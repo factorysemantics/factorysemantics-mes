@@ -14,7 +14,7 @@ shape field and a model field rather than a new converter.
 """
 
 from .model import BUFFER_DEFAULT, SHIFT_SECONDS, Plant, from_shape
-from .pack import to_pack
+from .pack import requires_for, to_pack
 from .read import HIGHEST, NotAShape, Shape, read_shape
 
 __all__ = [
@@ -26,5 +26,6 @@ __all__ = [
     "Shape",
     "from_shape",
     "read_shape",
+    "requires_for",
     "to_pack",
 ]

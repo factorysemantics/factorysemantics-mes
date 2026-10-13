@@ -7,6 +7,8 @@ MES-TWIN. They keep their names; only the executable changed.
 import asyncio
 import contextlib
 import os
+import shutil
+import tempfile
 import textwrap
 from datetime import datetime
 from importlib.metadata import entry_points
@@ -24,6 +26,12 @@ from fsmes.fleet.console import PORT as CONSOLE_PORT
 from fsmes.lab import assist_eval as assist_runs
 from fsmes.logging import setup_logging
 from fsmes.services import assist_eval
+
+# The buffer default from the module that states it, for the same reason: the
+# one number this converter asks a person for must not have a second spelling.
+# `shape.model` is imported here and `shape.pack` is not - the writer pulls in
+# the pack checker, and `fsmes --help` should not pay for it.
+from fsmes.shape.model import BUFFER_DEFAULT
 
 # The labelled set's own defaults, from the module that states them rather
 # than typed a second time here: a Typer default is read at import time, and
@@ -1312,6 +1320,19 @@ def demo(
     home: Path | None = typer.Option(
         None, help="Where a shipped plant keeps its pack, database, logs and replay "
                    "(default: this platform's per-user data directory, or FSMES_HOME)."),
+    name: str = typer.Option(
+        None, help="from-shape only: a short name for your plant. It becomes the "
+                   "plant's name in the fleet and the folder its data lives in."),
+    buffer: int = typer.Option(
+        None, "--buffer",
+        help=f"from-shape only: pieces of space between each pair of machines "
+             f"(default {BUFFER_DEFAULT}). Asked for if you leave it out."),
+    yes: bool = typer.Option(
+        False, "--yes", help="from-shape only: ask nothing. For a script."),
+    hours: float = typer.Option(
+        8.0, help="from-shape only: how long a shift the replay covers."),
+    seed: int = typer.Option(
+        7, help="from-shape only: the replay's seed. The same seed gives the same shift."),
 ) -> None:
     """Run a plant from this package, with no checkout anywhere.
 
@@ -1325,7 +1346,18 @@ def demo(
         fsmes demo                the twin: one order, ERP -> MES -> machines -> MES -> ERP
         fsmes demo <plant>        a plant this package ships: its shift, floor and screens
         fsmes demo <plant> stop   that plant, down
+        fsmes demo from-shape <plant-shape.toml> --name acme
+                                  a plant shaped like yours, built from the file the
+                                  assistant folder wrote on your own MES box
+
+    `from-shape` reads nothing but that file. Stop it, later, the same way as
+    any other: `fsmes demo <name> stop`.
     """
+    if plant == FROM_SHAPE:
+        raise typer.Exit(_plant_from_a_shape(
+            action if action not in _SHIPPED_ACTIONS else None,
+            name=name, buffer=buffer, yes=yes, hours=hours, seed=seed,
+            speed=speed, where=home))
     # `fsmes demo stop` reads as a plant called "stop", because the plant is
     # the first argument. Said back as "there is no plant called 'stop'" it is
     # a true sentence that helps nobody: what the person meant is plain, and
@@ -1376,6 +1408,87 @@ def _shipped_plant(name: str, action: str, *, speed: float | None,
     for line in standalone.how_to_sign_in(
             name, standalone.packs_dir((where or standalone.home()).expanduser()) / name):
         typer.echo(line)
+    return 0
+
+
+#: The word that turns `fsmes demo` into "build a plant from my own shape file".
+#: A verb in the plant's place, like `stop` is a verb in the action's place; it
+#: reads as the person says it out loud, which is why it is here rather than as
+#: a separate command nobody would find.
+FROM_SHAPE = "from-shape"
+
+
+def _plant_from_a_shape(shape: str | None, *, name: str | None, buffer: int | None,
+                        yes: bool, hours: float, seed: int, speed: float | None,
+                        where: Path | None) -> int:
+    """`fsmes demo from-shape <plant-shape.toml>`: your own plant, started.
+
+    The whole path in one command: read the shape, ask the one question no MES
+    can answer, build the pack under this user's own directory, generate the
+    shift once, build the plant and start it. Nothing is read but the shape
+    file and nothing leaves this machine.
+    """
+    from fsmes import standalone
+    from fsmes.shape import NotAShape, from_shape, read_shape, to_pack
+
+    if not shape:
+        typer.echo("`fsmes demo from-shape` needs the shape file the assistant folder "
+                   "wrote on your MES box:\n"
+                   "    fsmes demo from-shape plant-shape.toml --name acme\n"
+                   "Have not got one yet? `fsmes skills unpack plant-from-your-mes "
+                   "./assistant` writes the folder out, and its SKILL.md says what to run.")
+        return 2
+    path = Path(shape).expanduser()
+    if not path.is_file():
+        typer.echo(f"No shape file at {path}.")
+        return 2
+    try:
+        read = read_shape(path)
+    except NotAShape as exc:
+        typer.echo(str(exc))
+        return 2
+
+    plant_name = name or _plant_name_for(path, path.parent)
+    if buffer is None and not yes:
+        typer.echo("One question. Everything else came out of your shape file.\n"
+                   "How many pieces of space are there between two machines - the "
+                   "conveyor, the table, the tote? No MES records it, and it is what "
+                   "decides whether a stopped machine starves the next one.")
+        buffer = typer.prompt("  pieces", default=BUFFER_DEFAULT, type=int)
+    if buffer is None:
+        buffer = BUFFER_DEFAULT
+        typer.echo(f"  buffer: {buffer} pieces between each pair of machines (--buffer "
+                   f"says otherwise)")
+    if buffer < 1:
+        typer.echo("A buffer of less than one piece is a machine handing straight to the "
+                   "next one; say 1 for that.")
+        return 2
+
+    built = from_shape(read, name=plant_name, buffer=buffer, seed=seed,
+                       duration_s=int(hours * 3600))
+    typer.echo(f"Read {path} - shape format {built.shape_format}.")
+    staging = Path(tempfile.mkdtemp(prefix="fsmes-shape-"))
+    try:
+        pack = to_pack(built, staging / plant_name, echo=lambda _: None)
+        _shape_report(built, None)
+        typer.echo("")
+        try:
+            home_dir, placed = standalone.prepare_built(plant_name, pack, where=where,
+                                                        echo=typer.echo)
+        except (RuntimeError, OSError) as exc:
+            typer.echo(str(exc))
+            return 1
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
+    code = standalone.build_and_start(plant_name, home_dir, placed, speed=speed,
+                                      echo=typer.echo)
+    if code:
+        return code
+    for line in standalone.how_to_sign_in(plant_name, placed):
+        typer.echo(line)
+    typer.echo(f"  this plant was built from {path} and from the one number you were "
+               f"asked for; `fsmes pack check {placed}` reads it back, and its "
+               f"plant.toml says under [from_shape] what the shape could not say")
     return 0
 
 
@@ -3373,6 +3486,150 @@ def skills_zip(
     typer.echo(f"{written} — {len(listed)} file(s), {written.stat().st_size:,} bytes")
     for relative in listed:
         typer.echo(f"  {name}/{relative}")
+
+
+skills_app = typer.Typer(
+    help="The assistant folders this installation carries: write one out, offline, "
+         "onto the machine that has your MES on it.")
+app.add_typer(skills_app, name="skills")
+
+
+@skills_app.command("list")
+def skills_list() -> None:
+    """What assistant folders this installation carries, and what they are for."""
+    from fsmes import skills as skills_mod
+
+    here = skills_mod.available()
+    if not here:
+        typer.echo("No assistant folder here. This installation carries none inside it, "
+                   "and this is not a checkout with a skills/ directory above it. The "
+                   "folders are also on the project's Release page as zips.")
+        raise typer.Exit(1)
+    where = ("inside this installation" if skills_mod.shipped()
+             else "in the checkout above this directory")
+    typer.echo(f"{len(here)} assistant folder(s), {where}:")
+    for name in here:
+        typer.echo(f"  {name}")
+    typer.echo(f"  write one out with: fsmes skills unpack {here[0]} ./assistant")
+
+
+@skills_app.command("unpack")
+def skills_unpack(
+    name: str = typer.Argument("plant-from-your-mes", help="Which folder to write out."),
+    into: Path = typer.Argument(Path("."), help="Where to write it. The folder is "
+                                                "created as <into>/<name>."),
+) -> None:
+    """Write an assistant folder out of this installation, with no internet.
+
+    The files are already on this machine, inside the installed package. This
+    copies them somewhere you can carry them: onto the box that has your MES
+    on it, where `SKILL.md` says what to run and `scripts/` runs it with
+    nothing but a plain python.
+
+        fsmes skills unpack plant-from-your-mes ./assistant
+    """
+    from fsmes import skills as skills_mod
+
+    try:
+        skills_mod.unpack(name, into, echo=typer.echo)
+    except LookupError as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(2) from None
+    except FileExistsError as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(1) from None
+
+
+shape_app = typer.Typer(
+    help="A plant shape file — what the assistant folder writes on your own MES box — "
+         "read, explained, and turned into a plant pack.")
+app.add_typer(shape_app, name="shape")
+
+
+def _shape_report(plant, pack: Path | None) -> None:
+    """What a shape became, said out loud: what was asked, what was stated, and
+    every field the shape carried that this plant does not use.
+
+    Printed rather than left in the file because a silent default is the thing
+    this whole path is meant not to do. `plant.toml`'s `[from_shape]` says the
+    same, for the person who comes to the pack later.
+    """
+    if pack is not None:
+        typer.echo(f"\nWrote {pack}")
+    typer.echo(f"  {len(plant.stations)} station(s), {len(plant.areas)} area(s), "
+               f"{len(plant.routings)} routing(s), {len(plant.orders)} order(s), "
+               f"{len(plant.shifts)} shift(s)")
+    typer.echo(f"  flow: {' -> '.join(plant.chain())}"
+               + ("" if plant.is_one_straight_line else "  (flattened; see below)"))
+    if plant.notes:
+        typer.echo("\nStated here, because the shape could not say it:")
+        for note in plant.notes:
+            typer.echo(f"  - {note}")
+    if plant.dropped:
+        typer.echo(f"\nCarried by the shape and not used by this plant "
+                   f"({len(plant.dropped)}):")
+        for field, why in plant.dropped:
+            typer.echo(f"  - {field}: {why}")
+    else:
+        typer.echo("\nNothing in the shape went unused.")
+
+
+@shape_app.command("plant")
+def shape_plant(
+    shape: Path = typer.Argument(..., help="The plant-shape.toml the assistant folder wrote."),
+    out: Path = typer.Option(..., "--out", help="Directory to write the pack into."),
+    name: str = typer.Option(None, help="A short name for the plant (default: the "
+                                        "shape file's own folder, or the plant name in it)."),
+    buffer: int = typer.Option(
+        None, "--buffer", help=f"Pieces of space between each pair of machines "
+                               f"(default {BUFFER_DEFAULT}). The one number no MES "
+                               f"records, so it is the one thing you are asked."),
+    seed: int = typer.Option(7, help="The replay's seed. The same seed gives the same shift."),
+    hours: float = typer.Option(8.0, help="How long a shift the replay covers."),
+    force: bool = typer.Option(False, "--force", help="Overwrite a pack already there."),
+) -> None:
+    """Turn a shape file into a plant pack, and say what it did with it.
+
+    Writes the pack and stops. Nothing is started, nothing is generated, and
+    nothing is read but the shape file — so you can read the pack, and the
+    list this prints, before a plant exists.
+
+        fsmes shape plant plant-shape.toml --out ./acme --buffer 20
+        fsmes demo from-shape plant-shape.toml --name acme      # the same, started
+    """
+    from fsmes.shape import NotAShape, from_shape, read_shape, to_pack
+
+    target = Path(out).expanduser()
+    if target.exists() and any(target.iterdir()) and not force:
+        typer.echo(f"{target} is already there and is not empty. `--force` overwrites it.")
+        raise typer.Exit(1)
+    try:
+        read = read_shape(shape)
+    except NotAShape as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(2) from None
+    plant = from_shape(read, name=name or _plant_name_for(shape, target),
+                       buffer=BUFFER_DEFAULT if buffer is None else buffer,
+                       seed=seed, duration_s=int(hours * 3600))
+    typer.echo(f"Read {Path(shape).expanduser()} — shape format {plant.shape_format}.")
+    pack = to_pack(plant, target, echo=lambda _: None)
+    _shape_report(plant, pack)
+    typer.echo(f"\n  check it with: fsmes pack check {pack}")
+    typer.echo(f"  start it with: fsmes demo from-shape {Path(shape).expanduser()} "
+               f"--name {plant.name} --buffer {plant.buffer} --yes")
+
+
+def _plant_name_for(shape: Path, out: Path) -> str:
+    """A short, file-safe name for a plant nobody named.
+
+    The output directory's own name, which is almost always what a person
+    meant, falling back to the shape file's folder.
+    """
+    for candidate in (Path(out).expanduser().name, Path(shape).expanduser().parent.name):
+        cleaned = "".join(c for c in candidate.lower() if c.isalnum() or c in "-_")
+        if cleaned and cleaned not in (".", "..", "-", "_"):
+            return cleaned
+    return "from-shape"
 
 
 assist_app = typer.Typer(

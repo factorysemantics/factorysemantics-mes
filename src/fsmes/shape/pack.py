@@ -546,14 +546,29 @@ def _plant_toml(plant: Plant, *, requires: str) -> str:
     return "\n".join(lines)
 
 
+def requires_for(version: str) -> str:
+    """What a pack built by this release should say it needs.
+
+    `[pack] requires` is a comparison, not a version - `fsmes pack check`
+    refuses a bare `0.3.0` - and the honest comparison for a pack this
+    converter wrote is "at least the release that wrote it": every figure in
+    it is written by code of this version, and an older fsmes has never seen
+    the `[from_shape]` section.
+    """
+    return f">={version}"
+
+
 def to_pack(
     plant: Plant,
     out: str | Path,
     *,
-    requires: str,
+    requires: str | None = None,
     echo: Callable[[str], None] = print,
 ) -> Path:
     """Write one plant as a pack folder. Returns the folder."""
+    from fsmes import __version__
+
+    requires = requires or requires_for(__version__)
     out = Path(out)
     (out / "masterdata").mkdir(parents=True, exist_ok=True)
     (out / "plant.toml").write_text(_plant_toml(plant, requires=requires), encoding="utf-8")
