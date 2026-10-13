@@ -62,6 +62,7 @@
 - [Develop — Design — the configuration audit](https://docs.factorysemantics.com/dev/design/config-audit-2026-09-21/)
 - [Develop — Design — the agentic harness](https://docs.factorysemantics.com/dev/design/agentic-harness/)
 - [Develop — Design — deep analysis in the AI tab](https://docs.factorysemantics.com/dev/design/deep-analysis/)
+- [Develop — Design — a pack inside a pack](https://docs.factorysemantics.com/dev/design/pack-in-pack/)
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/)
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0001-apache-2-with-dco/)
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0002-kernel-and-modules/)

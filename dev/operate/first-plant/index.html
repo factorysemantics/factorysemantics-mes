@@ -1002,6 +1002,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="2. Install it and see it run">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#or-before-step-3-a-simulated-plant-shaped-like-yours" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Or, before step 3: a simulated plant shaped like yours
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2454,6 +2471,34 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../../design/pack-in-pack/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design — a pack inside a pack
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     
     
     
@@ -2468,10 +2513,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_13" >
         
           
-          <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_13" id="__nav_4_13_label" tabindex="0">
             
   
   
@@ -2489,8 +2534,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_12">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_13">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -4216,6 +4261,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="2. Install it and see it run">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#or-before-step-3-a-simulated-plant-shaped-like-yours" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Or, before step 3: a simulated plant shaped like yours
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -4466,12 +4528,6 @@ fsmes<span class="w"> </span>demo<span class="w"> </span>bottling
 </div>
 </div>
 </div>
-<div class="admonition note">
-<p class="admonition-title">Not on PyPI yet</p>
-<p>The release on PyPI today, 0.2.0, carries no plant packs, so
-<code>fsmes demo bottling</code> needs the next one. From a checkout it works now:
-<code>python -m build --wheel</code>, then install that wheel.</p>
-</div>
 <p><code>fsmes demo bottling</code> brings up a six-station beverage line the way a plant
 runs: an eight-hour shift replayed over a real OPC UA server, a simulated
 floor booking lots and naming its stops, and the operator screens reading it.
@@ -4482,6 +4538,21 @@ sign in with, and it keeps running until <code>fsmes demo bottling stop</code>.
 floor plan and a shift's worth of readings behind them. First start takes a
 little longer than later ones: it copies the pack out of the package and
 generates the shift from the seed in its <code>line.json</code>, which is seconds.</p>
+<h3 id="or-before-step-3-a-simulated-plant-shaped-like-yours">Or, before step 3: a simulated plant shaped like <em>yours</em><a class="headerlink" href="#or-before-step-3-a-simulated-plant-shaped-like-yours" title="Permanent link">&para;</a></h3>
+<p>The bottling line is our plant, not yours, and some people would rather see
+their own machine count, their own stop mix and their own tags before they ask
+IT for anything. There is a path for that, and it needs nothing to leave the
+building: the same install writes an assistant folder out of itself, three
+commands run on your MES box with a plain python, and one command here turns the
+one file they write into a running plant.</p>
+<div class="highlight"><pre><span></span><code>fsmes skills unpack plant-from-your-mes ./assistant
+# ... three commands on the MES box, which needs no fsmes ...
+fsmes demo from-shape ./plant-shape.toml --name acme
+</code></pre></div>
+<p>The whole path, with PowerShell and bash side by side, is in
+<a href="../plant-from-your-mes/">your plant without sending anyone your data</a>. It is a
+<em>simulation</em> shaped like your plant, not your plant — steps 3 and 4 below are
+still how real readings get in.</p>
 <p>Everything it writes — the pack copy, the database, the logs, the generated
 line data — goes to one per-user directory: <code>%LOCALAPPDATA%\fsmes</code> on
 Windows, <code>$XDG_DATA_HOME/fsmes</code> or <code>~/.local/share/fsmes</code> on Linux,
@@ -4745,6 +4816,7 @@ otherwise.</p>
 <li><a href="../deploy/">Deploy</a> · <a href="../security/">Security</a> · <a href="../compatibility/">Compatibility</a></li>
 <li><a href="../../plant/reading-oee/">Reading OEE</a> · <a href="../../plant/never-invent-production/">Never invent production</a></li>
 <li><a href="../coverage/">How much of the window did the MES see</a></li>
+<li><a href="../plant-from-your-mes/">Your plant without sending anyone your data</a> · <a href="../packs/">Plant packs</a></li>
 </ul>
 
 
