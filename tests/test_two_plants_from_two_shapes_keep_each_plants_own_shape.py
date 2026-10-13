@@ -15,8 +15,9 @@ would quietly turn it into one, and nobody would notice until a customer said
 first does not is asserted here: the areas in `equipment.json`, the routings in
 `routings.json`, and the grouped browse path in `tag_map.json`.
 
-Speed is at the bottom, as a ratio of a forty-station plant to this six-station
-one measured in the same run on the same machine — never a clock.
+Speed is at the bottom, twice — the conversion, and the shift the plant plays —
+each as a ratio of a forty-station plant to this six-station one measured in the
+same run on the same machine, never a clock.
 """
 
 from __future__ import annotations
@@ -369,10 +370,16 @@ def test_forty_stations_cost_about_what_forty_stations_should(tmp_path: Path) ->
     is 6.7 times six, and the honest expectation is linear-ish work: the gate
     is twice that, which still catches a converter that has gone quadratic
     (6.7 squared is 44) while saying nothing about how fast the box is.
+
+    Two things are timed, because a plant is two pieces of work: turning the
+    shape into a pack, which is this converter, and generating the shift the
+    pack plays, which is the simulator underneath it. Forty stations is where
+    the second one would hurt first.
     """
     import time
 
     from fsmes.shape import read as shape_read
+    from fsmes.sim import generate
 
     def build(raw: dict, name: str) -> float:
         shape = shape_read.of(raw)
@@ -391,6 +398,33 @@ def test_forty_stations_cost_about_what_forty_stations_should(tmp_path: Path) ->
         f"{small:.3f} s); 6.7 times the machines should not cost more than twice "
         f"that in work")
     big_pack = tmp_path / "big"
+
+    # The conversion above is this branch's own code; the shift underneath a
+    # plant is the simulator's, and forty stations is where that one would
+    # hurt. So it is held the same way, in the same run, on the same machine:
+    # half an hour of line time rather than the pack's eight, which is enough
+    # to see the per-station cost and leaves nothing on disk (`simulate` is a
+    # pure function of the config and returns its rows).
+    def shift(pack: Path) -> float:
+        config = generate.load_config(pack / "line.json")
+        config["duration_s"] = 1800
+        started = time.perf_counter()
+        rows = generate.simulate(config)
+        spent = time.perf_counter() - started
+        assert len(rows) == len(config["stations"]) + 1   # a table each, and the line
+        return spent
+
+    small_shift = shift(tmp_path / "small")
+    big_shift = shift(big_pack)
+    shift_ratio = big_shift / max(small_shift, 1e-9)
+    print(f"half an hour of line time - 6 stations: {small_shift:.3f} s; "
+          f"40 stations: {big_shift:.3f} s; ratio {shift_ratio:.1f}x for 6.7x "
+          f"the stations")
+    assert shift_ratio <= 13.4, (
+        f"a shift for forty stations cost {shift_ratio:.1f} times one for six "
+        f"({big_shift:.3f} s against {small_shift:.3f} s); 6.7 times the "
+        f"machines should not cost more than twice that in work")
+
     equipment = json.loads((big_pack / "masterdata" / "equipment.json").read_text(encoding="utf-8"))
     assert sum(1 for row in equipment if row["level"] == "work_unit") == 40
     assert sum(1 for row in equipment if row["level"] == "area") == 5
