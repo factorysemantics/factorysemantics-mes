@@ -805,6 +805,18 @@ SCHEMA: tuple[Section, ...] = (
              Key("role", "str", "The role it holds."),
              Key("password_env", "str", "The environment variable holding its password.")),
             repeated=True),
+    # Provenance, for a pack a converter wrote rather than a person. Nothing
+    # reads it and nothing in the plant depends on it: it is here so that the
+    # next person to open the pack does not have to ask where it came from,
+    # what had to be stated because the source could not say it, and what the
+    # source carried that this plant does not use. Written by `fsmes shape
+    # plant`; absent from every hand-written pack.
+    Section("from_shape", "Where this pack came from, when it was built from a plant "
+            "shape file rather than written by hand: which shape, what one number a "
+            "person was asked for, what had to be stated, and what the shape carried "
+            "that this plant does not use. Read by nothing; written so nobody has to "
+            "ask.",
+            open_keys="a provenance field `fsmes shape plant` wrote"),
 )
 
 BY_SECTION: dict[str, Section] = {s.name: s for s in SCHEMA}

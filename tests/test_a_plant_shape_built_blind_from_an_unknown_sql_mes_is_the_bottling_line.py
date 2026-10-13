@@ -375,7 +375,10 @@ def test_the_file_states_what_it_did_not_measure_rather_than_implying_zero(blind
     assert meta["vocabulary_kept"] is False
     assert meta["window_hours"] == pytest.approx(1.0, abs=0.05)
     assert meta["rows_read"] > 20_000
-    assert meta["queries_not_run"] == []
+    # This MES keeps no routing table, so the routing query was not run and the
+    # file says so by name. Not running it is not the same as no routings.
+    assert [entry["query"] for entry in meta["queries_not_run"]] == ["05d_routings"]
+    assert meta["queries_not_run"][0]["why"]
 
 
 def test_every_query_the_skill_ships_is_a_bounded_select_and_nothing_else() -> None:
@@ -400,4 +403,4 @@ def test_every_query_the_skill_ships_is_a_bounded_select_and_nothing_else() -> N
             assert "{{row_cap}}" in sql or "count" in lowered or "group by" in lowered, (
                 f"{path.name} is neither bounded nor an aggregate")
         seen += 1
-    assert seen == 32, f"expected sixteen queries in each of two dialects, found {seen}"
+    assert seen == 34, f"expected seventeen queries in each of two dialects, found {seen}"

@@ -169,6 +169,61 @@ packages = ["src/fsmes"]
 "labs/multiplant/machining/tag_map.json" = "fsmes/data/packs/machining/tag_map.json"
 "labs/multiplant/machining/masterdata" = "fsmes/data/packs/machining/masterdata"
 
+# THE ASSISTANT FOLDER, INSIDE THE WHEEL. `fsmes skills unpack plant-from-your-mes
+# <dir>` writes it out on a machine with no checkout and no internet, which is
+# the first step of building a plant shaped like your own: the folder goes onto
+# the MES box, somebody runs the three commands in its SKILL.md by hand, and a
+# `plant-shape.toml` comes back. Before this it existed only as a zip on a
+# release page, which is a download, which is a thing a locked-down plant
+# network does not do.
+#
+# Same arrangement as the packs above: build-time copies, never a second source
+# of truth, listed file by file because force-include honours no exclusion and a
+# stray `__pycache__` from somebody running the scripts in place would ship.
+# `tests/test_the_wheel_ships_the_assistant_folder.py` fails when a file is in
+# `fsmes.skills.SKILLS` and not here.
+"skills/plant-from-your-mes/SKILL.md" = "fsmes/data/skills/plant-from-your-mes/SKILL.md"
+"skills/plant-from-your-mes/FORMAT.md" = "fsmes/data/skills/plant-from-your-mes/FORMAT.md"
+"skills/plant-from-your-mes/example/plant-shape-grouped.toml" = "fsmes/data/skills/plant-from-your-mes/example/plant-shape-grouped.toml"
+"skills/plant-from-your-mes/example/plant-shape.toml" = "fsmes/data/skills/plant-from-your-mes/example/plant-shape.toml"
+"skills/plant-from-your-mes/queries/mssql/01_inventory.sql" = "fsmes/data/skills/plant-from-your-mes/queries/mssql/01_inventory.sql"
+"skills/plant-from-your-mes/queries/mssql/01b_row_count.sql" = "fsmes/data/skills/plant-from-your-mes/queries/mssql/01b_row_count.sql"
+"skills/plant-from-your-mes/queries/mssql/02_columns.sql" = "fsmes/data/skills/plant-from-your-mes/queries/mssql/02_columns.sql"
+"skills/plant-from-your-mes/queries/mssql/03_window.sql" = "fsmes/data/skills/plant-from-your-mes/queries/mssql/03_window.sql"
+"skills/plant-from-your-mes/queries/mssql/04_column_profile.sql" = "fsmes/data/skills/plant-from-your-mes/queries/mssql/04_column_profile.sql"
+"skills/plant-from-your-mes/queries/mssql/04b_column_sample.sql" = "fsmes/data/skills/plant-from-your-mes/queries/mssql/04b_column_sample.sql"
+"skills/plant-from-your-mes/queries/mssql/05_assets.sql" = "fsmes/data/skills/plant-from-your-mes/queries/mssql/05_assets.sql"
+"skills/plant-from-your-mes/queries/mssql/05b_tag_samples.sql" = "fsmes/data/skills/plant-from-your-mes/queries/mssql/05b_tag_samples.sql"
+"skills/plant-from-your-mes/queries/mssql/05c_tag_samples_nostate.sql" = "fsmes/data/skills/plant-from-your-mes/queries/mssql/05c_tag_samples_nostate.sql"
+"skills/plant-from-your-mes/queries/mssql/05d_routings.sql" = "fsmes/data/skills/plant-from-your-mes/queries/mssql/05d_routings.sql"
+"skills/plant-from-your-mes/queries/mssql/06_states.sql" = "fsmes/data/skills/plant-from-your-mes/queries/mssql/06_states.sql"
+"skills/plant-from-your-mes/queries/mssql/06b_production.sql" = "fsmes/data/skills/plant-from-your-mes/queries/mssql/06b_production.sql"
+"skills/plant-from-your-mes/queries/mssql/06c_quality.sql" = "fsmes/data/skills/plant-from-your-mes/queries/mssql/06c_quality.sql"
+"skills/plant-from-your-mes/queries/mssql/06d_orders.sql" = "fsmes/data/skills/plant-from-your-mes/queries/mssql/06d_orders.sql"
+"skills/plant-from-your-mes/queries/mssql/06e_shifts.sql" = "fsmes/data/skills/plant-from-your-mes/queries/mssql/06e_shifts.sql"
+"skills/plant-from-your-mes/queries/mssql/06f_documents.sql" = "fsmes/data/skills/plant-from-your-mes/queries/mssql/06f_documents.sql"
+"skills/plant-from-your-mes/queries/mssql/07_erp.sql" = "fsmes/data/skills/plant-from-your-mes/queries/mssql/07_erp.sql"
+"skills/plant-from-your-mes/queries/sqlite/01_inventory.sql" = "fsmes/data/skills/plant-from-your-mes/queries/sqlite/01_inventory.sql"
+"skills/plant-from-your-mes/queries/sqlite/01b_row_count.sql" = "fsmes/data/skills/plant-from-your-mes/queries/sqlite/01b_row_count.sql"
+"skills/plant-from-your-mes/queries/sqlite/02_columns.sql" = "fsmes/data/skills/plant-from-your-mes/queries/sqlite/02_columns.sql"
+"skills/plant-from-your-mes/queries/sqlite/03_window.sql" = "fsmes/data/skills/plant-from-your-mes/queries/sqlite/03_window.sql"
+"skills/plant-from-your-mes/queries/sqlite/04_column_profile.sql" = "fsmes/data/skills/plant-from-your-mes/queries/sqlite/04_column_profile.sql"
+"skills/plant-from-your-mes/queries/sqlite/04b_column_sample.sql" = "fsmes/data/skills/plant-from-your-mes/queries/sqlite/04b_column_sample.sql"
+"skills/plant-from-your-mes/queries/sqlite/05_assets.sql" = "fsmes/data/skills/plant-from-your-mes/queries/sqlite/05_assets.sql"
+"skills/plant-from-your-mes/queries/sqlite/05b_tag_samples.sql" = "fsmes/data/skills/plant-from-your-mes/queries/sqlite/05b_tag_samples.sql"
+"skills/plant-from-your-mes/queries/sqlite/05c_tag_samples_nostate.sql" = "fsmes/data/skills/plant-from-your-mes/queries/sqlite/05c_tag_samples_nostate.sql"
+"skills/plant-from-your-mes/queries/sqlite/05d_routings.sql" = "fsmes/data/skills/plant-from-your-mes/queries/sqlite/05d_routings.sql"
+"skills/plant-from-your-mes/queries/sqlite/06_states.sql" = "fsmes/data/skills/plant-from-your-mes/queries/sqlite/06_states.sql"
+"skills/plant-from-your-mes/queries/sqlite/06b_production.sql" = "fsmes/data/skills/plant-from-your-mes/queries/sqlite/06b_production.sql"
+"skills/plant-from-your-mes/queries/sqlite/06c_quality.sql" = "fsmes/data/skills/plant-from-your-mes/queries/sqlite/06c_quality.sql"
+"skills/plant-from-your-mes/queries/sqlite/06d_orders.sql" = "fsmes/data/skills/plant-from-your-mes/queries/sqlite/06d_orders.sql"
+"skills/plant-from-your-mes/queries/sqlite/06e_shifts.sql" = "fsmes/data/skills/plant-from-your-mes/queries/sqlite/06e_shifts.sql"
+"skills/plant-from-your-mes/queries/sqlite/06f_documents.sql" = "fsmes/data/skills/plant-from-your-mes/queries/sqlite/06f_documents.sql"
+"skills/plant-from-your-mes/queries/sqlite/07_erp.sql" = "fsmes/data/skills/plant-from-your-mes/queries/sqlite/07_erp.sql"
+"skills/plant-from-your-mes/scripts/explain.py" = "fsmes/data/skills/plant-from-your-mes/scripts/explain.py"
+"skills/plant-from-your-mes/scripts/leakcheck.py" = "fsmes/data/skills/plant-from-your-mes/scripts/leakcheck.py"
+"skills/plant-from-your-mes/scripts/profile.py" = "fsmes/data/skills/plant-from-your-mes/scripts/profile.py"
+
 [tool.hatch.build.targets.sdist]
 exclude = [".claude/", "site/", "docs/reference/"]
 

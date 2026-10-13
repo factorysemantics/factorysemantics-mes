@@ -347,6 +347,17 @@ def start(name: str, *, where: Path | None = None, speed: float | None = None,
           refresh: bool = False, echo=print) -> int:
     """Bring a packaged plant up, building it first if this home has not got it."""
     where, pack = prepare(name, where=where, refresh=refresh, echo=echo)
+    return build_and_start(name, where, pack, speed=speed, echo=echo)
+
+
+def build_and_start(name: str, where: Path, pack: Path, *, speed: float | None = None,
+                    echo=print) -> int:
+    """Build this plant if this home has not got it, then start it.
+
+    Shared by the shipped packs and by a pack built here from a shape file:
+    once a pack is under the home with a fleet file beside it, the two paths
+    are the same `fsmes fleet` commands a checkout runs.
+    """
     if not is_built(name, where):
         echo(f"  building {name} from {pack} (once)")
         if (code := _fsmes(where, "fleet", "create", str(pack), "--root", str(where),
@@ -356,6 +367,47 @@ def start(name: str, *, where: Path | None = None, speed: float | None = None,
     if speed is not None:
         args += ["--speed", str(speed)]
     return _fsmes(where, *args, echo=echo)
+
+
+def place_pack(name: str, source: Path, where: Path, *, echo=print) -> Path:
+    """Put a pack built on this machine under the home, beside the shipped ones.
+
+    The shape-built path needs this because its pack comes from a shape file in
+    somebody's downloads folder, not from inside the package. Everything after
+    it - the fleet file, the replay, `fsmes fleet create` - is identical.
+
+    A pack already there and identical is left alone, because its generated
+    replay is beside it and regenerating a shift nothing changed is a minute of
+    somebody's evening. A pack already there and different is replaced, and the
+    replacement is said out loud: the shape is the source of truth, and a
+    person who changed the buffer and ran the command again meant it.
+    """
+    target = packs_dir(where) / name
+    if (target / "plant.toml").is_file():
+        if _same(source, target):
+            echo(f"  pack: {target} (the same pack as last time; its replay is kept)")
+            return target
+        echo(f"  pack: replacing {target} - this shape makes a different pack than the "
+             f"one there, so its generated replay goes with it and is made again")
+    _copy(source, target)
+    echo(f"  pack: {target}")
+    return target
+
+
+def prepare_built(name: str, source: Path, *, where: Path | None = None,
+                  echo=print) -> tuple[Path, Path]:
+    """`prepare`, for a pack built here rather than shipped in the package."""
+    where = (where or home()).expanduser()
+    where.mkdir(parents=True, exist_ok=True)
+    data_dir(where).mkdir(parents=True, exist_ok=True)
+    echo(f"  home: {where}")
+    pack = place_pack(name, source, where, echo=echo)
+    file = write_fleet(where)
+    echo(f"  fleet: {file}")
+    os.environ[plants.REGISTRY_ENV] = str(file)
+    plants.environment.cache_clear()
+    generate_replay(pack, echo=echo)
+    return where, pack
 
 
 def stop(name: str, *, where: Path | None = None, echo=print) -> int:

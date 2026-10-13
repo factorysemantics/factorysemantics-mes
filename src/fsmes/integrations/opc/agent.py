@@ -830,7 +830,7 @@ async def resolve_nodes(client: Client, machines: list[MachineMap], namespace: s
             continue
         if idx is None:  # only browsed machines need the namespace to exist
             idx = await client.get_namespace_index(namespace)
-        obj = await client.nodes.objects.get_child(f"{idx}:{spec.object}")
+        obj = await client.nodes.objects.get_child([f"{idx}:{part}" for part in spec.browse_path])
         for tag in spec.tags:
             node_info[await obj.get_child(f"{idx}:{tag}")] = (spec, tag)
         if spec.order_tag:

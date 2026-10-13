@@ -14,21 +14,24 @@
 # `not measured` means exactly that. It does not mean zero.
 
 [meta]
-written_by = "plant-from-your-mes 1"
-written_at = "2026-10-04T11:03:48Z"
+shape_format = 2
+written_by = "plant-from-your-mes 2"
+written_at = "2026-10-13T11:01:13Z"
 source_dialect = "sqlite"
 read_only = true
 window_start = "2026-03-02T06:00:00Z"
 window_end = "2026-03-02T07:00:00Z"
 window_hours = 1.0
-rows_read = 20571
+rows_read = 20481
 row_cap = 200000
 tables_total = 13
 tables_mapped = 11
 tables_not_understood = 2
 vocabulary_kept = false
-leak_check = "passed: 0 of 1015 identifying values appear in this file (4037 values sampled from the source)"
-queries_not_run = []
+leak_check = "passed: 0 of 1015 identifying values appear in this file (4018 values sampled from the source)"
+queries_not_run = [
+  { query = "05d_routings", why = "the mapping has no [routings] section" },
+]
 
 [plant]
 stations_total = 6
@@ -53,6 +56,7 @@ good_total = 5670
 scrap_total = 39
 running_seconds = 3201.0
 analogs_total = 9
+area = "AR-01"
 
 [[stations.analogs]]
 name = "AN-01"
@@ -217,6 +221,7 @@ good_total = 5510
 scrap_total = 49
 running_seconds = 3203.0
 analogs_total = 10
+area = "AR-01"
 
 [[stations.analogs]]
 name = "AN-01"
@@ -398,6 +403,7 @@ good_total = 5439
 scrap_total = 99
 running_seconds = 3065.0
 analogs_total = 10
+area = "AR-01"
 
 [[stations.analogs]]
 name = "AN-01"
@@ -579,6 +585,7 @@ good_total = 5111
 scrap_total = 80
 running_seconds = 2999.0
 analogs_total = 9
+area = "AR-01"
 
 [[stations.analogs]]
 name = "AN-01"
@@ -743,6 +750,7 @@ good_total = 4941
 scrap_total = 40
 running_seconds = 2972.0
 analogs_total = 9
+area = "AR-01"
 
 [[stations.analogs]]
 name = "AN-01"
@@ -765,17 +773,17 @@ unit_dropped = false
 name = "AN-02"
 kind = "analog"
 unit = "g"
-base = 499.9
-noise = 3.3548
+base = 499.4
+noise = 3.7683
 decimals = 1
 running_only = false
-samples = 360
+samples = 270
 sample_interval_s = 10.0
 observed_min = 486.9
-observed_max = 505.1
+observed_max = 506.9
 modal_state = "running"
-modal_state_share = 0.828
-state_correlation = -0.072
+modal_state_share = 0.807
+state_correlation = -0.124
 unit_dropped = false
 
 [[stations.analogs]]
@@ -799,17 +807,17 @@ unit_dropped = false
 name = "AN-04"
 kind = "analog"
 unit = "bar"
-base = 2.6
-noise = 0.071
+base = 2.59
+noise = 0.114
 decimals = 2
 running_only = false
 samples = 360
 sample_interval_s = 10.0
-observed_min = 2.41
+observed_min = 2.21
 observed_max = 2.79
 modal_state = "running"
 modal_state_share = 0.828
-state_correlation = -0.013
+state_correlation = -0.063
 unit_dropped = false
 
 [[stations.analogs]]
@@ -907,6 +915,7 @@ good_total = 4926
 scrap_total = 5
 running_seconds = 2956.0
 analogs_total = 9
+area = "AR-01"
 
 [[stations.analogs]]
 name = "AN-01"
@@ -1061,6 +1070,40 @@ modal_state_share = 0.822
 state_correlation = -0.14
 unit_dropped = false
 
+[hierarchy]
+found = true
+basis = "the line/area column on the asset register"
+areas_seen = 1
+cells_seen = 0
+stations_placed = 6
+stations_total = 6
+areas = [
+  { name = "AR-01", parent = "", cells = [], stations = 6 },
+]
+
+[tag_nodes]
+found = true
+basis = "the tag path with its last segment (the tag itself) removed"
+nodes_seen = 6
+nodes_with_more_than_one_machine = 0
+depth_min = 3
+depth_max = 3
+stations_placed = 6
+stations_total = 6
+segment_text_carried = false
+nodes = [
+  { name = "ND-03", path = ["ND-01", "ND-02", "ND-03"], stations = ["ST-01"], tags = 9 },
+  { name = "ND-04", path = ["ND-01", "ND-02", "ND-04"], stations = ["ST-02"], tags = 10 },
+  { name = "ND-05", path = ["ND-01", "ND-02", "ND-05"], stations = ["ST-03"], tags = 10 },
+  { name = "ND-06", path = ["ND-01", "ND-02", "ND-06"], stations = ["ST-04"], tags = 9 },
+  { name = "ND-07", path = ["ND-01", "ND-02", "ND-07"], stations = ["ST-05"], tags = 9 },
+  { name = "ND-08", path = ["ND-01", "ND-02", "ND-08"], stations = ["ST-06"], tags = 9 },
+]
+
+[routings]
+found = false
+why = "no routing or operation table was mapped - ask the person whether this MES holds a routing per product, and which table it is in. Without it the plant is one straight line, which is a guess this file will not make for you"
+
 [stops]
 found = true
 intervals_total = 270
@@ -1094,18 +1137,18 @@ reasons = [
 
 [quality]
 found = true
-checks_total = 30
-fail_share = 0.0667
+checks_total = 23
+fail_share = 0.087
 nonconformances_total = 2
-nonconformances_per_1000_checks = 66.67
+nonconformances_per_1000_checks = 86.96
 verdicts = [
-  { verdict = "pass", checks = 28, share = 0.9333 },
-  { verdict = "fail", checks = 2, share = 0.0667 },
+  { verdict = "pass", checks = 21, share = 0.913 },
+  { verdict = "fail", checks = 2, share = 0.087 },
 ]
 dispositions = [
-  { disposition = "none recorded", rows = 28, share = 0.9333 },
-  { disposition = "rework", rows = 1, share = 0.0333 },
-  { disposition = "scrap", rows = 1, share = 0.0333 },
+  { disposition = "none recorded", rows = 21, share = 0.913 },
+  { disposition = "rework", rows = 1, share = 0.0435 },
+  { disposition = "scrap", rows = 1, share = 0.0435 },
 ]
 
 [orders]
@@ -1147,9 +1190,9 @@ found = true
 calls_total = 60
 endpoint_words_carried = false
 touchpoints = [
-  { verb = "GET", path_shape = "/aaa/aaaaaaaa/Aaaa Aaaaa", calls = 20, min_bytes = 412.0, max_bytes = 2363.0, failures = 1, calls_per_hour = 20.0, failure_share = 0.05 },
-  { verb = "POST", path_shape = "/aaa/aaaaaaaa/Aaa Aaaa/AA-####-####/aaaaaaa", calls = 20, min_bytes = 646.0, max_bytes = 2154.0, failures = 2, calls_per_hour = 20.0, failure_share = 0.1 },
-  { verb = "POST", path_shape = "/aaa/aaaaaaaa/Aaaaa Aaaaa", calls = 20, min_bytes = 320.0, max_bytes = 2382.0, failures = 1, calls_per_hour = 20.0, failure_share = 0.05 },
+  { verb = "GET", path_shape = "/aaa/aaaaaaaa/Aaaa Aaaaa", calls = 20, min_bytes = 320.0, max_bytes = 2382.0, failures = 1, calls_per_hour = 20.0, failure_share = 0.05 },
+  { verb = "POST", path_shape = "/aaa/aaaaaaaa/Aaa Aaaa/AA-####-####/aaaaaaa", calls = 20, min_bytes = 297.0, max_bytes = 2363.0, failures = 2, calls_per_hour = 20.0, failure_share = 0.1 },
+  { verb = "POST", path_shape = "/aaa/aaaaaaaa/Aaaaa Aaaaa", calls = 20, min_bytes = 646.0, max_bytes = 2154.0, failures = 1, calls_per_hour = 20.0, failure_share = 0.05 },
 ]
 
 [also_tracked_note]

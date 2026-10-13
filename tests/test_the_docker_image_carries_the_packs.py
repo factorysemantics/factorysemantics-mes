@@ -1,8 +1,8 @@
 """The image's build context carries every path the wheel is told to carry.
 
-`pyproject.toml` force-includes sixteen paths - six config files and the ten
-that are the two lab packs - so that the wheel works on a machine with no
-checkout. Hatchling copies whatever is on disk when the wheel is built, and
+`pyproject.toml` force-includes fifty-seven paths - six config files, the ten
+that are the two lab packs, and the forty-one that are the assistant folder -
+so that the wheel works on a machine with no checkout. Hatchling copies whatever is on disk when the wheel is built, and
 inside the image the wheel is built by `pip install .` at `/app`. So a forced
 path that `docker/Dockerfile` does not copy is not a missing file in the image:
 it is an image that cannot be built at all.

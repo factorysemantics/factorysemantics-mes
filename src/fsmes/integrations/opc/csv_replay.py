@@ -39,7 +39,7 @@ import structlog
 from asyncua import Server, ua
 
 from fsmes.config import Settings
-from fsmes.integrations.opc.tag_map import MachineMap, load_manifest, load_tag_map
+from fsmes.integrations.opc.tag_map import MachineMap, folder_for, load_manifest, load_tag_map
 from fsmes.kernel.tags import COUNTER_TAGS as COUNTERS
 from fsmes.kernel.tags import INSPECTION_PREFIX, INSPECTION_TAGS, INTEGER_TAGS, MANIFEST_NAME
 
@@ -398,9 +398,11 @@ async def build_server(settings: Settings, machines: list[MachineMap], directory
     replays: list[ReplayMachine] = []
     inspectors: list[Inspector] = []
     flow = Flow()
+    folders: dict = {}
     for spec in machines:
         rows = load_table(directory, spec.object)
-        obj = await server.nodes.objects.add_object(idx, spec.object)
+        parent = await folder_for(server.nodes.objects, idx, spec, folders)
+        obj = await parent.add_object(idx, spec.object)
         tag_meta = (manifest.get("tables", {}).get(spec.object, {}).get("tags", {}))
         nodes: dict = {}
         setpoints: dict = {}

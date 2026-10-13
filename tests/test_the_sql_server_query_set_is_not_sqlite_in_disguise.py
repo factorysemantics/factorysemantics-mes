@@ -49,6 +49,12 @@ MAPPING = {
     "shifts": {"table": "shift_calendar", "code": "shift_code", "starts": "starts_at",
                "ends": "ends_at"},
     "documents": {"table": "doc_register", "number": "doc_number", "revision": "revision"},
+    # Format 2's one new query. `sequence` is optional in the mapping - a
+    # routing table with no step column still reads, in table order - and is
+    # given here so the placeholder is exercised with a column rather than
+    # with the NULL it falls back to.
+    "routings": {"table": "route_step", "code": "route_code", "asset": "asset_id",
+                 "sequence": "step_no"},
     "erp": {"table": "erp_call_log", "at": "called_at", "verb": "verb", "endpoint": "endpoint",
             "bytes": "body_bytes", "status": "http_status"},
 }
@@ -75,7 +81,7 @@ def test_the_two_dialects_ship_the_same_numbered_queries() -> None:
     sqlite_names = sorted(p.name for p in (SKILL / "queries" / "sqlite").glob("*.sql"))
     mssql_names = sorted(p.name for p in (SKILL / "queries" / "mssql").glob("*.sql"))
     assert sqlite_names == mssql_names
-    assert len(mssql_names) == 16
+    assert len(mssql_names) == 17
 
 
 def test_every_placeholder_in_every_sql_server_query_resolves_from_a_mapping() -> None:
@@ -139,12 +145,12 @@ def test_the_filled_in_sql_can_be_written_out_for_somebody_to_run_by_hand(tmp_pa
     written = profiler.emit_sql(tmp_path, MAPPING, "mssql", SKILL / "queries", 5000)
     assert written == 0
     files = sorted(p.name for p in tmp_path.glob("*.sql"))
-    assert len(files) == 16, files
-    # Twelve are ready to paste; the four per-table and per-column templates come
-    # out as templates with a line saying what to substitute, rather than being
-    # dropped so a step goes quietly missing.
+    assert len(files) == 17, files
+    # Thirteen are ready to paste; the four per-table and per-column templates
+    # come out as templates with a line saying what to substitute, rather than
+    # being dropped so a step goes quietly missing.
     ready = [f for f in files if not f.endswith(".template.sql")]
-    assert len(ready) == 12, ready
+    assert len(ready) == 13, ready
     assert sorted(f for f in files if f.endswith(".template.sql")) == [
         "01b_row_count.template.sql", "03_window.template.sql",
         "04_column_profile.template.sql", "04b_column_sample.template.sql",

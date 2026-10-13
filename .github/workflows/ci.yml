@@ -286,6 +286,49 @@ jobs:
         shell: bash
         run: python .github/scripts/plant_from_wheel.py --wheel "$(ls dist/*.whl)" --speed 60
 
+  wheel-plant-from-shape:
+    # The whole customer path, from a built wheel, on both runners, with the
+    # network off: install, write the assistant folder out of the installation
+    # offline, run SKILL.md's three commands on a box that has *no fsmes on it*,
+    # and start a plant shaped like the MES those commands read.
+    #
+    # Two reference shapes, both all the way to a running dashboard. One is the
+    # flat MES - one line, one straight routing, one tag folder per machine, no
+    # routing table at all. The other is a brownfield plant: two areas with
+    # cells under them, two routings that meet at a shared machine, and two
+    # machines sharing one OPC device folder. A converter that has only ever
+    # seen one straight line is a converter that gets rewritten at the first
+    # customer, so both run on every pull request.
+    #
+    # The MES box is a second virtual environment with nothing in it, and the
+    # script asserts `import fsmes` fails there before it runs a single skill
+    # command. That is the only honest way to prove the scripts are
+    # stdlib-only: on a plant's MES box there is no fsmes to import.
+    #
+    # Windows as well as Linux because a plant engineer's PC is Windows and
+    # nobody on this project owns one. Facts, never seconds: every wait in the
+    # script is a poll for a state with a generous ceiling.
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    # Two plants, each generating an eight-hour shift once and then replaying
+    # until a lot has been counted, plus two venvs and two fixture databases.
+    # Generous on purpose: a slow runner should not look like a path that does
+    # not work.
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip build
+      - run: python -m build --wheel
+      - name: From an unread SQL MES to a running plant, both shapes, offline
+        shell: bash
+        run: python .github/scripts/plant_from_shape.py --wheel "$(ls dist/*.whl)" --speed 60
+
   image:
     # The container, built and then run, on every pull request.
     #
