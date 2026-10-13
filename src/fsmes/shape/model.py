@@ -345,7 +345,10 @@ def _areas(shape: Shape, stations: list[dict]) -> tuple[tuple[Area, ...], dict[s
         code = code_of(str(row.get("name") or ""))
         if not code:
             continue
-        parent = code_of(str(row.get("parent") or "")) or None
+        # An empty parent means "straight under the site". `code_of("")` is
+        # the placeholder "X", which would hang the area off nothing.
+        named_parent = str(row.get("parent") or "").strip()
+        parent = code_of(named_parent) if named_parent else None
         cells = tuple(code_of(str(c)) for c in (row.get("cells") or []) if str(c).strip())
         areas.append(Area(code=code, name=f"Area {len(areas) + 1}", parent=parent, cells=cells))
     if not areas:

@@ -5,10 +5,11 @@ The file is the thing that leaves the building, so somebody has to read it, and
 nobody should have to read TOML to do that. This prints what the file says, in
 the order a plant engineer would ask it:
 
-    what this says it measured — how many machines and how fast — what every tag
-    looks like — how the line stops and why — quality — orders and shifts — how
-    they number their paperwork — what they talk to the ERP about — and what
-    their MES tracks that FactorySemantics does not.
+    what this says it measured — how many machines and how fast — how the plant
+    is laid out, in areas, routings and tag folders — what every tag looks like —
+    how the line stops and why — quality — orders and shifts — how they number
+    their paperwork — what they talk to the ERP about — and what their MES tracks
+    that FactorySemantics does not.
 
 Run it:
 
@@ -66,6 +67,9 @@ def explain(shape: dict[str, Any], every_tag: bool = False) -> list[str]:
     meta = shape.get("meta", {})
     say("What this file measured")
     say("-----------------------")
+    say(f"  Shape format {_n(meta.get('shape_format', 1))}."
+        + ("" if int(meta.get("shape_format", 1) or 1) >= 2 else
+           " Format 1 says nothing about areas, routings or how the tags are grouped."))
     say(f"  Written {meta.get('written_at', 'at an unknown time')} by {meta.get('written_by', 'unknown')}, "
         f"reading a {meta.get('source_dialect', 'unknown')} database, read-only.")
     say(f"  The window it looked at: {meta.get('window_start')} to {meta.get('window_end')} "
@@ -102,6 +106,56 @@ def explain(shape: dict[str, Any], every_tag: bool = False) -> list[str]:
             f"{kind_text}.")
         if station.get("rate_per_min") in (None, "not measured"):
             say(f"      the rate is not measured: {station.get('rate_basis')}")
+    say("")
+
+    say("How the plant is laid out")
+    say("-------------------------")
+    say("  Areas, cells, routings and tag folders. Format 1 carried none of this; a format-1 file")
+    say("  means one area, one straight line, and one tag node per machine.")
+    hierarchy = shape.get("hierarchy", {})
+    if not hierarchy:
+        say("  Nothing here: this file is a format-1 shape.")
+    else:
+        if not hierarchy.get("found"):
+            say(f"  Areas and cells not measured. {hierarchy.get('why', '')}")
+        else:
+            say(f"  {_n(hierarchy.get('areas_seen'))} area(s) and {_n(hierarchy.get('cells_seen'))} cell(s), "
+                f"read from {hierarchy.get('basis', 'an unstated place')}.")
+            say(f"  {_n(hierarchy.get('stations_placed'))} of {_n(hierarchy.get('stations_total'))} machines "
+                f"sit in one of them. Their own area and cell names are not in this file.")
+            for area in hierarchy.get("areas", []):
+                cells = ", ".join(area.get("cells", [])) or "no cells of its own"
+                parent = area.get("parent") or "the site"
+                say(f"    {area.get('name')} under {parent}: {cells}")
+
+        nodes = shape.get("tag_nodes", {})
+        if not nodes.get("found"):
+            say(f"  How the tags are grouped: not measured. {nodes.get('why', '')}")
+        else:
+            say(f"  The tags hang off {_n(nodes.get('nodes_seen'))} node(s), "
+                f"{_n(nodes.get('nodes_with_more_than_one_machine'))} of which hold more than one machine; "
+                f"the paths are {_n(nodes.get('depth_min'))} to {_n(nodes.get('depth_max'))} deep.")
+            say("  No part of a real tag path is carried — the node names are ours.")
+            for node in nodes.get("nodes", []):
+                where = "/".join(node.get("path", [])) or node.get("name", "?")
+                machines = ", ".join(node.get("stations", [])) or "no machines"
+                say(f"    {where}: {machines} — {_n(node.get('tags'))} tags")
+            if nodes.get("note"):
+                say(f"  {nodes['note']}")
+
+        routings = shape.get("routings", {})
+        if not routings.get("found"):
+            say(f"  Routings: not measured. {routings.get('why', '')}")
+        else:
+            say(f"  {_n(routings.get('routings_seen'))} routing(s) over "
+                f"{_n(routings.get('steps_total'))} steps; "
+                f"{_n(routings.get('stations_on_a_routing'))} machines appear on one.")
+            for routing in routings.get("routings", []):
+                say(f"    {routing.get('name')}: {' -> '.join(routing.get('steps', []))}")
+            orphans = routings.get("steps_on_a_machine_not_in_the_asset_list")
+            if orphans:
+                say(f"  {_n(orphans)} step(s) named a machine that was not in the asset list; "
+                    f"those steps were left out rather than guessed at.")
     say("")
 
     say("Every tag, and what it looks like")

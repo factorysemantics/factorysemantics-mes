@@ -28,6 +28,7 @@ FIXED_TIME = (2026, 1, 1, 0, 0, 0)
 PLANT_FROM_YOUR_MES: tuple[str, ...] = (
     "SKILL.md",
     "FORMAT.md",
+    "example/plant-shape-grouped.toml",
     "example/plant-shape.toml",
     "queries/mssql/01_inventory.sql",
     "queries/mssql/01b_row_count.sql",
@@ -38,6 +39,7 @@ PLANT_FROM_YOUR_MES: tuple[str, ...] = (
     "queries/mssql/05_assets.sql",
     "queries/mssql/05b_tag_samples.sql",
     "queries/mssql/05c_tag_samples_nostate.sql",
+    "queries/mssql/05d_routings.sql",
     "queries/mssql/06_states.sql",
     "queries/mssql/06b_production.sql",
     "queries/mssql/06c_quality.sql",
@@ -54,6 +56,7 @@ PLANT_FROM_YOUR_MES: tuple[str, ...] = (
     "queries/sqlite/05_assets.sql",
     "queries/sqlite/05b_tag_samples.sql",
     "queries/sqlite/05c_tag_samples_nostate.sql",
+    "queries/sqlite/05d_routings.sql",
     "queries/sqlite/06_states.sql",
     "queries/sqlite/06b_production.sql",
     "queries/sqlite/06c_quality.sql",

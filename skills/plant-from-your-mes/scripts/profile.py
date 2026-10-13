@@ -67,7 +67,12 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import leakcheck  # same folder, deliberately: this ships as a folder, not as a package
 
-VERSION = "1"
+VERSION = "2"
+#: Which version of plant-shape.toml this writes. Format 2 adds three
+#: sections - [hierarchy], [tag_nodes] and [routings] - and changes nothing
+#: else, so a reader that understands format 1 reads everything else in a
+#: format-2 file unchanged. See FORMAT.md.
+SHAPE_FORMAT = 2
 HERE = Path(__file__).resolve().parent
 SKILL_ROOT = HERE.parent
 
@@ -397,7 +402,8 @@ SECTION_HINTS: dict[str, dict[str, Any]] = {
         "columns": {
             "id": ("id", "key", "no", "pk"),
             "code": ("code", "name", "ident", "tag", "number"),
-            "line": ("line", "area", "cell", "dept", "section", "plant"),
+            "line": ("line", "area", "dept", "section", "plant"),
+            "cell": ("cell", "workcenter", "work_center", "group", "subarea"),
             "sequence": ("seq", "sequence", "position", "sort", "order_no", "step"),
         },
         "required": ("id", "code"),
@@ -490,6 +496,21 @@ SECTION_HINTS: dict[str, dict[str, Any]] = {
             "revision": ("rev", "version", "ver"),
         },
         "required": ("number",),
+    },
+    "routings": {
+        # What feeds what. A plant with two cells feeding one shared machine
+        # cannot be described without this, and most MESs have it under a
+        # name like this. A plant whose MES has no such table says
+        # `found = false` and gets one straight routing, said out loud.
+        "tables": ("routing", "route", "operation", "op_seq", "opseq",
+                   "process_plan", "workflow", "itinerary"),
+        "columns": {
+            "code": ("routing", "route", "plan", "header", "code", "item"),
+            "asset": ("asset", "machine", "equipment", "resource", "workcenter",
+                      "work_center", "station", "device"),
+            "sequence": ("seq", "sequence", "step", "position", "sort", "order_no"),
+        },
+        "required": ("code", "asset"),
     },
     "erp": {
         "tables": ("erp", "interface", "integration", "outbound", "api", "call", "message",
@@ -597,6 +618,12 @@ def write_mapping(path: Path, mapping: dict[str, Any], notes: list[str]) -> None
 def _toml_scalar(value: Any) -> str:
     if value is None:
         return '"not measured"'
+    if isinstance(value, (list, tuple)):
+        # Format 2 carries three lists of generated codes - an area's cells,
+        # a node's browse path and its machines, a routing's steps. An empty
+        # one is empty and not "not measured": the row exists because
+        # something was read.
+        return "[" + ", ".join(_toml_scalar(item) for item in value) + "]"
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, int):
@@ -665,6 +692,14 @@ class Profiler:
         self.skipped: list[str] = []
         self.station_of: dict[str, int] = {}
         self.stations: list[dict[str, Any]] = []
+        #: What the asset register said about where each machine sits, by
+        #: station number: the raw line and cell values, counted and then
+        #: turned into AR-/CL- codes by read_hierarchy and discarded.
+        self.place: dict[int, tuple[str, str]] = {}
+        #: Every tag path seen per asset key. Used to work out how the tags
+        #: are organised above the machines and then thrown away; no segment
+        #: of any of them is written out.
+        self.tag_paths: dict[str, list[str]] = defaultdict(list)
         self.window: tuple[float | None, float | None] = (None, None)
         self.rows_read = 0
 
@@ -718,6 +753,8 @@ class Profiler:
         for index, row in enumerate(sorted(rows, key=sort_key), start=1):
             key = str(row.get("asset_key"))
             self.station_of[key] = index
+            self.place[index] = (str(row.get("line_code") or "").strip(),
+                                 str(row.get("cell_code") or "").strip())
             self.stations.append({
                 "name": f"ST-{index:02d}",
                 "sequence": index,
@@ -738,6 +775,8 @@ class Profiler:
         grouped: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
         for row in rows:
             grouped[(str(row.get("asset_key")), str(row.get("tag_path")))].append(row)
+        for asset_key, path in sorted(grouped):
+            self.tag_paths[asset_key].append(path)
 
         per_station: dict[int, list[dict[str, Any]]] = defaultdict(list)
         counters: dict[int, int] = defaultdict(int)
@@ -938,6 +977,186 @@ class Profiler:
             cut = sentence[:want].rstrip(" ,.;-")
             return cut
         return (sentence + " " + GENERIC_WORDING["other"])[:want].rstrip(" ,.;-")
+
+    # ---- step 5: where the machines sit (format 2)
+    def read_hierarchy(self) -> dict[str, Any]:
+        """Areas and cells, as generated codes in first-seen order.
+
+        A machine sits in an area and often in a cell inside it, and the pack
+        this becomes carries that as an ISA-95 hierarchy. The source's own
+        words for its areas never leave: what is carried is how many there
+        are and which machine is in which, which is the whole of what a
+        look-alike plant needs.
+
+        `found = false` when the asset register has no such column - not one
+        area, because "the source system was never asked" and "the source
+        system said one" are different facts.
+        """
+        if not self.stations:
+            return {"found": False, "why": "no asset table was mapped, so there is no hierarchy to read"}
+        lines = [self.place.get(s["sequence"], ("", ""))[0] for s in self.stations]
+        if not any(lines):
+            return {"found": False,
+                    "why": ("the asset register has no line, area or department column that this "
+                            "mapping names - ask the person whether machines are grouped by area "
+                            "here, and which column says so")}
+        areas: dict[str, str] = {}
+        cells: dict[tuple[str, str], str] = {}
+        for station in self.stations:
+            line, cell = self.place.get(station["sequence"], ("", ""))
+            if line not in areas:
+                areas[line] = f"AR-{len(areas) + 1:02d}"
+            station["area"] = areas[line]
+            if cell:
+                if (line, cell) not in cells:
+                    cells[(line, cell)] = f"CL-{len(cells) + 1:02d}"
+                station["cell"] = cells[(line, cell)]
+        rows = [
+            {"name": code, "parent": "",
+             "cells": [cell_code for (line, _c), cell_code in cells.items() if line == line_value],
+             "stations": sum(1 for st in self.stations if st.get("area") == code)}
+            for line_value, code in areas.items()
+        ]
+        return {
+            "found": True,
+            "basis": ("the line/area column on the asset register"
+                      + (", with a cell column inside it" if cells else "")),
+            "areas_seen": len(areas),
+            "cells_seen": len(cells),
+            "stations_placed": sum(1 for st in self.stations if st.get("area")),
+            "stations_total": len(self.stations),
+            "areas": rows,
+        }
+
+    # ---- step 5: how the tags are organised (format 2)
+    def read_tag_nodes(self) -> dict[str, Any]:
+        """The grouping above the machines, with every real segment discarded.
+
+        A tag path is `<something>.<something>.<something>.<the tag>`, and the
+        part before the tag is the folder it lives in. What is carried out is
+        the *shape* of that: how deep it is, and which machines share each
+        level. The segment text is read, counted and thrown away in the same
+        breath, exactly like the naming grammar.
+
+        This is the one thing that lets the look-alike plant serve an address
+        space like the real one: a Kepware channel or an Ignition device
+        folder holds a PLC's worth of machines, and a map with one node per
+        machine cannot say that.
+        """
+        if not self.tag_paths:
+            return {"found": False,
+                    "why": "no tag history was read, so nothing says how the tags are organised"}
+        # The folder each machine's tags mostly live in, as raw segments.
+        prefixes: dict[int, tuple[str, ...]] = {}
+        counts: dict[int, int] = {}
+        split: dict[int, int] = {}
+        for asset_key, paths in self.tag_paths.items():
+            station = self.station_of.get(asset_key)
+            if station is None:
+                continue
+            seen: Counter[tuple[str, ...]] = Counter()
+            for path in paths:
+                parts = tuple(part for part in re.split(r"[./\\:>|]+", path) if part)
+                seen[parts[:-1]] += 1          # the last segment is the tag itself
+            if len(seen) > 1:
+                split[station] = len(seen)
+            prefix, held = seen.most_common(1)[0]
+            prefixes[station] = prefix
+            counts[station] = held
+        deep = {station: prefix for station, prefix in prefixes.items() if prefix}
+        if not deep:
+            return {"found": False,
+                    "why": ("every tag path is one segment, so this MES's tags are not organised "
+                            "in folders at all - the plant gets one node per machine")}
+        # Generated names, assigned root first, so two machines that share a
+        # folder share its code and the depth is preserved.
+        codes: dict[tuple[str, ...], str] = {}
+        def code_for(prefix: tuple[str, ...]) -> str:
+            if prefix not in codes:
+                codes[prefix] = f"ND-{len(codes) + 1:02d}"
+            return codes[prefix]
+        for station in sorted(deep):
+            prefix = deep[station]
+            for depth in range(1, len(prefix) + 1):
+                code_for(prefix[:depth])
+        leaves: dict[tuple[str, ...], list[int]] = defaultdict(list)
+        for station in sorted(deep):
+            leaves[deep[station]].append(station)
+        rows = []
+        for prefix, under in leaves.items():
+            path = [code_for(prefix[:depth]) for depth in range(1, len(prefix) + 1)]
+            rows.append({
+                "name": path[-1],
+                "path": path,
+                "stations": [f"ST-{station:02d}" for station in under],
+                "tags": sum(counts[station] for station in under),
+            })
+        depths = sorted(len(prefix) for prefix in leaves)
+        shared = [row for row in rows if len(row["stations"]) > 1]
+        out = {
+            "found": True,
+            "basis": "the tag path with its last segment (the tag itself) removed",
+            "nodes_seen": len(rows),
+            "nodes_with_more_than_one_machine": len(shared),
+            "depth_min": depths[0],
+            "depth_max": depths[-1],
+            "stations_placed": len(deep),
+            "stations_total": len(self.stations),
+            "segment_text_carried": False,
+            "nodes": rows,
+        }
+        if split:
+            out["machines_whose_tags_span_more_than_one_node"] = len(split)
+            out["note"] = ("a machine whose tags are spread over several folders is listed under "
+                           "the one holding most of them, and the count above says how many "
+                           "machines that was")
+        return out
+
+    # ---- step 5: what feeds what (format 2)
+    def read_routings(self) -> dict[str, Any]:
+        """The routings, as station sequences with generated names."""
+        rows = self._try("05d_routings")
+        if not rows:
+            return {"found": False,
+                    "why": ("no routing or operation table was mapped - ask the person whether "
+                            "this MES holds a routing per product, and which table it is in. "
+                            "Without it the plant is one straight line, which is a guess this "
+                            "file will not make for you")}
+        steps: dict[str, list[tuple[float, int]]] = defaultdict(list)
+        unknown = 0
+        for row in rows:
+            station = self.station_of.get(str(row.get("asset_key")))
+            if station is None:
+                unknown += 1
+                continue
+            seq = _f(row.get("seq"))
+            steps[str(row.get("routing_key"))].append(
+                (seq if seq is not None else float(len(steps)), station))
+        if not steps:
+            return {"found": False,
+                    "why": ("a routing table was read and not one of its steps is on a machine "
+                            "in the asset list - the mapping has the wrong column for the "
+                            "machine on a routing step")}
+        out = []
+        for index, key in enumerate(sorted(steps), start=1):
+            ordered = [station for _seq, station in sorted(steps[key])]
+            seen: list[int] = []
+            for station in ordered:
+                if station not in seen:
+                    seen.append(station)
+            out.append({"name": f"RT-{index:02d}",
+                        "steps": [f"ST-{station:02d}" for station in seen]})
+        covered = {station for row in steps.values() for _s, station in row}
+        return {
+            "found": True,
+            "basis": "a routing table with one row per step, keyed by routing and ordered by step",
+            "routings_seen": len(out),
+            "steps_total": sum(len(row["steps"]) for row in out),
+            "stations_on_a_routing": len(covered),
+            "stations_total": len(self.stations),
+            "steps_on_a_machine_not_in_the_asset_list": unknown,
+            "routings": out,
+        }
 
     # ---- step 6: production
     def read_production(self) -> dict[str, Any]:
@@ -1195,6 +1414,7 @@ def build_document(profiler: Profiler, catalogue: dict[str, list[str]], dialect:
     low, high = profiler.window
     doc.table("meta")
     doc.keys({
+        "shape_format": SHAPE_FORMAT,
         "written_by": f"plant-from-your-mes {VERSION}",
         "written_at": datetime.now(tz=UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
         "source_dialect": dialect,
@@ -1234,6 +1454,14 @@ def build_document(profiler: Profiler, catalogue: dict[str, list[str]], dialect:
             "running_seconds": _round(station.get("running_seconds"), 1),
             "analogs_total": len(station["analogs"]),
         })
+        # Format 2, and written only when the asset register actually said
+        # so: an `area = "not measured"` on every station would be a field
+        # pretending to an answer, and [hierarchy] already says plainly that
+        # nothing was read.
+        if station.get("area"):
+            doc.key("area", station["area"])
+        if station.get("cell"):
+            doc.key("cell", station["cell"])
         for tag in station["analogs"]:
             doc.array_table("stations.analogs")
             doc.keys({
@@ -1246,6 +1474,27 @@ def build_document(profiler: Profiler, catalogue: dict[str, list[str]], dialect:
                 "state_correlation": tag["state_correlation"],
                 "unit_dropped": tag["unit_dropped"],
             })
+
+    # Format 2's three sections. Each is independent, each says whether it
+    # was measured, and a reader that only understands format 1 skips all
+    # three and reads the rest of the file exactly as before.
+    hierarchy = sections["hierarchy"]
+    doc.table("hierarchy")
+    doc.keys({k: v for k, v in hierarchy.items() if k != "areas"})
+    if hierarchy.get("found"):
+        doc.rows("areas", hierarchy["areas"])
+
+    nodes = sections["tag_nodes"]
+    doc.table("tag_nodes")
+    doc.keys({k: v for k, v in nodes.items() if k != "nodes"})
+    if nodes.get("found"):
+        doc.rows("nodes", nodes["nodes"])
+
+    routings = sections["routings"]
+    doc.table("routings")
+    doc.keys({k: v for k, v in routings.items() if k != "routings"})
+    if routings.get("found"):
+        doc.rows("routings", routings["routings"])
 
     stops = sections["stops"]
     doc.table("stops")
@@ -1376,10 +1625,18 @@ def run(args: argparse.Namespace) -> int:
 
         profiler.read_stations()
         tags = profiler.read_tags()
+        # After the tags, because the grouping is read off the tag paths; and
+        # before the document, because it writes an area onto each station.
+        hierarchy = profiler.read_hierarchy()
+        tag_nodes = profiler.read_tag_nodes()
+        routings = profiler.read_routings()
         stops = profiler.read_states()
         profiler.read_production()
         profiler.finish_stations(tags)
         sections = {
+            "hierarchy": hierarchy,
+            "tag_nodes": tag_nodes,
+            "routings": routings,
             "stops": stops,
             "quality": profiler.read_quality(),
             "orders": profiler.read_orders(),
@@ -1407,9 +1664,21 @@ def run(args: argparse.Namespace) -> int:
 
         out = Path(args.out)
         out.write_text(text, encoding="utf-8")
-        print(f"wrote {out} — {len(profiler.stations)} stations, "
+        print(f"wrote {out} — shape format {SHAPE_FORMAT}, {len(profiler.stations)} stations, "
               f"{sum(len(s['analogs']) for s in profiler.stations)} tags, "
               f"{len(also)} table(s) reported as also tracked")
+        for label, body in (("areas", hierarchy), ("tag nodes", tag_nodes), ("routings", routings)):
+            if body.get("found"):
+                print(f"  {label}: "
+                      + (f"{body.get('areas_seen')} area(s), {body.get('cells_seen')} cell(s)"
+                         if label == "areas" else
+                         f"{body.get('nodes_seen')} node(s), "
+                         f"{body.get('nodes_with_more_than_one_machine')} with more than one machine"
+                         if label == "tag nodes" else
+                         f"{body.get('routings_seen')} routing(s) over "
+                         f"{body.get('stations_on_a_routing')} of {body.get('stations_total')} machines"))
+            else:
+                print(f"  {label}: not measured — the file says why")
         print(f"  {verdict}")
         if profiler.skipped:
             print(f"  {len(profiler.skipped)} query(ies) did not run; the file says which and why")

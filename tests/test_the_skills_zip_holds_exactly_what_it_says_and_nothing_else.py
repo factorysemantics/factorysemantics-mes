@@ -43,7 +43,7 @@ def test_the_zip_holds_the_skill_md_the_queries_and_the_three_scripts(tmp_path: 
     assert names == [f"plant-from-your-mes/{p}" for p in skills.PLANT_FROM_YOUR_MES]
     assert "plant-from-your-mes/SKILL.md" in names
     assert "plant-from-your-mes/FORMAT.md" in names
-    assert sum(1 for n in names if n.endswith(".sql")) == 32
+    assert sum(1 for n in names if n.endswith(".sql")) == 34
     assert sorted(n for n in names if "/scripts/" in n) == [
         "plant-from-your-mes/scripts/explain.py",
         "plant-from-your-mes/scripts/leakcheck.py",

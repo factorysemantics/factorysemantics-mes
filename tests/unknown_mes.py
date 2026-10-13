@@ -30,9 +30,19 @@ side: order numbers, lot numbers, pallet ids, customer names, operator codes,
 inspector codes, non-conformance numbers, and free-text downtime notes written
 the way a maintenance technician writes them.
 
+It builds in one of two styles. `style="flat"` is the original: one line, one
+tag node per machine, no routing table — a format-1 shape. `style="grouped"` is
+the same six machines in a plant organised the way a brownfield site is: two
+areas with cells under them, tags living under channel/device folders with
+several machines sharing one device, and a routing table with two routings that
+meet at a shared machine. The second style exists because a converter that only
+ever saw one straight line is a converter that will be rewritten at the first
+customer.
+
 Run it by hand:
 
     python tests/unknown_mes.py /tmp/unknown.db
+    python tests/unknown_mes.py /tmp/grouped.db grouped
 """
 from __future__ import annotations
 
@@ -212,6 +222,53 @@ UNITS = {
 }
 
 
+# ------------------------------------------------- the grouped style's layout
+#
+# Which area and cell each machine sits in, by sequence number. Two areas, four
+# cells, so the shape file has a hierarchy to read rather than one flat line.
+# Their own words, which must never come out the other side.
+ASSET_PLACE = {
+    1: ("BLOW-AREA", "CELL-BLOW"),
+    2: ("BLOW-AREA", "CELL-BLOW"),
+    3: ("BLOW-AREA", "CELL-WASH"),
+    4: ("FILL-AREA", "CELL-FILL"),
+    5: ("FILL-AREA", "CELL-FILL"),
+    6: ("FILL-AREA", "CELL-PACK"),
+}
+
+# Where each machine's tags live. A Kepware or Ignition server addresses
+# channel/device/tag, and a device is a PLC, not a machine: two machines on one
+# PLC share one node, and the machine is a prefix on the tag name. That is the
+# organisation format 1 could not describe at all.
+TAG_FOLDER = {
+    1: "KEP.CH_NORTH.PLC_01",
+    2: "KEP.CH_NORTH.PLC_01",
+    3: "KEP.CH_NORTH.PLC_02",
+    4: "KEP.CH_SOUTH.PLC_03",
+    5: "KEP.CH_SOUTH.PLC_03",
+    6: "KEP.CH_SOUTH.PLC_04",
+}
+
+# Two routings that are not one straight line: two starts, a machine they both
+# pass through, a machine each, and one shared end. Their own routing codes.
+ROUTE_STEPS = {
+    "RTE-STILL-500": (1, 3, 5, 6),
+    "RTE-SPARK-500": (2, 3, 4, 6),
+}
+
+GROUPED_DDL = """
+ALTER TABLE plant_asset ADD COLUMN cell_code TEXT;
+CREATE TABLE route_step (
+    rs_id       INTEGER PRIMARY KEY,
+    route_code  TEXT NOT NULL,
+    route_name  TEXT NOT NULL,
+    asset_id    INTEGER NOT NULL REFERENCES plant_asset(asset_id),
+    step_no     INTEGER NOT NULL,
+    setup_min   REAL
+);
+"""
+
+
 def _stamp(second: int) -> str:
     return (EPOCH + timedelta(seconds=second)).isoformat().replace("+00:00", "Z")
 
@@ -246,8 +303,16 @@ def _intervals(rows: list[dict]) -> list[tuple[int, int, int]]:
     return out
 
 
-def build(target: Path, line_json: Path) -> Path:
-    """Write the foreign MES to `target` and return it."""
+def build(target: Path, line_json: Path, *, style: str = "flat") -> Path:
+    """Write the foreign MES to `target` and return it.
+
+    `style` is "flat" (one line, one tag node per machine, no routings) or
+    "grouped" (two areas with cells, tags under channel/device folders, two
+    routings meeting at a shared machine).
+    """
+    if style not in ("flat", "grouped"):
+        raise ValueError(f"style must be 'flat' or 'grouped', not {style!r}")
+    grouped = style == "grouped"
     config, tables = _generate_line(line_json)
     duration = int(config.get("duration_s", 3600))
     rng = random.Random(20261004)
@@ -257,17 +322,27 @@ def build(target: Path, line_json: Path) -> Path:
         target.unlink()
     db = sqlite3.connect(target)
     db.executescript(DDL)
+    if grouped:
+        db.executescript(GROUPED_DDL)
 
     # ---------------------------------------------------------- assets, tags
     asset_ids: dict[str, int] = {}
     for index, station in enumerate(config["stations"], start=1):
         name = station["name"]
         asset_ids[name] = index
-        db.execute(
-            "INSERT INTO plant_asset (asset_id, asset_code, asset_name, asset_kind, line_code, seq_no)"
-            " VALUES (?,?,?,?,?,?)",
-            (index, f"KC-LN3-M{index:02d}", f"{name} unit {index}", "machine", "KC-LN3", index),
-        )
+        if grouped:
+            area, cell = ASSET_PLACE[index]
+            db.execute(
+                "INSERT INTO plant_asset (asset_id, asset_code, asset_name, asset_kind, line_code,"
+                " seq_no, cell_code) VALUES (?,?,?,?,?,?,?)",
+                (index, f"{area}-M{index:02d}", f"{name} unit {index}", "machine", area, index, cell),
+            )
+        else:
+            db.execute(
+                "INSERT INTO plant_asset (asset_id, asset_code, asset_name, asset_kind, line_code,"
+                " seq_no) VALUES (?,?,?,?,?,?)",
+                (index, f"KC-LN3-M{index:02d}", f"{name} unit {index}", "machine", "KC-LN3", index),
+            )
 
     tag_ids: dict[tuple[str, str], int] = {}
     next_tag = 1
@@ -277,9 +352,16 @@ def build(target: Path, line_json: Path) -> Path:
         for column in columns:
             unit = UNITS.get(column, _unit_for(station, column))
             kind = "INT" if column in COUNTER_COLUMNS or column in DISCRETE_COLUMNS else "FLOAT"
+            index = asset_ids[name]
+            if grouped:
+                # channel.device.tag — the machine is a prefix on the tag name,
+                # because the device is a PLC and two machines share one.
+                path = f"{TAG_FOLDER[index]}.M{index:02d}_{column.upper()}"
+            else:
+                path = f"KC.LN3.M{index:02d}.{column.upper()}"
             db.execute(
                 "INSERT INTO tag_definition (tag_id, asset_id, tag_path, eng_unit, value_type) VALUES (?,?,?,?,?)",
-                (next_tag, asset_ids[name], f"KC.LN3.M{asset_ids[name]:02d}.{column.upper()}", unit, kind),
+                (next_tag, index, path, unit, kind),
             )
             tag_ids[(name, column)] = next_tag
             next_tag += 1
@@ -304,6 +386,19 @@ def build(target: Path, line_json: Path) -> Path:
                     continue
                 samples.append((tag_ids[(name, column)], stamp, float(value)))
     db.executemany("INSERT INTO tag_sample (tag_id, sample_ts, num_value) VALUES (?,?,?)", samples)
+
+    # ------------------------------------------------------------- routings
+    if grouped:
+        step_id = 0
+        for code, steps in ROUTE_STEPS.items():
+            for position, asset in enumerate(steps, start=10):
+                step_id += 1
+                db.execute(
+                    "INSERT INTO route_step (rs_id, route_code, route_name, asset_id, step_no,"
+                    " setup_min) VALUES (?,?,?,?,?,?)",
+                    (step_id, code, f"{code} standard process plan", asset, position,
+                     round(rng.uniform(4.0, 25.0), 1)),
+                )
 
     # ------------------------------------------------------- their vocabulary
     for index, (code, category, text) in enumerate(STOP_REASONS, start=1):
@@ -465,11 +560,12 @@ def _unit_for(station: dict, column: str) -> str | None:
 
 
 def main() -> None:
-    if len(sys.argv) != 2:
-        sys.exit("usage: python tests/unknown_mes.py <target.db>")
+    if len(sys.argv) not in (2, 3):
+        sys.exit("usage: python tests/unknown_mes.py <target.db> [flat|grouped]")
     root = Path(__file__).resolve().parent.parent
-    path = build(Path(sys.argv[1]), root / "labs" / "kepsim" / "line.json")
-    print(f"wrote {path}")
+    style = sys.argv[2] if len(sys.argv) == 3 else "flat"
+    path = build(Path(sys.argv[1]), root / "labs" / "kepsim" / "line.json", style=style)
+    print(f"wrote {path} ({style})")
 
 
 if __name__ == "__main__":
