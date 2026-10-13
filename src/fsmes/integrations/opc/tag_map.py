@@ -7,7 +7,19 @@ Pointing the agent at real PLCs means editing this file, nothing else.
 A machine entry carries everything that differs between sources, because real
 servers disagree about all of it:
 
-    object          browse name under Objects/ (the twin's own simulator)
+    object          browse name of the machine's own node (the twin's own
+                    simulator puts it straight under Objects/)
+    group           the folders the object sits in, outermost first, e.g.
+                    ["Area1", "PLC_02"]. Absent or empty means "straight
+                    under Objects/", which is one node per machine and is
+                    what every map written before this field said. A
+                    Kepware or Ignition server almost never looks like
+                    that: its tags are organised by channel, device and
+                    folder, and several machines share one device node.
+                    The group is a browse path only — the manifest, the
+                    replay CSVs and the generated tables stay keyed by
+                    `object`, because the folders a server happens to use
+                    say nothing about which machine a row belongs to.
     name            display name for humans; defaults to the equipment code
     node_id         a printf-style node-id template, e.g.
                     "ns=2;s=SimLine.LD.{tag}" — used INSTEAD of browsing when
@@ -79,9 +91,11 @@ DEFAULT_ORDER_TAG = "OrderCode"
 @dataclass(frozen=True)
 class MachineMap:
     equipment: str  # MES equipment code (a work unit)
-    object: str  # browse name of the OPC UA object under Objects/
+    object: str  # browse name of the OPC UA object holding this machine's tags
     cycle_seconds: float  # rated cycle time, used by the simulator
     name: str = ""  # display name; empty means "use the code"
+    # The folders `object` sits in, outermost first. Empty = under Objects/.
+    group: tuple[str, ...] = ()
     analog: str = DEFAULT_ANALOG  # name of the primary process value
     # Everything else this machine exposes: further process values, its
     # setpoints, its counters, its alarm word. `analog` stays the primary
@@ -113,6 +127,16 @@ class MachineMap:
         if self.nodes and not self.node_id:
             return tuple(tag for tag in ordered if tag in self.nodes)
         return ordered
+
+    @property
+    def browse_path(self) -> tuple[str, ...]:
+        """The names to walk from Objects/ to reach this machine's node.
+
+        One element for a map that says nothing about grouping, which is
+        every map written before `group` existed and every twin-simulator
+        line: the machine's node is a direct child of Objects/.
+        """
+        return (*self.group, self.object)
 
     @property
     def by_node_id(self) -> bool:
@@ -269,6 +293,7 @@ def load_tag_map(path: Path, manifest: dict | None = None) -> list[MachineMap]:
             cycle_seconds=float(m.get("cycle_seconds", 5.0)),
             name=m.get("name", ""),
             analog=m.get("analog", DEFAULT_ANALOG),
+            group=tuple(str(part) for part in (m.get("group") or ())),
             extra_tags=_extra_tags(m, tables),
             node_id=m.get("node_id"),
             nodes=dict(m.get("nodes") or {}),
@@ -283,6 +308,24 @@ def load_tag_map(path: Path, manifest: dict | None = None) -> list[MachineMap]:
             )
         machines.append(spec)
     return machines
+
+
+async def folder_for(objects, idx: int, spec: MachineMap, made: dict) -> object:
+    """The node a machine's variables hang off, creating its folders once.
+
+    Two machines on the same PLC share one device node, so the folders are
+    cached by the path that reached them rather than created per machine —
+    creating `Area1/PLC_02` twice would either fail or, worse, leave two
+    nodes with the same browse name and a client that reads one of them.
+    """
+    parent = objects
+    walked: tuple[str, ...] = ()
+    for part in spec.group:
+        walked = (*walked, part)
+        if walked not in made:
+            made[walked] = await parent.add_object(idx, part)
+        parent = made[walked]
+    return parent
 
 
 def _extra_tags(entry: dict, tables: dict) -> tuple[str, ...]:

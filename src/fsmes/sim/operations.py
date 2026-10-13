@@ -321,6 +321,77 @@ def keep_planned(script: dict) -> int:
         return 0
 
 
+#: How many stops one turn through a plant's reason mix stands for. The mix
+#: is shares, and a share only becomes a count once it is multiplied by
+#: something; a hundred is small enough that a shift sees whole turns of it
+#: and fine enough to hold a 1 % category.
+MIX_PER_TURN = 100
+
+
+def _stop_rotation(stops: dict) -> tuple[str | None, ...]:
+    """The reason words to put on long stops, in the plant's own proportions.
+
+    A plant's `stops.mix` says how often its operators pick each reason, and
+    `stops.leave_unlabelled` says how often nobody picked one at all. Both
+    are facts the shape measured on the source system, and the floor is only
+    believable if its stops come out in those proportions rather than all
+    carrying one word.
+
+    It is a rotation and not a draw: the same pack must produce the same
+    shift twice, and a random reason per stop would make every count on the
+    losses page move between two runs of the same scored line. Changeover
+    and the micro-stop word are left out, because the length of a stop
+    already decides those two and drawing them again here would book them
+    twice.
+
+    Empty for a script with no mix, which is every pack written before one
+    existed - those keep naming every long stop with the single word their
+    script gives.
+    """
+    mix = stops.get("mix") or []
+    if not mix:
+        return ()
+    decided = {stops.get("changeover"), stops.get("micro_stop")}
+    weights: list[tuple[str, float]] = []
+    for entry in mix:
+        reason = entry.get("reason")
+        share = float(entry.get("share") or 0.0)
+        if not reason or reason in decided or share <= 0:
+            continue
+        weights.append((reason, share))
+    if not weights:
+        return ()
+    total = sum(share for _, share in weights)
+    unlabelled = min(max(float(stops.get("leave_unlabelled") or 0.0), 0.0), 0.99)
+    named_turns = round(MIX_PER_TURN * (1.0 - unlabelled))
+    # Biggest category first, and at least one of every category the shape
+    # measured: a reason recorded on 0.4 % of stops is still a reason this
+    # plant's operators have, and rounding it away would quietly shorten the
+    # list a person picks from.
+    counts = [(reason, max(round(named_turns * share / total), 1))
+              for reason, share in sorted(weights, key=lambda w: (-w[1], w[0]))]
+    out: list[str | None] = []
+    for reason, count in counts:
+        out.extend([reason] * count)
+    blanks = max(MIX_PER_TURN - len(out), 0) if unlabelled > 0 else 0
+    if unlabelled > 0 and blanks == 0:
+        blanks = 1                      # the share is not zero, so neither is this
+    # Spread the unnamed ones through the turn rather than leaving them in a
+    # block at the end, so an hour of the shift is not entirely unexplained.
+    if blanks:
+        step = max(len(out) // blanks, 1)
+        spread: list[str | None] = []
+        placed = 0
+        for position, reason in enumerate(out):
+            if placed < blanks and position % step == 0:
+                spread.append(None)
+                placed += 1
+            spread.append(reason)
+        spread.extend([None] * (blanks - placed))
+        out = spread
+    return tuple(out)
+
+
 def _utcnow() -> datetime:
     """Now, naive UTC - the same instant the MES stores on every row."""
     return datetime.now(UTC).replace(tzinfo=None)
@@ -422,6 +493,13 @@ class Floor:
         # That an idle machine cannot be told from a starved or a blocked one
         # is said once, not every twenty seconds.
         self._said_idle_cannot_be_told_apart = False
+        # The reason words this floor works through for a stop longer than a
+        # micro stop, and how far through them it has got. Empty for a pack
+        # whose script has no `stops.mix`, which is every pack written before
+        # one existed and both lab packs: those name every long stop with the
+        # one word their script gives.
+        self._stop_rotation = _stop_rotation(self.script.get("stops") or {})
+        self._stop_turn = 0
         # The sampling plans this floor works to: which characteristics it
         # inspects several pieces at a time, and where the pieces come from.
         # Empty for a plant whose script has no `sampling` section, which is
@@ -1809,6 +1887,17 @@ class Floor:
             reason_code = stops.get("changeover")
         elif seconds < float(stops.get("micro_stop_under_s") or 0.0):
             reason_code = stops.get("micro_stop")
+        elif self._stop_rotation:
+            reason_code = self._stop_rotation[self._stop_turn % len(self._stop_rotation)]
+            self._stop_turn += 1
+            if reason_code is None:
+                # This plant leaves some share of its stops with nobody
+                # having said why, and the screens say so under each one.
+                # Naming them all would invent a shop floor more diligent
+                # than the one the shape was taken from.
+                log.info("left a stop unlabelled", equipment=code,
+                         state=seen["state"], about_line_seconds=round(seconds))
+                return False
         else:
             reason_code = stops.get("longer_than_a_micro_stop")
         if not reason_code:

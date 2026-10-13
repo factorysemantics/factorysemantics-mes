@@ -16,7 +16,7 @@ import structlog
 from asyncua import Server, ua
 
 from fsmes.config import Settings
-from fsmes.integrations.opc.tag_map import MachineMap, load_tag_map
+from fsmes.integrations.opc.tag_map import MachineMap, folder_for, load_tag_map
 
 log = structlog.get_logger("opc.simulator")
 
@@ -83,8 +83,10 @@ async def run(settings: Settings, speed: float | None = None) -> None:
     idx = await server.register_namespace(settings.opc_namespace)
 
     sims: list[SimMachine] = []
+    folders: dict = {}
     for spec in machines:
-        obj = await server.nodes.objects.add_object(idx, spec.object)
+        parent = await folder_for(server.nodes.objects, idx, spec, folders)
+        obj = await parent.add_object(idx, spec.object)
         state = await obj.add_variable(idx, "State", "idle")
         good = await obj.add_variable(idx, "GoodCount", ua.Variant(0, ua.VariantType.Int64))
         scrap = await obj.add_variable(idx, "ScrapCount", ua.Variant(0, ua.VariantType.Int64))
