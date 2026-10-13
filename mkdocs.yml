@@ -147,6 +147,7 @@ nav:
       - Design — the configuration audit: design/config-audit-2026-09-21.md
       - Design — the agentic harness: design/agentic-harness.md
       - Design — deep analysis in the AI tab: design/deep-analysis.md
+      - Design — a pack inside a pack: design/pack-in-pack.md
       - Decisions:
           - decisions/index.md
           - decisions/0001-apache-2-with-dco.md

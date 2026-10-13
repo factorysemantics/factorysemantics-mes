@@ -8,9 +8,20 @@ steps, and writes **one file: `plant-shape.toml`**.
 
 You read that file before it goes anywhere. Then it is yours to send, or not.
 
-Nothing in this folder runs a simulation. Producing the file is the whole job.
-Turning the file into a running plant you can click around is the next piece of
-work and is not built yet.
+Nothing in this folder runs a simulation and nothing in it needs the internet.
+Producing the file is the whole job.
+
+**Then one command turns that file into a plant you can click around**, on the
+PC you installed FactorySemantics on:
+
+```
+fsmes demo from-shape plant-shape.toml --name acme
+```
+
+It asks you one question — how many pieces of space there are between two
+machines — and starts a plant with your machine count, your line order, your
+rates and scrap, your tags' units and noise, your stop mix, your order sizes and
+your shifts on `http://127.0.0.1:8010/dashboard`. The whole path is below.
 
 ## What leaves the building
 
@@ -47,7 +58,7 @@ so a simulated plant reads like a plant and not like a form.
 ### Three things that make that checkable rather than a promise
 
 1. **Every query is `SELECT` only and bounded.** They are short, they are in
-   `queries/`, and you can read all thirty-two of them in ten minutes. A test in
+   `queries/`, and you can read all thirty-four of them in ten minutes. A test in
    this repository fails if one of them ever contains `INSERT`, `UPDATE`,
    `DELETE`, `DROP`, `CREATE`, `EXEC` or a second statement.
 2. **Nothing phones home and nothing installs.** The three scripts use the
@@ -59,10 +70,160 @@ so a simulated plant reads like a plant and not like a form.
    thing in the file: *"passed: 0 of 1,015 identifying values appear in this
    file"*.
 
-## How to run it
+## The whole path, end to end
+
+Four moves, three machines, nothing leaving the building. **The only machine
+that ever needs the internet is the one you install on, and only once.**
+
+### 1. Install, once, on the PC you will watch the plant from
+
+=== "Windows"
+
+    ```powershell
+    pipx install factorysemantics-mes
+    fsmes --version
+    ```
+
+=== "Linux and macOS"
+
+    ```bash
+    pipx install factorysemantics-mes     # or: uv tool install factorysemantics-mes
+    fsmes --version
+    ```
+
+### 2. Write the assistant folder out of the installation — offline
+
+The folder is already inside the installed package. This copies it somewhere you
+can carry it. No release page, no zip, no internet.
+
+=== "Windows"
+
+    ```powershell
+    fsmes skills list
+    fsmes skills unpack plant-from-your-mes .\assistant
+    ```
+
+=== "Linux and macOS"
+
+    ```bash
+    fsmes skills list
+    fsmes skills unpack plant-from-your-mes ./assistant
+    ```
+
+Copy `assistant\plant-from-your-mes` onto the box that has your MES on it — a
+network share, a memory stick, however files get there at your site.
+
+### 3. On the MES box: three commands, by hand
+
+That box needs **no fsmes, no database driver, no internet and no AI** — just a
+`python` 3.11 or newer. The scripts are standard library only and a test in this
+repository fails if one of them ever imports anything else.
+
+=== "Windows"
+
+    ```powershell
+    cd .\plant-from-your-mes
+    python scripts\profile.py --sqlite plant.db --propose-mapping mapping.toml
+    # read mapping.toml back to somebody who knows the schema, and correct it
+    python scripts\profile.py --sqlite plant.db --mapping mapping.toml --out plant-shape.toml
+    python scripts\explain.py plant-shape.toml
+    ```
+
+=== "Linux and macOS"
+
+    ```bash
+    cd ./plant-from-your-mes
+    python scripts/profile.py --sqlite plant.db --propose-mapping mapping.toml
+    # read mapping.toml back to somebody who knows the schema, and correct it
+    python scripts/profile.py --sqlite plant.db --mapping mapping.toml --out plant-shape.toml
+    python scripts/explain.py plant-shape.toml
+    ```
+
+On SQL Server there is no driver here on purpose — see
+[On SQL Server, where there is no driver](#on-sql-server-where-there-is-no-driver)
+below. The middle command runs the leak check and **refuses to write the file**
+if one identifying value from your database got in.
+
+Read `plant-shape.toml`. It is yours. Carry it back to the first PC.
+
+### 4. One command, and the plant is on screen
+
+=== "Windows"
+
+    ```powershell
+    fsmes demo from-shape .\plant-shape.toml --name acme
+    ```
+
+=== "Linux and macOS"
+
+    ```bash
+    fsmes demo from-shape ./plant-shape.toml --name acme
+    ```
+
+It asks you **one** question — how many pieces of space sit between two machines,
+the conveyor or the table or the tote — because no MES records it and it is what
+decides whether a stopped machine starves the next one. The default is 20. Then
+it builds the plant, generates one eight-hour shift, starts the simulated floor,
+a real OPC UA server and the dashboard on `http://127.0.0.1:8010/dashboard`, and
+tells you how to sign in.
+
+`--buffer 20 --yes` answers the question in advance, for a script. Stop it the
+way you stop any plant:
+
+```
+fsmes demo acme stop
+```
+
+### Read the pack before you start anything
+
+`fsmes shape plant` is step 4 without the plant: it writes the pack, prints what
+it did with your shape, and stops.
+
+=== "Windows"
+
+    ```powershell
+    fsmes shape plant .\plant-shape.toml --out .\acme --buffer 20
+    fsmes pack check .\acme
+    ```
+
+=== "Linux and macOS"
+
+    ```bash
+    fsmes shape plant ./plant-shape.toml --out ./acme --buffer 20
+    fsmes pack check ./acme
+    ```
+
+Both commands print three lists, and the lists are the point:
+
+- **what was asked** — the buffer, and nothing else;
+- **what is stated here because the shape could not say it** — the specification
+  band and where its width came from, and, when your MES has no routing table,
+  that the one routing is your station order rather than a measured route;
+- **what your shape carries that this plant does not use**, with one line each
+  saying why. Counter and discrete tags, the range each tag was seen in, your
+  numbering grammar, your ERP call rates, the tables the skill could not map.
+  Twelve of them for our own bottling example. They are in the pack too, under
+  `[from_shape]` in `plant.toml`, for whoever opens it later.
+
+### What the shape carries that the plant uses
+
+Your machine count and their line order; each machine's rate, scrap share and
+run time; every tag's kind, unit, base, spread, sampling interval and whether it
+only moves while the machine runs; the share of time in each state and how long
+stops last; your stop categories, as `downtime_reasons.json`, in your own
+proportions; your quality loop's check and failure rates and its dispositions,
+as `nc_severities.json`; your order sizes, as a book of work orders; and your
+shift pattern. With a **format 2** shape it also carries your areas and cells,
+your routings, and how your tags are grouped under channel/device folders — see
+`FORMAT.md`.
+
+## Step 3 in more detail
 
 SQL Server first, because that is what the first plant to try this runs. SQLite
 works too and is what this repository's own test uses.
+
+The folder also ships as `plant-from-your-mes.zip` on the release page, for a
+box that never sees the pip install:
 
 ```bash
 unzip plant-from-your-mes.zip
@@ -70,7 +231,7 @@ cd plant-from-your-mes
 ```
 
 Your assistant reads `SKILL.md` and does the rest. If you would rather drive it
-yourself, it is three commands:
+yourself, it is the three commands again, with what each is for:
 
 ```bash
 # 1. Guess which table is which, from names alone. Read this back out loud —
@@ -98,9 +259,11 @@ python scripts/profile.py --csv-dir results/ --dialect mssql \
     --mapping mapping.toml --out plant-shape.toml
 ```
 
-Twelve of the sixteen queries come out ready to paste. The other four are
-per-table or per-column templates — you run them once per table you care about —
-and they come out as `*.template.sql` with a line saying what to substitute.
+There are seventeen queries per dialect. Most come out ready to paste. The
+per-table and per-column ones come out as `*.template.sql` with a line saying
+what to substitute — you run those once per table you care about — and so does
+any query your mapping has no answer for, a routing table you do not have being
+the common one. The script says how many of each it wrote.
 
 In CSV mode the leak check has no database to sample, so save the output of
 `04b_column_sample.sql` as one value per line and pass `--samples values.txt`.
@@ -135,6 +298,26 @@ appears in the output. See
 `skills/plant-from-your-mes/example/plant-shape.toml` is what that run produces.
 Read it; it is the best answer to "what exactly would I be sending?"
 
+**Also proven: the whole path, on Windows and on Linux, with the network off.**
+A job on every pull request builds the wheel, installs it in a fresh virtual
+environment in a directory holding none of this repository's files, writes the
+assistant folder out of the installation, and then runs the three commands under
+a *second* virtual environment with nothing in it at all — `import fsmes` fails
+there, which is the only honest way to prove the scripts need nothing but a
+plain python. Every step after the install runs with outbound HTTP pointed at
+the discard port, and the job proves that by trying one request itself and
+requiring it to fail. It does this twice, for two reference shapes:
+
+- the flat MES — one line, one straight routing, one tag folder per machine, no
+  routing table at all (a format-1 shape);
+- a brownfield plant — two areas with cells under them, two routings that meet
+  at a shared machine, and two machines sharing one OPC device folder (a
+  format-2 shape), which is `example/plant-shape-grouped.toml`.
+
+Both end at a running dashboard with six stations on it, the right number of
+areas, the OPC server answering, every machine watched and a counted lot on the
+p chart. See `.github/scripts/plant_from_shape.py`.
+
 **Not proven.** There is no SQL Server on this machine or on the CI runner, so
 **no SQL Server has ever parsed the `queries/mssql/` set.** What is checked is
 structural: every placeholder resolves, each query is one bounded `SELECT` in
@@ -146,8 +329,8 @@ these queries compare a timestamp column against an ISO text value, which SQL
 Server converts implicitly and which can behave differently on a `datetime2`
 with an unusual collation or a non-UTC column.
 
-**Also not proven:** that the mapping proposal works on anything but the one
-invented schema it has been tried against. It matches on table and column names
+**Also not proven:** that the mapping proposal works on anything but the two
+invented schemas it has been tried against. It matches on table and column names
 and on nothing else. On a real plant it will get lines wrong, which is exactly
 why `SKILL.md` tells the assistant to read the draft back to a person before
 profiling with it. A wrong mapping leaks nothing — it describes a plant that is
@@ -167,8 +350,39 @@ direction.
 
 ## Where the file goes next
 
-`FORMAT.md` inside the zip says what every section means and how each field maps
-onto `labs/kepsim/line.json` — the file the simulator already reads. It also
-lists, plainly, what a plant shape carries that the generator has no field for
-yet, and the one thing a plant shape cannot know and somebody has to be asked:
-**buffer capacity between machines.** No MES we have seen records it.
+`FORMAT.md` in the folder says what every section means and how each field maps
+onto the simulator's own `line.json`. It also lists, plainly, what a plant shape
+carries that the generator has no field for yet, and the one thing a plant shape
+cannot know and somebody has to be asked: **buffer capacity between machines.**
+No MES we have seen records it.
+
+`fsmes demo from-shape` and `fsmes shape plant` read that file and nothing else
+— no database, no network — and build a plant pack out of it:
+`plant.toml`, `line.json`, `tag_map.json`, `floor.json` and master data. The
+pack format is [one folder of declarative data](packs.md), so the pack a shape
+builds is the same kind of thing as the two this project ships, and `fsmes pack
+check` reads it the same way.
+
+### Format 1 and format 2
+
+`[meta] shape_format` says which. A file with no such key is format 1.
+
+| | format 1 | format 2 |
+|---|---|---|
+| machines, rates, scrap, tags, stops, quality, orders, shifts | yes | yes |
+| areas and cells (`[hierarchy]`) | no — one area | measured where the MES has the tables |
+| routings (`[routings]`) | no — one straight line in station order | measured; a routing that branches stays branched |
+| how tags are grouped (`[tag_nodes]`) | no — one node per machine | measured; several machines can share one node |
+
+A format-1 file still reads exactly as it always did, and it still builds a
+plant: one area, one straight line, one node per machine. Where format 2 has no
+answer — your MES keeps no routing table, say — the file says `found = false`
+with the reason, the shape report says so out loud, and nothing is guessed in
+silence.
+
+### Pack-in-pack, routings and OPC structures
+
+A plant with areas, cells and branching routings is one pack with a deeper
+`equipment.json` — no nesting involved. Several plants are the fleet, not a
+nested pack. The reasoning and the recommendation are on one page:
+[a pack inside a pack](../design/pack-in-pack.md).

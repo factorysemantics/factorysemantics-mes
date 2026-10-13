@@ -92,11 +92,6 @@ carries two complete example plants inside it.
     fsmes demo bottling
     ```
 
-!!! note "Not on PyPI yet"
-    The release on PyPI today, 0.2.0, carries no plant packs, so
-    `fsmes demo bottling` needs the next one. From a checkout it works now:
-    `python -m build --wheel`, then install that wheel.
-
 `fsmes demo bottling` brings up a six-station beverage line the way a plant
 runs: an eight-hour shift replayed over a real OPC UA server, a simulated
 floor booking lots and naming its stops, and the operator screens reading it.
@@ -108,6 +103,24 @@ sign in with, and it keeps running until `fsmes demo bottling stop`.
 floor plan and a shift's worth of readings behind them. First start takes a
 little longer than later ones: it copies the pack out of the package and
 generates the shift from the seed in its `line.json`, which is seconds.
+
+### Or, before step 3: a simulated plant shaped like *yours*
+
+The bottling line is our plant, not yours, and some people would rather see
+their own machine count, their own stop mix and their own tags before they ask
+IT for anything. There is a path for that, and it needs nothing to leave the
+building: the same install writes an assistant folder out of itself, three
+commands run on your MES box with a plain python, and one command here turns the
+one file they write into a running plant.
+
+    fsmes skills unpack plant-from-your-mes ./assistant
+    # ... three commands on the MES box, which needs no fsmes ...
+    fsmes demo from-shape ./plant-shape.toml --name acme
+
+The whole path, with PowerShell and bash side by side, is in
+[your plant without sending anyone your data](plant-from-your-mes.md). It is a
+*simulation* shaped like your plant, not your plant — steps 3 and 4 below are
+still how real readings get in.
 
 Everything it writes — the pack copy, the database, the logs, the generated
 line data — goes to one per-user directory: `%LOCALAPPDATA%\fsmes` on
@@ -456,3 +469,4 @@ otherwise.
 - [Deploy](deploy.md) · [Security](security.md) · [Compatibility](compatibility.md)
 - [Reading OEE](../plant/reading-oee.md) · [Never invent production](../plant/never-invent-production.md)
 - [How much of the window did the MES see](coverage.md)
+- [Your plant without sending anyone your data](plant-from-your-mes.md) · [Plant packs](packs.md)
