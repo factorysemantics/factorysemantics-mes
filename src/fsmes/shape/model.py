@@ -61,9 +61,12 @@ def code_of(name: str) -> str:
     customer's travels. All this does is swap the dash for an underscore,
     because an OPC browse name and an equipment code are both happier
     without it.
+
+    Empty in, empty out: a blank name is not a code, and a placeholder put
+    here would travel into `equipment.json` as a machine nobody has.
     """
     cleaned = re.sub(r"[^A-Za-z0-9_]+", "_", name.strip())
-    return cleaned.strip("_").upper() or "X"
+    return cleaned.strip("_").upper()
 
 
 @dataclass(frozen=True)
@@ -345,10 +348,8 @@ def _areas(shape: Shape, stations: list[dict]) -> tuple[tuple[Area, ...], dict[s
         code = code_of(str(row.get("name") or ""))
         if not code:
             continue
-        # An empty parent means "straight under the site". `code_of("")` is
-        # the placeholder "X", which would hang the area off nothing.
-        named_parent = str(row.get("parent") or "").strip()
-        parent = code_of(named_parent) if named_parent else None
+        # An empty parent means "straight under the site".
+        parent = code_of(str(row.get("parent") or "")) or None
         cells = tuple(code_of(str(c)) for c in (row.get("cells") or []) if str(c).strip())
         areas.append(Area(code=code, name=f"Area {len(areas) + 1}", parent=parent, cells=cells))
     if not areas:
@@ -386,7 +387,7 @@ def _nodes(shape: Shape, stations: tuple[Station, ...]) -> tuple[TagNode, ...]:
         path = tuple(code_of(str(p)) for p in (row.get("path") or [name]) if str(p).strip())
         under = tuple(code_of(str(s)) for s in (row.get("stations") or []))
         under = tuple(s for s in under if s in known)
-        if not under:
+        if not under or not path:
             continue
         out.append(TagNode(name=name or path[-1], path=path, stations=under,
                            tags_total=int(row.get("tags") or 0)))
