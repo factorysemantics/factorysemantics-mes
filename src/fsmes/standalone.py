@@ -284,7 +284,7 @@ def generate_replay(pack: Path, *, echo=print) -> float | None:
     out = replay_dir(pack)
     echo(f"  replay: generating {out} from {description.name} (once; it is not shipped)")
     started = time.monotonic()
-    code, said = _through([plants.fsmes_bin(), "sim-generate", str(description),
+    code, said = _through([*plants.fsmes_command(), "sim-generate", str(description),
                            "--out", str(out)], echo=echo, indent="      ")
     took = time.monotonic() - started
     if code != 0:
@@ -325,7 +325,7 @@ def _fsmes(where: Path, *args: str, echo=print) -> int:
     cached, and a command that has already built one cannot honestly run
     another plant's.
     """
-    code, _ = _through([plants.fsmes_bin(), *args], cwd=where,
+    code, _ = _through([*plants.fsmes_command(), *args], cwd=where,
                        env={**os.environ, plants.REGISTRY_ENV: str(fleet_file(where))},
                        echo=echo)
     return code

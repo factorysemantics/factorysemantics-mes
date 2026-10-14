@@ -256,6 +256,29 @@ def fsmes_bin() -> str:
     return found
 
 
+def fsmes_command() -> list[str]:
+    """How to run fsmes as a child process, as a list to put a verb after.
+
+    `fsmes_bin` above finds the console script, and on the machine this was
+    written for there is none to find. A plain `py -m pip install
+    factorysemantics-mes` on Windows puts `fsmes.exe` in a user Scripts
+    folder that is not on PATH - that is why `pip` itself had to be reached
+    as `py -m pip` - and nothing beside `sys.executable` is a file. The first
+    person to install 0.3.0 on Windows met that on 2026-10-13 at 07:18.
+
+    So there is a second way to run this package: `python -m fsmes`, which
+    `__main__.py` sends to the same `cli.run`. A plant started that way has
+    to be able to start its own processes, and this is how - the interpreter
+    that is running us can always be named, PATH or no PATH. The console
+    script is still preferred where it exists, because that is what every
+    log line and every `ps` output has said since 0.1.0.
+    """
+    try:
+        return [fsmes_bin()]
+    except FileNotFoundError:
+        return [sys.executable, "-m", "fsmes"]
+
+
 # How a plant's processes are detached from the terminal that started them.
 # On POSIX that is `setsid()`, which `start_new_session` asks for. On Windows
 # there is no such call and `start_new_session` is accepted and silently
@@ -424,10 +447,10 @@ def init(name: str, cfg: dict, root: Path, echo=print) -> None:
     its own generator itself.
     """
     env = plant_env(name, cfg, root)
-    mes = fsmes_bin()
+    mes = fsmes_command()
 
     echo(f"  {name}: applying {cfg['pack']}...")
-    applied = subprocess.run([mes, "pack", "apply", str(cfg["pack"])], cwd=root, env=env,
+    applied = subprocess.run([*mes, "pack", "apply", str(cfg["pack"])], cwd=root, env=env,
                              capture_output=True, text=True)
     for line in (applied.stdout or "").splitlines():
         echo(f"      {line}")
@@ -447,13 +470,13 @@ def ensure_accounts(root: Path, env: dict[str, str], cfg: dict, echo=print) -> N
     if not declared:
         ensure_lab_users(root, env, echo)
         return
-    mes = fsmes_bin()
+    mes = fsmes_command()
     for account in declared:
         var = account["password_env"]
         password = env.get(var) or os.environ.get(var)
         if not password:
             raise SystemExit(f"account {account['code']}: {var} is not set; refusing to create it without a password")
-        made = subprocess.run([mes, "add-user", account["code"], account["name"], password,
+        made = subprocess.run([*mes, "add-user", account["code"], account["name"], password,
                                "--role", account["role"]], cwd=root, env=env, capture_output=True, text=True)
         if made.returncode == 0:
             echo(f"      account {account['code']} ({account['role']})")
@@ -461,9 +484,9 @@ def ensure_accounts(root: Path, env: dict[str, str], cfg: dict, echo=print) -> N
 
 def ensure_lab_users(root: Path, env: dict[str, str], echo=print) -> None:
     """Create any lab account that does not exist yet. Existing ones are left alone."""
-    mes = fsmes_bin()
+    mes = fsmes_command()
     for code, full, password, role in LAB_USERS:
-        made = subprocess.run([mes, "add-user", code, full, password, "--role", role],
+        made = subprocess.run([*mes, "add-user", code, full, password, "--role", role],
                               cwd=root, env=env, capture_output=True, text=True)
         if made.returncode == 0:
             echo(f"      account {code} ({role})")
@@ -487,7 +510,7 @@ def _run_init_db(root: Path, env: dict, echo) -> None:
     was recognised as, and what ran afterwards - and that belongs in the
     receipt rather than in a pipe to nowhere.
     """
-    done = subprocess.run([fsmes_bin(), "init-db"], cwd=root, env=env, check=True,
+    done = subprocess.run([*fsmes_command(), "init-db"], cwd=root, env=env, check=True,
                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     for line in done.stdout.splitlines():
         if line.strip():
@@ -606,7 +629,7 @@ def start(name: str, cfg: dict, root: Path, speed: float | None = None, echo=pri
         return
 
     env = plant_env(name, cfg, root, speed)
-    mes = fsmes_bin()
+    mes = fsmes_command()
     (root / "logs" / name).mkdir(parents=True, exist_ok=True)
     log_path = root / "logs" / name / "plant.log"
 
@@ -629,7 +652,7 @@ def start(name: str, cfg: dict, root: Path, speed: float | None = None, echo=pri
     # a sink that cannot open that log still says why somewhere.
     sink_log = (root / "logs" / name / "sink.log").open("a", encoding="utf-8")
     with contextlib.closing(sink_log):
-        sink = subprocess.Popen([mes, "run-log-sink", str(log_path)], cwd=root, env=env,
+        sink = subprocess.Popen([*mes, "run-log-sink", str(log_path)], cwd=root, env=env,
                                 stdin=subprocess.PIPE, stdout=sink_log,
                                 stderr=subprocess.STDOUT, **_detached())
     log = sink.stdin
@@ -639,20 +662,20 @@ def start(name: str, cfg: dict, root: Path, speed: float | None = None, echo=pri
     # subscribes. The agent retries forever, but starting it first only buys a
     # confusing burst of connection errors in the log.
     if simulates(cfg):
-        procs.append(subprocess.Popen([mes, "run-opc-sim", "--replay"], cwd=root, env=env,
+        procs.append(subprocess.Popen([*mes, "run-opc-sim", "--replay"], cwd=root, env=env,
                                       stdout=log, stderr=subprocess.STDOUT,
                                       **_detached()))
         time.sleep(2.5)
-        procs.append(subprocess.Popen([mes, "run-opc-agent"], cwd=root, env=env,
+        procs.append(subprocess.Popen([*mes, "run-opc-agent"], cwd=root, env=env,
                                       stdout=log, stderr=subprocess.STDOUT,
                                       **_detached()))
-    procs.append(subprocess.Popen([mes, "run-api"], cwd=root, env=env,
+    procs.append(subprocess.Popen([*mes, "run-api"], cwd=root, env=env,
                                   stdout=log, stderr=subprocess.STDOUT,
                                   **_detached()))
     # The people part of the plant. It signs in over HTTP, so it waits for the
     # API rather than racing it.
     if simulates(cfg):
-        procs.append(subprocess.Popen([mes, "run-operations"], cwd=root, env=env,
+        procs.append(subprocess.Popen([*mes, "run-operations"], cwd=root, env=env,
                                       stdout=log, stderr=subprocess.STDOUT,
                                       **_detached()))
         # A scenario's own post-boot script: what the seeding cannot do
@@ -743,7 +766,7 @@ def run(name: str, cfg: dict, root: Path, speed: float | None = None, echo=print
     stop` leaves nothing orphaned holding a port.
     """
     env = plant_env(name, cfg, root, speed)
-    mes = fsmes_bin()
+    mes = fsmes_command()
     (root / "logs" / name).mkdir(parents=True, exist_ok=True)
 
     children: list[subprocess.Popen] = []
@@ -765,12 +788,12 @@ def run(name: str, cfg: dict, root: Path, speed: float | None = None, echo=print
     signal.signal(signal.SIGINT, shutdown)
 
     if simulates(cfg):
-        children.append(subprocess.Popen([mes, "run-opc-sim", "--replay"], cwd=root, env=env))
+        children.append(subprocess.Popen([*mes, "run-opc-sim", "--replay"], cwd=root, env=env))
         time.sleep(2.5)
-        children.append(subprocess.Popen([mes, "run-opc-agent"], cwd=root, env=env))
-    children.append(subprocess.Popen([mes, "run-api"], cwd=root, env=env))
+        children.append(subprocess.Popen([*mes, "run-opc-agent"], cwd=root, env=env))
+    children.append(subprocess.Popen([*mes, "run-api"], cwd=root, env=env))
     if simulates(cfg):
-        children.append(subprocess.Popen([mes, "run-operations"], cwd=root, env=env))
+        children.append(subprocess.Popen([*mes, "run-operations"], cwd=root, env=env))
         if cfg.get("post_boot"):
             children.append(subprocess.Popen([sys.executable, cfg["post_boot"]], cwd=root, env=env))
     echo(f"{name} running -> {dashboard_url(cfg)}" + ("" if simulates(cfg) else " (serving; nothing simulates)"))
