@@ -60,6 +60,11 @@ two-station line over a real OPC UA server, books honest production and
 finishes the order — in one process, no setup. The
 [tutorial](plant/first-line.md) walks through what you are looking at.
 
+On a PC of your own — a Windows one especially —
+[run it on your own box](operate/run-it-on-your-own-box.md) is the first hour
+on one page: what to do when `fsmes` is not on PATH, how to tell whether the
+plant is still running, and what to type when half of it has died.
+
 ## Where to talk
 
 [GitHub Discussions](https://github.com/factorysemantics/factorysemantics-mes/discussions)

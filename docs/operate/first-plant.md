@@ -98,6 +98,9 @@ floor booking lots and naming its stops, and the operator screens reading it.
 It prints the address — `http://127.0.0.1:8010/dashboard` — and an account to
 sign in with, and it keeps running until `fsmes demo bottling stop`.
 `fsmes demo bottling status` says whether it is up.
+[Run it on your own box](run-it-on-your-own-box.md) is one page of what trips
+people in this first hour on a machine of their own: `fsmes` not on PATH after
+a `py -m pip install`, and a plant left alive but silent.
 
 **Done looks like:** that dashboard on screen, with the six machines on the
 floor plan and a shift's worth of readings behind them. First start takes a

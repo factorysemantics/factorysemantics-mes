@@ -10,7 +10,42 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **`py -m fsmes` works.** On Windows, `pip install` puts `fsmes.exe` in a
+  Scripts folder that a default Python install does not put on PATH, and the
+  command comes back "not recognized". `py -m fsmes demo bottling` now does
+  everything `fsmes demo bottling` does, and a plant started that way starts
+  its own child processes the same way, so the PATH never has to be fixed
+  first.
+- **One page for the first hour on your own PC**,
+  [run it on your own box](docs/operate/run-it-on-your-own-box.md): the
+  Windows install and the two ways out when `fsmes` is not found, how to tell
+  whether the plant is still running and what takes it down on a laptop, the
+  alive-but-silent state and the way out of it, what is on the box and what
+  needs a key, and the four things people trip on going from a shape file to
+  a plant of their own.
+
+### Fixed
+
+- **`fsmes demo <plant> stop` gets a half-dead plant back on its feet.** When
+  one of a plant's processes dies and the rest keep running, nothing answers
+  and nothing can be started over the top. `stop` on the demo path now ends
+  the survivors and clears the record with no flag, and says what it found:
+  "bottling was not answering; 4 of its 5 processes were still alive (…);
+  stopping them." `fsmes fleet stop` keeps its `--force` exactly as it was —
+  on the demo path the person typing `stop` owns the plant they made on this
+  PC, and ownership, not liveness, is what that gate protects.
+- **`fsmes demo <plant> status` says what to do next.** A plant records what
+  each of its processes is for, so `status` names which of them are alive and
+  which is gone by role — the dashboard and the API, the OPC server, the
+  reader, the simulated floor, the log sink — prints the path of the gone
+  one's log, and ends with the next command to type. A healthy plant prints
+  its dashboard URL.
+- **`fsmes demo <plant>` looks at the ports before it launches anything.**
+  Instead of starting five processes that fail at bind one by one, it says
+  which port is taken and by what it can tell — this installation's own
+  earlier plant, or another program — and what to type.
 
 ## [0.3.0] — 2026-10-12
 
