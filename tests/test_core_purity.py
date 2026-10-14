@@ -108,11 +108,22 @@ LADDER: tuple[tuple[str, tuple[str, ...]], ...] = (
         # imports it; only the CLI does. An edge because what it meets is a
         # file written on somebody else's box.
         "shape",
+        # What one plant on somebody's own PC is told when it is not up: it
+        # reads the ownership record, asks the plant one question over HTTP,
+        # reads the processes `fsmes.plant` recorded and reads a pack for the
+        # ports it will want. Four things it reads and nothing it decides, so
+        # it sits with `fleet` and `standalone`; only `standalone` and the CLI
+        # import it.
+        "firstrun",
     )),
     ("cli", (
         # The top of the ladder: everything may be imported by the CLI and
         # the CLI may be imported by nothing.
         "cli",
+        # `python -m fsmes`, for a PC where the console script is not on PATH.
+        # Four lines that call `cli.run`, so it is the CLI layer by every
+        # rule here; it is a second door into the same room.
+        "__main__",
     )),
 )
 

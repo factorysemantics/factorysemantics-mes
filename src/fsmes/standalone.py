@@ -46,6 +46,7 @@ import time
 from importlib import resources
 from pathlib import Path
 
+from fsmes import firstrun
 from fsmes import plant as plants
 
 #: Where the wheel keeps its copies of the lab packs, under `fsmes/data/`.
@@ -358,6 +359,14 @@ def build_and_start(name: str, where: Path, pack: Path, *, speed: float | None =
     once a pack is under the home with a fleet file beside it, the two paths
     are the same `fsmes fleet` commands a checkout runs.
     """
+    # Look before launching five processes. A port somebody else holds does
+    # not stop a start; it kills the process that wanted it a second later,
+    # in a log file nobody is reading yet.
+    if blocked := firstrun.in_the_way(name, pack, data_dir=data_dir(where),
+                                      logs=logs_dir(name, where)):
+        for line in blocked:
+            echo(line)
+        return 1
     if not is_built(name, where):
         echo(f"  building {name} from {pack} (once)")
         if (code := _fsmes(where, "fleet", "create", str(pack), "--root", str(where),
@@ -410,14 +419,46 @@ def prepare_built(name: str, source: Path, *, where: Path | None = None,
     return where, pack
 
 
+def logs_dir(name: str, where: Path) -> Path:
+    """Where this plant's processes write, for a line that sends somebody to read one."""
+    return where / "logs" / name
+
+
 def stop(name: str, *, where: Path | None = None, echo=print) -> int:
+    """Stop a packaged plant, including one that has stopped answering.
+
+    **Why this passes `--force` and `fsmes fleet stop` still asks for it.**
+    The gate's two properties are ownership and liveness. `--force` gives up
+    liveness only: a plant this installation did not create is refused with
+    the flag exactly as without it, and that is unchanged here. What is
+    different on this path is who is typing. `fsmes demo bottling stop` can
+    only ever mean the one plant this installation made in this home on this
+    machine - there is no `--root`, no other host, nothing to confuse it with
+    - so a person typing it about a plant that is not answering is already
+    saying they meant it. Asking them for a flag that lives on a different
+    command, five words and a `--root` away, is how 2026-10-13 went: the
+    first Windows user was left with two pids on his screen and no way out
+    that the product had told him about. `fsmes fleet stop` keeps its flag,
+    because there a name can mean a plant on another host that somebody else
+    is watching.
+
+    What it found and what it did are printed, because a command that
+    silently does more than it was asked is worse than one that asks.
+    """
     where = (where or home()).expanduser()
     if not fleet_file(where).is_file():
         echo(f"  nothing to stop: no fleet file at {fleet_file(where)}")
         return 1
     os.environ[plants.REGISTRY_ENV] = str(fleet_file(where))
     plants.environment.cache_clear()
-    return _fsmes(where, "fleet", "stop", name, "--root", str(where), echo=echo)
+    seen = firstrun.look(name, data_dir=data_dir(where), logs=logs_dir(name, where))
+    for line in firstrun.what_stop_found(seen):
+        echo(line)
+    code = _fsmes(where, "fleet", "stop", name, "--root", str(where), "--force", echo=echo)
+    if code == 0:
+        for line in firstrun.what_stop_leaves(seen):
+            echo(line)
+    return code
 
 
 def status(name: str, *, where: Path | None = None, echo=print) -> int:
@@ -427,7 +468,13 @@ def status(name: str, *, where: Path | None = None, echo=print) -> int:
         return 1
     os.environ[plants.REGISTRY_ENV] = str(fleet_file(where))
     plants.environment.cache_clear()
-    return _fsmes(where, "fleet", "status", name, "--root", str(where), echo=echo)
+    code = _fsmes(where, "fleet", "status", name, "--root", str(where), echo=echo)
+    # The fleet has said what state this plant is in. This says what to do
+    # about it, which is the half that was missing at 07:50 on 2026-10-13.
+    for line in firstrun.what_status_should_say(
+            firstrun.look(name, data_dir=data_dir(where), logs=logs_dir(name, where))):
+        echo(line)
+    return code
 
 
 # ------------------------------------------------------- what to say afterwards
