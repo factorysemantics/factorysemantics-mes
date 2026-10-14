@@ -94,6 +94,12 @@ pipx install factorysemantics-mes
 fsmes demo bottling
 ```
 
+If `fsmes` comes back *not recognized* after a `py -m pip install`, or the
+plant stops answering and you need to know what to type next,
+[run it on your own box](docs/operate/run-it-on-your-own-box.md) is the first
+hour on a Windows PC on one page: PATH, is it still running, and a plant that
+is alive but silent.
+
 It prints where the plant is — `http://127.0.0.1:8010/dashboard` — and an
 account to sign in with. `fsmes demo bottling stop` puts it down;
 `fsmes demo machining` is a second plant on 8020. First start copies the pack

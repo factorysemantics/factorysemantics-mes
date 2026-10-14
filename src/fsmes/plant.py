@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import contextlib
 import functools
+import json
 import os
 import shutil
 import signal
@@ -44,6 +45,7 @@ import time
 import tomllib
 import urllib.error
 import urllib.request
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
@@ -256,6 +258,29 @@ def fsmes_bin() -> str:
     return found
 
 
+def fsmes_command() -> list[str]:
+    """How to run fsmes as a child process, as a list to put a verb after.
+
+    `fsmes_bin` above finds the console script, and on the machine this was
+    written for there is none to find. A plain `py -m pip install
+    factorysemantics-mes` on Windows puts `fsmes.exe` in a user Scripts
+    folder that is not on PATH - that is why `pip` itself had to be reached
+    as `py -m pip` - and nothing beside `sys.executable` is a file. The first
+    person to install 0.3.0 on Windows met that on 2026-10-13 at 07:18.
+
+    So there is a second way to run this package: `python -m fsmes`, which
+    `__main__.py` sends to the same `cli.run`. A plant started that way has
+    to be able to start its own processes, and this is how - the interpreter
+    that is running us can always be named, PATH or no PATH. The console
+    script is still preferred where it exists, because that is what every
+    log line and every `ps` output has said since 0.1.0.
+    """
+    try:
+        return [fsmes_bin()]
+    except FileNotFoundError:
+        return [sys.executable, "-m", "fsmes"]
+
+
 # How a plant's processes are detached from the terminal that started them.
 # On POSIX that is `setsid()`, which `start_new_session` asks for. On Windows
 # there is no such call and `start_new_session` is accepted and silently
@@ -424,10 +449,10 @@ def init(name: str, cfg: dict, root: Path, echo=print) -> None:
     its own generator itself.
     """
     env = plant_env(name, cfg, root)
-    mes = fsmes_bin()
+    mes = fsmes_command()
 
     echo(f"  {name}: applying {cfg['pack']}...")
-    applied = subprocess.run([mes, "pack", "apply", str(cfg["pack"])], cwd=root, env=env,
+    applied = subprocess.run([*mes, "pack", "apply", str(cfg["pack"])], cwd=root, env=env,
                              capture_output=True, text=True)
     for line in (applied.stdout or "").splitlines():
         echo(f"      {line}")
@@ -447,13 +472,13 @@ def ensure_accounts(root: Path, env: dict[str, str], cfg: dict, echo=print) -> N
     if not declared:
         ensure_lab_users(root, env, echo)
         return
-    mes = fsmes_bin()
+    mes = fsmes_command()
     for account in declared:
         var = account["password_env"]
         password = env.get(var) or os.environ.get(var)
         if not password:
             raise SystemExit(f"account {account['code']}: {var} is not set; refusing to create it without a password")
-        made = subprocess.run([mes, "add-user", account["code"], account["name"], password,
+        made = subprocess.run([*mes, "add-user", account["code"], account["name"], password,
                                "--role", account["role"]], cwd=root, env=env, capture_output=True, text=True)
         if made.returncode == 0:
             echo(f"      account {account['code']} ({account['role']})")
@@ -461,9 +486,9 @@ def ensure_accounts(root: Path, env: dict[str, str], cfg: dict, echo=print) -> N
 
 def ensure_lab_users(root: Path, env: dict[str, str], echo=print) -> None:
     """Create any lab account that does not exist yet. Existing ones are left alone."""
-    mes = fsmes_bin()
+    mes = fsmes_command()
     for code, full, password, role in LAB_USERS:
-        made = subprocess.run([mes, "add-user", code, full, password, "--role", role],
+        made = subprocess.run([*mes, "add-user", code, full, password, "--role", role],
                               cwd=root, env=env, capture_output=True, text=True)
         if made.returncode == 0:
             echo(f"      account {code} ({role})")
@@ -487,7 +512,7 @@ def _run_init_db(root: Path, env: dict, echo) -> None:
     was recognised as, and what ran afterwards - and that belongs in the
     receipt rather than in a pipe to nowhere.
     """
-    done = subprocess.run([fsmes_bin(), "init-db"], cwd=root, env=env, check=True,
+    done = subprocess.run([*fsmes_command(), "init-db"], cwd=root, env=env, check=True,
                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     for line in done.stdout.splitlines():
         if line.strip():
@@ -600,13 +625,116 @@ def simulates(cfg: dict) -> bool:
 
 
 
+@dataclass(frozen=True)
+class Process:
+    """One of the processes a plant is made of: how to start it, what it is
+    for in words a person can act on, and the log it writes.
+
+    One table, read twice. `start` below starts these in order; `processes_in`
+    reads the same roles back when something wants to know what is still
+    alive. Before 2026-10-14 the roles existed only in the order of the pids
+    in the pid file, so the most a status command could say was "2 of 5
+    processes are still alive (7964, 3940)" - which is what the first Windows
+    user was told, and is not a sentence anybody can do anything with.
+    """
+
+    args: tuple[str, ...]
+    role: str
+    log: str
+    settle: float = 0.0
+
+
+# The log sink is not in the table below because it is started differently -
+# it owns the file the others write down a pipe to - but it is one of the
+# plant's processes and is named here so a person reading `status` is not left
+# wondering what the fifth pid was.
+SINK = Process((), "the log sink", "sink.log")
+POST_BOOT = Process((), "the scenario's post-boot script", "plant.log")
+
+
+def processes(cfg: dict) -> list[Process]:
+    """What this plant's processes are, in the order they are started.
+
+    Order matters: the OPC server must be listening before the agent
+    subscribes. The agent retries forever, but starting it first only buys a
+    confusing burst of connection errors in the log. The floor signs in over
+    HTTP, so it waits for the API rather than racing it.
+    """
+    opc = [
+        Process(("run-opc-sim", "--replay"), "the OPC server the machines answer on",
+                "opc-replay.jsonl", settle=2.5),
+        Process(("run-opc-agent",), "the reader that writes the machines into the MES",
+                "opc-agent.jsonl"),
+    ]
+    api = Process(("run-api",), "the dashboard and the API", "api.jsonl")
+    floor = Process(("run-operations",), "the simulated floor", "operations.jsonl")
+    if not simulates(cfg):
+        return [api]
+    return [*opc, api, floor]
+
+
+def procs_file(root: Path, name: str) -> Path:
+    """Where the roles of this plant's processes are recorded, beside its pid
+    file and written at the same moment."""
+    return data_dir(root) / f"{name}.procs"
+
+
+@dataclass(frozen=True)
+class Recorded:
+    """One process this plant's pid file names, and whether it is still there."""
+
+    pid: int
+    alive: bool
+    role: str
+    log: str
+
+    @property
+    def said(self) -> str:
+        """What this process is, in words, for a line a person reads."""
+        return self.role or "a process this plant started (its role was not recorded)"
+
+
+def processes_in(where: Path, name: str, logs: Path | None = None) -> list[Recorded]:
+    """Every process this plant's pid file names - alive or gone - and what
+    each one is.
+
+    The roles come from the file `start` wrote beside the pid file, and never
+    from the position of a pid in the file: a plant started by a release that
+    wrote no such file reports its roles as not recorded rather than guessing
+    them. Unknown is not zero, and a status line that names the wrong process
+    is worse than one that admits it cannot name it.
+
+    `pids_in` beside this answers the narrower question - which of them are
+    alive - and is what every ownership decision still uses.
+    """
+    pid_list = Path(where) / f"{name}.pids"
+    if not pid_list.is_file():
+        return []
+    pids = [int(x) for x in pid_list.read_text(encoding="utf-8").split() if x.strip().isdigit()]
+
+    roles: dict[int, dict] = {}
+    recorded = Path(where) / f"{name}.procs"
+    if recorded.is_file():
+        with contextlib.suppress(OSError, ValueError):
+            for row in json.loads(recorded.read_text(encoding="utf-8")):
+                roles[int(row["pid"])] = row
+
+    out = []
+    for pid in pids:
+        row = roles.get(pid, {})
+        log = row.get("log", "")
+        out.append(Recorded(pid=pid, alive=_alive(pid), role=row.get("role", ""),
+                            log=str(logs / log) if (logs and log) else log))
+    return out
+
+
 def start(name: str, cfg: dict, root: Path, speed: float | None = None, echo=print) -> None:
     if running_pids(root, name):
         echo(f"  {name} is already running. Stop it first.")
         return
 
     env = plant_env(name, cfg, root, speed)
-    mes = fsmes_bin()
+    mes = fsmes_command()
     (root / "logs" / name).mkdir(parents=True, exist_ok=True)
     log_path = root / "logs" / name / "plant.log"
 
@@ -629,43 +757,30 @@ def start(name: str, cfg: dict, root: Path, speed: float | None = None, echo=pri
     # a sink that cannot open that log still says why somewhere.
     sink_log = (root / "logs" / name / "sink.log").open("a", encoding="utf-8")
     with contextlib.closing(sink_log):
-        sink = subprocess.Popen([mes, "run-log-sink", str(log_path)], cwd=root, env=env,
+        sink = subprocess.Popen([*mes, "run-log-sink", str(log_path)], cwd=root, env=env,
                                 stdin=subprocess.PIPE, stdout=sink_log,
                                 stderr=subprocess.STDOUT, **_detached())
     log = sink.stdin
 
-    procs = []
-    # Order matters: the OPC server must be listening before the agent
-    # subscribes. The agent retries forever, but starting it first only buys a
-    # confusing burst of connection errors in the log.
-    if simulates(cfg):
-        procs.append(subprocess.Popen([mes, "run-opc-sim", "--replay"], cwd=root, env=env,
-                                      stdout=log, stderr=subprocess.STDOUT,
-                                      **_detached()))
-        time.sleep(2.5)
-        procs.append(subprocess.Popen([mes, "run-opc-agent"], cwd=root, env=env,
-                                      stdout=log, stderr=subprocess.STDOUT,
-                                      **_detached()))
-    procs.append(subprocess.Popen([mes, "run-api"], cwd=root, env=env,
-                                  stdout=log, stderr=subprocess.STDOUT,
-                                  **_detached()))
-    # The people part of the plant. It signs in over HTTP, so it waits for the
-    # API rather than racing it.
-    if simulates(cfg):
-        procs.append(subprocess.Popen([mes, "run-operations"], cwd=root, env=env,
-                                      stdout=log, stderr=subprocess.STDOUT,
-                                      **_detached()))
-        # A scenario's own post-boot script: what the seeding cannot do
-        # because the API did not exist yet, plus any floor activity the
-        # scenario scripts beyond run-operations. **No pack can ask for
-        # this** - decision 0022 says a pack carries no code, and `fsmes pack
-        # check` refuses the key. It is here for a lab tool that composes a
-        # configuration in code, which is code, gets reviewed, and is where
-        # the two scale labs put their breadth seeding.
-        if cfg.get("post_boot"):
-            procs.append(subprocess.Popen([sys.executable, cfg["post_boot"]], cwd=root, env=env,
-                                          stdout=log, stderr=subprocess.STDOUT,
-                                          **_detached()))
+    launched: list[tuple[Process, int]] = []
+    for spec in processes(cfg):
+        child = subprocess.Popen([*mes, *spec.args], cwd=root, env=env,
+                                 stdout=log, stderr=subprocess.STDOUT, **_detached())
+        launched.append((spec, child.pid))
+        if spec.settle:
+            time.sleep(spec.settle)
+
+    # A scenario's own post-boot script: what the seeding cannot do because
+    # the API did not exist yet, plus any floor activity the scenario scripts
+    # beyond run-operations. **No pack can ask for this** - decision 0022 says
+    # a pack carries no code, and `fsmes pack check` refuses the key. It is
+    # here for a lab tool that composes a configuration in code, which is
+    # code, gets reviewed, and is where the two scale labs put their breadth
+    # seeding.
+    if simulates(cfg) and cfg.get("post_boot"):
+        child = subprocess.Popen([sys.executable, cfg["post_boot"]], cwd=root, env=env,
+                                 stdout=log, stderr=subprocess.STDOUT, **_detached())
+        launched.append((POST_BOOT, child.pid))
 
     # Let go of our own end of the pipe, so the sink sees EOF when the last
     # of the plant's processes has gone and can finish writing and exit.
@@ -673,8 +788,16 @@ def start(name: str, cfg: dict, root: Path, speed: float | None = None, echo=pri
 
     # The sink is last in the file: `stop` reaches it after the processes
     # that write to it, which is the order that loses nothing.
-    pids = [p.pid for p in procs] + [sink.pid]
+    launched.append((SINK, sink.pid))
+
+    pids = [pid for _, pid in launched]
     pid_file(root, name).write_text("\n".join(str(p) for p in pids), encoding="utf-8")
+    # What each of those pids is, written in the same breath as the pid file.
+    # A pid on its own is what the first Windows user had on his screen.
+    procs_file(root, name).write_text(
+        json.dumps([{"pid": pid, "role": spec.role, "log": spec.log} for spec, pid in launched],
+                   indent=1),
+        encoding="utf-8")
     echo(f"  {name} started -> {dashboard_url(cfg)} "
          f"(PIDs {', '.join(str(p) for p in pids)})")
 
@@ -684,6 +807,7 @@ def stop(name: str, cfg: dict, root: Path, echo=print) -> None:
     if not pids:
         echo(f"  {name} is not running.")
         pid_file(root, name).unlink(missing_ok=True)
+        procs_file(root, name).unlink(missing_ok=True)
         return
 
     for pid in pids:
@@ -698,6 +822,7 @@ def stop(name: str, cfg: dict, root: Path, echo=print) -> None:
             _force_stop(pid)
 
     pid_file(root, name).unlink(missing_ok=True)
+    procs_file(root, name).unlink(missing_ok=True)
     echo(f"  {name} stopped ({len(pids)} process(es)).")
 
 
@@ -743,7 +868,7 @@ def run(name: str, cfg: dict, root: Path, speed: float | None = None, echo=print
     stop` leaves nothing orphaned holding a port.
     """
     env = plant_env(name, cfg, root, speed)
-    mes = fsmes_bin()
+    mes = fsmes_command()
     (root / "logs" / name).mkdir(parents=True, exist_ok=True)
 
     children: list[subprocess.Popen] = []
@@ -765,12 +890,12 @@ def run(name: str, cfg: dict, root: Path, speed: float | None = None, echo=print
     signal.signal(signal.SIGINT, shutdown)
 
     if simulates(cfg):
-        children.append(subprocess.Popen([mes, "run-opc-sim", "--replay"], cwd=root, env=env))
+        children.append(subprocess.Popen([*mes, "run-opc-sim", "--replay"], cwd=root, env=env))
         time.sleep(2.5)
-        children.append(subprocess.Popen([mes, "run-opc-agent"], cwd=root, env=env))
-    children.append(subprocess.Popen([mes, "run-api"], cwd=root, env=env))
+        children.append(subprocess.Popen([*mes, "run-opc-agent"], cwd=root, env=env))
+    children.append(subprocess.Popen([*mes, "run-api"], cwd=root, env=env))
     if simulates(cfg):
-        children.append(subprocess.Popen([mes, "run-operations"], cwd=root, env=env))
+        children.append(subprocess.Popen([*mes, "run-operations"], cwd=root, env=env))
         if cfg.get("post_boot"):
             children.append(subprocess.Popen([sys.executable, cfg["post_boot"]], cwd=root, env=env))
     echo(f"{name} running -> {dashboard_url(cfg)}" + ("" if simulates(cfg) else " (serving; nothing simulates)"))

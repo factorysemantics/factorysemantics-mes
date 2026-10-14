@@ -232,7 +232,7 @@ What is left, after the scar tissue, is five ideas and one posture.
 | **`handoffs/*.md`** | 116 files, 100 done; `Goal / Why / Constraints / Definition of done / Out of scope / Result` | **the draft rows that already exist** — a document revision, a trigger, an adjustment, a reason, a severity | `Why` cites its provenance; `Result` carries *Verified* and *Left out, and why*. A proposal's `rationale` and `evidence` are the same two fields |
 | **`journal/`** | 479 stanzas, append-only, several concurrent writers, no locking — timestamps run backwards and three files carry a duplicate heading | **`ai_turns` and `audit_log`** | Already there and already better: indexed, pruned to a stated horizon, gated on `audit.read`, and one writer per row |
 | **`reports/fitness-*.md`** | the crew measuring itself weekly | **the eval suite and `fsmes assist coverage`** | Both exist. Neither is on the AI tab yet (§8) |
-| **`bin/crew-guard`** | seven mechanical refusals | **the capability checks, and `shadow.REGISTER`'s 35 entries** | The lesson, not the mechanism: *every rule in the guard exists because prose failed first.* The role file said "you do not loop" and the agent looped for four days |
+| **`bin/crew-guard`** | seven mechanical refusals | **the capability checks, and `shadow.REGISTER`'s 36 entries** | The lesson, not the mechanism: *every rule in the guard exists because prose failed first.* The role file said "you do not loop" and the agent looped for four days |
 | **panes, sessions, `--resume`, permission modes, `clear_trust_dialog`** | ~80 of `crew-up`'s 200 lines | **nothing** | This is the "not exactly". A server process has one long-lived loop already (`api/app.py`'s lifespan) and needs none of it |
 
 ### The five ideas worth taking, in order

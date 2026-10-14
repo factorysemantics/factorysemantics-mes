@@ -11,6 +11,7 @@ page below is linked from it.
 |---|---|
 | [Beside your existing MES](first-plant.md) | tutorial — the whole path, one afternoon, for a plant engineer |
 | [Deploy](deploy.md) | tutorial — Compose on one box, or systemd units for test and promoted environments |
+| [Run it on your own box](run-it-on-your-own-box.md) | how-to — the first hour on a PC of your own: PATH on Windows, is it still running, and a plant left alive but silent |
 | [Connecting read-only to an OPC UA server you do not own](opc-readonly.md) | how-to — commissioning against a server that already serves another system |
 | [Plant packs](packs.md) | reference — the one directory that says which plant this is |
 | [Plants from a fleet file](registry.md) | how-to — several independent plants, one list |
