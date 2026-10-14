@@ -225,3 +225,23 @@ def _a_free_port() -> int:
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 0))
         return probe.getsockname()[1]
+
+
+def test_the_half_dead_state_is_made_and_recovered_on_both_runners():
+    """The words above are asserted here from fakes; a real plant half dying
+    is asserted in CI, on a real Windows runner.
+
+    A plant PC is a Windows PC, nobody on this project owns one, and all of
+    this is processes, pids and console output - which is where Windows
+    differs. If this job goes, the unit tests above still pass and nothing
+    ever starts a plant on Windows again.
+    """
+    repo = Path(__file__).resolve().parents[1]
+    ci = (repo / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert "\n  half-dead-plant:\n" in ci, (
+        "ci.yml has no `half-dead-plant` job: nothing then kills a plant's API "
+        "process and reads what the product says about it")
+    job = ci.split("\n  half-dead-plant:\n", 1)[1].split("\n  wheel-plant-from-shape:")[0]
+    assert "recover_a_half_dead_plant.py" in job
+    assert "windows-latest" in job and "ubuntu-latest" in job, (
+        "both runners, or the half that matters is the one that is missing")
