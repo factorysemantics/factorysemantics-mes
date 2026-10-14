@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import contextlib
 import functools
+import json
 import os
 import shutil
 import signal
@@ -44,6 +45,7 @@ import time
 import tomllib
 import urllib.error
 import urllib.request
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
@@ -623,6 +625,109 @@ def simulates(cfg: dict) -> bool:
 
 
 
+@dataclass(frozen=True)
+class Process:
+    """One of the processes a plant is made of: how to start it, what it is
+    for in words a person can act on, and the log it writes.
+
+    One table, read twice. `start` below starts these in order; `processes_in`
+    reads the same roles back when something wants to know what is still
+    alive. Before 2026-10-14 the roles existed only in the order of the pids
+    in the pid file, so the most a status command could say was "2 of 5
+    processes are still alive (7964, 3940)" - which is what the first Windows
+    user was told, and is not a sentence anybody can do anything with.
+    """
+
+    args: tuple[str, ...]
+    role: str
+    log: str
+    settle: float = 0.0
+
+
+# The log sink is not in the table below because it is started differently -
+# it owns the file the others write down a pipe to - but it is one of the
+# plant's processes and is named here so a person reading `status` is not left
+# wondering what the fifth pid was.
+SINK = Process((), "the log sink", "sink.log")
+POST_BOOT = Process((), "the scenario's post-boot script", "plant.log")
+
+
+def processes(cfg: dict) -> list[Process]:
+    """What this plant's processes are, in the order they are started.
+
+    Order matters: the OPC server must be listening before the agent
+    subscribes. The agent retries forever, but starting it first only buys a
+    confusing burst of connection errors in the log. The floor signs in over
+    HTTP, so it waits for the API rather than racing it.
+    """
+    opc = [
+        Process(("run-opc-sim", "--replay"), "the OPC server the machines answer on",
+                "opc-replay.jsonl", settle=2.5),
+        Process(("run-opc-agent",), "the reader that writes the machines into the MES",
+                "opc-agent.jsonl"),
+    ]
+    api = Process(("run-api",), "the dashboard and the API", "api.jsonl")
+    floor = Process(("run-operations",), "the simulated floor", "operations.jsonl")
+    if not simulates(cfg):
+        return [api]
+    return [*opc, api, floor]
+
+
+def procs_file(root: Path, name: str) -> Path:
+    """Where the roles of this plant's processes are recorded, beside its pid
+    file and written at the same moment."""
+    return data_dir(root) / f"{name}.procs"
+
+
+@dataclass(frozen=True)
+class Recorded:
+    """One process this plant's pid file names, and whether it is still there."""
+
+    pid: int
+    alive: bool
+    role: str
+    log: str
+
+    @property
+    def said(self) -> str:
+        """What this process is, in words, for a line a person reads."""
+        return self.role or "a process this plant started (its role was not recorded)"
+
+
+def processes_in(where: Path, name: str, logs: Path | None = None) -> list[Recorded]:
+    """Every process this plant's pid file names - alive or gone - and what
+    each one is.
+
+    The roles come from the file `start` wrote beside the pid file, and never
+    from the position of a pid in the file: a plant started by a release that
+    wrote no such file reports its roles as not recorded rather than guessing
+    them. Unknown is not zero, and a status line that names the wrong process
+    is worse than one that admits it cannot name it.
+
+    `pids_in` beside this answers the narrower question - which of them are
+    alive - and is what every ownership decision still uses.
+    """
+    pid_list = Path(where) / f"{name}.pids"
+    if not pid_list.is_file():
+        return []
+    pids = [int(x) for x in pid_list.read_text(encoding="utf-8").split() if x.strip().isdigit()]
+
+    roles: dict[int, dict] = {}
+    recorded = Path(where) / f"{name}.procs"
+    if recorded.is_file():
+        with contextlib.suppress(OSError, ValueError):
+            for row in json.loads(recorded.read_text(encoding="utf-8")):
+                roles[int(row["pid"])] = row
+
+    out = []
+    for pid in pids:
+        row = roles.get(pid, {})
+        log = row.get("log", "")
+        out.append(Recorded(pid=pid, alive=_alive(pid), role=row.get("role", ""),
+                            log=str(logs / log) if (logs and log) else log))
+    return out
+
+
 def start(name: str, cfg: dict, root: Path, speed: float | None = None, echo=print) -> None:
     if running_pids(root, name):
         echo(f"  {name} is already running. Stop it first.")
@@ -657,38 +762,25 @@ def start(name: str, cfg: dict, root: Path, speed: float | None = None, echo=pri
                                 stderr=subprocess.STDOUT, **_detached())
     log = sink.stdin
 
-    procs = []
-    # Order matters: the OPC server must be listening before the agent
-    # subscribes. The agent retries forever, but starting it first only buys a
-    # confusing burst of connection errors in the log.
-    if simulates(cfg):
-        procs.append(subprocess.Popen([*mes, "run-opc-sim", "--replay"], cwd=root, env=env,
-                                      stdout=log, stderr=subprocess.STDOUT,
-                                      **_detached()))
-        time.sleep(2.5)
-        procs.append(subprocess.Popen([*mes, "run-opc-agent"], cwd=root, env=env,
-                                      stdout=log, stderr=subprocess.STDOUT,
-                                      **_detached()))
-    procs.append(subprocess.Popen([*mes, "run-api"], cwd=root, env=env,
-                                  stdout=log, stderr=subprocess.STDOUT,
-                                  **_detached()))
-    # The people part of the plant. It signs in over HTTP, so it waits for the
-    # API rather than racing it.
-    if simulates(cfg):
-        procs.append(subprocess.Popen([*mes, "run-operations"], cwd=root, env=env,
-                                      stdout=log, stderr=subprocess.STDOUT,
-                                      **_detached()))
-        # A scenario's own post-boot script: what the seeding cannot do
-        # because the API did not exist yet, plus any floor activity the
-        # scenario scripts beyond run-operations. **No pack can ask for
-        # this** - decision 0022 says a pack carries no code, and `fsmes pack
-        # check` refuses the key. It is here for a lab tool that composes a
-        # configuration in code, which is code, gets reviewed, and is where
-        # the two scale labs put their breadth seeding.
-        if cfg.get("post_boot"):
-            procs.append(subprocess.Popen([sys.executable, cfg["post_boot"]], cwd=root, env=env,
-                                          stdout=log, stderr=subprocess.STDOUT,
-                                          **_detached()))
+    launched: list[tuple[Process, int]] = []
+    for spec in processes(cfg):
+        child = subprocess.Popen([*mes, *spec.args], cwd=root, env=env,
+                                 stdout=log, stderr=subprocess.STDOUT, **_detached())
+        launched.append((spec, child.pid))
+        if spec.settle:
+            time.sleep(spec.settle)
+
+    # A scenario's own post-boot script: what the seeding cannot do because
+    # the API did not exist yet, plus any floor activity the scenario scripts
+    # beyond run-operations. **No pack can ask for this** - decision 0022 says
+    # a pack carries no code, and `fsmes pack check` refuses the key. It is
+    # here for a lab tool that composes a configuration in code, which is
+    # code, gets reviewed, and is where the two scale labs put their breadth
+    # seeding.
+    if simulates(cfg) and cfg.get("post_boot"):
+        child = subprocess.Popen([sys.executable, cfg["post_boot"]], cwd=root, env=env,
+                                 stdout=log, stderr=subprocess.STDOUT, **_detached())
+        launched.append((POST_BOOT, child.pid))
 
     # Let go of our own end of the pipe, so the sink sees EOF when the last
     # of the plant's processes has gone and can finish writing and exit.
@@ -696,8 +788,16 @@ def start(name: str, cfg: dict, root: Path, speed: float | None = None, echo=pri
 
     # The sink is last in the file: `stop` reaches it after the processes
     # that write to it, which is the order that loses nothing.
-    pids = [p.pid for p in procs] + [sink.pid]
+    launched.append((SINK, sink.pid))
+
+    pids = [pid for _, pid in launched]
     pid_file(root, name).write_text("\n".join(str(p) for p in pids), encoding="utf-8")
+    # What each of those pids is, written in the same breath as the pid file.
+    # A pid on its own is what the first Windows user had on his screen.
+    procs_file(root, name).write_text(
+        json.dumps([{"pid": pid, "role": spec.role, "log": spec.log} for spec, pid in launched],
+                   indent=1),
+        encoding="utf-8")
     echo(f"  {name} started -> {dashboard_url(cfg)} "
          f"(PIDs {', '.join(str(p) for p in pids)})")
 
@@ -707,6 +807,7 @@ def stop(name: str, cfg: dict, root: Path, echo=print) -> None:
     if not pids:
         echo(f"  {name} is not running.")
         pid_file(root, name).unlink(missing_ok=True)
+        procs_file(root, name).unlink(missing_ok=True)
         return
 
     for pid in pids:
@@ -721,6 +822,7 @@ def stop(name: str, cfg: dict, root: Path, echo=print) -> None:
             _force_stop(pid)
 
     pid_file(root, name).unlink(missing_ok=True)
+    procs_file(root, name).unlink(missing_ok=True)
     echo(f"  {name} stopped ({len(pids)} process(es)).")
 
 
