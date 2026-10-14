@@ -91,7 +91,7 @@ class Outbound:
 #: `allowed`    — it runs, because nothing about the plant leaves this box
 #:                by it, and nothing outside this MES changes.
 #:
-#: **35 entries.** The count is stated because a register that quietly loses
+#: **36 entries.** The count is stated because a register that quietly loses
 #: a row is worse than no register, and `tests/test_shadow_mode.py` scans the
 #: source for outbound primitives and fails on any call site not covered by
 #: an entry here.
@@ -374,6 +374,17 @@ REGISTER: tuple[Outbound, ...] = (
              "sends no bytes",
     ),
     # ---------------------------------------------------------- the demo
+    Outbound(
+        name="firstrun.port_check",
+        where="fsmes.firstrun:answers",
+        reaches="a TCP port on this box, opened and closed",
+        verdict="allowed",
+        note="before `fsmes demo <plant>` launches anything it asks whether "
+             "the dashboard port and the OPC port are already in use, so it "
+             "can say which one and what to do instead of starting five "
+             "processes that fail at bind one by one. It connects to "
+             "127.0.0.1 and closes; it sends no bytes and reads none",
+    ),
     Outbound(
         name="cli.demo",
         where="fsmes.cli:_demo",
