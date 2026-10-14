@@ -896,6 +896,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../operate/run-it-on-your-own-box/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — run it on your own box
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../operate/first-plant/" class="md-nav__link">
         
   
@@ -5275,7 +5303,7 @@ one a plant manager most wants broken.</p>
 <tr>
 <td><strong>"graph the ui response time for those pages"</strong></td>
 <td><strong>No</strong></td>
-<td>No timing anywhere. <code>/metrics</code> (<code>api/routers/system.py</code>) is counts and ids, and its own docstring says <em>"there is deliberately </em><em>no performance and no OEE series here</em><em>"</em>. The app has two <code>http</code> middlewares (<code>api/app.py</code>) and neither times anything. Smallest honest start: a bounded in-memory ring per route template — p50, p95, count — on the middleware that already runs. <strong>A ring is not history:</strong> it answers "now", never "last Tuesday", and a chart drawn from it says so</td>
+<td>No timing anywhere. <code>/metrics</code> (<code>api/routers/system.py</code>) is counts and ids, and its own docstring says <em>"there is deliberately <strong>no performance and no OEE series here</strong>"</em>. The app has two <code>http</code> middlewares (<code>api/app.py</code>) and neither times anything. Smallest honest start: a bounded in-memory ring per route template — p50, p95, count — on the middleware that already runs. <strong>A ring is not history:</strong> it answers "now", never "last Tuesday", and a chart drawn from it says so</td>
 </tr>
 <tr>
 <td><strong>"graph maintenance repair time over time"</strong></td>
