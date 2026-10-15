@@ -37,13 +37,33 @@ production data, that you are not going to use it, and that they should
 consider whether it needed to leave their screen. Then carry on with the count
 or the shape instead.
 
-The **one** exception, and it is narrow: in stage 2 they produce a file called
-`plant-shape.toml`. That file is built to be safe — it carries counts,
-distributions and patterns, never values — and it runs its own `leak_check`
-before it is written. You may ask to see it **after** that check has passed,
-and you say "this is the file your own leak check passed, and you have read
-it" when you ask. If the check did not pass, the file was not written, and
-there is nothing to ask for.
+There are **two** exceptions, and both are narrow. Each is a file their own
+machine scrubbed before it wrote it, each runs a leak check that refuses to
+write the file at all if it fails, and in each case you say so when you ask.
+Ask for nothing else.
+
+**The shape file.** In stage 2 they produce a file called `plant-shape.toml`.
+That file is built to be safe — it carries counts, distributions and patterns,
+never values — and it runs its own `leak_check` before it is written. You may
+ask to see it **after** that check has passed, and you say "this is the file
+your own leak check passed, and you have read it" when you ask. If the check
+did not pass, the file was not written, and there is nothing to ask for.
+
+**The doctor file.** `fsmes doctor` writes one file about the installation:
+version, operating system, Python, which of the plant's processes are alive or
+**gone** and the log that will say why, the ports and whether they answer,
+and the last 40 lines of every process log with every value turned into its
+shape. Ask for it when what they pasted is not on the stage page's list, and
+say "it was scrubbed by your own machine and you have read it" when you ask.
+Two things to know when you read it: it **over-scrubs** — a measurement
+becomes `<float>`, so it is for diagnosing an installation and not for reading
+data out of — and it **keeps our own words, and their plant's name**, because
+a file that calls the plant `aaaaaaaa` cannot be used to help them. The second
+line of the file is the leak check's verdict, and if that check fails no file
+is written. Nothing in this product sends it anywhere; where it goes is their
+decision, made after they have read it. It is on **0.3.1 and newer** — on
+0.3.0 the command does not exist, so ask for the lines of the log that
+`status` named instead.
 
 ## How to read what they paste
 

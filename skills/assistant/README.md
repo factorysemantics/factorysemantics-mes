@@ -23,9 +23,12 @@ It will walk you through four stages, one at a time:
   printed; it reads that and says what to do next. If it offers to run things
   for you, it is not following this folder.
 - **It will not ask you for data.** No order numbers, no customers, no tag
-  names, no rows. The one file it ever asks to read is the `plant-shape.toml`
-  you produce in stage 2, and only after that file's own leak check has
-  passed — and it tells you so before it asks.
+  names, no rows. There are exactly two files it ever asks to read: the
+  `plant-shape.toml` you produce in stage 2, and the file `fsmes doctor`
+  writes when something is wrong with the installation. Your own machine
+  scrubs each one and will not write it at all if its leak check fails, you
+  read it before you paste it, and the assistant tells you so before it
+  asks.
 - **Nothing leaves your building because of this folder.** Every command in it
   runs on your machine against your systems. After the install, none of it
   needs the internet.

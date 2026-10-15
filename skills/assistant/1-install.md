@@ -69,6 +69,12 @@ plant and not a plant anybody else can reach.
 Four things actually go wrong. Each is identified by text the computer printed,
 so ask for the paste before you diagnose.
 
+**When none of the four matches, do not invent a cause: ask for the doctor
+file.** On **0.3.1 and newer** `fsmes doctor --out doctor.md` writes one file
+holding what is installed, which processes are alive or **gone** with the log
+that says why, the ports, and the last 40 lines of every log with the values
+taken out. `0-how-to-help.md` says how to ask for it; it is not on 0.3.0.
+
 ### `not recognized` — it installed, and the shell cannot find it
 
 ```text
@@ -136,9 +142,6 @@ PowerShell (Task Manager's *Details* tab, *End task*, does the same thing by
 clicking), then `fsmes demo bottling`. On Linux, `kill 7964`. Ask for
 `fsmes --version` — or `py -m pip show factorysemantics-mes` if `fsmes` is
 still not found — before you tell them which of the two they are on.
-
-The log the `gone:` line names is worth reading: it says why that process
-died. Ask them to paste its last few lines, not the whole file.
 
 ### `did not answer` — 0.3.0 refusing to act on a silent plant
 
