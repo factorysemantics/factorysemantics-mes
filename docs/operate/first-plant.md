@@ -24,6 +24,13 @@ and nothing on your plant has changed.
 Send the two guides out first; they are the long pole. Everything else is an
 afternoon.
 
+**If you would rather be walked through it.** This page, and the install and
+plant-shape pages either side of it, also ship as a folder you hand to whatever
+AI assistant you already use — `fsmes-assistant.zip` on the release page, or
+`fsmes skills unpack assistant ./assistant` out of an installation. You run the
+commands and paste back what they print; it needs no access to this machine and
+it asks you for no plant data. Stage 3 of it is this page, as a script.
+
 ## The afternoon, in order
 
 | # | Step | Budget |
