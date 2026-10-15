@@ -199,7 +199,8 @@ def database_url(name: str, cfg: dict, root: Path) -> str:
     return storage.with_password(url, cfg.get("database_password_file"))
 
 
-def plant_env(name: str, cfg: dict, root: Path, speed: float | None = None) -> dict[str, str]:
+def plant_env(name: str, cfg: dict, root: Path, speed: float | None = None,
+              node: str | None = None, api_port: int | None = None) -> dict[str, str]:
     """The complete MES_* contract for one plant.
 
     Almost all of it is the pack's, compiled once when the fleet was read.
@@ -207,12 +208,22 @@ def plant_env(name: str, cfg: dict, root: Path, speed: float | None = None) -> d
     plant on this machine rather than facts about the plant: where its
     database file goes, where its data directory is, where its log goes, and
     a signing key when nothing supplied one.
+
+    `node` and `api_port` are facts about running it on *this* box rather
+    than on any box, which is why they are arguments and not pack keys: two
+    nodes of one plant differ by name and by port and in nothing else. A node
+    writes its logs in its own directory under the plant's, so two nodes on
+    one box do not append to one file.
     """
     env = dict(os.environ)
     env.update(cfg.get("env") or {})
     env["MES_PLANT_NAME"] = name
     env["MES_DATABASE_URL"] = database_url(name, cfg, root)
-    env["MES_LOG_DIR"] = f"logs/{name}"
+    env["MES_LOG_DIR"] = log_dir(name, node)
+    if node:
+        env["MES_NODE_ID"] = node
+    if api_port is not None:
+        env["MES_API_PORT"] = str(api_port)
     # Where this plant's own files live: its database, the record of the pack
     # it was given, and the instance id that says which installation created
     # it. A plant started any other way does not know, and /health then
@@ -422,16 +433,35 @@ def dashboard_url(cfg: dict) -> str:
     return f"http://{cfg.get('api_host', '127.0.0.1')}:{cfg['api_port']}/dashboard"
 
 
-def health(cfg: dict, timeout: float = 4.0) -> str:
+def health_report(cfg: dict, timeout: float = 4.0) -> tuple[str, dict]:
+    """Ask the port how it is, and keep what it said.
+
+    `health()` answers the only question most callers have - is it
+    answering - and throws the body away. A redundant plant makes the body
+    worth reading: it carries the node's name and the roles that node holds,
+    which is the difference between "two nodes are up" and "two nodes are up
+    and exactly one of them is reading the machines".
+    """
     host = cfg.get("api_host", "127.0.0.1")
     url = f"http://{host}:{cfg['api_port']}/health"
     try:
         with urllib.request.urlopen(url, timeout=timeout) as r:
-            return "healthy" if r.status == 200 else f"HTTP {r.status}"
+            if r.status != 200:
+                return f"HTTP {r.status}", {}
+            try:
+                return "healthy", json.loads(r.read().decode("utf-8"))
+            except (ValueError, UnicodeDecodeError, OSError):
+                # Answering is the fact that matters; a body we cannot read
+                # is a thinner answer, not a sick plant.
+                return "healthy", {}
     except urllib.error.URLError:
-        return "not answering yet"
+        return "not answering yet", {}
     except OSError:
-        return "not answering yet"
+        return "not answering yet", {}
+
+
+def health(cfg: dict, timeout: float = 4.0) -> str:
+    return health_report(cfg, timeout)[0]
 
 
 # --------------------------------------------------------------------------
@@ -615,6 +645,23 @@ def migrate(name: str, cfg: dict, root: Path, echo=print, upgrade=None) -> dict:
     return receipt
 
 
+def log_dir(name: str, node: str | None = None) -> str:
+    """Where one plant's processes write, relative to the repository root.
+
+    A node of its own gets a directory of its own: two nodes of one plant on
+    one box would otherwise interleave two readers' lines in one file, and the
+    first question a person asks of a failover is which node said what.
+    """
+    return f"logs/{name}/{node}" if node else f"logs/{name}"
+
+
+def redundant(cfg: dict) -> bool:
+    """Whether this plant expects more than one node - `[redundancy] enabled`
+    in its pack, read from the environment the pack compiled to, because that
+    is the same string every one of its processes will read."""
+    return str((cfg.get("env") or {}).get("MES_REDUNDANCY", "")).lower() in {"1", "true", "yes", "on"}
+
+
 def simulates(cfg: dict) -> bool:
     """Whether this plant runs its simulated line - the OPC replay, the agent
     and the floor - or only serves what its database already holds. A public
@@ -670,6 +717,15 @@ def processes(cfg: dict) -> list[Process]:
     floor = Process(("run-operations",), "the simulated floor", "operations.jsonl")
     if not simulates(cfg):
         return [api]
+    if redundant(cfg):
+        # The OPC server is the machine layer, and the machine layer is not a
+        # node: there is one of it, shared, like the database. A simulated one
+        # started by a node would die with that node and take the counters
+        # with it, and the reader on the surviving node would see the replay
+        # restart from the beginning - which reads as a PLC reset, so nothing
+        # would be booked. A redundant plant's nodes are pointed at one
+        # endpoint, which is a real PLC or a replay somebody started once.
+        return [opc[1], api, floor]
     return [*opc, api, floor]
 
 
@@ -853,23 +909,43 @@ def supervisor(root: Path, name: str) -> str:
 def status(name: str, cfg: dict, root: Path, echo=print) -> dict:
     # Health is asked of the port directly and never gated on knowing who
     # started the plant - the dashboard answering is the fact that matters.
-    state = health(cfg)
+    state, body = health_report(cfg)
     by = supervisor(root, name)
     echo(f"  {name:<12} {state:<18} {by:<16} {dashboard_url(cfg)}")
     echo(f"               {cfg['label']}")
+    node = body.get("node") or {}
+    roles = node.get("roles")
+    if node.get("redundancy"):
+        # One line a person can read during a failover: which node answered,
+        # and what that node is responsible for right now. "nothing yet" is a
+        # real state - a standby that has not taken over is healthy - and
+        # "unknown" is a third one, when the lease table could not be read.
+        if roles is None:
+            holding = "unknown"
+        else:
+            holding = ", ".join(roles) if roles else "nothing yet"
+        echo(f"               node {node.get('name', '?')}, holding {holding}")
     return {"plant": name, "supervisor": by, "health": state,
-            "api_port": cfg["api_port"], "pack": str(cfg.get("pack", ""))}
+            "api_port": cfg["api_port"], "pack": str(cfg.get("pack", "")),
+            "node": node.get("name", ""), "roles": roles}
 
 
-def run(name: str, cfg: dict, root: Path, speed: float | None = None, echo=print) -> int:
+def run(name: str, cfg: dict, root: Path, speed: float | None = None, echo=print,
+        node: str | None = None, api_port: int | None = None) -> int:
     """Foreground supervisor: what the systemd unit executes.
 
     Owns the three child processes and takes them down with it, so `systemctl
     stop` leaves nothing orphaned holding a port.
+
+    `node` names this node of the plant and `api_port` overrides the pack's
+    port, so two nodes of one plant can be run on one box. Neither changes
+    anything about a plant that runs on one node.
     """
-    env = plant_env(name, cfg, root, speed)
+    if api_port is not None:
+        cfg = {**cfg, "api_port": api_port}
+    env = plant_env(name, cfg, root, speed, node=node, api_port=api_port)
     mes = fsmes_command()
-    (root / "logs" / name).mkdir(parents=True, exist_ok=True)
+    (root / log_dir(name, node)).mkdir(parents=True, exist_ok=True)
 
     children: list[subprocess.Popen] = []
 
@@ -889,16 +965,24 @@ def run(name: str, cfg: dict, root: Path, speed: float | None = None, echo=print
     signal.signal(signal.SIGTERM, shutdown)
     signal.signal(signal.SIGINT, shutdown)
 
-    if simulates(cfg):
+    if simulates(cfg) and not redundant(cfg):
         children.append(subprocess.Popen([*mes, "run-opc-sim", "--replay"], cwd=root, env=env))
         time.sleep(2.5)
+    if simulates(cfg):
         children.append(subprocess.Popen([*mes, "run-opc-agent"], cwd=root, env=env))
     children.append(subprocess.Popen([*mes, "run-api"], cwd=root, env=env))
     if simulates(cfg):
         children.append(subprocess.Popen([*mes, "run-operations"], cwd=root, env=env))
         if cfg.get("post_boot"):
             children.append(subprocess.Popen([sys.executable, cfg["post_boot"]], cwd=root, env=env))
-    echo(f"{name} running -> {dashboard_url(cfg)}" + ("" if simulates(cfg) else " (serving; nothing simulates)"))
+    said = f"{name} running -> {dashboard_url(cfg)}"
+    if node:
+        said += f" (node {node})"
+    if not simulates(cfg):
+        said += " (serving; nothing simulates)"
+    elif redundant(cfg):
+        said += f" (reading {env.get('MES_OPC_ENDPOINT', 'the endpoint this plant was given')})"
+    echo(said)
 
     # If any child dies the plant is broken; take the rest down so systemd
     # restarts a whole plant rather than leaving a half-dead one answering.

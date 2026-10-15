@@ -5,6 +5,7 @@ import logging
 from fastapi import APIRouter
 from fastapi.responses import PlainTextResponse
 from sqlalchemy import func, select, text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from fsmes import identity
@@ -22,7 +23,7 @@ from fsmes.domain import (
     WorkOrder,
 )
 from fsmes.services import connection as connection_service
-from fsmes.services import line_clock
+from fsmes.services import leases, line_clock
 
 log = logging.getLogger(__name__)
 
@@ -56,6 +57,58 @@ def _the_floor(db: Session) -> dict:
             # Against the plant's own clock, so a reader does not have to work
             # out which zone the instant above is in before it means anything.
             "seconds_since": round((utcnow() - last).total_seconds(), 1)}
+
+
+def _this_node(db: Session) -> dict:
+    """Which node answered, and what that node is responsible for.
+
+    A plant with `[redundancy]` on runs on more than one node against one
+    database, and every node serves the dashboard. So the address a person
+    dialled no longer tells them which box answered, and "the plant is up" no
+    longer tells them whether anything is reading the machines. Health says
+    both, because health is the endpoint everything already asks.
+
+    `named` is there for the reason `timezone_defaulted` is: a node that was
+    not given a name got one made from its hostname and port, and a reader is
+    entitled to know the name was a guess.
+
+    `holders` names every role, including the ones nobody holds, because a
+    role with no holder is a fact worth reading and an absent key is not. On a
+    real plant `floor` is never held by anybody - there is no simulated floor
+    to run - and that is the same shape as a role whose holder just died.
+    """
+    from fsmes.config import get_settings
+
+    settings = get_settings()
+    me = leases.node_name(settings)
+    out: dict = {"name": me, "named": bool(settings.node_id),
+                 "redundancy": settings.redundancy}
+    if not settings.redundancy:
+        # One node does everything, so "which roles does this node hold" is
+        # not a question about this plant. Null, not an empty list: unknown is
+        # not zero and neither is "does not apply".
+        out["lease_seconds"] = None
+        out["roles"] = None
+        out["holders"] = None
+        return out
+    out["lease_seconds"] = settings.lease_seconds
+    try:
+        rows = leases.holders(db)
+    except SQLAlchemyError:
+        # An un-migrated database has no lease table. Health still answers -
+        # the plant is up - and says plainly that it does not know who holds
+        # what rather than claiming nobody does.
+        log.warning("health could not read the lease table", exc_info=True)
+        out["roles"] = None
+        out["holders"] = None
+        return out
+    held = {role: None for role in leases.ROLES}
+    for row in rows:
+        if row["live"]:
+            held[row["role"]] = row["holder"]
+    out["holders"] = held
+    out["roles"] = sorted(role for role, holder in held.items() if holder == me)
+    return out
 
 
 @router.get("/health")
@@ -103,7 +156,12 @@ def health(db: ReadDbDep) -> dict:
             # namespace envelope or the backup manifest. None here means no
             # fleet tool created this plant, which means no fleet tool owns
             # it - decision 0023, condition 2.
-            "instance_id": identity.instance_id()}
+            "instance_id": identity.instance_id(),
+            # Which node answered and what it holds. Rides on health for the
+            # same reason everything above it does: during a failover the
+            # question a person has is not "is it up" but "is anybody reading
+            # the machines", and this is the endpoint they are already asking.
+            "node": _this_node(db)}
 
 
 @router.get("/shadow")

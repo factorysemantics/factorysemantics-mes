@@ -2614,6 +2614,14 @@ def plant(
         None,
         help="Replay speed multiplier. 60 replays a scripted hour in a minute.",
     ),
+    node: str | None = typer.Option(
+        None,
+        help="Name this node of the plant, for a plant that runs on more than one box.",
+    ),
+    api_port: int | None = typer.Option(
+        None,
+        help="Serve the dashboard on this port instead of the pack's, for a second node on one box.",
+    ),
     root: Path | None = typer.Option(None, help="Repository root (default: found from cwd)."),
 ) -> None:
     """Run several independent MES plants side by side.
@@ -2629,6 +2637,18 @@ def plant(
         fsmes plant bottling run  foreground supervisor (what systemd runs)
         fsmes plant all migrate   bring every stopped plant's database to the
                                   current schema (backup first, receipt after)
+
+    A plant with [redundancy] on runs on more than one node against one
+    PostgreSQL. A node is one of these supervisors, named, and two nodes of
+    one plant on one box need a port each:
+
+        fsmes plant bottling run --node a --api-port 8111
+        fsmes plant bottling run --node b --api-port 8112
+        fsmes plant bottling status --api-port 8112   ask node b how it is
+
+    Both nodes serve the dashboard; the roles that must run once - reading
+    the machines, the simulated floor, housekeeping - are held by whichever
+    node holds that role's lease in the database.
     """
     from fsmes import plant as plants_mod
     from fsmes.pack import fleet
@@ -2647,15 +2667,28 @@ def plant(
         typer.echo(str(exc).strip('"'))
         raise typer.Exit(2) from exc
 
+    if node and action not in {"run", "status"}:
+        typer.echo(f"--node names the node a supervisor is, so it belongs to `run` (or `status`), not `{action}`.")
+        raise typer.Exit(2)
+    if api_port is not None and len(targets) != 1:
+        typer.echo("--api-port is one port, so name one plant.")
+        raise typer.Exit(2)
+
     if action == "run":
         if len(targets) != 1:
             typer.echo("`run` supervises exactly one plant - name it explicitly.")
             raise typer.Exit(2)
         name = targets[0]
-        raise typer.Exit(plants_mod.run(name, registry[name], where, speed) or 0)
+        raise typer.Exit(
+            plants_mod.run(name, registry[name], where, speed, node=node, api_port=api_port) or 0
+        )
 
     for name in targets:
         cfg = registry[name]
+        if api_port is not None:
+            # Asking a node on a port the pack does not know about is the
+            # whole point: on one box the second node is somewhere else.
+            cfg = {**cfg, "api_port": api_port}
         if action == "init":
             plants_mod.init(name, cfg, where, echo=typer.echo)
         elif action == "start":
@@ -3059,14 +3092,27 @@ def run_operations(
         # a crew looking every twenty real seconds would be walking to the
         # machine for most of it.
         crew_every = crew_every / speed
-    _asyncio.run(run_floor(settings, inspect_every=inspect_every,
-                           issue_every=issue_every, watch_every=watch_every,
-                           plan_every=plan_every, crew_every=crew_every,
-                           speed=speed, seed=seed, inspect_all=inspect_all,
-                           finish_orders=finish_orders,
-                           plan_orders=plan_orders,
-                           password=settings.operator_password,
-                           crew_password=settings.operator_password))
+    def floor():
+        return run_floor(settings, inspect_every=inspect_every,
+                         issue_every=issue_every, watch_every=watch_every,
+                         plan_every=plan_every, crew_every=crew_every,
+                         speed=speed, seed=seed, inspect_all=inspect_all,
+                         finish_orders=finish_orders,
+                         plan_orders=plan_orders,
+                         password=settings.operator_password,
+                         crew_password=settings.operator_password)
+
+    # One floor per plant, however many nodes it runs on: two of these would
+    # raise two of every inspection and two of every maintenance job, and the
+    # plant's own records would say both happened. A plant on one box has no
+    # lease and runs the floor directly.
+    from fsmes.services import leases
+
+    lease = leases.for_role(leases.ROLE_FLOOR, settings)
+    if lease is None:
+        _asyncio.run(floor())
+    else:
+        _asyncio.run(leases.run_while_held(lease, floor))
 
 
 @app.command("draft-instructions")
