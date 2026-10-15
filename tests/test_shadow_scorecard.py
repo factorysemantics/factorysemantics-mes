@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import csv
 import json
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -332,3 +332,99 @@ def test_two_records_with_no_order_code_in_common_say_so_rather_than_report_noth
         "--ours", str(tmp_path / "outbox")])
     assert result.exit_code == 1
     assert "Not one order code appears in both records" in result.output
+
+
+# ------------------------------------- the figures kept for `fsmes doctor`
+
+
+def test_the_figures_kept_under_the_home_carry_no_code_no_heading_and_no_quantity(tmp_path, run):
+    """What `--json` leaves under the home is counts, and nothing else.
+
+    The report itself names the orders and quotes the numbers, because that is
+    what a person has to act on, and it stays where the person who ran it put
+    it. The copy this product keeps by itself - in a directory a diagnostic
+    file reads later - is the reduction, and the test reads every string in it
+    rather than looking for the few it remembered to search for.
+    """
+    headings = {"order": "ORDER_NO", "operation": "OPER", "equipment": "WORK_CTR",
+                "good_qty": "QTY_OK", "scrap_qty": "QTY_SCRAP",
+                "started_at": "DT_START", "completed_at": "DT_END"}
+    rows = perturbed_export(run)
+    path = write_csv(tmp_path / "theirs.csv", rows, headings)
+    card = scorecard.compare(incumbent.read(path),
+                             scorecard.read_confirmations(our_confirmations(tmp_path, run)))
+
+    home = tmp_path / "home"
+    kept = scorecard.keep(card, home, when=datetime(2026, 10, 14, 6, 30, tzinfo=UTC))
+    assert kept == home / scorecard.KEPT / "2026-10-14.json"
+    text = kept.read_text(encoding="utf-8")
+    body = json.loads(text)
+
+    def strings(value) -> list[str]:
+        if isinstance(value, str):
+            return [value]
+        if isinstance(value, dict):
+            return [s for v in value.values() for s in strings(v)]
+        if isinstance(value, list):
+            return [s for v in value for s in strings(v)]
+        return []
+
+    # The only words allowed are this product's own: what the file calls
+    # itself, when it was written, its note, and the names of the fields it
+    # compares - which are our names for them, not the incumbent's headings.
+    allowed = ({scorecard.KEPT_KIND, body["written"], body["note"]}
+               | set(scorecard.BY_NAME) | set(incumbent.COLUMNS))
+    unexpected = sorted(set(strings(body)) - allowed)
+    assert not unexpected, f"a string nobody checked is in the kept figures: {unexpected}"
+
+    for order in (*EXPECTED_DIFFERENCES, (ONLY_THE_INCUMBENT_BOOKED,), (ONLY_THIS_MES_HAS,)):
+        assert order[0] not in text
+    for heading in headings.values():
+        assert heading not in text
+    # A quantity is a number and so is a count, so only the quantities that
+    # are too large to be any count in this comparison can be looked for -
+    # which the demo run's are, and which is the shape of the risk anyway: a
+    # plant's batch sizes are not single digits.
+    big = [q for q in (float(p["good_qty"]) for p in run.values()) if q >= 100]
+    assert big, "a run with no large quantity in it proves nothing here"
+    for quantity in big:
+        assert f"{quantity:g}" not in text
+
+
+def test_the_kept_figures_hold_the_counts_doctor_lines_up_by_date(tmp_path, run):
+    card = card_for(tmp_path, run, perturbed_export(run))
+    body = card.figures(written="2026-10-14T06:30:00+00:00")
+
+    assert body["kind"] == scorecard.KEPT_KIND
+    assert body["orders"]["total"] == (len(card.orders_both)
+                                       + len(card.orders_only_incumbent)
+                                       + len(card.orders_only_mes))
+    assert body["agreement"]["compared"] == card.compared
+    assert body["agreement"]["differ"] == len(card.differences)
+    assert body["cannot_tell"]["total"] == len(card.cannot_tell)
+    # Every list states the total it came out of, in the reduction as well.
+    for row in body["agreement"]["per_operation"]:
+        assert row["agree"] + row["differ"] + row["not_stated"] == row["pairs"]
+
+
+def test_the_command_keeps_a_copy_of_the_figures_under_the_home(tmp_path, run, monkeypatch):
+    from typer.testing import CliRunner
+
+    from fsmes import standalone
+    from fsmes.cli import app
+
+    home = tmp_path / "home"
+    monkeypatch.setenv(standalone.HOME_ENV, str(home))
+    write_csv(tmp_path / "incumbent.csv", perturbed_export(run))
+    our_confirmations(tmp_path, run)
+    result = CliRunner().invoke(app, [
+        "shadow", "scorecard",
+        "--incumbent", str(tmp_path / "incumbent.csv"),
+        "--ours", str(tmp_path / "outbox"),
+        "--json", str(tmp_path / "card.json"),
+    ])
+    assert result.exit_code == 0, result.output
+    kept = sorted((home / scorecard.KEPT).glob("*.json"))
+    assert len(kept) == 1, "one file a day, so two days read as two rows"
+    assert json.loads(kept[0].read_text())["kind"] == scorecard.KEPT_KIND
+    assert "for `fsmes doctor`" in result.output, "a file this product writes by itself is said"

@@ -377,7 +377,13 @@ On the first day, in this order:
 fsmes info          # the version you think you are running
 fsmes opc-verify    # every mapped tag still readable
 fsmes erp check     # only if you did step 5
+fsmes doctor        # one file to paste when something is wrong
 ```
+
+Run `fsmes doctor` once on the first day even if nothing is wrong, and read
+it: it is how you will ask for help later, and reading it now is how you
+satisfy yourself that nothing of your plant's is in it —
+[one file to paste when something is wrong](doctor.md).
 
 Then open `/dashboard` and look at the line, `/dashboard/analysis` for the
 shift, and `/dashboard/line` for one line's machines, its work in progress

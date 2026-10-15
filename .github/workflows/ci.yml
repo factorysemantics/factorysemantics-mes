@@ -319,6 +319,37 @@ jobs:
         shell: bash
         run: python .github/scripts/recover_a_half_dead_plant.py --wheel "$(ls dist/*.whl)" --speed 60
 
+  doctor-leaks-nothing:
+    # The file `fsmes doctor` writes is the one thing in this product a person
+    # is told to paste somewhere else - to their own agent, or to this project.
+    # Its first line promises that no tag name, order number, product, lot,
+    # person, host name or database URL is in it. A promise like that is only
+    # worth what a check makes it worth, so this job plants a tag named
+    # SECRET_TAG_XYZ and an order WO-LEAK-1 in the logs the command reads, runs
+    # it against a home with no plant, a running plant in shadow mode, a
+    # half-dead one and a stopped one, and greps every file it wrote for them -
+    # and for this machine's host name and the user who ran it.
+    #
+    # Beside `half-dead-plant` and on both runners for the same reason: it is
+    # processes, pids, paths and console output, which is exactly where Windows
+    # differs, and a plant engineer's PC is a Windows PC.
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip build
+      - run: python -m build --wheel
+      - name: doctor writes a file with nothing of yours in it, in every state
+        shell: bash
+        run: python .github/scripts/doctor_writes_nothing_of_yours.py --wheel "$(ls dist/*.whl)" --speed 60
+
   wheel-plant-from-shape:
     # The whole customer path, from a built wheel, on both runners, with the
     # network off: install, write the assistant folder out of the installation

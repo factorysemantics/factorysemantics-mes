@@ -264,6 +264,57 @@ def available() -> list[str]:
     return sorted(name for name in SKILLS if _in_a_checkout(name) is not None)
 
 
+def folder(name: str) -> Path | None:
+    """Where this installation keeps one skill folder, as a real directory.
+
+    Three places, in order: the copy inside the installed package; the
+    `skills/` folder above this module, which is where it lives in a checkout
+    and in an editable install; and `skills/` above the working directory, for
+    somebody running out of a checkout they have not installed.
+
+    Walking up from this module rather than only from the working directory is
+    what makes it findable from a test or a command that has chdir'd
+    somewhere else - an editable install has no `fsmes/data/skills`, because
+    those copies are made at build time.
+
+    `None` means this installation does not carry it. A caller that needs the
+    folder to keep a promise - `fsmes doctor` needs the leak check - refuses
+    rather than carries on without it.
+    """
+    if _in_the_package(name):
+        with resources.as_file(
+                resources.files("fsmes").joinpath(*SKILLS_IN_PACKAGE, name)) as source:
+            # The context manager may have unpacked a copy to a temporary
+            # place, so the path is only valid inside it; a caller that reads
+            # a file from here reads it through `read_file` below.
+            return Path(source)
+    return _in_a_checkout(name, Path(__file__).parent) or _in_a_checkout(name)
+
+
+def read_file(name: str, relative: str) -> str | None:
+    """One file out of a shipped skill folder, as text, wherever it lives.
+
+    Goes through `importlib.resources` for the packaged copy rather than
+    through `folder()`, because a package's data is not promised to be a real
+    directory that outlives a `with` block.
+    """
+    if _in_the_package(name):
+        try:
+            return (resources.files("fsmes")
+                    .joinpath(*SKILLS_IN_PACKAGE, name, *relative.split("/"))
+                    .read_text(encoding="utf-8"))
+        except (OSError, FileNotFoundError, NotADirectoryError):
+            return None
+    here = _in_a_checkout(name, Path(__file__).parent) or _in_a_checkout(name)
+    if here is None:
+        return None
+    path = here.joinpath(*relative.split("/"))
+    try:
+        return path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+
+
 def unpack(name: str, target: Path, *, echo=print) -> Path:
     """Write a shipped skill folder into `target/<name>/`, and say what landed.
 

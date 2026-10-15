@@ -1087,6 +1087,18 @@ def shadow_scorecard(
         json_out.parent.mkdir(parents=True, exist_ok=True)
         json_out.write_text(card.to_json(), encoding="utf-8")
         typer.echo(f"  wrote {json_out}")
+        # And the figures alone under the home, so that `fsmes doctor` can
+        # line two shadow days up by date. Figures: no order code, no column
+        # heading, no quantity. The scorecard itself stays where it was asked
+        # for and is never copied.
+        from fsmes import standalone
+
+        try:
+            kept = scoring.keep(card, standalone.home())
+        except OSError as exc:
+            typer.echo(f"  could not keep the figures under the home: {exc}")
+        else:
+            typer.echo(f"  kept the figures in {kept} for `fsmes doctor`")
     if html_out:
         html_out.parent.mkdir(parents=True, exist_ok=True)
         html_out.write_text(scorecard_html.render(card), encoding="utf-8")
@@ -1784,6 +1796,45 @@ def info() -> None:
     else:
         typer.echo(f"shadow mode   off — this MES may act on its plant "
                    f"({shadow.SETTING}=true to watch only)")
+
+
+@app.command()
+def doctor(
+    plant: str | None = typer.Option(None, "--plant",
+                                     help="Only this plant, by the name this home knows it by "
+                                          "(the name `fsmes demo <plant>` takes)."),
+    out: Path | None = typer.Option(None, "--out",
+                                    help="Where the file is written. "
+                                         "Default: `doctor.md` in this directory."),
+) -> None:
+    """Write one file describing this installation, with nothing of yours in it.
+
+    What is installed, which plants this home has, which of their processes
+    are alive or gone, whether their ports answer, whether shadow mode is on,
+    and the last lines of each log with every value replaced by its shape.
+    Then, for a plant in shadow mode, how long it has been watching, how much
+    of that window it saw, and how well it agreed with the MES in charge.
+
+    It starts nothing and stops nothing. The file is yours: paste it into your
+    own agent, into a chat with us, into an issue. Nothing sends it anywhere.
+    """
+    from fsmes import doctor as writer
+    from fsmes.doctor import Leak
+
+    try:
+        written = writer.write(out, plant=plant)
+    except Leak as exc:
+        typer.echo("NOT OK  the leak check refused this file, so it was not written.")
+        for line in str(exc).splitlines():
+            typer.echo(f"        {line}")
+        raise typer.Exit(2) from exc
+
+    typer.echo(f"wrote {written.path}  ({written.lines} lines, "
+               f"{written.plants} {'plant' if written.plants == 1 else 'plants'})")
+    typer.echo(written.verdict)
+    if plant:
+        typer.echo(f"Only `{plant}`, as this home spells it. Omit --plant for every plant here.")
+    typer.echo("Read it before you paste it anywhere. Nothing in this product sends it.")
 
 
 @app.command()

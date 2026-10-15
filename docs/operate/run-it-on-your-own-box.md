@@ -94,7 +94,16 @@ bottling was not answering; 4 of its 5 processes were still alive (7964, 3940, 5
 ```
 
 The log `status` named is the only place the reason is. Read the last lines
-of it; if you want someone else to look, that file is the thing to send.
+of it. If you want someone else to look, do not send that log — run
+
+```powershell
+fsmes doctor
+```
+
+which writes one file with the same lines in it and every value of yours
+taken out, plus the version, the ports and which process went. That file is
+the thing to paste into an agent or into an issue:
+[one file to paste when something is wrong](doctor.md).
 
 **On 0.3.0**, `stop` refuses this state and has no flag of its own: stop the
 pids it named by hand (`taskkill /F /PID 7964`) and then `fsmes demo bottling`.
