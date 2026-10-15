@@ -1008,6 +1008,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../operate/redundancy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — one plant on two boxes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../operate/opc-readonly/" class="md-nav__link">
         
   
@@ -3714,6 +3742,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../decisions/0042-one-plant-many-nodes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0042 — A plant is its database, and a node is a process that asks the database whether it may write
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../decisions/TEMPLATE/" class="md-nav__link">
         
   
@@ -4615,7 +4671,7 @@
 </tr>
 <tr>
 <td>Plant</td>
-<td>compose: Postgres + api (N replicas behind nginx) + connect + one-shot migrate job</td>
+<td>compose: Postgres + api (N replicas behind nginx) + connect + one-shot migrate job. More than one whole node of a plant, each serving the API and each taking the lease for the roles that must run once, is <a href="../operate/redundancy/">one plant on two boxes</a> — decision <a href="../decisions/0042-one-plant-many-nodes/">0042</a></td>
 <td>a real line (ported topology — the migrate-job-separate-from-API pattern is the keeper)</td>
 </tr>
 <tr>

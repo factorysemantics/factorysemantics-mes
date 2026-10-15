@@ -237,6 +237,10 @@
          <lastmod>2026-10-15</lastmod>
     </url>
     <url>
+         <loc>https://docs.factorysemantics.com/dev/decisions/0042-one-plant-many-nodes/</loc>
+         <lastmod>2026-10-15</lastmod>
+    </url>
+    <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/TEMPLATE/</loc>
          <lastmod>2026-10-15</lastmod>
     </url>
@@ -514,6 +518,10 @@
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/quality-severities/</loc>
+         <lastmod>2026-10-15</lastmod>
+    </url>
+    <url>
+         <loc>https://docs.factorysemantics.com/dev/operate/redundancy/</loc>
          <lastmod>2026-10-15</lastmod>
     </url>
     <url>
