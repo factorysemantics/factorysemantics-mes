@@ -116,6 +116,69 @@ nodes on one box never append to one file.
 - **`lease_seconds` under 2.** A lease shorter than the time a busy box can
   take to renew one is a plant that fails over because it was busy.
 
+## Run it with docker compose
+
+If you would rather see it than read about it, there is a compose file that
+is one plant on two nodes: one PostgreSQL, one machine layer, two nodes of
+the lab's bottling plant, and nginx in front of them so there is one address.
+
+```bash
+docker compose -f docker/docker-compose.redundant.yml up --build   # 1
+# open http://localhost:8000/dashboard                             # 2
+docker compose -f docker/docker-compose.redundant.yml kill node-a  # 3
+docker compose -f docker/docker-compose.redundant.yml start node-a # 4
+```
+
+What you see:
+
+1. Four or five minutes the first time, while the image builds and the line's
+   replay data is generated. Then the log settles into two nodes talking to
+   one database, and one of them saying it took the three roles.
+2. The dashboard, on one address, with the header saying **served by *a* ·
+   machines read by *a***. The counts move while you read it. Sign in as
+   `ADMIN` / `admin`.
+3. A power cut, as far as the plant is concerned: `kill` sends no shutdown
+   and waits for nothing. Leave the page open and do not reload it. Within
+   about a lease the header says **served by *b* · machines read by *b***
+   and the counts carry on from where they were — not from zero, because the
+   counter baselines the dead node left behind are in the database. You are
+   not asked to sign in again: both nodes sign sessions with the same key.
+4. Node a comes back as a standby. It serves the dashboard again and holds
+   nothing, because b is holding the roles and a node that comes back does
+   not take work off a node that is doing it.
+
+One command does all four and checks every claim in them:
+
+```bash
+bash scripts/kill-a-node.sh
+```
+
+It prints the takeover in lease units with the bound beside it, how many
+requests the one address refused while a node died (it should be none), what
+each machine booked against what its counters moved, and how many readings
+were stored twice (it should be none). It is a shell script because
+everything in it is `docker compose` and SQL; the MES itself knows nothing
+about containers. The same script runs on every pull request in the
+`two-nodes-in-compose` job, so this page cannot quietly stop being true.
+
+When you are done: `docker compose -f docker/docker-compose.redundant.yml
+down -v` throws the containers and the data away.
+
+Two things about this compose file worth knowing before you copy it:
+
+- **The machine layer is one service, shared.** A simulated OPC server
+  started by a node would die with that node, and the surviving reader would
+  see the replay restart from the beginning — which reads as a PLC reset, so
+  nothing would be booked. A real plant has one PLC and points both nodes at
+  it; that is what this file imitates. It is also why a redundant plant's
+  nodes never start `run-opc-sim` themselves.
+- **The pack is the lab's bottling line with three things changed**, in
+  `docker/redundant/plant.toml`: a PostgreSQL URL, a `secret_key_env`, and
+  `[redundancy] enabled = true`. Nothing else about the plant differs. The
+  other compose file, `docker/docker-compose.yml`, is untouched and is a
+  different demo: one plant, N stateless API replicas, one of everything
+  else.
+
 ## Seeing which node is which
 
 `/health` carries a `node` block: the node's name, whether it was named or
@@ -159,8 +222,8 @@ other node is holding.
 
 - **The front door is yours.** Two nodes are two addresses. Give people one
   of them with a DNS name they can repoint, a floating address, or a proxy —
-  nginx in front of the API, as `docker/docker-compose.yml` already does.
-  This product does not pick for you.
+  nginx in front of both nodes, as `docker/docker-compose.redundant.yml`
+  does. This product does not pick for you.
 - **The database is not made redundant by this.** One PostgreSQL is one
   PostgreSQL. Its own standby, its own backups and its own failover are
   PostgreSQL's job, and well-documented there. See

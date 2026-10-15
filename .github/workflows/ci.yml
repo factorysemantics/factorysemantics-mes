@@ -493,6 +493,62 @@ jobs:
             esac
           done
 
+  two-nodes-in-compose:
+    # The two-box demo, killed on purpose, on every pull request.
+    #
+    # `docker/docker-compose.redundant.yml` is one PostgreSQL, one machine
+    # layer, two nodes of the bottling plant and nginx in front of them, and
+    # `scripts/kill-a-node.sh` kills one node and checks the other carried
+    # on: the reader lease moved within three leases, the counters kept
+    # moving, every machine booked exactly what it counted, no reading was
+    # stored twice, and the one address kept answering. It is the same claim
+    # `postgres`'s two-node test makes, made through containers and a proxy
+    # instead of two processes - which is what anybody who tries this product
+    # will actually run.
+    #
+    # Linux only. `docker compose` on the Windows runner has no Linux daemon
+    # to run these images on, and a plant engineer's Windows box is covered by
+    # `half-dead-plant` and `two-nodes-on-windows` instead.
+    #
+    # Behind `image`: there is nothing to learn from a compose demo of an
+    # image that does not build, and the layer cache that job wrote makes the
+    # build here a cache hit rather than a second four-minute pip install.
+    # The timing this job asserts is in lease units measured against the
+    # database's own clock, never in seconds on a shared runner.
+    needs: image
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: Build the image the compose file names
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: factorysemantics-mes:two-nodes
+          # Read-only: `image` owns this scope, and two jobs writing one
+          # scope evict each other's layers.
+          cache-from: type=gha,scope=ci-image
+
+      - name: Kill one of two nodes and check the plant carried on
+        run: bash scripts/kill-a-node.sh
+
+      - name: What the containers said
+        # Always, pass or fail: a failover nobody can read the logs of is a
+        # green check or a red one and nothing else.
+        if: always()
+        run: |
+          docker compose -f docker/docker-compose.redundant.yml ps -a || true
+          docker compose -f docker/docker-compose.redundant.yml logs --no-color --tail 200 || true
+
+      - name: Put it away
+        if: always()
+        run: docker compose -f docker/docker-compose.redundant.yml down -v || true
+
   lab:
     # The lab's starter experiments, on a runner.
     #

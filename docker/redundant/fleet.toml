@@ -1,0 +1,13 @@
+# Which packs this container runs: the two-node bottling plant, built into
+# the `plant` volume by the `prepare` service.
+#
+# `FSMES_PLANT_REGISTRY` points every process at this file, so
+# `fsmes plant bottling run --node a` and `--node b` are two nodes of one
+# plant rather than two plants.
+packs = ["bottling"]
+
+[environment]
+# Where this plant keeps what belongs to the machine rather than to the
+# plant: its instance record and the pack it was given. The database is in
+# PostgreSQL, not here.
+data_dir = "/plant/.data"
