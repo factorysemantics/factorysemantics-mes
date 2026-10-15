@@ -901,6 +901,62 @@
   
   
     <li class="md-nav__item">
+      <a href="../run-it-on-your-own-box/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — run it on your own box
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../doctor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — one file to paste when something is wrong
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../first-plant/" class="md-nav__link">
         
   
@@ -1561,6 +1617,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Reading the report">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-json-also-keeps-the-figures-under-the-home" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --json also keeps the figures under the home
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2388,6 +2461,34 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../../design/pack-in-pack/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design — a pack inside a pack
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     
     
     
@@ -2402,10 +2503,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_13" >
         
           
-          <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_13" id="__nav_4_13_label" tabindex="0">
             
   
   
@@ -2423,8 +2524,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_12">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_13">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -3911,6 +4012,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../releases/0.3.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0.3.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../releases/0.3.0/" class="md-nav__link">
         
   
@@ -4150,6 +4279,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Reading the report">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-json-also-keeps-the-figures-under-the-home" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --json also keeps the figures under the home
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -4364,6 +4510,19 @@ figures for whatever you do next with them.</p>
    stated, rows that could not be read, and the two limits no file
    comparison can escape.</li>
 </ol>
+<h3 id="-json-also-keeps-the-figures-under-the-home"><code>--json</code> also keeps the figures under the home<a class="headerlink" href="#-json-also-keeps-the-figures-under-the-home" title="Permanent link">&para;</a></h3>
+<p>When you pass <code>--json</code>, the command writes the scorecard where you asked for
+it <em>and</em> keeps a reduction of it under the <code>fsmes</code> home as
+<code>scorecards/&lt;date&gt;.json</code> — one file per day, a later run on the same day
+replacing the earlier one. That kept copy holds <strong>figures only</strong>: how many
+fields were compared, how many agreed, how many differed, how many could not
+be compared, and the totals each count came out of. It holds no order code,
+no operation code, no column heading and no quantity; those stay in the
+scorecard you asked for, where you put it.</p>
+<p>It exists so that <a href="../doctor/"><code>fsmes doctor</code></a> can line two shadow days up by
+date in a file you can paste to somebody. Delete the directory if you would
+rather it did not: nothing else reads it, and <code>doctor</code> then says there is
+nothing kept.</p>
 <p>There are no charts, on purpose. The chart this invites is a bar showing
 how much agreed, and that bar averages away exactly what you are looking
 for: two records agreeing on 998 of 1,000 comparisons and differing by 400

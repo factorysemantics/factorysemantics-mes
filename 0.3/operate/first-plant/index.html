@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://docs.factorysemantics.com/0.3/operate/first-plant/">
       
       
-        <link rel="prev" href="../">
+        <link rel="prev" href="../doctor/">
       
       
         <link rel="next" href="../deploy/">
@@ -898,6 +898,62 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../run-it-on-your-own-box/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — run it on your own box
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../doctor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — one file to paste when something is wrong
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -1001,6 +1057,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="2. Install it and see it run">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#or-before-step-3-a-simulated-plant-shaped-like-yours" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Or, before step 3: a simulated plant shaped like yours
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2454,6 +2527,34 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../../design/pack-in-pack/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design — a pack inside a pack
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     
     
     
@@ -2468,10 +2569,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_13" >
         
           
-          <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_13" id="__nav_4_13_label" tabindex="0">
             
   
   
@@ -2489,8 +2590,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_12">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_13">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -3977,6 +4078,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../releases/0.3.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0.3.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../releases/0.3.0/" class="md-nav__link">
         
   
@@ -4216,6 +4345,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="2. Install it and see it run">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#or-before-step-3-a-simulated-plant-shaped-like-yours" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Or, before step 3: a simulated plant shaped like yours
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -4370,6 +4516,12 @@ and nothing on your plant has changed.</p>
 </table>
 <p>Send the two guides out first; they are the long pole. Everything else is an
 afternoon.</p>
+<p><strong>If you would rather be walked through it.</strong> This page, and the install and
+plant-shape pages either side of it, also ship as a folder you hand to whatever
+AI assistant you already use — <code>fsmes-assistant.zip</code> on the release page, or
+<code>fsmes skills unpack assistant ./assistant</code> out of an installation. You run the
+commands and paste back what they print; it needs no access to this machine and
+it asks you for no plant data. Stage 3 of it is this page, as a script.</p>
 <h2 id="the-afternoon-in-order">The afternoon, in order<a class="headerlink" href="#the-afternoon-in-order" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -4466,22 +4618,34 @@ fsmes<span class="w"> </span>demo<span class="w"> </span>bottling
 </div>
 </div>
 </div>
-<div class="admonition note">
-<p class="admonition-title">Not on PyPI yet</p>
-<p>The release on PyPI today, 0.2.0, carries no plant packs, so
-<code>fsmes demo bottling</code> needs the next one. From a checkout it works now:
-<code>python -m build --wheel</code>, then install that wheel.</p>
-</div>
 <p><code>fsmes demo bottling</code> brings up a six-station beverage line the way a plant
 runs: an eight-hour shift replayed over a real OPC UA server, a simulated
 floor booking lots and naming its stops, and the operator screens reading it.
 It prints the address — <code>http://127.0.0.1:8010/dashboard</code> — and an account to
 sign in with, and it keeps running until <code>fsmes demo bottling stop</code>.
-<code>fsmes demo bottling status</code> says whether it is up.</p>
+<code>fsmes demo bottling status</code> says whether it is up.
+<a href="../run-it-on-your-own-box/">Run it on your own box</a> is one page of what trips
+people in this first hour on a machine of their own: <code>fsmes</code> not on PATH after
+a <code>py -m pip install</code>, and a plant left alive but silent.</p>
 <p><strong>Done looks like:</strong> that dashboard on screen, with the six machines on the
 floor plan and a shift's worth of readings behind them. First start takes a
 little longer than later ones: it copies the pack out of the package and
 generates the shift from the seed in its <code>line.json</code>, which is seconds.</p>
+<h3 id="or-before-step-3-a-simulated-plant-shaped-like-yours">Or, before step 3: a simulated plant shaped like <em>yours</em><a class="headerlink" href="#or-before-step-3-a-simulated-plant-shaped-like-yours" title="Permanent link">&para;</a></h3>
+<p>The bottling line is our plant, not yours, and some people would rather see
+their own machine count, their own stop mix and their own tags before they ask
+IT for anything. There is a path for that, and it needs nothing to leave the
+building: the same install writes an assistant folder out of itself, three
+commands run on your MES box with a plain python, and one command here turns the
+one file they write into a running plant.</p>
+<div class="highlight"><pre><span></span><code>fsmes skills unpack plant-from-your-mes ./assistant
+# ... three commands on the MES box, which needs no fsmes ...
+fsmes demo from-shape ./plant-shape.toml --name acme
+</code></pre></div>
+<p>The whole path, with PowerShell and bash side by side, is in
+<a href="../plant-from-your-mes/">your plant without sending anyone your data</a>. It is a
+<em>simulation</em> shaped like your plant, not your plant — steps 3 and 4 below are
+still how real readings get in.</p>
 <p>Everything it writes — the pack copy, the database, the logs, the generated
 line data — goes to one per-user directory: <code>%LOCALAPPDATA%\fsmes</code> on
 Windows, <code>$XDG_DATA_HOME/fsmes</code> or <code>~/.local/share/fsmes</code> on Linux,
@@ -4663,7 +4827,12 @@ moves up the list.</p>
 <div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>info<span class="w">          </span><span class="c1"># the version you think you are running</span>
 fsmes<span class="w"> </span>opc-verify<span class="w">    </span><span class="c1"># every mapped tag still readable</span>
 fsmes<span class="w"> </span>erp<span class="w"> </span>check<span class="w">     </span><span class="c1"># only if you did step 5</span>
+fsmes<span class="w"> </span>doctor<span class="w">        </span><span class="c1"># one file to paste when something is wrong</span>
 </code></pre></div>
+<p>Run <code>fsmes doctor</code> once on the first day even if nothing is wrong, and read
+it: it is how you will ask for help later, and reading it now is how you
+satisfy yourself that nothing of your plant's is in it —
+<a href="../doctor/">one file to paste when something is wrong</a>.</p>
 <p>Then open <code>/dashboard</code> and look at the line, <code>/dashboard/analysis</code> for the
 shift, and <code>/dashboard/line</code> for one line's machines, its work in progress
 and its state timeline, with the 3D view as a tab.</p>
@@ -4745,6 +4914,7 @@ otherwise.</p>
 <li><a href="../deploy/">Deploy</a> · <a href="../security/">Security</a> · <a href="../compatibility/">Compatibility</a></li>
 <li><a href="../../plant/reading-oee/">Reading OEE</a> · <a href="../../plant/never-invent-production/">Never invent production</a></li>
 <li><a href="../coverage/">How much of the window did the MES see</a></li>
+<li><a href="../plant-from-your-mes/">Your plant without sending anyone your data</a> · <a href="../packs/">Plant packs</a></li>
 </ul>
 
 
@@ -4783,7 +4953,7 @@ otherwise.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../" class="md-footer__link md-footer__link--prev" aria-label="Previous: Operate">
+          <a href="../doctor/" class="md-footer__link md-footer__link--prev" aria-label="Previous: How-to — one file to paste when something is wrong">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -4793,7 +4963,7 @@ otherwise.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                Operate
+                How-to — one file to paste when something is wrong
               </div>
             </div>
           </a>

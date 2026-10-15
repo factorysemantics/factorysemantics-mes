@@ -16,7 +16,7 @@
         <link rel="prev" href="../agentic-harness/">
       
       
-        <link rel="next" href="../../decisions/">
+        <link rel="next" href="../pack-in-pack/">
       
       
         
@@ -876,6 +876,62 @@
     
   
     Operate
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/run-it-on-your-own-box/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — run it on your own box
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/doctor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — one file to paste when something is wrong
   
 
     
@@ -2815,6 +2871,34 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../pack-in-pack/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design — a pack inside a pack
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     
     
     
@@ -2832,10 +2916,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_13" >
         
           
-          <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="">
+          <label class="md-nav__link" for="__nav_4_13" id="__nav_4_13_label" tabindex="">
             
   
   
@@ -2853,8 +2937,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_12">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_13">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -4341,6 +4425,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../releases/0.3.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0.3.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../releases/0.3.0/" class="md-nav__link">
         
   
@@ -5247,7 +5359,7 @@ one a plant manager most wants broken.</p>
 <tr>
 <td><strong>"graph the ui response time for those pages"</strong></td>
 <td><strong>No</strong></td>
-<td>No timing anywhere. <code>/metrics</code> (<code>api/routers/system.py</code>) is counts and ids, and its own docstring says <em>"there is deliberately </em><em>no performance and no OEE series here</em><em>"</em>. The app has two <code>http</code> middlewares (<code>api/app.py</code>) and neither times anything. Smallest honest start: a bounded in-memory ring per route template — p50, p95, count — on the middleware that already runs. <strong>A ring is not history:</strong> it answers "now", never "last Tuesday", and a chart drawn from it says so</td>
+<td>No timing anywhere. <code>/metrics</code> (<code>api/routers/system.py</code>) is counts and ids, and its own docstring says <em>"there is deliberately <strong>no performance and no OEE series here</strong>"</em>. The app has two <code>http</code> middlewares (<code>api/app.py</code>) and neither times anything. Smallest honest start: a bounded in-memory ring per route template — p50, p95, count — on the middleware that already runs. <strong>A ring is not history:</strong> it answers "now", never "last Tuesday", and a chart drawn from it says so</td>
 </tr>
 <tr>
 <td><strong>"graph maintenance repair time over time"</strong></td>
@@ -6359,13 +6471,13 @@ better model.</p>
         
         
           
-          <a href="../../decisions/" class="md-footer__link md-footer__link--next" aria-label="Next: Decisions">
+          <a href="../pack-in-pack/" class="md-footer__link md-footer__link--next" aria-label="Next: Design — a pack inside a pack">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Decisions
+                Design — a pack inside a pack
               </div>
             </div>
             <div class="md-footer__button md-icon">
