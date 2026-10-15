@@ -325,7 +325,7 @@ def two_node_plant(tmp_path):
 
 # ------------------------------------------------------------------ the proof
 
-def test_killing_the_node_that_reads_the_machines_loses_no_production(two_node_plant):
+def test_killing_the_node_that_reads_the_machines_loses_no_production(two_node_plant, request):
     plant = two_node_plant
     plant.start("a")
     plant.start("b")
@@ -397,9 +397,27 @@ def test_killing_the_node_that_reads_the_machines_loses_no_production(two_node_p
         f"{rows - distinct} readings are in tag_values twice: a reader taking "
         "over was handed the moment the dead one had already stored")
 
-    print(f"\ntakeover: reader {units:.2f} lease units, floor {units_floor:.2f}, "
-          f"bound {TAKEOVER_LEASE_UNITS} (lease_seconds={LEASE_SECONDS}, "
-          f"replay {SPEED}x, {rows} readings)")
+    _say(request,
+         f"takeover: reader {units:.2f} lease units, floor {units_floor:.2f}, "
+         f"bound {TAKEOVER_LEASE_UNITS} (lease_seconds={LEASE_SECONDS}, "
+         f"replay {SPEED}x, {rows} readings)")
+
+
+def _say(request, line: str) -> None:
+    """Put a measured number on the console even when the test passes.
+
+    `pytest` keeps a passing test's output to itself, and a ratio nobody can
+    read is a ratio nobody can check: the takeover this run measured belongs
+    in the job's log, because CI's runner is the only machine the crew has to
+    measure it on. The terminal reporter writes outside the capture; a runner
+    that has none (`-p no:terminal`) falls back to a plain print.
+    """
+    reporter = request.config.pluginmanager.get_plugin("terminalreporter")
+    if reporter is None:
+        print(f"\n{line}")
+        return
+    reporter.ensure_newline()
+    reporter.write_line(line)
 
 
 def _who_claims_what(plant: Plant) -> dict:
