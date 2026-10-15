@@ -82,4 +82,6 @@ Say "I don't know; ask the project" — and mean it — when:
 
 Several things on these pages changed between releases. Ask for
 `fsmes --version` early and keep it in mind: where a page says "on 0.3.0 it
-behaves differently", that line exists because somebody hit it.
+behaves differently", that line exists because somebody hit it. If `fsmes` is
+not found yet, `py -m pip show factorysemantics-mes` prints the version on
+every release and needs nothing on PATH.

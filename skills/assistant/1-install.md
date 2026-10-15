@@ -84,6 +84,11 @@ above, which has usually scrolled away. Three ways out, cheapest first:
 1. `py -m fsmes demo bottling` — the same program, found through Python
    instead of through PATH. Every command on these pages can be typed that
    way: `py -m fsmes` wherever a page says `fsmes`.
+
+   **On 0.3.0 this one does not work yet.** It prints `No module named
+   fsmes.__main__; 'fsmes' is a package and cannot be directly executed`.
+   That is not a broken install — it is the release not carrying the entry
+   point, which 0.3.1 adds. Say so and go to way 2 or 3.
 2. For this window only: `$env:PATH += ";C:\...\Scripts"` with the folder from
    the warning. If the warning has scrolled away,
    `py -m pip show -f factorysemantics-mes` names it.
@@ -91,7 +96,9 @@ above, which has usually scrolled away. Three ways out, cheapest first:
    account* → `Path` → **Edit** → **New** → paste the folder → OK → a new
    PowerShell. Then `fsmes --version` answers.
 
-Ask for `py -m fsmes --version` to settle *is it installed at all*.
+To settle *is it installed at all*, ask for
+`py -m pip show factorysemantics-mes`. That answers on every release, with
+PATH broken or not, and prints the version — which you want anyway.
 
 ### `still alive` — the plant is running and cannot be talked to
 
@@ -127,7 +134,8 @@ state outright — see `did not answer` below — and the way out is to end the
 process ids `status` named, by hand: `taskkill /F /PID 7964` for each, in
 PowerShell (Task Manager's *Details* tab, *End task*, does the same thing by
 clicking), then `fsmes demo bottling`. On Linux, `kill 7964`. Ask for
-`fsmes --version` before you tell them which of the two they are on.
+`fsmes --version` — or `py -m pip show factorysemantics-mes` if `fsmes` is
+still not found — before you tell them which of the two they are on.
 
 The log the `gone:` line names is worth reading: it says why that process
 died. Ask them to paste its last few lines, not the whole file.
