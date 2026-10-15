@@ -119,14 +119,35 @@ def test_counters_coalesce_to_their_latest_value_per_machine(monkeypatch):
                  (SPEC, "GoodCount", 104)]
 
     class Session:
+        """Enough of a session for one booking: the savepoint it opens per
+        machine, and the two calls writing a counter baseline makes - an
+        UPDATE that matches nothing on a plant that has never booked this
+        machine, then the INSERT."""
+
+        def __init__(self):
+            self.baselines = []
+
         def begin_nested(self):
             import contextlib
             return contextlib.nullcontext()
 
+        def execute(self, _statement):
+            class Done:
+                rowcount = 0
+            return Done()
+
+        def add(self, row):
+            self.baselines.append((row.equipment_code, row.tag, row.value))
+
     pending: dict[tuple[str, str], int] = {}
-    handler._book(Session(), decisions, pending)
+    session = Session()
+    handler._book(session, decisions, pending)
     assert reports == [{"equipment_code": "WASH01", "source": agent.ProductionSource.OPC,
                         "actor": "opc-agent", "good": 4, "scrap": 1}]
+    # And the baseline goes down in the same transaction as the booking, at
+    # the coalesced value, so a reader taking over continues this count.
+    assert sorted(session.baselines) == [("WASH01", "GoodCount", 104),
+                                         ("WASH01", "ScrapCount", 6)]
     # The new baseline is *pending*, not banked: `_book_with_retry` promotes it
     # once the transaction commits, so a booking that fails leaves the counter
     # where it was and the next reading re-measures the whole delta.

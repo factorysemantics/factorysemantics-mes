@@ -24,7 +24,9 @@ says what it found and stops.
 
 from __future__ import annotations
 
+import contextlib
 import tempfile
+from contextlib import contextmanager
 from importlib import resources
 from pathlib import Path
 
@@ -33,6 +35,7 @@ from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from sqlalchemy import Engine, create_engine, inspect
+from sqlalchemy.pool import NullPool
 
 
 class SchemaError(RuntimeError):
@@ -187,14 +190,67 @@ def identify_unstamped(url: str | None = None) -> str:
     )
 
 
+#: The number every fsmes process asks PostgreSQL for before it migrates.
+#: An advisory lock is just a number two connections agree on; this one is
+#: `zlib.crc32(b"fsmes.migrations")`, written out so it cannot drift.
+MIGRATION_LOCK_KEY = 3013764701
+
+
+@contextmanager
+def migration_lock(url: str, echo=print):
+    """Hold PostgreSQL's advisory lock for migrating *this* database.
+
+    Two nodes of one plant both run `init-db` when they start, and before
+    this they ran Alembic against the same empty database at the same moment:
+    two processes creating the same table, and whichever lost said so with a
+    traceback. Now the second one waits, then finds the schema at head and
+    says it is up to date.
+
+    Session-scoped (`pg_advisory_lock`) and not transaction-scoped: Alembic
+    runs each migration in its own transaction, so a lock that released at
+    the first commit would hold for the first revision of a chain and nothing
+    after it.
+
+    Any other database yields immediately and holds nothing. SQLite is one
+    file on one box - `[redundancy]` refuses it outright - and the writer
+    lock the driver already takes is the whole of its story.
+    """
+    if not url.startswith("postgresql"):
+        yield
+        return
+    engine = create_engine(url, poolclass=NullPool)
+    try:
+        with engine.connect() as conn:
+            got = conn.exec_driver_sql(
+                f"SELECT pg_try_advisory_lock({MIGRATION_LOCK_KEY})").scalar()
+            if not got:
+                echo("Another process is migrating this database; waiting for it to finish.")
+                conn.exec_driver_sql(f"SELECT pg_advisory_lock({MIGRATION_LOCK_KEY})")
+            try:
+                yield
+            finally:
+                with contextlib.suppress(Exception):
+                    conn.exec_driver_sql(
+                        f"SELECT pg_advisory_unlock({MIGRATION_LOCK_KEY})")
+    finally:
+        engine.dispose()
+
+
 def upgrade_database(url: str | None = None, echo=print) -> dict:
     """Create or upgrade the schema, and say what was done.
 
     Returns a receipt: `revision_before` (None when the database was empty or
     unstamped), `stamped` (the revision an unstamped database was recognised
     as), `revision_after`, and `created` for a database that did not exist.
+
+    One migration at a time per database: see `migration_lock`.
     """
     target = _database_url(url)
+    with migration_lock(target, echo=echo):
+        return _upgrade(target, echo)
+
+
+def _upgrade(target: str, echo) -> dict:
     head = head_revision()
     before = current_revision(target)
     shape = database_shape(target)
