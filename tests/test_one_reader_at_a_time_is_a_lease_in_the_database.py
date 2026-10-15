@@ -338,3 +338,74 @@ def test_a_reading_with_no_moment_of_its_own_is_never_held_back(
     session.flush()
 
     assert len(list(session.scalars(select(TagValue.id)))) == 2
+
+
+# ------------------------------------------------------------- the migration
+#
+# Run on a real SQLite file, both ways. `[redundancy]` needs PostgreSQL, but
+# the *migration* runs on every plant that upgrades, including the laptop
+# that will never hold a lease, and a revision that cannot be rolled back is
+# one nobody dares run.
+
+REVISION = "b6f0c2a71d58"
+PARENT = "d4e8a1c93b70"
+
+
+def _shape(url: str, revision: str) -> dict[str, list[str]]:
+    from alembic import command
+
+    from fsmes import schema as schema_mod
+
+    command.upgrade(schema_mod.alembic_config(url), revision)
+    return schema_mod.database_shape(url)
+
+
+def test_the_migration_adds_two_tables_and_takes_them_away_again(tmp_path):
+    """Up: the lease table and the baseline table. Down: both gone and the
+    parent's schema back, unchanged."""
+    from alembic import command
+
+    from fsmes import schema as schema_mod
+
+    url = f"sqlite:///{tmp_path / 'leases.db'}"
+    before = _shape(url, PARENT)
+    assert "plant_leases" not in before
+    assert "counter_baselines" not in before
+
+    after = _shape(url, REVISION)
+    assert sorted(after["plant_leases"]) == [
+        "acquired_at", "expires_at", "holder", "renewed_at", "role"]
+    assert sorted(after["counter_baselines"]) == [
+        "equipment_code", "node", "tag", "updated_at", "value"]
+
+    command.downgrade(schema_mod.alembic_config(url), PARENT)
+    assert schema_mod.database_shape(url) == before
+
+
+def test_the_migration_is_the_only_head(tmp_path):
+    """One head, so `alembic upgrade head` on a plant that has been running
+    since 0.3.1 is not a question about which branch it meant."""
+    from alembic.script import ScriptDirectory
+
+    from fsmes import schema as schema_mod
+
+    heads = ScriptDirectory.from_config(
+        schema_mod.alembic_config(f"sqlite:///{tmp_path / 'heads.db'}")).get_heads()
+    assert list(heads) == [REVISION], heads
+
+
+def test_the_migration_backfills_no_baseline_it_cannot_know(tmp_path):
+    """A counter whose reader's memory is gone has no recoverable baseline:
+    `production_logs` holds the deltas that were booked, never the absolute
+    value the PLC showed. So the table starts empty on every upgrading
+    plant, and the first reading per machine books nothing — unknown is not
+    zero, and a guessed absolute counter would invent production."""
+    from sqlalchemy import create_engine, text
+
+    url = f"sqlite:///{tmp_path / 'empty.db'}"
+    _shape(url, REVISION)
+    engine = create_engine(url)
+    with engine.connect() as conn:
+        assert conn.execute(text("SELECT count(*) FROM counter_baselines")).scalar() == 0
+        assert conn.execute(text("SELECT count(*) FROM plant_leases")).scalar() == 0
+    engine.dispose()
