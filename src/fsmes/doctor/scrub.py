@@ -133,6 +133,12 @@ OUR_WORDS: frozenset[str] = frozenset({
     "pip", "pipx", "venv", "virtualenv", "conda", "uv", "wheel", "sdist",
     "editable", "installer", "dist", "site", "packages", "local",
     "appdata", "localappdata", "users", "home", "program", "files",
+    # The directories an operating system made, which nobody owns - and the
+    # three Windows folders a person unzips into, because "they ran it from
+    # Downloads" is a diagnosis.
+    "usr", "etc", "srv", "opt", "var", "dev", "proc", "mnt", "media",
+    "roaming", "desktop", "documents", "downloads", "onedrive",
+    "programs",
     "scripts", "bin", "lib", "path", "exe", "console", "powershell", "cmd",
     "bash", "shell", "utf", "http", "https", "localhost", "loopback", "port",
     "host", "true", "false", "null", "unknown",
@@ -140,6 +146,7 @@ OUR_WORDS: frozenset[str] = frozenset({
     # it prints reads as a path. A directory a plant owns is not in here and
     # comes out as its shape.
     "jsonl", "toml", "json", "db", "env", "md", "txt", "csv", "html", "zip",
+    "log", "file", "mes",
     "pids", "procs", "ownership", "fleet", "packs", "backups", "scorecards",
     "doctor", "masterdata", "certs", "cert", "pem", "tmp", "temp",
     "shape", "inbound", "config", "migrations", "static", "templates", "labs",
@@ -178,10 +185,34 @@ _DRIVE = re.compile(r"^[A-Za-z]:[/\\]")
 _URLISH = re.compile(r"^[A-Za-z][A-Za-z0-9+.\-]{1,15}://")
 _INTERPRETER_FILE = re.compile(r"^<[A-Za-z][A-Za-z0-9 ._]*>$")
 _ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+#: An interpreter or one of our own executables, with the version in its name:
+#: `python3.14`, `python.exe`, `pythonw3.13.exe`, `pypy3.10`. Carried whole
+#: because which Python this is, exactly, is the first thing a support call
+#: needs, and `aaaaaa#.##` is not an answer.
+_EXECUTABLE = re.compile(r"^(python|pythonw|pypy|fsmes|uvicorn|pip)[0-9]*(\.[0-9]+)*t?(\.exe)?$",
+                         re.IGNORECASE)
 
 #: Past this many characters a character-by-character pattern is as
 #: unreadable as the sentence it replaced and no safer, so the length is
 #: carried instead - which is the handoff's own `<str:12>`.
+#: The words this home has taught us: the names of the plants in it, which are
+#: in the file on purpose and are the one documented exception to the rule
+#: above. Set once, by `gather`, before anything is shaped - a plant called
+#: `bottling` should read as `bottling` in a log line too, not as `aaaaaaaa`.
+_ALSO: frozenset[str] = frozenset()
+
+
+def also(words) -> None:
+    """Teach this run the names of the plants in this home."""
+    global _ALSO
+    _ALSO = frozenset(str(w).strip().lower() for w in words if str(w).strip())
+
+
+def taught() -> frozenset[str]:
+    """What `also` was told, for the leak check to forgive the same words."""
+    return _ALSO
+
+
 PATTERN_LIMIT = 24
 
 #: A list longer than this is carried as its length. Shorter than this and the
@@ -294,7 +325,8 @@ def shape_path(path, *, home: Path | None = None, keep: frozenset[str] | None = 
 
     said = []
     for part in rest.parts:
-        if part.lower() in allowed or carried_whole(part, extra=allowed):
+        if (part.lower() in allowed or carried_whole(part, extra=allowed)
+                or _EXECUTABLE.match(part)):
             said.append(part)
         else:
             said.append(shape_token(part))
@@ -329,7 +361,8 @@ def carried_whole(token: str, *, extra: frozenset[str] = frozenset()) -> bool:
     if not pieces:
         return False
     known = vocabulary()
-    return all(_LETTERS.match(piece) and (piece.lower() in known or piece.lower() in extra)
+    return all(_LETTERS.match(piece)
+               and (piece.lower() in known or piece.lower() in extra or piece.lower() in _ALSO)
                for piece in pieces)
 
 

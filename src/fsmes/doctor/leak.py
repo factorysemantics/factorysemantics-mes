@@ -143,7 +143,11 @@ class Seen:
         import getpass
         import socket
 
-        for probe in (socket.gethostname, socket.getfqdn, getpass.getuser):
+        # `socket.getfqdn` is not here on purpose: it is a reverse DNS lookup,
+        # it took five seconds of a five-second budget on the machine this was
+        # written on, and the part of it that is not already `gethostname` is a
+        # domain this file never prints anyway.
+        for probe in (socket.gethostname, getpass.getuser):
             try:
                 self.value(probe())
             except Exception:                                   # pragma: no cover
