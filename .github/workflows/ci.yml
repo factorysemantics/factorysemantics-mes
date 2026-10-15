@@ -325,6 +325,12 @@ jobs:
     # offline, run SKILL.md's three commands on a box that has *no fsmes on it*,
     # and start a plant shaped like the MES those commands read.
     #
+    # First step is the folder a person downloads: `fsmes skills list` names
+    # `assistant` and `fsmes skills unpack assistant` writes its seven pages
+    # with `plant-from-your-mes/` inside them, byte-for-byte the checkout's,
+    # with no second copy in git and no symlink. Then the shape path below uses
+    # that nested folder for real.
+    #
     # Two reference shapes, both all the way to a running dashboard. One is the
     # flat MES - one line, one straight routing, one tag folder per machine, no
     # routing table at all. The other is a brownfield plant: two areas with
@@ -358,6 +364,13 @@ jobs:
           python-version: "3.12"
       - run: python -m pip install --upgrade pip build
       - run: python -m build --wheel
+      # Cheap and first: the folder a person downloads comes out of this same
+      # wheel offline, with `plant-from-your-mes/` nested inside it from the one
+      # copy in git. Here rather than in a job of its own because the wheel is
+      # already built on both runners and a Windows round costs a day.
+      - name: The assistant folder out of the wheel, offline
+        shell: bash
+        run: python .github/scripts/assistant_folder_from_the_wheel.py --wheel "$(ls dist/*.whl)"
       - name: From an unread SQL MES to a running plant, both shapes, offline
         shell: bash
         run: python .github/scripts/plant_from_shape.py --wheel "$(ls dist/*.whl)" --speed 60

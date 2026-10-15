@@ -3437,8 +3437,10 @@ def config_audit_cmd(
 
 @app.command("skills-zip")
 def skills_zip(
-    name: str = typer.Argument("plant-from-your-mes", help="Which skill folder to package."),
-    out: Path = typer.Option(None, help="Where to write the zip (default: <name>.zip here)."),
+    name: str = typer.Argument(
+        "all", help="Which skill folder to package, or `all` for every one of them."),
+    out: Path = typer.Option(None, help="Where to write the zip (default: its download "
+                                        "name, here). One skill at a time."),
     root: Path = typer.Option(None, help="Repository root (default: found from cwd)."),
     check: bool = typer.Option(
         False, "--check",
@@ -3451,41 +3453,56 @@ def skills_zip(
     in `fsmes.skills`, not globbed, so adding a file to a skill is a line in a
     diff and `--check` fails when the two disagree in either direction.
 
+    A skill may carry another one inside it — the assistant carries
+    `plant-from-your-mes/`, which is its stage 2 — and the zip is built with
+    that folder nested, from the one copy in `skills/`.
+
         fsmes skills-zip --check
-        fsmes skills-zip plant-from-your-mes --out dist/plant-from-your-mes.zip
+        fsmes skills-zip assistant --out dist/fsmes-assistant.zip
     """
     from fsmes import skills as skills_mod
 
-    if name not in skills_mod.SKILLS:
-        typer.echo(f"no skill called {name}. There is: {', '.join(sorted(skills_mod.SKILLS))}")
+    every = sorted(skills_mod.SKILLS)
+    wanted = every if name == "all" else [name]
+    if name != "all" and name not in skills_mod.SKILLS:
+        typer.echo(f"no skill called {name}. There is: {', '.join(every)}")
+        raise typer.Exit(2)
+    if out is not None and len(wanted) > 1:
+        typer.echo(f"--out writes one zip; name which of the {len(wanted)} skills you mean "
+                   f"({', '.join(wanted)}).")
         raise typer.Exit(2)
 
     here = (root or Path.cwd()).resolve()
-    base = next((c for c in [here, *here.parents] if (c / "skills" / name).is_dir()), None)
-    if base is None:
-        typer.echo(f"no skills/{name}/ above {here}. Run this from a checkout.")
-        raise typer.Exit(2)
+    for one in wanted:
+        base = next((c for c in [here, *here.parents] if (c / "skills" / one).is_dir()), None)
+        if base is None:
+            typer.echo(f"no skills/{one}/ above {here}. Run this from a checkout.")
+            raise typer.Exit(2)
 
-    missing, stray = skills_mod.differences(name, base)
-    for path in missing:
-        typer.echo(f"  listed but not on disk: {path}")
-    for path in stray:
-        typer.echo(f"  on disk but not listed: {path}")
-    if missing or stray:
-        typer.echo(f"skills/{name}/ does not match its shipping list "
-                   f"({len(missing)} missing, {len(stray)} stray).")
-        raise typer.Exit(1)
+        bad = False
+        for which in (one, *skills_mod.INCLUDES.get(one, ())):
+            missing, stray = skills_mod.differences(which, base)
+            for path in missing:
+                typer.echo(f"  listed but not on disk: {which}/{path}")
+            for path in stray:
+                typer.echo(f"  on disk but not listed: {which}/{path}")
+            if missing or stray:
+                typer.echo(f"skills/{which}/ does not match its shipping list "
+                           f"({len(missing)} missing, {len(stray)} stray).")
+                bad = True
+        if bad:
+            raise typer.Exit(1)
 
-    listed = skills_mod.SKILLS[name]
-    if check:
-        typer.echo(f"skills/{name}/: {len(listed)} file(s), all listed, none stray.")
-        return
+        laid_out = skills_mod.tree(one)
+        if check:
+            typer.echo(f"skills/{one}/: {len(laid_out)} file(s), all listed, none stray.")
+            continue
 
-    target = Path(out) if out else base / f"{name}.zip"
-    written = skills_mod.build_zip(name, base, target)
-    typer.echo(f"{written} — {len(listed)} file(s), {written.stat().st_size:,} bytes")
-    for relative in listed:
-        typer.echo(f"  {name}/{relative}")
+        target = Path(out) if out else base / f"{skills_mod.download_name(one)}.zip"
+        written = skills_mod.build_zip(one, base, target)
+        typer.echo(f"{written} — {len(laid_out)} file(s), {written.stat().st_size:,} bytes")
+        for lands, _ in laid_out:
+            typer.echo(f"  {skills_mod.download_name(one)}/{lands}")
 
 
 skills_app = typer.Typer(

@@ -115,3 +115,33 @@ def test_a_folder_nobody_ships_is_named_as_such(tmp_path):
     with pytest.raises(LookupError) as refused:
         skills.unpack("plant-from-somebody-elses-mes", tmp_path, echo=lambda _: None)
     assert "plant-from-somebody-elses-mes" in str(refused.value)
+
+
+def test_unpacking_the_assistant_nests_the_other_skill_inside_it(tmp_path):
+    """Stage 2 of the assistant *is* `plant-from-your-mes`, so that folder has
+    to be inside the one a person downloads — made here from the one copy in
+    `skills/plant-from-your-mes/`, which is why there is no second copy in git
+    and no symlink for Windows to mangle."""
+    into = skills.unpack("assistant", tmp_path, echo=lambda _: None)
+    written = sorted(p.relative_to(into).as_posix() for p in into.rglob("*") if p.is_file())
+    assert written == sorted(lands for lands, _ in skills.tree("assistant")), (
+        f"unpacked {len(written)} file(s); fsmes.skills.tree('assistant') says "
+        f"{len(skills.tree('assistant'))}")
+    nested = [f for f in written if f.startswith("plant-from-your-mes/")]
+    assert len(nested) == len(skills.SKILLS["plant-from-your-mes"]), (
+        f"{len(nested)} nested file(s) of {len(skills.SKILLS['plant-from-your-mes'])}")
+    assert (into / "plant-from-your-mes" / "SKILL.md").is_file()
+    assert not any(p.is_symlink() for p in into.rglob("*")), (
+        "a symlink in the unpacked folder: a zip of one arrives on Windows as a "
+        "text file with a path in it")
+
+
+def test_the_assistant_says_what_it_wrote_and_that_the_other_folder_is_in_it(tmp_path):
+    """The closing lines are the only instructions a person gets before they
+    hand the folder to an assistant, so they are worth a test."""
+    said: list[str] = []
+    skills.unpack("assistant", tmp_path, echo=said.append)
+    whole = "\n".join(said)
+    assert f"{len(skills.tree('assistant'))} file(s)" in whole
+    assert "including plant-from-your-mes/" in whole
+    assert "needs no access to this machine" in whole

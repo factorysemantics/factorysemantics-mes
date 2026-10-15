@@ -69,10 +69,81 @@ PLANT_FROM_YOUR_MES: tuple[str, ...] = (
     "scripts/profile.py",
 )
 
+#: Exactly what the assistant folder holds of its own, in the order it is written.
+#:
+#: Markdown and nothing else. The folder tells a person what to run; it runs
+#: nothing itself, so there is no script in it to go wrong on a machine nobody
+#: on this project owns. The nested `plant-from-your-mes/` is not in this list
+#: — see `INCLUDES`.
+ASSISTANT: tuple[str, ...] = (
+    "SKILL.md",
+    "README.md",
+    "0-how-to-help.md",
+    "1-install.md",
+    "2-your-plant.md",
+    "3-shadow-mode.md",
+    "4-migration.md",
+)
+
 #: Every skill that ships, by folder name.
 SKILLS: dict[str, tuple[str, ...]] = {
+    "assistant": ASSISTANT,
     "plant-from-your-mes": PLANT_FROM_YOUR_MES,
 }
+
+#: Which skills carry another skill's folder inside them.
+#:
+#: The assistant walks a person through four stages and stage 2 *is* the
+#: `plant-from-your-mes` skill, so that folder has to be inside the one the
+#: person downloads. It is not copied into `skills/assistant/` in git — one
+#: file, one place — and it is not a symlink, because a zip of a symlink
+#: unpacks on Windows as a text file with a path in it. The relationship
+#: lives here instead, and `build_zip` and `unpack` both read it, so the
+#: nesting happens at build time from the one copy.
+#:
+#: `fsmes skills unpack plant-from-your-mes` keeps working on its own: a skill
+#: being included somewhere does not take it out of `SKILLS`.
+INCLUDES: dict[str, tuple[str, ...]] = {
+    "assistant": ("plant-from-your-mes",),
+}
+
+#: The zips a Release page attaches: skill name -> the basename the download
+#: carries, used for both `<basename>.zip` and the folder inside it.
+#:
+#: One entry on purpose. `plant-from-your-mes.zip` used to be attached beside
+#: it; now that the assistant carries that folder, two downloads would be two
+#: copies of the same files and a question about which one to take. The skill
+#: is still in `SKILLS`, still checked, still unpackable by name — it just is
+#: not a separate download any more.
+#:
+#: The download is named `fsmes-assistant` rather than `assistant` because a
+#: zip lands in a folder beside other people's downloads and has to say whose
+#: it is; `assistant` is the short name a person types after
+#: `fsmes skills unpack`.
+RELEASED: dict[str, str] = {
+    "assistant": "fsmes-assistant",
+}
+
+
+def download_name(name: str) -> str:
+    """What `<name>`'s zip and its top-level folder are called."""
+    return RELEASED.get(name, name)
+
+
+def tree(name: str) -> list[tuple[str, str]]:
+    """Every file `<name>` delivers: (where it lands, where it comes from).
+
+    "Where it lands" is relative to the delivered folder; "where it comes from"
+    is relative to `skills/` in a checkout (and to `fsmes/data/skills/` in an
+    installed wheel, which is the same shape). The two differ only for an
+    included skill, whose files come from its own folder and land in a
+    subfolder of this one.
+    """
+    laid_out = [(rel, f"{name}/{rel}") for rel in SKILLS[name]]
+    for included in INCLUDES.get(name, ()):
+        laid_out += [(f"{included}/{rel}", f"{included}/{rel}")
+                     for rel in SKILLS[included]]
+    return laid_out
 
 #: Files that live in a skill folder in a checkout and must never ship.
 NEVER_SHIP = ("__pycache__", ".pyc", ".pyo", ".DS_Store", ".ruff_cache", ".pytest_cache")
@@ -99,8 +170,7 @@ def differences(name: str, root: Path) -> tuple[list[str], list[str]]:
     return sorted(listed - actual), sorted(actual - listed)
 
 
-def build_zip(name: str, root: Path, target: Path) -> Path:
-    """Write `<name>.zip` from `skills/<name>/`, refusing if the list is stale."""
+def _refuse_a_stale_list(name: str, root: Path) -> None:
     missing, stray = differences(name, root)
     if missing or stray:
         detail = []
@@ -111,16 +181,28 @@ def build_zip(name: str, root: Path, target: Path) -> Path:
         raise FileNotFoundError(
             f"skills/{name}/ and fsmes.skills.SKILLS['{name}'] disagree — " + "; ".join(detail)
         )
-    folder = root / "skills" / name
+
+
+def build_zip(name: str, root: Path, target: Path) -> Path:
+    """Write `<name>`'s zip from `skills/`, refusing if any list is stale.
+
+    A skill that includes another carries that one's folder inside it, read
+    from its own `skills/<included>/` — so there is one copy in git and the
+    nesting is made here.
+    """
+    for which in (name, *INCLUDES.get(name, ())):
+        _refuse_a_stale_list(which, root)
+    skills_root = root / "skills"
+    top = download_name(name)
     target.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(target, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        for relative in SKILLS[name]:
-            info = zipfile.ZipInfo(f"{name}/{relative}", date_time=FIXED_TIME)
+        for lands, comes_from in tree(name):
+            info = zipfile.ZipInfo(f"{top}/{lands}", date_time=FIXED_TIME)
             info.compress_type = zipfile.ZIP_DEFLATED
             # 0o644, or 0o755 for the scripts a person runs.
-            mode = 0o755 if relative.startswith("scripts/") and relative.endswith(".py") else 0o644
+            mode = 0o755 if "/scripts/" in f"/{lands}" and lands.endswith(".py") else 0o644
             info.external_attr = (0o100000 | mode) << 16
-            archive.writestr(info, (folder / relative).read_bytes())
+            archive.writestr(info, (skills_root / comes_from).read_bytes())
     return target
 
 
@@ -207,23 +289,38 @@ def unpack(name: str, target: Path, *, echo=print) -> Path:
             f"move that folder aside first — anything you have written in it, "
             f"a plant-shape.toml included, stays yours.")
 
-    if _in_the_package(name):
-        with resources.as_file(
-                resources.files("fsmes").joinpath(*SKILLS_IN_PACKAGE, name)) as source:
-            written = _copy_out(Path(source), into)
-    else:
-        folder = _in_a_checkout(name)
-        if folder is None:                                      # pragma: no cover
-            raise LookupError(f"no {name} here")
-        written = _copy_out(folder, into)
+    written = _write_out(name, into)
+    for included in INCLUDES.get(name, ()):
+        written += _write_out(included, into / included)
     echo(f"{into} — {written} file(s)")
-    echo(f"  read {into / 'SKILL.md'} next. It is written for an assistant, and a "
-         f"person can follow it: three commands against your own MES, by hand, and a "
-         f"plant-shape.toml comes out.")
+    for included in INCLUDES.get(name, ()):
+        echo(f"  including {included}/, which is stage 2 of it and also a folder "
+             f"on its own ({len(SKILLS[included])} file(s)).")
+    echo(f"  read {into / 'SKILL.md'} next.")
+    if name == "assistant":
+        echo("  give this folder to whatever assistant you use — in a chat window is "
+             "fine, it needs no access to this machine — and say: help me install "
+             "FactorySemantics MES. It asks you to run the commands and paste back "
+             "what they print.")
+    else:
+        echo("  it is written for an assistant, and a person can follow it: three "
+             "commands against your own MES, by hand, and a plant-shape.toml comes out.")
     echo("  the scripts need nothing on that box but a python 3.11 or newer (they read "
          "TOML with the standard library's own tomllib) — no fsmes, no driver, no "
          "internet, no AI.")
     return into
+
+
+def _write_out(name: str, into: Path) -> int:
+    """One skill folder's files into `into`, from the wheel or from a checkout."""
+    if _in_the_package(name):
+        with resources.as_file(
+                resources.files("fsmes").joinpath(*SKILLS_IN_PACKAGE, name)) as source:
+            return _copy_out(Path(source), into)
+    folder = _in_a_checkout(name)
+    if folder is None:                                          # pragma: no cover
+        raise LookupError(f"no {name} here")
+    return _copy_out(folder, into)
 
 
 def _copy_out(source: Path, into: Path) -> int:

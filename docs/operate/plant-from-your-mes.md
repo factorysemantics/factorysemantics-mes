@@ -1,6 +1,7 @@
 # Your plant in FactorySemantics, without sending anyone your data
 
-**What it is.** A folder — `plant-from-your-mes.zip` on the release page — that
+**What it is.** A folder — inside `fsmes-assistant.zip` on the release page, or
+`fsmes skills unpack plant-from-your-mes .` out of an installation — that
 you unpack next to your own AI assistant. You ask it *"I want to put my plant
 into FactorySemantics without giving away anything proprietary — how?"*, and it
 walks you through read-only queries against your own MES database, in widening
@@ -243,11 +244,18 @@ your routings, and how your tags are grouped under channel/device folders — se
 SQL Server first, because that is what the first plant to try this runs. SQLite
 works too and is what this repository's own test uses.
 
-The folder also ships as `plant-from-your-mes.zip` on the release page, for a
-box that never sees the pip install:
+The folder also ships on the release page, for a box that never sees the pip
+install. It is stage 2 of `fsmes-assistant.zip`, which is the one download:
 
 ```bash
-unzip plant-from-your-mes.zip
+unzip fsmes-assistant.zip
+cd fsmes-assistant/plant-from-your-mes
+```
+
+Out of an installation instead, with no download at all:
+
+```bash
+fsmes skills unpack plant-from-your-mes .
 cd plant-from-your-mes
 ```
 
@@ -360,10 +368,16 @@ not yours, and you will hear that in the first three lines of `explain.py`.
 ## Building the zip
 
 ```bash
-fsmes skills-zip --check            # what CI runs: folder and shipping list agree
-fsmes skills-zip                    # writes plant-from-your-mes.zip
-uv run python -m zipfile -l plant-from-your-mes.zip
+fsmes skills-zip --check            # what CI runs: every folder matches its list
+fsmes skills-zip assistant          # writes fsmes-assistant.zip, this folder inside it
+uv run python -m zipfile -l fsmes-assistant.zip
 ```
+
+`fsmes-assistant.zip` is the only skills zip a release attaches, and this folder
+is in it: a second download would be a second copy of these files and a question
+about which one to take. There is still one copy in git — `skills/` has no
+`assistant/plant-from-your-mes/` in it — and the nesting is made at build time
+from `fsmes.skills.INCLUDES`.
 
 The contents are a list in `src/fsmes/skills.py`, not a glob, so adding a file
 to the skill is a line in a diff and a stray file fails the check in either

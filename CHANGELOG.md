@@ -12,6 +12,20 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **An assistant folder that walks you from install to shadow mode**,
+  `fsmes-assistant.zip` on the release page or
+  `fsmes skills unpack assistant ./assistant` out of an installation. Plain
+  markdown you hand to whatever AI assistant you already use — in a chat
+  window is fine; it needs no access to your machine. Four stages: install
+  until `fsmes demo bottling` answers; a simulated plant shaped like yours
+  (stage 2 is the `plant-from-your-mes` folder, nested inside this one); this
+  one beside your own MES in shadow mode, ending at the scorecard; and an
+  honest page on what is built, what is **not** built, and why the answer to
+  "can I switch my old MES off?" is still no. It asks you to run the commands
+  and paste back what they print; it never asks you for plant data, and it is
+  told to say when something is not built rather than describe it. The release
+  page now attaches one skills zip: `plant-from-your-mes.zip` is retired, and
+  that folder is inside the assistant one.
 - **`py -m fsmes` works.** On Windows, `pip install` puts `fsmes.exe` in a
   Scripts folder that a default Python install does not put on PATH, and the
   command comes back "not recognized". `py -m fsmes demo bottling` now does

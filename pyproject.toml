@@ -182,6 +182,21 @@ packages = ["src/fsmes"]
 # stray `__pycache__` from somebody running the scripts in place would ship.
 # `tests/test_the_wheel_ships_the_assistant_folder.py` fails when a file is in
 # `fsmes.skills.SKILLS` and not here.
+# The assistant folder itself: four stages of plain markdown that any agent can
+# read — install, a plant shaped like yours, shadow mode, and an honest page on
+# what migration would still need. `plant-from-your-mes` is its stage 2 and is
+# NOT copied in here: `fsmes.skills.INCLUDES` says the assistant carries that
+# folder, and `fsmes skills unpack assistant` nests it at unpack time from the
+# one copy below. One copy in git, no symlink (a zipped symlink unpacks on
+# Windows as a text file with a path in it).
+"skills/assistant/SKILL.md" = "fsmes/data/skills/assistant/SKILL.md"
+"skills/assistant/README.md" = "fsmes/data/skills/assistant/README.md"
+"skills/assistant/0-how-to-help.md" = "fsmes/data/skills/assistant/0-how-to-help.md"
+"skills/assistant/1-install.md" = "fsmes/data/skills/assistant/1-install.md"
+"skills/assistant/2-your-plant.md" = "fsmes/data/skills/assistant/2-your-plant.md"
+"skills/assistant/3-shadow-mode.md" = "fsmes/data/skills/assistant/3-shadow-mode.md"
+"skills/assistant/4-migration.md" = "fsmes/data/skills/assistant/4-migration.md"
+
 "skills/plant-from-your-mes/SKILL.md" = "fsmes/data/skills/plant-from-your-mes/SKILL.md"
 "skills/plant-from-your-mes/FORMAT.md" = "fsmes/data/skills/plant-from-your-mes/FORMAT.md"
 "skills/plant-from-your-mes/example/plant-shape-grouped.toml" = "fsmes/data/skills/plant-from-your-mes/example/plant-shape-grouped.toml"
