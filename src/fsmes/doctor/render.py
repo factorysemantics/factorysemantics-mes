@@ -121,13 +121,16 @@ def _the_plants(report: gather.Report) -> list[str]:
     out = ["## Plants in this home", ""]
     if not report.plants:
         if report.asked_for:
-            out += [f"No plant called `{scrub.scrub_text(report.asked_for)}` is in this home.", ""]
+            out += [f"No plant called `{report.asked_for}` is in this home."]
+            if report.home_has:
+                out += ["", f"This home has {len(report.home_has)} "
+                            f"{'plant' if len(report.home_has) == 1 else 'plants'}: "
+                        + ", ".join(f"`{n}`" for n in report.home_has)
+                        + ". Run `fsmes doctor` with no `--plant` for all of them."]
+            out.append("")
         else:
             out += ["None. This home has no plant in it yet, so everything below this "
                     "section is about the installation only.", ""]
-        if report.not_in_this_home:
-            out += ["", "Asked for: " + ", ".join(f"`{scrub.scrub_text(n)}`"
-                                                  for n in report.not_in_this_home), ""]
         return out
     out.append(f"{len(report.plants)} "
                f"{'plant' if len(report.plants) == 1 else 'plants'}"

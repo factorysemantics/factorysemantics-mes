@@ -196,6 +196,10 @@ class Report:
     not_in_this_home: tuple[str, ...]
     seen: object
     trouble: tuple[str, ...] = ()
+    #: Every plant the fleet file lists, whether `--plant` narrowed the file
+    #: to one of them or not. A person who mistyped a name has to be able to
+    #: see the name they meant.
+    home_has: tuple[str, ...] = ()
 
     @property
     def in_shadow(self) -> tuple[Plant, ...]:
@@ -628,9 +632,14 @@ def report(home: Path | None = None, only: str | None = None) -> Report:
     # The plants' names are the one thing in this file that is a customer's
     # word on purpose: every command a person types next has one in it. They
     # are taught to the scrub and forgiven by the check in one place, here.
-    scrub.also(config.keys())
+    # A name typed on the command line is a plant's name too, whether this
+    # home has it or not: a person who asked for `machining` has to read
+    # which name was not found, and it is theirs either way.
+    scrub.also([*config, *( [only] if only else [] )])
     for name in config:
         seen.ours(name)
+    if only:
+        seen.ours(only)
 
     install = installation(where, seen)
     missing: list[str] = []
@@ -666,6 +675,7 @@ def report(home: Path | None = None, only: str | None = None) -> Report:
         plants=tuple(full),
         asked_for=only,
         not_in_this_home=tuple(missing),
+        home_has=tuple(config),
         seen=seen,
         trouble=tuple(trouble),
     )

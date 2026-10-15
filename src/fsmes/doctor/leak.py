@@ -186,6 +186,10 @@ def vocabulary(seen: Seen) -> frozenset[str]:
 
     ours = frozenset(w.lower() for w in seen.words)
     forgiven = set(ours)
+    # The exception classes the scrub decided to carry whole this run, and
+    # only those: `scrub.exception_type` is the single rule for which names
+    # reach the file, so it is the single rule for which are forgiven here.
+    forgiven |= {w.lower() for w in scrub.carried()}
     forgiven |= {v.lower() for v in seen.values
                  if scrub.carried_whole(v, extra=ours)}
     return frozenset(scrub.vocabulary() | forgiven)
@@ -210,6 +214,13 @@ def as_the_scrub_leaves_it(value: str, ours: frozenset[str]) -> bool:
     from fsmes.doctor import scrub
 
     if scrub.carried_whole(value, extra=ours):
+        return True
+    # `Seen` tokenises raw text, and its tokeniser takes a colon with the
+    # word in front of it: `RuntimeError:` off a console traceback is the
+    # word the scrub carried, plus the punctuation of the sentence it sits
+    # in. Judge the word.
+    bare = value.strip(":.,;()[]'\"")
+    if bare != value and scrub.carried_whole(bare, extra=ours):
         return True
     shapers = [scrub.scrub_jsonl, scrub.scrub_text, scrub.shape_token]
     if "://" in value:

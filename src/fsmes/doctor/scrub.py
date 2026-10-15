@@ -69,6 +69,7 @@ OUR_WORDS: frozenset[str] = frozenset({
     # the words a traceback is made of.
     "event", "level", "logger", "timestamp", "message", "msg", "logging",
     "record", "filename", "lineno", "func", "stack", "frames", "notes",
+    "exc", "tb", "args", "cause", "context", "suppress",
     "syntax", "group", "id", "max", "min", "avg", "sum", "count", "p",
     "debug", "info", "warning", "warn", "critical", "exception", "traceback",
     "recent", "call", "last", "during", "handling", "above", "another",
@@ -184,6 +185,12 @@ _LETTERS = re.compile(r"^[A-Za-z]+$")
 _DRIVE = re.compile(r"^[A-Za-z]:[/\\]")
 _URLISH = re.compile(r"^[A-Za-z][A-Za-z0-9+.\-]{1,15}://")
 _INTERPRETER_FILE = re.compile(r"^<[A-Za-z][A-Za-z0-9 ._]*>$")
+
+#: An exception's class, possibly with the module it was defined in. Letters
+#: and underscores only, in dotted segments: `TimeoutError`,
+#: `asyncua.ua.uaerrors._auto.BadSessionIdInvalid`. Carried whole - see
+#: `exception_type` for why, and for what it refuses.
+_EXCEPTION_TYPE = re.compile(r"^[A-Za-z_][A-Za-z_]*(\.[A-Za-z_][A-Za-z_]*)*$")
 _ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 #: An interpreter or one of our own executables, with the version in its name:
 #: `python3.14`, `python.exe`, `pythonw3.13.exe`, `pypy3.10`. Carried whole
@@ -203,14 +210,32 @@ _ALSO: frozenset[str] = frozenset()
 
 
 def also(words) -> None:
-    """Teach this run the names of the plants in this home."""
+    """Teach this run the names of the plants in this home.
+
+    Also forgets what the last run carried whole: `carried` below is a record
+    of this run and nothing else.
+    """
     global _ALSO
     _ALSO = frozenset(str(w).strip().lower() for w in words if str(w).strip())
+    _CARRIED.clear()
 
 
 def taught() -> frozenset[str]:
     """What `also` was told, for the leak check to forgive the same words."""
     return _ALSO
+
+
+#: Every exception class this run decided to carry whole. Kept so that the
+#: leak check forgives exactly the names the scrub actually wrote and no
+#: others: `TimeoutError` is in the file because `exception_type` put it
+#: there, and a check that could not tell that from a tag would refuse every
+#: file with a traceback in it.
+_CARRIED: set[str] = set()
+
+
+def carried() -> frozenset[str]:
+    """The exception classes this run carried whole, for the leak check."""
+    return frozenset(_CARRIED)
 
 
 #: The addresses that identify nobody: they are the same four numbers on
@@ -233,8 +258,9 @@ def pattern_of(value: str) -> str:
     Copied rather than imported because the skill is a standalone script by
     design - it has to run on a plant PC with nothing installed - and four
     lines of character classes is not a second source of truth worth a loader.
-    `tests/test_doctor_shapes_a_value_the_way_the_shape_skill_does.py` holds
-    the two spellings to the same answers.
+    The skill's spelling is in `scripts/profile.py`;
+    `test_the_shape_of_a_value_is_the_shape_the_shape_skill_writes` loads that
+    script and holds the two spellings to the same answers.
     """
     out: list[str] = []
     for char in str(value):
@@ -544,6 +570,31 @@ def shape_frames(frames) -> tuple[list[dict], int]:
     return out, dropped
 
 
+def exception_type(name: str) -> str:
+    """An exception's class, carried whole where it can only be ours.
+
+    The handoff asks for this one by name: *a log line with a Traceback still
+    shows the exception type and the module*. Without it a traceback says
+    "something went wrong" and an agent reading the file can say nothing an
+    error count could not.
+
+    The rule is letters, underscores and dots. An exception class is defined
+    in Python's standard library, in a package this installation has, or in
+    this product - never in a plant's masterdata - and the one way a plant's
+    word could reach here is somebody defining a class named after their
+    line. A name with a digit, a dash or a space in it is not that class
+    anyway and is shaped, as is a name longer than any class has, as is a
+    name shouted in capitals: `SECRET_TAG_XYZ` is letters and underscores
+    too, and a tag is far more likely to be spelt that way than a class is.
+    """
+    text = str(name).strip()
+    if (len(text) <= 80 and _EXCEPTION_TYPE.match(text)
+            and any(c.islower() for c in text)):
+        _CARRIED.add(text)
+        return text
+    return shape_token(text)
+
+
 def shape_exception(blocks) -> list[dict]:
     """What `dict_tracebacks` wrote, with the type and the frames and nothing else.
 
@@ -559,7 +610,7 @@ def shape_exception(blocks) -> list[dict]:
             continue
         frames, dropped = shape_frames(block.get("frames"))
         one: dict = {
-            "exc_type": shape_token(str(block.get("exc_type", ""))),
+            "exc_type": exception_type(str(block.get("exc_type", ""))),
             "exc_value": scrub_text(str(block.get("exc_value", ""))),
             "frames": frames,
         }
@@ -659,7 +710,7 @@ def traceback_skeleton(lines: list[str]) -> tuple[list[str], int]:
         exc = _EXC_LINE.match(line.strip())
         if inside and exc:
             message = exc.group("message")
-            said = exc.group("type")
+            said = exception_type(exc.group("type"))
             if message:
                 said = f"{said}: {scrub_text(message)}"
             kept.append(said)
