@@ -46,6 +46,12 @@ LADDER: tuple[tuple[str, tuple[str, ...]], ...] = (
         # read, and land back here.
         "storage",
         "modules", "plant", "__init__",
+        # The fixed words about what is not built yet on the way off an old
+        # MES. Text and nothing else: it imports nothing at all, and it sits
+        # here beside `shadow` because the packaged assistant, `fsmes doctor`
+        # and anything else that has to say those words must all read them
+        # from one place and cannot be allowed to reach up for them.
+        "migration",
     )),
     ("domain", (
         # The tables and their relationships. Imports `db` and itself; that
@@ -115,6 +121,14 @@ LADDER: tuple[tuple[str, tuple[str, ...]], ...] = (
         # it sits with `fleet` and `standalone`; only `standalone` and the CLI
         # import it.
         "firstrun",
+        # The one file a person pastes to their agent (`fsmes doctor`): it
+        # reads this installation's own home, the processes `fsmes.plant`
+        # recorded, their logs, a pack, the coverage ledger through the
+        # services and the kept scorecards, asks each port whether it
+        # answers, and writes one Markdown file. Everything it does is
+        # reading and shaping, so it sits with `firstrun` and `fleet`; only
+        # the CLI imports it.
+        "doctor",
     )),
     ("cli", (
         # The top of the ladder: everything may be imported by the CLI and
