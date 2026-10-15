@@ -49,12 +49,25 @@ enabled       = true
 lease_seconds = 10
 ```
 
+Then the schema, once, from any one box — `run` serves a plant, it does not
+create one, and a node whose database has no lease table stands by and says
+so with this command in it:
+
+```bash
+fsmes plant kc1 init          # or `fsmes plant kc1 migrate` on an existing plant
+```
+
 Then on each box, with `MES_PLANT_SECRET` set to the same value:
 
 ```bash
 fsmes plant kc1 run --node box-one
 fsmes plant kc1 run --node box-two
 ```
+
+Starting both nodes at once is safe: `run` migrates nothing. And if you do
+run the schema command on both boxes at the same time, that is safe too — the
+first one into the database holds the migration lock while the second waits
+for it and finds the head.
 
 `--node` names the node. Give it a name you will recognise in a log at
 02:00 — the host name is the usual answer. Without `--node` a node calls
