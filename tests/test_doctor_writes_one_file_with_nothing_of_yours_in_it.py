@@ -257,6 +257,34 @@ def test_a_traceback_in_console_text_keeps_its_skeleton(tmp_path):
     assert TAG not in text and ORDER not in text
 
 
+def test_a_crash_written_as_console_text_into_a_jsonl_keeps_its_skeleton_too(tmp_path):
+    """A process's `.jsonl` is also where its own stderr lands.
+
+    An import-time crash, or anything the interpreter raises before logging is
+    set up, is painted into that same file as plain console lines. Those are
+    read the way `plant.log` is read, so the fault still has a name.
+    """
+    home = a_home(tmp_path)
+    a_log(home, "bottling", "api.jsonl", [
+        f"a line of its own that is not JSON, about {TAG}",
+        a_line(event="started"),
+        "Traceback (most recent call last):",
+        f'  File "{Path("src/fsmes/opc/agent.py").resolve()}", line 412, in read_batch',
+        f"    value = client.read({TAG})",
+        f"RuntimeError: the session for {ORDER} is gone",
+    ])
+    text = written(tmp_path, home).path.read_text(encoding="utf-8")
+
+    assert "Traceback (most recent call last):" in text
+    assert "fsmes/opc/agent.py" in text and "read_batch" in text
+    assert "RuntimeError" in text, "the type is carried, the same as from a console log"
+    from fsmes.doctor import scrub
+    assert scrub.scrub_text("a line of its own that is not JSON") in text, (
+        "a plain line that is no part of a traceback is still kept, as a scrubbed "
+        "sentence - it is dropped only where it sits inside one")
+    assert TAG not in text and ORDER not in text
+
+
 def test_a_plant_name_is_the_one_word_of_yours_the_file_keeps(tmp_path):
     home = a_home(tmp_path, name="bottling")
     text = written(tmp_path, home).path.read_text(encoding="utf-8")

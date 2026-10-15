@@ -195,6 +195,73 @@ def vocabulary(seen: Seen) -> frozenset[str]:
     return frozenset(scrub.vocabulary() | forgiven)
 
 
+#: A value made of nothing but letters. Only these can be judged by whether
+#: they appear as a word, because anything with a digit, a dash or a dot in it
+#: is an identity on its own and is compared as it stands.
+_LETTERS_ONLY = re.compile(r"^[A-Za-z]+$")
+
+
+@lru_cache(maxsize=1)
+def the_files_own_words() -> frozenset[str]:
+    """Every word this file writes of its own accord.
+
+    The file is mostly its own prose: what each section is, what the product
+    does not do yet, the three questions at the end. A plant's log line is
+    full of English too - the templates of our own event messages, the
+    sentences our own `detail=` fields carry - and `Seen` collects every word
+    of it, so a value read from a log and a word of this file's own writing
+    collide on nearly every run: `history`, `production`, `books`, `writes`.
+    None of them is evidence of anything. The file would have said them if it
+    had read nothing at all.
+
+    So the words of the modules that write the file are read out of their own
+    source and handed to the check as vocabulary, the same way the shape skill
+    hands it `OWN_WORDS`. A plant's word is never in this product's source,
+    which is what makes the source safe to use as the list.
+
+    The skill's `is_identity` then forgives one of these words only where the
+    value is a single bare word: anything with a space, a digit or a separator
+    in it is still compared, so `SECRET_TAG_XYZ` and `WO-LEAK-1` are still
+    looked for. What this does forgive is a plant's one-word name that happens
+    to be a word this product also writes - a machine called `Budget` - which
+    is the same trade-off the skill has always made with its own vocabulary,
+    and the reason the file says in its first lines that it names the plants
+    in this home.
+    """
+    import inspect
+
+    from fsmes import migration
+    from fsmes.doctor import gather, render, scrub
+
+    words: set[str] = set()
+    for module in (render, migration, gather, scrub):
+        try:
+            source = inspect.getsource(module)
+        except (OSError, TypeError):                            # pragma: no cover
+            continue
+        words |= {w.lower() for w in re.findall(r"[A-Za-z]{3,}", source)}
+    return frozenset(words)
+
+
+def never_a_word_of_its_own(value: str, text: str) -> bool:
+    """Is this value absent from the file as a word, in longer words only?
+
+    `scan` asks whether the value appears anywhere in the text at all, so
+    `live` is found inside `alive` and `reach` inside `reachable` - both of
+    them this file's own words. A value that appears nowhere in the file at a
+    word boundary is not in the file: nobody reading it can tell that the
+    letters of somebody's word are inside one of ours, because they are not
+    that word.
+
+    Only a value of letters alone is judged this way. Everything with a digit
+    or a separator in it - every order code, every tag, every path - is
+    compared as it stands.
+    """
+    if not _LETTERS_ONLY.match(value):
+        return False
+    return re.search(rf"\b{re.escape(value)}\b", text, re.IGNORECASE) is None
+
+
 def as_the_scrub_leaves_it(value: str, ours: frozenset[str]) -> bool:
     """Would the scrub carry this value through exactly as it found it?
 
@@ -248,8 +315,10 @@ def verdict(text: str, seen: Seen) -> str:
     # `is_identity` forgives a known word only when the value is a single
     # bare word, and half of what the scrub carries through verbatim is a
     # sentence of them.
-    values = sorted(v for v in seen.values if not as_the_scrub_leaves_it(v, ours))
-    found, considered = module.scan(text, values, ours)
+    values = sorted(v for v in seen.values
+                    if not as_the_scrub_leaves_it(v, ours)
+                    and not never_a_word_of_its_own(v, text))
+    found, considered = module.scan(text, values, ours | the_files_own_words())
     if found:
         shown = ", ".join(repr(v) for v in found[:5])
         raise Leak(

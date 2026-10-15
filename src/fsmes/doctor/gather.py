@@ -369,10 +369,11 @@ def _log_of(path: Path, seen) -> tuple[tuple[str, ...], bool, int]:
     """The tail of one log, scrubbed line by line.
 
     Two kinds of file, because this product writes two. A `.jsonl` log is
-    structured and keeps its keys, its level and its message template. A
-    `.log` is the console as it was painted - which is where an import-time
-    traceback lands, and nothing else in it can be read as fields - so only
-    the skeleton of a traceback is carried out of it and the rest is counted.
+    structured and keeps its keys, its level and its message template, and
+    the console lines mixed into it - a crash that never reached logging -
+    keep a traceback's skeleton. A `.log` is the console as it was painted,
+    and nothing in it can be read as fields, so only the skeleton of a
+    traceback is carried out of it and the rest is counted.
     """
     from fsmes.doctor import scrub
 
@@ -380,7 +381,8 @@ def _log_of(path: Path, seen) -> tuple[tuple[str, ...], bool, int]:
     for line in raw:
         seen.text(line)
     if path.suffix == ".jsonl":
-        return tuple(scrub.scrub_jsonl(line) for line in raw), more, 0
+        said, lost = scrub.scrub_jsonl_lines(raw)
+        return tuple(said), more, lost
     kept, dropped = scrub.traceback_skeleton(raw)
     return tuple(kept), more, dropped
 

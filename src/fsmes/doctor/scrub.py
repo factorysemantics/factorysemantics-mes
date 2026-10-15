@@ -65,6 +65,12 @@ OUR_WORDS: frozenset[str] = frozenset({
     "server", "client", "security", "shadow", "access", "error", "root", "main",
     "mqtt", "uns", "erp", "erpnext", "frappe", "sqlite", "aiosqlite", "postgres",
     "postgresql", "psycopg", "pymssql", "pyodbc", "driver", "engine", "pool",
+    # What this product calls its own processes, because `<plant>.procs` is a
+    # file this product wrote itself and the file quotes those words whole:
+    # "the dashboard and the API", "the simulated floor", "the reader that
+    # writes the machines into the MES". A process named by what it is for is
+    # the whole of what `status` gives a person, and `doctor` says the same.
+    "dashboard", "reader", "writes", "answer", "simulated", "scenario",
     # The keys structlog and the standard library write on every line, and
     # the words a traceback is made of.
     "event", "level", "logger", "timestamp", "message", "msg", "logging",
@@ -725,6 +731,47 @@ def traceback_skeleton(lines: list[str]) -> tuple[list[str], int]:
         inside = False
         dropped += 1
     return kept, dropped
+
+
+def scrub_jsonl_lines(lines: list[str]) -> tuple[list[str], int]:
+    """A `.jsonl` log's last lines, keeping a crash that never reached JSON.
+
+    A process's `.jsonl` is also where its own stderr lands: anything raised
+    before logging was set up, or by the interpreter itself, is written there
+    as the console would have painted it - several plain lines in the middle
+    of the JSON. A run of plain lines that holds a `Traceback` is read the way
+    `plant.log` is read, so the exception type and the frames survive instead
+    of being shaped word by word into nothing; any other plain line is
+    scrubbed as a sentence, which is what it is. Returns the lines and how
+    many were dropped, because a reader has to know there was more.
+    """
+    said: list[str] = []
+    dropped = 0
+    console: list[str] = []
+
+    def flush() -> None:
+        nonlocal dropped
+        if not console:
+            return
+        if any(_TRACEBACK_START in line for line in console):
+            kept, gone = traceback_skeleton(console)
+            said.extend(kept)
+            dropped += gone
+        else:
+            said.extend(scrub_text(_ANSI.sub("", line.rstrip("\n")).rstrip())
+                        for line in console)
+        console.clear()
+
+    for line in lines:
+        if not line.strip():
+            continue
+        if line.lstrip().startswith("{"):
+            flush()
+            said.append(scrub_jsonl(line))
+            continue
+        console.append(line)
+    flush()
+    return said, dropped
 
 
 # ------------------------------------------------------------------ reading them
