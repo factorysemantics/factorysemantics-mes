@@ -16,6 +16,7 @@
 - [Plant — Explanation — never invent production](https://docs.factorysemantics.com/dev/plant/never-invent-production/)
 - [Operate](https://docs.factorysemantics.com/dev/operate/)
 - [Operate — How-to — run it on your own box](https://docs.factorysemantics.com/dev/operate/run-it-on-your-own-box/)
+- [Operate — How-to — one file to paste when something is wrong](https://docs.factorysemantics.com/dev/operate/doctor/)
 - [Operate — Tutorial — beside your existing MES](https://docs.factorysemantics.com/dev/operate/first-plant/)
 - [Operate — Tutorial — deploy](https://docs.factorysemantics.com/dev/operate/deploy/)
 - [Operate — How-to — read-only OPC UA commissioning](https://docs.factorysemantics.com/dev/operate/opc-readonly/)

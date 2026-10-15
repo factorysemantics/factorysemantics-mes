@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://docs.factorysemantics.com/dev/operate/first-plant/">
       
       
-        <link rel="prev" href="../run-it-on-your-own-box/">
+        <link rel="prev" href="../doctor/">
       
       
         <link rel="next" href="../deploy/">
@@ -909,6 +909,34 @@
     
   
     How-to — run it on your own box
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../doctor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — one file to paste when something is wrong
   
 
     
@@ -4771,7 +4799,12 @@ moves up the list.</p>
 <div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>info<span class="w">          </span><span class="c1"># the version you think you are running</span>
 fsmes<span class="w"> </span>opc-verify<span class="w">    </span><span class="c1"># every mapped tag still readable</span>
 fsmes<span class="w"> </span>erp<span class="w"> </span>check<span class="w">     </span><span class="c1"># only if you did step 5</span>
+fsmes<span class="w"> </span>doctor<span class="w">        </span><span class="c1"># one file to paste when something is wrong</span>
 </code></pre></div>
+<p>Run <code>fsmes doctor</code> once on the first day even if nothing is wrong, and read
+it: it is how you will ask for help later, and reading it now is how you
+satisfy yourself that nothing of your plant's is in it —
+<a href="../doctor/">one file to paste when something is wrong</a>.</p>
 <p>Then open <code>/dashboard</code> and look at the line, <code>/dashboard/analysis</code> for the
 shift, and <code>/dashboard/line</code> for one line's machines, its work in progress
 and its state timeline, with the 3D view as a tab.</p>
@@ -4892,7 +4925,7 @@ otherwise.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../run-it-on-your-own-box/" class="md-footer__link md-footer__link--prev" aria-label="Previous: How-to — run it on your own box">
+          <a href="../doctor/" class="md-footer__link md-footer__link--prev" aria-label="Previous: How-to — one file to paste when something is wrong">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -4902,7 +4935,7 @@ otherwise.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                How-to — run it on your own box
+                How-to — one file to paste when something is wrong
               </div>
             </div>
           </a>
