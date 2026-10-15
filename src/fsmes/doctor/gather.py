@@ -145,7 +145,9 @@ class ScorecardRow:
     not_stated: int | None
     orders_compared: int | None
     operations_compared: int | None
-    cannot_tell: tuple[str, ...] = ()
+    #: How many things that scorecard said it could not tell you. A count,
+    #: not the sentences: the sentences name order codes.
+    cannot_tell: int | None = None
 
 
 @dataclass(frozen=True)
@@ -558,10 +560,10 @@ SCORECARDS = "scorecards"
 def scorecards_in(home: Path, seen) -> tuple[ScorecardRow, ...]:
     """Every kept scorecard under the home, oldest first, as rows.
 
-    The kept copy holds figures and no work: counts per field, the totals
-    they were drawn from, and the sentences the scorecard uses to say what it
-    could not tell. The orders and operations themselves stay in the
-    scorecard the person ran, on their own machine.
+    The kept copy holds figures and no work: counts per field and the totals
+    they were drawn from. The orders, the operations, the quantities and the
+    sentences that name them stay in the scorecard the person ran, on their
+    own machine (`scorecard.Scorecard.figures`).
     """
     from fsmes.doctor import scrub
 
@@ -587,7 +589,7 @@ def scorecards_in(home: Path, seen) -> tuple[ScorecardRow, ...]:
             not_stated=sum(int(f.get("not_stated") or 0) for f in fields) or 0,
             orders_compared=((body.get("orders") or {}).get("both")),
             operations_compared=((body.get("operations") or {}).get("both")),
-            cannot_tell=tuple(str(s) for s in (body.get("what_this_cannot_tell_you") or [])),
+            cannot_tell=(body.get("cannot_tell") or {}).get("total"),
         ))
     return tuple(out)
 

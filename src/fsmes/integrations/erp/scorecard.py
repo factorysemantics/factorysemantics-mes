@@ -254,6 +254,59 @@ class Scorecard:
     def to_json(self, indent: int = 2) -> str:
         return json.dumps(self.as_dict(), indent=indent, default=str) + "\n"
 
+    def figures(self, written: str | None = None) -> dict:
+        """The same comparison as counts, with nothing anybody owns in it.
+
+        This is what is kept under the `fsmes` home so that `fsmes doctor`
+        can line two shadow runs up by date. It holds how many were compared,
+        how many agreed, how many differed and how many could not be
+        compared, per field - and not one order code, operation code, column
+        heading or quantity.
+
+        `as_dict()` is the report, and the report is the plant's: it names
+        the orders only one side has and quotes the numbers that differ,
+        because that is what a person has to act on. None of that may sit in
+        a directory this product writes by itself and a diagnostic file reads
+        later, so this reduction is a separate method rather than a flag on
+        that one, and it is the only thing written to the home.
+        """
+        def counts(side: Side) -> dict:
+            return {"orders": side.orders, "operations": side.operations,
+                    "order_totals": side.order_totals, "documents": side.documents,
+                    "not_read": len(side.not_read)}
+
+        def per(agreements: list[Agreement]) -> list[dict]:
+            return [{"field": a.field, "agree": a.agree, "differ": a.differ,
+                     "not_stated": a.not_stated, "compared": a.compared, "pairs": a.total}
+                    for a in agreements]
+
+        return {
+            "kind": KEPT_KIND,
+            "written": written or datetime.now(UTC).isoformat(timespec="seconds"),
+            "tolerances": {"quantity": self.tolerances.quantity,
+                           "seconds": self.tolerances.seconds},
+            "sides": {"incumbent": counts(self.incumbent), "mes": counts(self.mes)},
+            "orders": {"both": len(self.orders_both),
+                       "only_incumbent": len(self.orders_only_incumbent),
+                       "only_mes": len(self.orders_only_mes),
+                       "total": len(self.orders_both) + len(self.orders_only_incumbent)
+                                + len(self.orders_only_mes)},
+            "operations": {"both": len(self.operations_both),
+                           "only_incumbent": len(self.operations_only_incumbent),
+                           "only_mes": len(self.operations_only_mes),
+                           "total": len(self.operations_both)
+                                    + len(self.operations_only_incumbent)
+                                    + len(self.operations_only_mes)},
+            "agreement": {"per_operation": per(self.operation_agreement),
+                          "per_order": per(self.order_agreement),
+                          "compared": self.compared,
+                          "agree": self.agreed,
+                          "differ": len(self.differences)},
+            "cannot_tell": {"total": len(self.cannot_tell)},
+            "note": ("Figures only. The scorecard this was reduced from names the orders "
+                     "and quotes the numbers; it stays where the person who ran it put it."),
+        }
+
     def render(self) -> list[str]:
         """The whole thing in words, for a terminal."""
         lines = [
@@ -371,6 +424,29 @@ class OurRecord:
             self.operations.setdefault((confirmation.order, str(confirmation.seq)), confirmation)
         else:
             self.completions.setdefault(confirmation.order, confirmation)
+
+
+#: The directory under the `fsmes` home where kept figures live, and what a
+#: kept file calls itself. One name, read by `fsmes doctor`.
+KEPT = "scorecards"
+KEPT_KIND = "shadow_scorecard_figures"
+
+
+def keep(card: Scorecard, home: Path, *, when: datetime | None = None) -> Path:
+    """Keep this scorecard's figures under the home, named for the day.
+
+    One file per day: a second run on the same day replaces the first,
+    because what `doctor` lines up is one row per shadow day, and two runs
+    an hour apart over the same export are the same day's answer. The
+    scorecard itself is not touched and is not copied.
+    """
+    moment = when or datetime.now(UTC)
+    where = Path(home) / KEPT
+    where.mkdir(parents=True, exist_ok=True)
+    path = where / f"{moment.date().isoformat()}.json"
+    body = card.figures(written=moment.isoformat(timespec="seconds"))
+    path.write_text(json.dumps(body, indent=2, default=str) + "\n", encoding="utf-8")
+    return path
 
 
 def read_confirmations(path: Path) -> OurRecord:

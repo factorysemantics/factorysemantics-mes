@@ -290,8 +290,8 @@ def _scorecards(plant: gather.Plant) -> list[str]:
             "up by date. One run of this writes one:",
             "",
             "```",
-            "fsmes shadow scorecard --export <what the incumbent exported> \\",
-            "    --mapping <your mapping file> --json scorecard.json",
+            "fsmes shadow scorecard --incumbent <what the incumbent exported> \\",
+            "    --map <your mapping file> --json scorecard.json",
             "```",
             "",
             "It keeps a copy of its figures - counts, not orders - under "
@@ -320,12 +320,12 @@ def _scorecards(plant: gather.Plant) -> list[str]:
     else:
         out += ["The most recent kept scorecard reports no field still differing.", ""]
     if latest.cannot_tell:
-        out += ["What that scorecard says it cannot tell you:", ""]
-        for line in latest.cannot_tell[:6]:
-            out.append(f"- {scrub.scrub_text(line)}")
-        if len(latest.cannot_tell) > 6:
-            out.append(f"- *(6 of {len(latest.cannot_tell)} shown)*")
-        out.append("")
+        out += [f"That scorecard also names {latest.cannot_tell} "
+                f"{'thing' if latest.cannot_tell == 1 else 'things'} it cannot tell you - "
+                f"work only one side has, a field the export never carries, comparisons "
+                f"that could not be made. The sentences name orders and columns, so they "
+                f"are not kept under the home and are not in this file. They are in the "
+                f"scorecard itself, under *what this cannot tell you*.", ""]
     return out
 
 

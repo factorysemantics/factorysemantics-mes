@@ -155,6 +155,22 @@ Four parts, in order:
    stated, rows that could not be read, and the two limits no file
    comparison can escape.
 
+### `--json` also keeps the figures under the home
+
+When you pass `--json`, the command writes the scorecard where you asked for
+it *and* keeps a reduction of it under the `fsmes` home as
+`scorecards/<date>.json` — one file per day, a later run on the same day
+replacing the earlier one. That kept copy holds **figures only**: how many
+fields were compared, how many agreed, how many differed, how many could not
+be compared, and the totals each count came out of. It holds no order code,
+no operation code, no column heading and no quantity; those stay in the
+scorecard you asked for, where you put it.
+
+It exists so that [`fsmes doctor`](doctor.md) can line two shadow days up by
+date in a file you can paste to somebody. Delete the directory if you would
+rather it did not: nothing else reads it, and `doctor` then says there is
+nothing kept.
+
 There are no charts, on purpose. The chart this invites is a bar showing
 how much agreed, and that bar averages away exactly what you are looking
 for: two records agreeing on 998 of 1,000 comparisons and differing by 400

@@ -1087,6 +1087,18 @@ def shadow_scorecard(
         json_out.parent.mkdir(parents=True, exist_ok=True)
         json_out.write_text(card.to_json(), encoding="utf-8")
         typer.echo(f"  wrote {json_out}")
+        # And the figures alone under the home, so that `fsmes doctor` can
+        # line two shadow days up by date. Figures: no order code, no column
+        # heading, no quantity. The scorecard itself stays where it was asked
+        # for and is never copied.
+        from fsmes import standalone
+
+        try:
+            kept = scoring.keep(card, standalone.home())
+        except OSError as exc:
+            typer.echo(f"  could not keep the figures under the home: {exc}")
+        else:
+            typer.echo(f"  kept the figures in {kept} for `fsmes doctor`")
     if html_out:
         html_out.parent.mkdir(parents=True, exist_ok=True)
         html_out.write_text(scorecard_html.render(card), encoding="utf-8")
