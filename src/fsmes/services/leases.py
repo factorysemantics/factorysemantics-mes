@@ -185,6 +185,7 @@ class Holder:
         self.node = node
         self.seconds = float(seconds)
         self._held = False
+        self._said_no_table = False
 
     @property
     def held(self) -> bool:
@@ -203,12 +204,35 @@ class Holder:
         except Exception as exc:
             # A database this node cannot reach is a database it cannot
             # prove it holds a lease in. Standby is the safe answer.
-            log.warning("could not ask for the lease", role=self.role, node=self.node,
-                        error=f"{type(exc).__name__}: {exc}"[:160])
+            self._say_why_not(exc)
             self._held = False
             return False
         self._held = got
         return got
+
+    def _say_why_not(self, exc: Exception) -> None:
+        """Say why this node could not ask for the lease, once per reason.
+
+        A missing lease table is not a database that went away: it is a
+        plant whose schema was never created, and the fix is a command. It
+        is said once, as an error, because a renewal comes every third of a
+        lease and the message never changes - a node standing by for ten
+        minutes printed the same stack 450 times before this.
+        """
+        detail = f"{type(exc).__name__}: {exc}"
+        no_table = "plant_leases" in detail and (
+            "does not exist" in detail or "no such table" in detail)
+        if not no_table:
+            log.warning("could not ask for the lease", role=self.role, node=self.node,
+                        error=detail[:160])
+            return
+        if self._said_no_table:
+            return
+        self._said_no_table = True
+        log.error("this plant's database has no lease table, so no node can hold a "
+                  "role: create this plant's schema once - `fsmes plant <name> init`, "
+                  "or `fsmes init-db` against this database - and start the nodes "
+                  "again", role=self.role, node=self.node)
 
     def drop(self) -> None:
         self._held = False

@@ -23,6 +23,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 from sqlalchemy import select
+from sqlalchemy.exc import ProgrammingError
 
 from fsmes.config import Settings
 from fsmes.domain import Equipment, EquipmentLevel, PlantLease, TagValue
@@ -177,6 +178,34 @@ def test_a_node_that_cannot_reach_the_database_is_a_standby_and_not_a_crash(monk
     assert holder.take() is False
     assert holder.held is False
     assert holder.holds() is False
+
+
+def test_a_node_whose_plant_was_never_migrated_is_told_which_command_fixes_it(monkeypatch):
+    """The first thing a person hits when they bring up two nodes by hand:
+    `fsmes plant <name> run` serves the dashboard but creates no schema, so
+    every role asks for a lease in a table that is not there. Said once, as
+    an error, with the command - not as the same stack every three seconds
+    for as long as the node stands by."""
+    import structlog
+
+    holder = leases.Holder(leases.ROLE_READER, "a", 10.0)
+
+    def no_table():
+        raise ProgrammingError(
+            'UPDATE plant_leases SET holder=...', {},
+            Exception('relation "plant_leases" does not exist'))
+
+    monkeypatch.setattr(leases, "session_scope", no_table)
+    with structlog.testing.capture_logs() as captured:
+        for _ in range(3):
+            assert holder.take() is False
+
+    said = [line for line in captured if line["log_level"] == "error"]
+    assert len(said) == 1, f"the same reason was printed {len(said)} times"
+    assert "fsmes plant <name> init" in said[0]["event"]
+    assert not [line for line in captured if line["log_level"] == "warning"], (
+        "a missing table is one error with a command in it, not a warning a "
+        "person has to read a stack out of")
 
 
 # ------------------------------------------------------- baselines in the database
