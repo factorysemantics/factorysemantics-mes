@@ -74,6 +74,12 @@ class Listed:
 
     about: str = ""
 
+    nodes: tuple[dict, ...] = ()
+    """The nodes this plant's pack names, each `{"id", "api_port"}`, in the
+    order the pack writes them. Empty for a plant that serves one address,
+    which is almost every plant and is what this page drew before nodes
+    existed."""
+
 
 def listed(root: Path) -> list[Listed]:
     """Every plant this console shows, from the three places they come from.
@@ -94,6 +100,7 @@ def listed(root: Path) -> list[Listed]:
             rows[name] = Listed(name=name,
                                 base=observe.base(cfg.get("api_host", ""), cfg.get("api_port")),
                                 label=str(cfg.get("label") or ""),
+                                nodes=tuple(cfg.get("nodes") or ()),
                                 about="a pack this machine runs")
     except (FileNotFoundError, packfleet.FleetError):
         # A console outside a checkout has no fleet file, and that is not an
@@ -101,8 +108,14 @@ def listed(root: Path) -> list[Listed]:
         pass
 
     for entry in record.owned:
+        known = rows.get(entry.name)
+        # The ownership entry wins on where the plant is, because it knows
+        # where the plant's data is and the fleet file does not. The nodes
+        # stay the pack's: an ownership entry records one address, and a plant
+        # that runs as two nodes would otherwise lose one of them here.
         rows[entry.name] = Listed(name=entry.name, base=entry.base,
-                                  label=rows[entry.name].label if entry.name in rows else "",
+                                  label=known.label if known else "",
+                                  nodes=known.nodes if known else (),
                                   entry=entry, about="created by this installation")
     for watched in record.observed:
         rows[watched.name] = Listed(name=watched.name, base=watched.url,
@@ -163,6 +176,7 @@ class Console:
             agreed, why = owned.agrees(plant.entry, said)
             owned_state = "yes" if agreed else ("unknown" if said is None else "no")
 
+        nodes = [self._node(plant, one) for one in plant.nodes]
         pack_said = self._pack(plant.base).body if answer.answered else None
         pack_said = pack_said or {}
         schema = pack_said.get("schema") or {}
@@ -232,9 +246,49 @@ class Console:
             # this worth showing: it ran seventy times past that order and
             # every light on this page was green.
             "book": book,
+            # The nodes of this plant, when its pack names more than one: one
+            # entry each, in the pack's order, with its own address, whether
+            # it answered and the roles it holds. Empty for a plant that
+            # serves one address - the page then draws exactly what it drew
+            # before nodes existed - and the count is on the row rather than
+            # inferred from the length of a list, because two nodes of which
+            # one answered is a plant running on one node and this page says
+            # so in words.
+            "nodes": nodes,
+            "nodes_answered": sum(1 for one in nodes if one["answered"]),
             "watching": (said or {}).get("watching") or {},
             "last_answered": self.last_answered.get(plant.name),
         }
+
+    def _node(self, plant: Listed, node: dict) -> dict:
+        """One node of one plant: where it is, whether it answered, what it
+        holds. The roles are the node's own answer and nothing is carried
+        over from the plant's row: a node that did not answer holds
+        `unknown`, never nothing."""
+        port = node.get("api_port")
+        base = observe.base(_host(plant.base), port) if port else ""
+        answer = self._health(base) if base else observe.Answer(
+            base, False, why="nothing says where this node answers")
+        said = (answer.body or {}).get("node") or {} if answer.answered else {}
+        return {
+            "id": str(node.get("id") or ""),
+            "base": base,
+            "answered": answer.answered,
+            "why": answer.why,
+            # What the node calls itself, which is what its own lease rows
+            # say. It should equal `id`; when it does not, a node was started
+            # by hand with another name and this page is where that shows.
+            "says": said.get("name") or "",
+            "roles": said.get("roles"),
+            "lease_seconds": said.get("lease_seconds"),
+        }
+
+
+def _host(base: str) -> str:
+    """The host out of `http://host:port`, so a node's address is built the
+    way the plant's was rather than assumed to be loopback."""
+    rest = base.split("//", 1)[-1]
+    return rest.split(":", 1)[0].rstrip("/")
 
 
 def create_app(root: Path, *, console: Console | None = None):

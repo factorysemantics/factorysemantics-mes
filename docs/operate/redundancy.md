@@ -73,6 +73,66 @@ for it and finds the head.
 02:00 — the host name is the usual answer. Without `--node` a node calls
 itself `<host>:<port>`.
 
+### Two nodes on one box
+
+Two boxes is the point of all this. Two nodes on *one* box is the cheap way
+to see it work before you own the second box — and it is how the lab on the
+author's desk runs — so a pack may name the nodes that run on this machine:
+
+```toml
+[serve]
+api_host     = "127.0.0.1"
+api_port     = 8010          # the plant's address: one of its nodes serves here
+secret_key_env = "MES_BOTTLING_SECRET"
+
+[[serve.nodes]]
+id       = "a"
+api_port = 8010
+
+[[serve.nodes]]
+id       = "b"
+api_port = 8011
+
+[redundancy]
+enabled       = true
+lease_seconds = 6
+```
+
+Then the fleet commands act on every node the pack names:
+
+```bash
+fsmes fleet start bottling      # starts node a and node b, each with its own log
+fsmes fleet status bottling     # 2 nodes, 2 answered, and what each one holds
+fsmes fleet stop bottling       # stops both
+```
+
+Each node keeps its own pid file and its own log directory
+(`logs/bottling/a/`, `logs/bottling/b/`), so stopping the plant stops both
+and a failover is readable in one node's log without the other's lines in
+it. `fsmes fleet start` on a plant with one node already up starts only the
+one that is down, which is what you want after killing one on purpose.
+
+What `fsmes pack check` refuses here, so that you find it before half a
+plant is running: two nodes sharing a port (one of them would fail to bind
+and the plant would look healthy on the other), two nodes sharing a name
+(they would take each other's lease and both believe they hold it), nodes
+named by a pack whose `[redundancy]` is off (both would read the machines
+and book every count twice), and nodes with no `secret_key_env` between
+them (whoever signed in on one would be signed out the moment the other
+answered).
+
+A plant that names no nodes is the ordinary plant on one address. That is
+almost every plant, and nothing above changes it.
+
+**Two nodes on one box, on Windows:** CI starts two nodes of one plant on a
+Windows runner, checks that both answer `/health`, that exactly one of them
+holds all three roles, and that `fleet stop` stops both. What is **not**
+proven on Windows is the kill: the Windows runners ship a PostgreSQL that is
+installed and not started, and a failover without a shared PostgreSQL is not
+a failover. The lease, the takeover and the baselines are proven on Linux —
+in CI and by hand on the author's box — and the node-starting, node-stopping
+and role-holding half is proven on both.
+
 ### A real plant: the reader is its own service
 
 `fsmes plant <name> run` serves the API. On a plant whose pack says
@@ -197,7 +257,18 @@ can read:
 The dashboard says it in its header: **served by *b* · machines read by
 *a***. If the line says *machines read by nobody yet*, no node holds the
 reader lease — which is what you see in the seconds after a failover, and
-what you would see if the database were unreachable from every node.
+what you would see if the database were unreachable from every node. **The
+header follows a failover on the page's own poll** — within five seconds,
+with no reload — so a page left open on a phone shows the takeover as it
+happens.
+
+The [fleet console](fleet.md) shows a plant whose pack names its nodes once,
+with its nodes under it: how many there are and how many answered, then one
+line each saying where that node is and what it holds in words — *reads the
+machines*, *runs the floor*, *prunes the history*, or *nothing yet* for a
+standby. A node that did not answer is **unknown** there and never a node
+holding nothing. Its `fleet.json` carries the same, node by node, for
+anything else that wants to read it.
 
 ## What a failover costs
 

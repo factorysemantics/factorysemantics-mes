@@ -90,7 +90,13 @@ class Key:
 
     `floats` is the same thing for measurements - `report_windows =
     [0.25, 1, 8]`, a list of window lengths in hours, where a quarter of an
-    hour is a real answer and a whole number is not enough to say it."""
+    hour is a real answer and a whole number is not enough to say it.
+
+    `nodes` is the one shape that is neither a value nor a list of values: an
+    array of tables, written `[[serve.nodes]]`, each naming one node of this
+    plant on this box. It compiles to no setting at all - a node's name and
+    port go to one child process each, not into the plant's own environment -
+    and `fsmes.pack.check` holds its shape."""
     about: str
     becomes: str | None = None
     """The `MES_*` setting this compiles to, or None when the key is read by
@@ -161,6 +167,14 @@ SCHEMA: tuple[Section, ...] = (
         Key("secret_key_env", "str",
             "The environment variable holding this plant's token-signing key. The "
             "pack names the variable and never the key."),
+        Key("nodes", "nodes",
+            "The nodes of this plant that run on this box, each `[[serve.nodes]]` "
+            "with an `id` and an `api_port` of its own. Leave it out for a plant "
+            "that serves one address, which is almost every plant and is the "
+            "default. Naming nodes here is what lets `fsmes fleet start` start "
+            "both of them and `fsmes fleet status` ask each one what it holds; a "
+            "plant spread over two *boxes* names none of them, because each box "
+            "is started with `--node` and the pack is the same file on both."),
     )),
     Section("redundancy",
             "Running this plant on more than one box. Off is one box and "
@@ -168,9 +182,11 @@ SCHEMA: tuple[Section, ...] = (
             "exactly one of them reads the machines, runs the simulated floor "
             "and prunes the history - decided by a lease row in this plant's "
             "own database. PostgreSQL only: two boxes cannot share a file. "
-            "A node's *own* name and port are not here, because they are "
-            "facts about a box rather than about the plant: they come from "
-            "`fsmes plant <name> run --node a --api-port 8111`.", (
+            "A node's own name and port are not in this table, because they "
+            "are facts about a box rather than about the plant: they come "
+            "from `fsmes plant <name> run --node a --api-port 8111`, or - for "
+            "the two nodes on one box that a person proving a failover on a "
+            "laptop has - from `[[serve.nodes]]`.", (
         Key("enabled", "bool", "Whether this plant expects more than one node.",
             "MES_REDUNDANCY"),
         Key("lease_seconds", "float",
@@ -893,6 +909,17 @@ class Pack:
     def accounts(self) -> list[dict]:
         value = self.raw.get("accounts")
         return [a for a in value if isinstance(a, dict)] if isinstance(value, list) else []
+
+    def nodes(self) -> list[dict]:
+        """The nodes `[[serve.nodes]]` names, in the order they are written.
+
+        Empty for a plant that names none, which is the default and almost
+        every plant. Nothing is validated here - `fsmes.pack.check` refuses a
+        node without an id, two nodes sharing a port, and nodes named by a
+        pack whose `[redundancy]` is off.
+        """
+        value = self.table("serve").get("nodes")
+        return [n for n in value if isinstance(n, dict)] if isinstance(value, list) else []
 
     def path(self, relative: str) -> Path:
         """A file the pack names, as a path from here. Relative to the pack

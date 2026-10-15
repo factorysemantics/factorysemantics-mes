@@ -655,6 +655,46 @@ def log_dir(name: str, node: str | None = None) -> str:
     return f"logs/{name}/{node}" if node else f"logs/{name}"
 
 
+def node_list(cfg: dict) -> list[dict]:
+    """The nodes this plant's pack names, each with its own id and port.
+
+    Empty for every plant that names none, which is almost all of them: one
+    plant, one address, exactly as before. A pack that names nodes is saying
+    "this plant runs as these processes on this box", and `fsmes fleet
+    start/stop/status` then act on every one of them instead of on one.
+
+    A node's id and port are facts about a box rather than about the plant -
+    which is why `fsmes plant <name> run --node a --api-port 8111` takes them
+    as arguments and a plant on two *boxes* needs nothing here. Naming them in
+    the pack is for the other shape: two nodes on one box, which is what a
+    person proving a failover on a laptop has, and what the lab has.
+    """
+    out: list[dict] = []
+    for raw in cfg.get("nodes") or []:
+        out.append({"id": str(raw["id"]), "api_port": int(raw["api_port"])})
+    return out
+
+
+def keyed(name: str, node: str | None = None) -> str:
+    """How one node's own files are named: the plant, and the node when the
+    plant has more than one.
+
+    Two nodes of one plant on one box must not share a pid file - stopping the
+    plant would stop whichever node wrote it last and leave the other running,
+    which is the half-stopped plant a person then cannot start again.
+    """
+    return f"{name}-{node}" if node else name
+
+
+def node_cfg(cfg: dict, node: dict) -> dict:
+    """This plant's configuration as one of its nodes serves it: its own port.
+
+    Everything else - the pack, the database, the machine layer - is the
+    plant's and is shared, which is the whole point of two nodes.
+    """
+    return {**cfg, "api_port": node["api_port"]}
+
+
 def redundant(cfg: dict) -> bool:
     """Whether this plant expects more than one node - `[redundancy] enabled`
     in its pack, read from the environment the pack compiled to, because that
@@ -784,15 +824,32 @@ def processes_in(where: Path, name: str, logs: Path | None = None) -> list[Recor
     return out
 
 
-def start(name: str, cfg: dict, root: Path, speed: float | None = None, echo=print) -> None:
-    if running_pids(root, name):
-        echo(f"  {name} is already running. Stop it first.")
+def start(name: str, cfg: dict, root: Path, speed: float | None = None, echo=print,
+          node: str | None = None, api_port: int | None = None) -> None:
+    """Start this plant, detached, and record what was started.
+
+    A plant whose pack names nodes is started node by node: one supervisor,
+    one pid file and one log directory each, and the roles that must run once
+    sorted out between them by the lease in the database rather than by
+    whatever order they came up in.
+    """
+    if node is None and node_list(cfg):
+        for one in node_list(cfg):
+            start(name, cfg, root, speed, echo=echo, node=one["id"],
+                  api_port=one["api_port"])
         return
 
-    env = plant_env(name, cfg, root, speed)
+    key = keyed(name, node)
+    said = f"{name} node {node}" if node else name
+    if running_pids(root, key):
+        echo(f"  {said} is already running. Stop it first.")
+        return
+
+    env = plant_env(name, cfg, root, speed, node=node, api_port=api_port)
     mes = fsmes_command()
-    (root / "logs" / name).mkdir(parents=True, exist_ok=True)
-    log_path = root / "logs" / name / "plant.log"
+    here = root / log_dir(name, node)
+    here.mkdir(parents=True, exist_ok=True)
+    log_path = here / "plant.log"
 
     # THE LOG HAS A CEILING. A plant is a thing that is left running, and a
     # lab plant filled 1.1 GB in six hours on a box with 22 GB free. One
@@ -811,7 +868,7 @@ def start(name: str, cfg: dict, root: Path, speed: float | None = None, echo=pri
     # minutes on exactly that, 2026-10-12, with the plant up and answering
     # the whole time. Its own words are few and go beside the plant log, so
     # a sink that cannot open that log still says why somewhere.
-    sink_log = (root / "logs" / name / "sink.log").open("a", encoding="utf-8")
+    sink_log = (here / "sink.log").open("a", encoding="utf-8")
     with contextlib.closing(sink_log):
         sink = subprocess.Popen([*mes, "run-log-sink", str(log_path)], cwd=root, env=env,
                                 stdin=subprocess.PIPE, stdout=sink_log,
@@ -847,23 +904,32 @@ def start(name: str, cfg: dict, root: Path, speed: float | None = None, echo=pri
     launched.append((SINK, sink.pid))
 
     pids = [pid for _, pid in launched]
-    pid_file(root, name).write_text("\n".join(str(p) for p in pids), encoding="utf-8")
+    pid_file(root, key).write_text("\n".join(str(p) for p in pids), encoding="utf-8")
     # What each of those pids is, written in the same breath as the pid file.
     # A pid on its own is what the first Windows user had on his screen.
-    procs_file(root, name).write_text(
+    procs_file(root, key).write_text(
         json.dumps([{"pid": pid, "role": spec.role, "log": spec.log} for spec, pid in launched],
                    indent=1),
         encoding="utf-8")
-    echo(f"  {name} started -> {dashboard_url(cfg)} "
+    serving = {**cfg, "api_port": api_port} if api_port is not None else cfg
+    echo(f"  {said} started -> {dashboard_url(serving)} "
          f"(PIDs {', '.join(str(p) for p in pids)})")
 
 
-def stop(name: str, cfg: dict, root: Path, echo=print) -> None:
-    pids = running_pids(root, name)
+def stop(name: str, cfg: dict, root: Path, echo=print, node: str | None = None) -> None:
+    """Stop this plant. Every node of it, when its pack names more than one."""
+    if node is None and node_list(cfg):
+        for one in node_list(cfg):
+            stop(name, cfg, root, echo=echo, node=one["id"])
+        return
+
+    key = keyed(name, node)
+    said = f"{name} node {node}" if node else name
+    pids = running_pids(root, key)
     if not pids:
-        echo(f"  {name} is not running.")
-        pid_file(root, name).unlink(missing_ok=True)
-        procs_file(root, name).unlink(missing_ok=True)
+        echo(f"  {said} is not running.")
+        pid_file(root, key).unlink(missing_ok=True)
+        procs_file(root, key).unlink(missing_ok=True)
         return
 
     for pid in pids:
@@ -877,9 +943,9 @@ def stop(name: str, cfg: dict, root: Path, echo=print) -> None:
         with contextlib.suppress(OSError):
             _force_stop(pid)
 
-    pid_file(root, name).unlink(missing_ok=True)
-    procs_file(root, name).unlink(missing_ok=True)
-    echo(f"  {name} stopped ({len(pids)} process(es)).")
+    pid_file(root, key).unlink(missing_ok=True)
+    procs_file(root, key).unlink(missing_ok=True)
+    echo(f"  {said} stopped ({len(pids)} process(es)).")
 
 
 def supervisor(root: Path, name: str) -> str:
@@ -906,6 +972,34 @@ def supervisor(root: Path, name: str) -> str:
     return "-"
 
 
+def holding(roles) -> str:
+    """What one node is responsible for, in words.
+
+    Three states and not two. "nothing yet" is a standby that has not taken
+    over, which is healthy; "unknown" is the lease table not answering, which
+    is not the same thing as a node holding nothing.
+    """
+    if roles is None:
+        return "unknown"
+    return ", ".join(roles) if roles else "nothing yet"
+
+
+def node_status(name: str, cfg: dict, root: Path, node: dict) -> dict:
+    """One node of a plant: whether it answered, and what it holds."""
+    serving = node_cfg(cfg, node)
+    state, body = health_report(serving)
+    said = body.get("node") or {}
+    return {"id": node["id"], "api_port": node["api_port"],
+            "base": f"http://{serving.get('api_host', '127.0.0.1')}:{node['api_port']}",
+            "health": state, "answered": state == "healthy",
+            "supervisor": supervisor(root, keyed(name, node["id"])),
+            # What the node calls itself, which is not necessarily what the
+            # pack calls it: a node started by hand with a different --node
+            # answers with its own name, and a status command that printed
+            # the pack's name over it would hide exactly that mistake.
+            "says": said.get("name", ""), "roles": said.get("roles")}
+
+
 def status(name: str, cfg: dict, root: Path, echo=print) -> dict:
     # Health is asked of the port directly and never gated on knowing who
     # started the plant - the dashboard answering is the fact that matters.
@@ -915,16 +1009,26 @@ def status(name: str, cfg: dict, root: Path, echo=print) -> dict:
     echo(f"               {cfg['label']}")
     node = body.get("node") or {}
     roles = node.get("roles")
+    nodes = node_list(cfg)
+    if nodes:
+        # A plant whose pack names its nodes is asked node by node, and the
+        # count is stated: two nodes of which one answered is a plant running
+        # on one node, and nothing on this screen should let that look like
+        # two. The roles are each held by exactly one of them, so the lines
+        # read together or not at all.
+        asked = [node_status(name, cfg, root, one) for one in nodes]
+        answered = sum(1 for one in asked if one["answered"])
+        echo(f"               {len(asked)} nodes, {answered} answered")
+        for one in asked:
+            echo(f"                 node {one['id']:<6} {one['health']:<18} "
+                 f"{one['supervisor']:<16} holding {holding(one['roles'])}")
+        return {"plant": name, "supervisor": by, "health": state,
+                "api_port": cfg["api_port"], "pack": str(cfg.get("pack", "")),
+                "node": node.get("name", ""), "roles": roles, "nodes": asked}
     if node.get("redundancy"):
         # One line a person can read during a failover: which node answered,
-        # and what that node is responsible for right now. "nothing yet" is a
-        # real state - a standby that has not taken over is healthy - and
-        # "unknown" is a third one, when the lease table could not be read.
-        if roles is None:
-            holding = "unknown"
-        else:
-            holding = ", ".join(roles) if roles else "nothing yet"
-        echo(f"               node {node.get('name', '?')}, holding {holding}")
+        # and what that node is responsible for right now.
+        echo(f"               node {node.get('name', '?')}, holding {holding(roles)}")
     return {"plant": name, "supervisor": by, "health": state,
             "api_port": cfg["api_port"], "pack": str(cfg.get("pack", "")),
             "node": node.get("name", ""), "roles": roles}

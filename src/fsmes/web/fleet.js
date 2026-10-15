@@ -119,6 +119,71 @@ function bookCell(plant) {
   return node;
 }
 
+/* What each role means on a floor, so a person reading this page does not
+   have to know the product's word for it. A role this build has never heard
+   of is printed as the plant said it: a console that dropped an unknown role
+   would be hiding the one thing worth seeing. */
+const ROLE_WORDS = {
+  reader: "reads the machines",
+  floor: "runs the floor",
+  housekeeping: "prunes the history",
+};
+
+function roleWords(roles) {
+  if (roles === null || roles === undefined) return "unknown";
+  if (!roles.length) return "nothing yet";
+  return roles.map((role) => ROLE_WORDS[role] || role).join(", ");
+}
+
+/* One extra row under a plant that runs as more than one node: the nodes, in
+   the pack's order, each with its own address and what it holds right now.
+   A plant that names no nodes gets no row at all, so the table is exactly
+   what it was before nodes existed.
+
+   The count is written out - "2 nodes, 1 answered" - because two nodes of
+   which one answered is a plant running on one node, and a list a person has
+   to count themselves is where that gets missed. */
+function nodesRow(plant, columns) {
+  const row = document.createElement("tr");
+  row.className = "nodes";
+  const td = document.createElement("td");
+  td.colSpan = columns;
+  const total = document.createElement("span");
+  total.className = "count";
+  total.textContent = plant.nodes.length + " nodes, " + plant.nodes_answered
+    + " answered";
+  td.appendChild(total);
+  for (const node of plant.nodes) {
+    const line = document.createElement("span");
+    line.className = "node";
+    const who = document.createElement("b");
+    who.textContent = "node " + (node.id || "unknown");
+    line.appendChild(who);
+    line.appendChild(pill(node.answered ? "answered" : "unknown",
+                          node.answered ? "answered" : "unknown"));
+    const where = document.createElement("a");
+    where.href = node.base + "/dashboard";
+    where.textContent = node.base;
+    line.appendChild(where);
+    const holds = document.createElement("span");
+    holds.className = "holds";
+    holds.textContent = "holds " + roleWords(node.roles);
+    line.appendChild(holds);
+    /* A node answering under a different name than the pack gave it is a
+       node somebody started by hand with the wrong --node. It is the one
+       thing on this row that nobody would otherwise notice. */
+    if (node.says && node.id && node.says !== node.id) {
+      const says = document.createElement("span");
+      says.className = "why";
+      says.textContent = "answers as " + node.says;
+      line.appendChild(says);
+    }
+    td.appendChild(line);
+  }
+  row.appendChild(td);
+  return row;
+}
+
 function draw(fleet) {
   document.getElementById("totals").textContent = fleet.says;
   document.getElementById("ownership").textContent = fleet.ownership_says;
@@ -126,6 +191,7 @@ function draw(fleet) {
   document.getElementById("empty").hidden = fleet.plants.length > 0;
 
   const body = document.getElementById("rows");
+  const columns = document.querySelectorAll("#fleet thead th").length;
   body.textContent = "";
   for (const plant of fleet.plants) {
     const row = document.createElement("tr");
@@ -182,6 +248,9 @@ function draw(fleet) {
     cell(row, known(plant.last_answered));
 
     body.appendChild(row);
+    if (plant.nodes && plant.nodes.length) {
+      body.appendChild(nodesRow(plant, columns));
+    }
   }
 }
 

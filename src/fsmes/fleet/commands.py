@@ -192,13 +192,23 @@ def _fleet_lists(directory: Path, root: Path) -> bool:
 
 
 def start(name: str, *, root: Path, speed: float | None = None, echo=print) -> owned.Ownership:
-    """Start an owned plant. Nothing here starts a plant on its own."""
+    """Start an owned plant. Nothing here starts a plant on its own.
+
+    A plant whose pack names nodes is started node by node, and one of them
+    already answering is not a reason to stop: that is exactly the state a
+    person is in after one node died and they want it back. `plants.start`
+    skips each node whose own pid file names live processes and says so.
+    """
     where = data_dir(root)
     ownership = owned.gate("start", name, data_dir=where)
-    if ownership.answering:
+    cfg = _config(ownership.entry)
+    if ownership.answering and not plants.node_list(cfg):
         echo(f"  {name} is already answering on {ownership.entry.base}.")
         return ownership
-    plants.start(name, _config(ownership.entry), root, speed, echo=echo)
+    if ownership.answering:
+        echo(f"  {name} is answering on {ownership.entry.base}; starting any node of it "
+             "that is not running.")
+    plants.start(name, cfg, root, speed, echo=echo)
     return ownership
 
 
@@ -267,6 +277,11 @@ class Plant:
     #: How many orders this plant has planned, released and running. `None`
     #: is *this plant did not say*, which is not an empty book.
     book_said: dict | None = None
+    #: This plant's nodes, when its pack names more than one: one entry each,
+    #: as `fsmes.plant.node_status` answers them. Empty for the ordinary plant
+    #: that serves one address, and empty when the pack could not be read -
+    #: the pack is the only place nodes are named.
+    nodes: tuple[dict, ...] = ()
 
     @property
     def state(self) -> str:
@@ -286,6 +301,24 @@ class Plant:
         return "empty" if observe.is_empty(self.pack_said) else "answered"
 
 
+def _nodes(entry: owned.Entry | None, root: Path) -> tuple[dict, ...]:
+    """What each node of this plant says, when its pack names more than one.
+
+    Empty for the plant that serves one address, which is almost every plant,
+    and empty when the pack is not where the ownership entry says it is: a
+    read verb says what it found and never raises on the way to a status
+    line. The row's `pack` line is where an unreadable pack shows up.
+    """
+    if entry is None:
+        return ()
+    try:
+        cfg = _config(entry)
+    except (Refused, fmt.PackError, OSError):
+        return ()
+    return tuple(plants.node_status(entry.name, cfg, root, one)
+                 for one in plants.node_list(cfg))
+
+
 def status(name: str, *, root: Path, echo=print, ask=None, ask_book=None) -> Plant:
     """One plant: whether it is owned, whether it answered, and its drift."""
     where = data_dir(root)
@@ -298,6 +331,7 @@ def status(name: str, *, root: Path, echo=print, ask=None, ask_book=None) -> Pla
                 pack_said=(observe.pack(base).body if ownership.answering else None),
                 book_said=(ask_book(base) if ownership.answering else None),
                 supervisor=(plants.supervisor(root, name) if entry else None),
+                nodes=_nodes(entry, root),
                 label=str((ownership.said or {}).get("label", "")))
     for line in render(row):
         echo(line)
@@ -361,6 +395,12 @@ def render(row: Plant) -> list[str]:
             lines.append(f"    modules    {len(modules.get('on', []))} on, "
                          f"{len(modules.get('off', []))} off, of "
                          f"{modules.get('total', 'unknown')}")
+    if row.nodes:
+        answered = sum(1 for one in row.nodes if one["answered"])
+        lines.append(f"    nodes      {len(row.nodes)}, {answered} answered")
+        for one in row.nodes:
+            lines.append(f"      {one['id']:<6} {one['health']:<18} {one['base']}"
+                         f"   holding {plants.holding(one['roles'])}")
     if row.supervisor:
         lines.append(f"    started by {row.supervisor}")
     return lines
@@ -387,6 +427,7 @@ def listing(*, root: Path, echo=print, ask=None, ask_pack=None) -> dict:
         rows.append(Plant(name=entry.name, owned=ownership.owned, reason=ownership.reason,
                           base=entry.base, answered=ownership.answering, said=ownership.said,
                           pack_said=(ask_pack(entry.base).body if ownership.answering else None),
+                          nodes=_nodes(entry, root),
                           supervisor=plants.supervisor(root, entry.name)))
     for watched in sorted(record.observed, key=lambda o: o.name):
         answer = ask(watched.url)
@@ -406,6 +447,12 @@ def listing(*, root: Path, echo=print, ask=None, ask_pack=None) -> dict:
     for row in rows:
         echo(f"  {row.name:<14} {('owned' if row.owned else 'observed'):<9} "
              f"{row.state:<9} {row.base}{'   ' + observe.empty_because(row.pack_said) if row.state == 'empty' else ''}")
+        if row.nodes:
+            echo(f"    {len(row.nodes)} nodes, "
+                 f"{sum(1 for one in row.nodes if one['answered'])} answered")
+        for one in row.nodes:
+            echo(f"    node {one['id']:<9} {'answered' if one['answered'] else 'unknown':<9} "
+                 f"{one['base']}   holding {plants.holding(one['roles'])}")
     if not rows:
         echo("  Nothing yet. `fsmes fleet create <pack>` makes the first one.")
     return {"totals": totals, "plants": rows}

@@ -213,6 +213,7 @@ def check(directory: Path, *, version: str = __version__) -> Report:
     problems += _admin_numbers(pack)
     problems += _screens_numbers(pack)
     problems += _system_numbers(pack)
+    problems += _nodes(pack)
     problems += _modules(pack)
     problems += _words(pack)
     files, file_problems, file_unknowns = _files(pack)
@@ -302,7 +303,7 @@ def _sections(pack: fmt.Pack) -> list[Problem]:
 
 
 _TYPES = {"str": str, "int": int, "float": (int, float), "bool": bool, "path": str,
-          "ints": list, "strs": list, "floats": list}
+          "ints": list, "strs": list, "floats": list, "nodes": list}
 
 
 def _typed(where: str, key: fmt.Key, value) -> list[Problem]:
@@ -1027,6 +1028,102 @@ def system_numbers(table: dict) -> list[Problem]:
             "answer from nothing.")))
     return out
 
+
+
+#: What one `[[serve.nodes]]` table may say, and nothing else.
+NODE_KEYS = ("id", "api_port")
+
+
+def _nodes(pack: fmt.Pack) -> list[Problem]:
+    """`[[serve.nodes]]`: two or more nodes of one plant on this box.
+
+    Everything here is a thing a person would otherwise find out by starting
+    a plant and watching half of it come up: two nodes sharing a port (the
+    second one dies on bind and the first serves alone, looking fine), a node
+    with no id (its lease rows would be anonymous and its logs would land in
+    the plant's own directory beside the other node's), or nodes named by a
+    pack whose `[redundancy]` is off - which is two processes on two ports
+    both reading the machines and both booking every count.
+    """
+    table = pack.table("serve")
+    if "nodes" not in table:
+        return []
+    written = table["nodes"]
+    if not isinstance(written, list):
+        return []  # already refused by `_sections` as the wrong kind
+    out: list[Problem] = []
+    nodes = [n for n in written if isinstance(n, dict)]
+    if len(nodes) != len(written):
+        out.append(Problem("[serve] nodes", (
+            "is an array of tables: one `[[serve.nodes]]` per node, each with an "
+            "`id` and an `api_port`.")))
+    if len(nodes) < 2:
+        out.append(Problem("[serve] nodes", (
+            f"names {len(nodes)} node(s). A plant with one address names none of "
+            "them - that is the ordinary form, and it is what `[serve] api_port` "
+            "already says. Name nodes when there are two or more of them on this "
+            "box.")))
+
+    ids: list[str] = []
+    ports: list[int] = []
+    for index, node in enumerate(nodes, start=1):
+        where = f"[[serve.nodes]] #{index}"
+        for key in node:
+            if key not in NODE_KEYS:
+                out.append(Problem(f"{where} {key}", (
+                    f"is not a key a node has. A node is {' and '.join(NODE_KEYS)}.")))
+        node_id = node.get("id")
+        if not isinstance(node_id, str) or not node_id.strip():
+            out.append(Problem(f"{where} id", (
+                "missing. A node needs a name of its own: it is what the lease row "
+                "in this plant's database says, what `/health` reports, and what the "
+                "node's log directory is called. `a` and `b` are enough.")))
+        elif not node_id.strip().isalnum():
+            out.append(Problem(f"{where} id", (
+                f"is {node_id!r}. A node's id becomes a directory name and a row "
+                "value, so it is letters and digits only.")))
+        else:
+            ids.append(node_id.strip())
+        port = node.get("api_port")
+        if isinstance(port, bool) or not isinstance(port, int):
+            out.append(Problem(f"{where} api_port", (
+                "missing, or not a whole number. Two nodes on one box answer on two "
+                "ports, and the pack says which.")))
+        elif not 1 <= port <= 65535:
+            out.append(Problem(f"{where} api_port", f"is {port}, which is not a port."))
+        else:
+            ports.append(port)
+
+    for twice in sorted({i for i in ids if ids.count(i) > 1}):
+        out.append(Problem("[[serve.nodes]] id", (
+            f"is {twice!r} on more than one node. Two nodes with one name would "
+            "take each other's lease and both believe they hold it.")))
+    for twice in sorted({p for p in ports if ports.count(p) > 1}):
+        out.append(Problem("[[serve.nodes]] api_port", (
+            f"is {twice} on more than one node. One of them would fail to bind and "
+            "the plant would look healthy on the other.")))
+
+    plant_port = table.get("api_port")
+    if ports and isinstance(plant_port, int) and not isinstance(plant_port, bool) \
+            and plant_port not in ports:
+        out.append(Problem("[serve] api_port", (
+            f"is {plant_port}, and no node serves there. `[serve] api_port` is this "
+            f"plant's address - what the console dials and what `fsmes fleet create` "
+            f"records - so one of the nodes has to be on it. The nodes are on "
+            f"{', '.join(str(p) for p in ports)}.")))
+
+    if nodes and not pack.table("redundancy").get("enabled"):
+        out.append(Problem("[redundancy] enabled", (
+            "is off, and `[[serve.nodes]]` names more than one node. Without it both "
+            "nodes would read the machines and book every count twice. Set "
+            "`enabled = true`, which also needs a PostgreSQL `[storage] database_url` "
+            "and a `[serve] secret_key_env`.")))
+    if nodes and not str(table.get("secret_key_env") or "").strip():
+        out.append(Problem("[serve] secret_key_env", (
+            "missing, and this plant has more than one node. Each node would invent "
+            "its own signing key, and whoever signed in on one would be signed out "
+            "the moment the other answered.")))
+    return out
 
 
 def _modules(pack: fmt.Pack) -> list[Problem]:

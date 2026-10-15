@@ -42,7 +42,8 @@ Every key is enumerated in `fsmes.pack.format`, and **an unknown key is an error
 | `[modules]` | one boolean per module | What this plant serves. Anything not named stays on |
 | `[words]` | display term → this plant's word | Display only. See below |
 | `[storage]` | `database_url`, `database_password_file` | Where the data lives |
-| `[serve]` | `api_host`, `api_port`, `opc_endpoint`, `simulate`, `speed`, `secret_key_env` | What it serves, and where |
+| `[serve]` | `api_host`, `api_port`, `opc_endpoint`, `simulate`, `speed`, `secret_key_env`, `[[serve.nodes]]` | What it serves, and where. `[[serve.nodes]]` names the nodes of one plant that run on this box, each with an `id` and an `api_port` of its own; leave it out for the plant that serves one address, which is nearly every plant — see [two boxes, one plant](redundancy.md) |
+| `[redundancy]` | `enabled`, `lease_seconds` | Whether two copies of this plant may run against one database, and how long a role is held between renewals. Needs PostgreSQL and a `secret_key_env` |
 | `[files]` | `tag_map`, `replay_dir`, `line_layout`, `masterdata` | The rest of the pack, by relative path inside it |
 | `[erp]` | `mode` | `off`, `file`, `rest` or `erpnext` |
 | `[uns]` | `mode`, `topic_prefix` | `off`, `log` or `mqtt` |
