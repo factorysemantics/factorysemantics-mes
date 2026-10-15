@@ -37,6 +37,7 @@ import pytest
 
 from fsmes import plant as plants
 from fsmes.fleet import commands, console, observe
+from fsmes.fleet import owned as ownership
 from fsmes.pack import check as checker
 from fsmes.pack import fleet as packs
 from fsmes.pack import format as fmt
@@ -398,6 +399,73 @@ def test_a_node_that_did_not_answer_is_unknown_and_not_a_node_holding_nothing(
     assert "did not answer" in bottling["nodes"][1]["why"]
 
 
+def test_a_plant_whose_first_node_died_is_read_off_the_node_that_answered(
+        a_two_node_fleet):
+    """The one moment this page exists for, and the one it used to get wrong.
+
+    Node a is the address the pack names and the node that was killed; node b
+    is serving the floor. The row used to say `unknown` in every column - no
+    label, no schema, no orders left - about a plant that was still counting,
+    because it only ever asked the first address. It now reads the plant off
+    the node that answered, and still names the silent node underneath.
+    """
+    root, _directory = a_two_node_fleet
+
+    def health(base, **_kwargs):
+        # Only node b of bottling is up: node a was killed, and the lab's
+        # other plant is not running either.
+        if not base.endswith("8011"):
+            return observe.Answer(base, False, why="did not answer ([Errno 111] refused)")
+        return observe.Answer(base, True, status=200, body={
+            "status": "ok", "plant": "bottling", "label": "Bottling (two nodes)",
+            "node": {"name": "b", "named": True, "redundancy": True,
+                     "lease_seconds": 6.0,
+                     "roles": ["floor", "housekeeping", "reader"]}})
+
+    def pack(base, **_kwargs):
+        assert base.endswith("8011"), f"a silent address was asked for its pack: {base}"
+        return observe.Answer(base, True, status=200, body={
+            "pack": "bottling", "schema": {"revision": "abc", "at_head": True},
+            "line": {"equipment": 6, "answered": True}, "modules": {"on": ["oee"], "total": 1}})
+
+    fleet = console.Console(root, health=health, pack=pack,
+                            book=lambda base, **_k: {"open": 10}).look()
+    bottling = next(row for row in fleet["plants"] if row["name"] == "bottling")
+
+    assert bottling["state"] == "answered", (
+        "a plant whose other node is serving the floor is not a plant nobody heard from")
+    assert bottling["base"] == "http://127.0.0.1:8011", "the address that answered"
+    assert bottling["schema_revision"] == "abc", "the columns are filled from that node"
+    assert bottling["line_equipment"] == 6, "and so is the line - 6 machines, not unknown"
+    assert fleet["says"] == "2 plants, 1 answered, 0 answered but empty, 1 unknown", (
+        "machining is the unknown one; bottling is answered now")
+
+    assert bottling["nodes_answered"] == 1
+    assert bottling["nodes"][0]["id"] == "a"
+    assert bottling["nodes"][0]["answered"] is False, "the dead node is still named as dead"
+    assert bottling["nodes"][0]["roles"] is None
+    assert bottling["nodes"][1]["roles"] == ["floor", "housekeeping", "reader"]
+
+
+def test_a_single_node_plant_that_is_silent_is_still_unknown(a_two_node_fleet):
+    """The other half of the same change: nothing to fall back to, nothing
+    different. A plant on one address that does not answer reads exactly as
+    it did before any of this existed."""
+    root, _directory = a_two_node_fleet
+    quiet = lambda base, **_k: observe.Answer(  # noqa: E731
+        base, False, why="did not answer (nothing listening)")
+
+    fleet = console.Console(root, health=quiet, pack=quiet,
+                            book=lambda base, **_k: None).look()
+    machining = next(row for row in fleet["plants"] if row["name"] == "machining")
+
+    assert machining["state"] == "unknown"
+    assert machining["base"].startswith("http://127.0.0.1:"), (
+        "the one address it was dialled at, which is the one its pack names")
+    assert machining["base"] == f"http://127.0.0.1:{packs.load(root)['machining']['api_port']}"
+    assert machining["nodes"] == []
+
+
 def test_fleet_json_carries_every_node_so_a_phone_can_read_it(a_two_node_fleet):
     """The console's page is drawn from this document and nothing else."""
     root, _directory = a_two_node_fleet
@@ -473,6 +541,125 @@ def test_the_fleet_list_names_both_nodes_and_states_their_total(tmp_path, monkey
     assert any("2 nodes, 1 answered" in line for line in said)
     assert any("node a" in line and "reader, floor, housekeeping" in line for line in said)
     assert any("node b" in line and "holding unknown" in line for line in said)
+
+
+def _ownership_of(where: Path, *, port: int = 8010, instance: str = "abc") -> None:
+    """An ownership record for a plant created here, on this host, by this
+    user - the three conditions the gate asks about before it reads a word
+    the plant said."""
+    host, user = ownership.here()
+    where.mkdir(parents=True, exist_ok=True)
+    (where / "ownership.toml").write_text(
+        '[[owned]]\nname = "bottling"\npack = "/packs/bottling"\n'
+        f'instance_id = "{instance}"\n'
+        f'data_dir = "{where.as_posix()}"\napi_port = {port}\n'
+        f'control = "{ownership.LOCAL}"\n'
+        f'created_on_host = "{host}"\ncreated_by_user = "{user}"\n', encoding="utf-8")
+
+
+def _answering_at(at: str, *, instance: str = "abc"):
+    """`/health` from one address only: the node that is still up."""
+    def health(base, **_kwargs):
+        if not base.startswith(at):
+            return observe.Answer(base, False, why="did not answer ([Errno 111] refused)")
+        return observe.Answer(base, True, status=200, body={
+            "status": "ok", "plant": "bottling", "instance_id": instance,
+            "label": "Bottling (two nodes)",
+            "node": {"name": "b", "redundancy": True,
+                     "roles": ["floor", "housekeeping", "reader"]}})
+    return health
+
+
+def _two_node_rows(answered_at: int = 8011) -> tuple[dict, ...]:
+    return tuple({"id": one, "api_port": port,
+                  "base": f"http://127.0.0.1:{port}",
+                  "health": "healthy" if port == answered_at else "did not answer",
+                  "answered": port == answered_at, "supervisor": "",
+                  "says": one if port == answered_at else "",
+                  "roles": ["floor", "housekeeping", "reader"]
+                  if port == answered_at else None}
+                 for one, port in (("a", 8010), ("b", 8011)))
+
+
+def test_fleet_status_reads_the_plant_off_the_node_that_answered(tmp_path, monkeypatch):
+    """`fsmes fleet status bottling` with node a dead. The terminal had the
+    same blind spot the page had: it asked the one address in the ownership
+    record, and said `unknown` about a plant that was booking on its other
+    node."""
+    where = commands.data_dir(tmp_path)
+    _ownership_of(where)
+    monkeypatch.setattr(commands, "_nodes", lambda entry, root: _two_node_rows())
+    monkeypatch.setattr(commands.observe, "pack",
+                        lambda base, **_k: observe.Answer(base, False, why="not asked"))
+    said: list[str] = []
+
+    row = commands.status("bottling", root=tmp_path, echo=said.append,
+                          ask=_answering_at("http://127.0.0.1:8011"),
+                          ask_book=lambda base, **_k: None)
+
+    assert row.answered is True
+    assert row.base == "http://127.0.0.1:8011"
+    assert row.owned is True, (
+        "the node that answered carries the same instance id - it is the same plant, "
+        "and ownership is still corroborated rather than assumed")
+    assert any("answering  answered on http://127.0.0.1:8011" in line for line in said)
+    assert any("nodes      2, 1 answered" in line for line in said), said
+
+
+def test_fleet_status_of_a_plant_whose_every_node_is_silent_still_says_unknown(
+        tmp_path, monkeypatch):
+    where = commands.data_dir(tmp_path)
+    _ownership_of(where)
+    monkeypatch.setattr(commands, "_nodes", lambda entry, root: _two_node_rows(0))
+    said: list[str] = []
+
+    row = commands.status("bottling", root=tmp_path, echo=said.append,
+                          ask=_answering_at("http://127.0.0.1:9999"),
+                          ask_book=lambda base, **_k: None)
+
+    assert row.answered is False
+    assert row.base == "http://127.0.0.1:8010", "the address it was dialled at"
+    assert any("answering  unknown" in line for line in said), said
+
+
+def test_a_node_answering_as_another_plant_is_refused_rather_than_believed(
+        tmp_path, monkeypatch):
+    """The reason the fallback goes through the ownership question instead of
+    trusting a port. Something else is listening where node b should be; that
+    is not this plant and no column is filled from it."""
+    where = commands.data_dir(tmp_path)
+    _ownership_of(where)
+    monkeypatch.setattr(commands, "_nodes", lambda entry, root: _two_node_rows())
+    said: list[str] = []
+
+    row = commands.status("bottling", root=tmp_path, echo=said.append,
+                          ask=_answering_at("http://127.0.0.1:8011",
+                                            instance="a-different-plant"),
+                          ask_book=lambda base, **_k: None)
+
+    assert row.answered is False
+    assert row.base == "http://127.0.0.1:8010"
+    assert any("answering  unknown" in line for line in said), said
+
+
+def test_fleet_list_counts_a_plant_serving_on_its_second_node_as_answered(
+        tmp_path, monkeypatch):
+    """The totals on `fsmes fleet list`, which is what a person reads first."""
+    where = commands.data_dir(tmp_path)
+    _ownership_of(where)
+    monkeypatch.setattr(commands, "_nodes", lambda entry, root: _two_node_rows())
+    said: list[str] = []
+
+    commands.listing(root=tmp_path, echo=said.append,
+                     ask=_answering_at("http://127.0.0.1:8011"),
+                     ask_pack=lambda base, **_k: observe.Answer(
+                         base, True, status=200,
+                         body={"pack": "bottling", "line": {"machines": 6},
+                               "schema": {"revision": "abc", "at_head": True},
+                               "modules": {"on": ["oee"], "total": 1}}))
+
+    assert said[0].startswith("1 plants, 1 answered"), said[0]
+    assert any("2 nodes, 1 answered" in line for line in said), said
 
 
 def test_windows_is_promised_only_what_a_windows_job_actually_runs():

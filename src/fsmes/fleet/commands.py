@@ -319,6 +319,37 @@ def _nodes(entry: owned.Entry | None, root: Path) -> tuple[dict, ...]:
                  for one in plants.node_list(cfg))
 
 
+def _at_a_node_that_answered(name: str, ownership: owned.Ownership,
+                             nodes: tuple[dict, ...], *, where: Path,
+                             ask) -> tuple[owned.Ownership, str]:
+    """The same plant, asked again at a node of it that is up.
+
+    A plant that runs as two nodes is reached at whichever node answers. The
+    address in the ownership record is one node of it, and when that is the
+    node that died, this plant used to read `unknown` in every column while
+    the other node was serving the floor and booking the count - the one
+    moment a status line exists for. Asking the node that answered goes
+    through the same ownership question, so a node that is not this plant is
+    still refused; the nodes lines name the silent one either way.
+
+    Returns what it was given when there is nothing to ask or nothing
+    answered, so a single-node plant takes exactly the path it took before.
+    """
+    entry = ownership.entry
+    base = entry.base if entry else ""
+    if entry is None or ownership.answering:
+        return ownership, base
+    asking = ask or observe.health
+    for one in nodes:
+        at = one.get("base") or ""
+        if not one.get("answered") or not at or at == base:
+            continue
+        there = owned.describe(name, data_dir=where, ask=lambda _b, _at=at: asking(_at))
+        if there.answering:
+            return there, at
+    return ownership, base
+
+
 def status(name: str, *, root: Path, echo=print, ask=None, ask_book=None) -> Plant:
     """One plant: whether it is owned, whether it answered, and its drift."""
     where = data_dir(root)
@@ -326,12 +357,15 @@ def status(name: str, *, root: Path, echo=print, ask=None, ask_book=None) -> Pla
     ownership = owned.describe(name, data_dir=where, ask=ask)
     entry = ownership.entry
     base = entry.base if entry else ""
+    nodes = _nodes(entry, root)
+    ownership, base = _at_a_node_that_answered(name, ownership, nodes,
+                                               where=where, ask=ask)
     row = Plant(name=name, owned=ownership.owned, reason=ownership.reason, base=base,
                 answered=ownership.answering, said=ownership.said,
                 pack_said=(observe.pack(base).body if ownership.answering else None),
                 book_said=(ask_book(base) if ownership.answering else None),
                 supervisor=(plants.supervisor(root, name) if entry else None),
-                nodes=_nodes(entry, root),
+                nodes=nodes,
                 label=str((ownership.said or {}).get("label", "")))
     for line in render(row):
         echo(line)
@@ -424,10 +458,13 @@ def listing(*, root: Path, echo=print, ask=None, ask_pack=None) -> dict:
     rows: list[Plant] = []
     for entry in sorted(record.owned, key=lambda e: e.name):
         ownership = owned.describe(entry.name, data_dir=where, ask=ask)
+        nodes = _nodes(entry, root)
+        ownership, base = _at_a_node_that_answered(entry.name, ownership, nodes,
+                                                   where=where, ask=ask)
         rows.append(Plant(name=entry.name, owned=ownership.owned, reason=ownership.reason,
-                          base=entry.base, answered=ownership.answering, said=ownership.said,
-                          pack_said=(ask_pack(entry.base).body if ownership.answering else None),
-                          nodes=_nodes(entry, root),
+                          base=base, answered=ownership.answering, said=ownership.said,
+                          pack_said=(ask_pack(base).body if ownership.answering else None),
+                          nodes=nodes,
                           supervisor=plants.supervisor(root, entry.name)))
     for watched in sorted(record.observed, key=lambda o: o.name):
         answer = ask(watched.url)

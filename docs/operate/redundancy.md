@@ -281,6 +281,14 @@ standby. A node that did not answer is **unknown** there and never a node
 holding nothing. Its `fleet.json` carries the same, node by node, for
 anything else that wants to read it.
 
+A plant with nodes is also *read* at whichever node answers. The address in
+its pack is one node of it, so when that is the node that died, the console
+and `fsmes fleet status` ask another one and fill the row from there — the
+plant is answering, because it is. The silent node is still named as silent
+on its own line underneath. The node that answered has to be the same plant:
+it is asked the same ownership question as the first address, and a port
+answering as something else is refused rather than believed.
+
 ## What a failover costs
 
 One lease, plus a renewal interval to notice, plus whatever the new holder

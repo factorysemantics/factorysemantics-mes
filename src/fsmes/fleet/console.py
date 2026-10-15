@@ -164,8 +164,25 @@ class Console:
         }
 
     def _one(self, plant: Listed) -> dict:
-        answer = self._health(plant.base) if plant.base else observe.Answer(
-            plant.base, False, why="nothing says where this plant answers")
+        asked = [self._node(plant, one) for one in plant.nodes]
+        nodes = [node for node, _answer in asked]
+        base = plant.base
+        answer = self._health(base) if base else observe.Answer(
+            base, False, why="nothing says where this plant answers")
+        if not answer.answered:
+            # A plant that runs as two nodes is reached at whichever node
+            # answers. The address in the pack is one node of it, and when
+            # that is the node that died this row used to go `unknown` in
+            # every column while the other node was serving the floor - the
+            # one moment the page exists for. Seen on a live failover,
+            # 2026-10-15. The nodes line below still says which node is
+            # silent, so nothing is hidden by reading the plant off a node
+            # that is not, and the answer is the one already asked for:
+            # no second GET to a node that has just replied.
+            for node, at_node in asked:
+                if at_node.answered and node["base"] and node["base"] != base:
+                    base, answer = node["base"], at_node
+                    break
         said = answer.body if answer.answered else None
         if answer.answered:
             self.last_answered[plant.name] = datetime.now(UTC).isoformat(timespec="seconds")
@@ -176,17 +193,18 @@ class Console:
             agreed, why = owned.agrees(plant.entry, said)
             owned_state = "yes" if agreed else ("unknown" if said is None else "no")
 
-        nodes = [self._node(plant, one) for one in plant.nodes]
-        pack_said = self._pack(plant.base).body if answer.answered else None
+        pack_said = self._pack(base).body if answer.answered else None
         pack_said = pack_said or {}
         schema = pack_said.get("schema") or {}
         line = pack_said.get("line") or {}
         modules = pack_said.get("modules") or {}
-        book = self._book(plant.base) if answer.answered else None
+        book = self._book(base) if answer.answered else None
         return {
             "name": plant.name,
             "label": plant.label or (said or {}).get("label") or "",
-            "base": plant.base,
+            # The address that answered, which on a plant with nodes is the
+            # node that answered when the pack's first one did not.
+            "base": base,
             "about": plant.about,
             "answered": answer.answered,
             # Three states. Never "down": a plant nobody heard from is a
@@ -260,11 +278,16 @@ class Console:
             "last_answered": self.last_answered.get(plant.name),
         }
 
-    def _node(self, plant: Listed, node: dict) -> dict:
+    def _node(self, plant: Listed, node: dict) -> tuple[dict, observe.Answer]:
         """One node of one plant: where it is, whether it answered, what it
         holds. The roles are the node's own answer and nothing is carried
         over from the plant's row: a node that did not answer holds
-        `unknown`, never nothing."""
+        `unknown`, never nothing.
+
+        The whole answer comes back beside the row, because when the address
+        in the pack is silent the plant itself is read off whichever node
+        replied, and asking that node twice would be two GETs for one fact.
+        """
         port = node.get("api_port")
         base = observe.base(_host(plant.base), port) if port else ""
         answer = self._health(base) if base else observe.Answer(
@@ -281,7 +304,7 @@ class Console:
             "says": said.get("name") or "",
             "roles": said.get("roles"),
             "lease_seconds": said.get("lease_seconds"),
-        }
+        }, answer
 
 
 def _host(base: str) -> str:
