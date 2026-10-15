@@ -306,8 +306,10 @@ def main() -> int:
         say("  fsmes fleet stop stops both")
         if args.keep_running:
             say(f"    | --keep-running: both nodes are up on {args.port_a} and "
-                f"{args.port_b}, and {root} is theirs. Stop them with "
-                f"`fsmes fleet stop bottling --root {root}`.")
+                f"{args.port_b}, the machine layer is still playing on "
+                f"{endpoint} (pid {replay.pid}), and {root} is theirs. Stop "
+                f"them with `fsmes fleet stop bottling --root {root}`, and "
+                f"the machine layer by its pid.")
             return 0
         stopped = fsmes("fleet", "stop", "bottling", "--root", str(root), env=env)
         if stopped.returncode != 0:
@@ -336,7 +338,10 @@ def main() -> int:
         # they are meant to stay up.
         if started_nodes and not args.keep_running:
             fsmes("fleet", "stop", "bottling", "--root", str(root), env=env, timeout=120)
-        if replay is not None and replay.poll() is None:
+        if replay is not None and replay.poll() is None and not args.keep_running:
+            # `--keep-running` keeps the machine layer too: two nodes with
+            # nothing to read are a plant whose machines all say
+            # *disconnected*, which is not what the person asked to look at.
             replay.terminate()
             try:
                 replay.wait(timeout=30)
