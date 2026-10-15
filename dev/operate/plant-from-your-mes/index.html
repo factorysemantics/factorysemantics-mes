@@ -4568,7 +4568,8 @@
 
 
 <h1 id="your-plant-in-factorysemantics-without-sending-anyone-your-data">Your plant in FactorySemantics, without sending anyone your data<a class="headerlink" href="#your-plant-in-factorysemantics-without-sending-anyone-your-data" title="Permanent link">&para;</a></h1>
-<p><strong>What it is.</strong> A folder — <code>plant-from-your-mes.zip</code> on the release page — that
+<p><strong>What it is.</strong> A folder — inside <code>fsmes-assistant.zip</code> on the release page, or
+<code>fsmes skills unpack plant-from-your-mes .</code> out of an installation — that
 you unpack next to your own AI assistant. You ask it <em>"I want to put my plant
 into FactorySemantics without giving away anything proprietary — how?"</em>, and it
 walks you through read-only queries against your own MES database, in widening
@@ -4775,9 +4776,13 @@ your routings, and how your tags are grouped under channel/device folders — se
 <h2 id="step-3-in-more-detail">Step 3 in more detail<a class="headerlink" href="#step-3-in-more-detail" title="Permanent link">&para;</a></h2>
 <p>SQL Server first, because that is what the first plant to try this runs. SQLite
 works too and is what this repository's own test uses.</p>
-<p>The folder also ships as <code>plant-from-your-mes.zip</code> on the release page, for a
-box that never sees the pip install:</p>
-<div class="highlight"><pre><span></span><code>unzip<span class="w"> </span>plant-from-your-mes.zip
+<p>The folder also ships on the release page, for a box that never sees the pip
+install. It is stage 2 of <code>fsmes-assistant.zip</code>, which is the one download:</p>
+<div class="highlight"><pre><span></span><code>unzip<span class="w"> </span>fsmes-assistant.zip
+<span class="nb">cd</span><span class="w"> </span>fsmes-assistant/plant-from-your-mes
+</code></pre></div>
+<p>Out of an installation instead, with no download at all:</p>
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>skills<span class="w"> </span>unpack<span class="w"> </span>plant-from-your-mes<span class="w"> </span>.
 <span class="nb">cd</span><span class="w"> </span>plant-from-your-mes
 </code></pre></div>
 <p>Your assistant reads <code>SKILL.md</code> and does the rest. If you would rather drive it
@@ -4870,10 +4875,15 @@ why <code>SKILL.md</code> tells the assistant to read the draft back to a person
 profiling with it. A wrong mapping leaks nothing — it describes a plant that is
 not yours, and you will hear that in the first three lines of <code>explain.py</code>.</p>
 <h2 id="building-the-zip">Building the zip<a class="headerlink" href="#building-the-zip" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>skills-zip<span class="w"> </span>--check<span class="w">            </span><span class="c1"># what CI runs: folder and shipping list agree</span>
-fsmes<span class="w"> </span>skills-zip<span class="w">                    </span><span class="c1"># writes plant-from-your-mes.zip</span>
-uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>zipfile<span class="w"> </span>-l<span class="w"> </span>plant-from-your-mes.zip
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>skills-zip<span class="w"> </span>--check<span class="w">            </span><span class="c1"># what CI runs: every folder matches its list</span>
+fsmes<span class="w"> </span>skills-zip<span class="w"> </span>assistant<span class="w">          </span><span class="c1"># writes fsmes-assistant.zip, this folder inside it</span>
+uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>zipfile<span class="w"> </span>-l<span class="w"> </span>fsmes-assistant.zip
 </code></pre></div>
+<p><code>fsmes-assistant.zip</code> is the only skills zip a release attaches, and this folder
+is in it: a second download would be a second copy of these files and a question
+about which one to take. There is still one copy in git — <code>skills/</code> has no
+<code>assistant/plant-from-your-mes/</code> in it — and the nesting is made at build time
+from <code>fsmes.skills.INCLUDES</code>.</p>
 <p>The contents are a list in <code>src/fsmes/skills.py</code>, not a glob, so adding a file
 to the skill is a line in a diff and a stray file fails the check in either
 direction.</p>
