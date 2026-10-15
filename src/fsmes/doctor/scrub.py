@@ -112,7 +112,7 @@ OUR_WORDS: frozenset[str] = frozenset({
     "a", "an", "and", "are", "as", "at", "be", "before", "but", "by", "did",
     "do", "else", "for", "from", "got", "had", "has", "have", "in",
     "into", "is", "it", "its", "left", "may", "no", "not", "nothing", "now",
-    "of", "on", "once", "one", "only", "or", "other", "out", "over", "so",
+    "of", "off", "on", "once", "one", "only", "or", "other", "out", "over", "so",
     "than", "that", "the", "their", "them", "then", "there", "this", "those",
     "to", "too", "under", "until", "use", "used", "using", "were", "what",
     "when", "where", "which", "while", "who", "whoever", "why", "will",
@@ -212,6 +212,13 @@ def taught() -> frozenset[str]:
     """What `also` was told, for the leak check to forgive the same words."""
     return _ALSO
 
+
+#: The addresses that identify nobody: they are the same four numbers on
+#: every machine on earth, this file prints them on purpose (a plant on
+#: loopback is the whole of the evaluation story), and shaping them to
+#: `###.#.#.#` would make the ports table useless.
+LOOPBACK = frozenset({"127.0.0.1", "0.0.0.0", "localhost", "::1", "::", "[::1]",
+                      "0:0:0:0:0:0:0:1"})
 
 PATTERN_LIMIT = 24
 
@@ -357,6 +364,8 @@ def carried_whole(token: str, *, extra: frozenset[str] = frozenset()) -> bool:
     not forgive would fail every run, and a token the check forgives and the
     scrub removes would be a check weaker than it looks.
     """
+    if str(token).strip().lower() in LOOPBACK:
+        return True
     pieces = [piece for piece in re.split(r"[.\-_/]", str(token)) if piece]
     if not pieces:
         return False

@@ -191,6 +191,38 @@ def vocabulary(seen: Seen) -> frozenset[str]:
     return frozenset(scrub.vocabulary() | forgiven)
 
 
+def as_the_scrub_leaves_it(value: str, ours: frozenset[str]) -> bool:
+    """Would the scrub carry this value through exactly as it found it?
+
+    If it would, the value is not evidence of anything: by the scrub's single
+    rule, every piece of it is a word this product itself writes. The keys of
+    a log line, its level, its logger, the template of its message, a
+    loopback URL and the whole of a log line that happens to contain nothing
+    but our own words are all in the file on purpose, and a check that looked
+    for them would refuse to write a file on every run.
+
+    This is not the check forgiving itself. A value with a digit in it, a
+    timestamp, a number, a path part somebody named, a tag, an order, a
+    product, a person: none of those comes back unchanged, because the scrub
+    has no rule that would carry them. What comes back unchanged is the ~450
+    words in `scrub.OUR_WORDS`, in some arrangement.
+    """
+    from fsmes.doctor import scrub
+
+    if scrub.carried_whole(value, extra=ours):
+        return True
+    shapers = [scrub.scrub_jsonl, scrub.scrub_text, scrub.shape_token]
+    if "://" in value:
+        shapers.append(scrub.url_shape)
+    for shaper in shapers:
+        try:
+            if shaper(value) == value:
+                return True
+        except Exception:                                       # pragma: no cover
+            continue
+    return False
+
+
 def verdict(text: str, seen: Seen) -> str:
     """The one line that goes at the top of the file, or `Leak` and no file.
 
@@ -200,8 +232,13 @@ def verdict(text: str, seen: Seen) -> str:
     module = leakcheck()
     if module is None:
         raise Leak(NO_CHECK)
-    values = sorted(seen.values)
-    found, considered = module.scan(text, values, vocabulary(seen))
+    ours = vocabulary(seen)
+    # Dropped before the scan rather than forgiven inside it: the skill's
+    # `is_identity` forgives a known word only when the value is a single
+    # bare word, and half of what the scrub carries through verbatim is a
+    # sentence of them.
+    values = sorted(v for v in seen.values if not as_the_scrub_leaves_it(v, ours))
+    found, considered = module.scan(text, values, ours)
     if found:
         shown = ", ".join(repr(v) for v in found[:5])
         raise Leak(

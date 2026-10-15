@@ -426,7 +426,7 @@ def _logs_without_a_record(where: Path, home: Path, seen) -> tuple[tuple[Process
     out = []
     for path in files[:LOGS_WITHOUT_A_RECORD]:
         lines, more, dropped = _log_of(path, seen)
-        out.append(Process(pid=0, role="not running - this log is what it left behind",
+        out.append(Process(pid=0, role="",
                            alive=False, log=scrub.shape_path(path, home=home),
                            log_exists=True, lines=lines, truncated=more, dropped=dropped))
     return tuple(out), len(files)
@@ -469,10 +469,10 @@ def one_plant(name: str, cfg: dict, home: Path, seen) -> Plant:
         processes, logs_total = _logs_without_a_record(logs, home, seen)
         if processes:
             notes.append(
-                f"this plant has no pid file: nothing of it is running. Its log "
-                f"directory holds {logs_total} "
+                f"This plant has no pid file, so nothing of it is running. Its "
+                f"log directory holds {logs_total} "
                 f"{'file' if logs_total == 1 else 'files'}, and the "
-                f"{len(processes)} most recently written of them are below")
+                f"{len(processes)} most recently written of them are below.")
     return Plant(
         name=name,
         label=scrub.scrub_text(str(cfg.get("label") or "")),
