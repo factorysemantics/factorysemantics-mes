@@ -32,6 +32,23 @@ goes under Honesty with a migration line, so plant people can find it.
   everything `fsmes demo bottling` does, and a plant started that way starts
   its own child processes the same way, so the PATH never has to be fixed
   first.
+- **`fsmes doctor` writes one file you can paste to anybody.** One command,
+  one Markdown file, nothing of your plant's in it: the version, the OS, how
+  it was installed, every plant in this home with each process alive or gone,
+  the ports and whether they answer, shadow mode on or off, and the last 40
+  lines of every process log with every value replaced by its shape — a tag
+  becomes `AAAAAA_AAA_AAA`, an order `AA-AAAA-#`, and a traceback keeps its
+  exception type and our own module and loses its locals. For a plant in
+  shadow mode a second half says how long it has been watching, how much of
+  that window it saw, the kept scorecards as one row each, the differences
+  still open, and what is not built yet toward a real switch-over. The
+  finished file is read back by the shape file's own leak check and **is not
+  written at all if any value got through**. It starts nothing, stops
+  nothing, and nothing sends it anywhere —
+  [one file to paste when something is wrong](docs/operate/doctor.md).
+- **`fsmes shadow scorecard --json` keeps a copy of its figures** under the
+  home, in `scorecards/<date>.json` — counts only, no order codes — so that
+  `fsmes doctor` can line two days up and show whether agreement is moving.
 - **One page for the first hour on your own PC**,
   [run it on your own box](docs/operate/run-it-on-your-own-box.md): the
   Windows install and the two ways out when `fsmes` is not found, how to tell
