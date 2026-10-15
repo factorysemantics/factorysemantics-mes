@@ -231,7 +231,8 @@ def taught() -> frozenset[str]:
     return _ALSO
 
 
-#: Every exception class this run decided to carry whole. Kept so that the
+#: Every name this run decided to carry whole: an exception class, and the
+#: parts of a path inside this installation's own package. Kept so that the
 #: leak check forgives exactly the names the scrub actually wrote and no
 #: others: `TimeoutError` is in the file because `exception_type` put it
 #: there, and a check that could not tell that from a tag would refuse every
@@ -240,7 +241,14 @@ _CARRIED: set[str] = set()
 
 
 def carried() -> frozenset[str]:
-    """The exception classes this run carried whole, for the leak check."""
+    """What this run carried whole, for the leak check.
+
+    Exception classes (`scrub.exception_type`) and the parts of the source
+    paths inside this installation's own package (`shape_source_file`). One
+    record rather than two lists, read once when the verdict is written: the
+    check forgives exactly what the scrub decided to carry, and nothing it
+    merely might have.
+    """
     return frozenset(_CARRIED)
 
 
@@ -548,9 +556,19 @@ def shape_source_file(filename: str) -> str:
         return "<file>"
     for root in _roots():
         try:
-            return path.relative_to(root).as_posix()
+            kept = path.relative_to(root).as_posix()
         except ValueError:
             continue
+        # Carried on purpose, so the check is told: the parts of this path are
+        # our own directory and module names. It matters on Windows and
+        # nowhere else - `_TOKEN` in `leak.py` has `/` in it and not `\`, so
+        # `C:\...\fsmes\integrations\opc\agent.py` is harvested as
+        # `integrations` and `agent.py` where the same path on Linux is one
+        # token. The words then appear in the file, because this frame is
+        # ours, and the check would be right to object if nobody told it.
+        _CARRIED.add(kept)
+        _CARRIED.update(part for part in kept.split("/") if part)
+        return kept
     return "<file>"
 
 

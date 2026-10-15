@@ -285,6 +285,38 @@ def test_a_crash_written_as_console_text_into_a_jsonl_keeps_its_skeleton_too(tmp
     assert TAG not in text and ORDER not in text
 
 
+def test_our_own_module_path_out_of_a_frame_is_carried_and_the_check_is_told(tmp_path):
+    """The Windows fault the planted secret found in CI, as a unit.
+
+    `leak._TOKEN` has `/` in it and not a backslash, so on Windows
+    `C:\\...\\fsmes\\integrations\\opc\\agent.py` is harvested as the
+    separate words `integrations` and `agent.py`, where the same path on Linux
+    is one long token. Both words are then in the file, on purpose, because
+    the frame is one of ours - so the scrub records what it carried and the
+    check forgives exactly that.
+    """
+    from fsmes.doctor import leak, scrub
+
+    scrub.also(["bottling"])
+    ours = Path(scrub.__file__).resolve()
+    kept = scrub.shape_source_file(str(ours))
+
+    assert kept.endswith("fsmes/doctor/scrub.py"), (
+        "a frame inside this installation's own package keeps its path")
+    carried = scrub.carried()
+    assert kept in carried
+    assert {"doctor", "scrub.py", "fsmes"} <= carried, (
+        "each part of it, because that is the shape a Windows path is read in")
+
+    seen = leak.Seen()
+    seen.ours("bottling")
+    for word in kept.split("/"):
+        seen.value(word)
+    said = leak.verdict(f"a file that names `{kept}`", seen)
+    assert "passed" in said, (
+        "what the scrub carried on purpose is not a leak when it is read back")
+
+
 def test_a_plant_name_is_the_one_word_of_yours_the_file_keeps(tmp_path):
     home = a_home(tmp_path, name="bottling")
     text = written(tmp_path, home).path.read_text(encoding="utf-8")

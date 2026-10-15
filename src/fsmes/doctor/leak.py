@@ -186,9 +186,11 @@ def vocabulary(seen: Seen) -> frozenset[str]:
 
     ours = frozenset(w.lower() for w in seen.words)
     forgiven = set(ours)
-    # The exception classes the scrub decided to carry whole this run, and
-    # only those: `scrub.exception_type` is the single rule for which names
-    # reach the file, so it is the single rule for which are forgiven here.
+    # What the scrub decided to carry whole this run, and only that: the
+    # exception classes (`scrub.exception_type`) and the parts of our own
+    # source paths out of a traceback's frames (`scrub.shape_source_file`).
+    # Those two functions are the single rule for which such names reach the
+    # file, so they are the single rule for which are forgiven here.
     forgiven |= {w.lower() for w in scrub.carried()}
     forgiven |= {v.lower() for v in seen.values
                  if scrub.carried_whole(v, extra=ours)}
