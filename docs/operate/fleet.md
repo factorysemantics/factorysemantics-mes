@@ -105,6 +105,11 @@ to. `--force` stops it: what this installation owns it may stop, and ownership
 is the safety property here, not liveness.
 ```
 
+A plant that names nodes keeps one pid file per node, so the refusal reads
+every one of them and says how many nodes it asked about. It also asks each
+node's address before it refuses at all: a plant still serving on its second
+node is a plant that is running, and `stop` stops it without the flag.
+
 `--force` gives up **liveness and nothing else**. Conditions 1 and 3 still hold in full, and condition 2 is still corroborated — by the instance id in the plant's own data directory, the half of it that is readable while the plant is silent, exactly as `start` and `apply` corroborate it. A plant this installation did not create is refused with the flag exactly as it is without it, and so is a plant that has taken its ownership back by deleting that id. It is the only verb in this product that takes the flag.
 
 **Nothing starts a plant on its own.** There is no scheduler, no reconciliation loop, and no daemon that notices a stopped plant and brings it back. Desired state stays intent displayed as drift, never intent enforced.

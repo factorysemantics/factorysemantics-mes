@@ -289,6 +289,13 @@ on its own line underneath. The node that answered has to be the same plant:
 it is asked the same ownership question as the first address, and a port
 answering as something else is refused rather than believed.
 
+`fsmes fleet stop` and `fsmes fleet apply` ask every node for the same
+reason. Both act on a running plant and refuse one that has gone silent, and
+a plant whose first node is the one that died is a plant that is running —
+`stop` is the verb a person reaches for next. When no node answers at all,
+the refusal counts the pid file each node writes, not one file a plant with
+nodes never has, and says how many it read.
+
 ## What a failover costs
 
 One lease, plus a renewal interval to notice, plus whatever the new holder

@@ -28,6 +28,7 @@ Nothing here starts a process, binds a port or asks the network anything.
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import tomllib
 from pathlib import Path
@@ -660,6 +661,91 @@ def test_fleet_list_counts_a_plant_serving_on_its_second_node_as_answered(
 
     assert said[0].startswith("1 plants, 1 answered"), said[0]
     assert any("2 nodes, 1 answered" in line for line in said), said
+
+
+def test_stopping_a_plant_whose_first_node_died_stops_the_plant(tmp_path, monkeypatch):
+    """The state a person is in one second after killing a node, and the verb
+    they reach for next. `stop` asks the plant whether it is there before it
+    acts, and asking only the address in the ownership record meant a plant
+    running on node b refused to stop at all: *nothing in its pid file is
+    alive, there may be nothing left to stop* - about two live processes."""
+    where = commands.data_dir(tmp_path)
+    _ownership_of(where)
+    monkeypatch.setattr(commands, "_nodes", lambda entry, root: _two_node_rows())
+    monkeypatch.setattr(commands.observe, "health",
+                        _answering_at("http://127.0.0.1:8011"))
+    monkeypatch.setattr(commands, "_config", lambda entry: _two_nodes())
+    stopped: list[tuple[str, Path]] = []
+    monkeypatch.setattr(commands.plants, "stop",
+                        lambda name, cfg, root, echo=print: stopped.append((name, root)))
+
+    ownership = commands.stop("bottling", root=tmp_path, echo=lambda _line: None)
+
+    assert ownership.owned is True
+    assert ownership.answering is True, "node b answered, so the plant is there"
+    assert [name for name, _root in stopped] == ["bottling"], (
+        "and `plants.stop` stops every node the pack names")
+
+
+def test_a_silent_two_node_plant_counts_the_pid_file_of_every_node(tmp_path, monkeypatch):
+    """What the refusal says when no node answers at all. Each node writes its
+    own pid file - `bottling-a.pids`, `bottling-b.pids` - and the sentence a
+    person reads before typing `--force` used to count only `bottling.pids`,
+    which for a plant with nodes is a file nobody writes: it said nothing was
+    left to stop while two processes were alive. Unknown is not zero, least of
+    all there."""
+    where = commands.data_dir(tmp_path)
+    _ownership_of(where)
+    (where / "bottling-b.pids").write_text(f"{os.getpid()}\n", encoding="utf-8")
+    monkeypatch.setattr(commands, "_nodes", lambda entry, root: _two_node_rows())
+    monkeypatch.setattr(commands.observe, "health",
+                        lambda base, **_k: observe.Answer(
+                            base, False, why="did not answer ([Errno 111] refused)"))
+
+    with pytest.raises(ownership.NotOwned) as refused:
+        commands.stop("bottling", root=tmp_path, echo=lambda _line: None)
+
+    said = str(refused.value)
+    assert str(os.getpid()) in said, said
+    assert "nothing left to stop" not in said, (
+        "a plant with a live process is not a plant with nothing left to stop")
+
+
+def test_a_silent_two_node_plant_with_no_live_process_says_which_files_it_read(
+        tmp_path, monkeypatch):
+    """And when the pid files really are all dead, the sentence says how many
+    it read rather than speaking of one file the plant does not have."""
+    where = commands.data_dir(tmp_path)
+    _ownership_of(where)
+    monkeypatch.setattr(commands, "_nodes", lambda entry, root: _two_node_rows())
+    monkeypatch.setattr(commands.observe, "health",
+                        lambda base, **_k: observe.Answer(
+                            base, False, why="did not answer ([Errno 111] refused)"))
+
+    with pytest.raises(ownership.NotOwned) as refused:
+        commands.stop("bottling", root=tmp_path, echo=lambda _line: None)
+
+    said = str(refused.value)
+    assert "its 2 nodes" in said and "(a, b)" in said, said
+
+
+def test_applying_a_pack_while_the_second_node_serves_the_floor_is_refused(
+        tmp_path, monkeypatch):
+    """The other side of the same question. A pack applied while a node is
+    up migrates a database underneath a live process; asking one address
+    meant the node that was still serving did not count as a plant running.
+    """
+    where = commands.data_dir(tmp_path)
+    _ownership_of(where)
+    monkeypatch.setattr(commands, "_nodes", lambda entry, root: _two_node_rows())
+    monkeypatch.setattr(commands.observe, "health",
+                        _answering_at("http://127.0.0.1:8011"))
+
+    with pytest.raises(commands.Refused) as refused:
+        commands.apply("bottling", root=tmp_path, echo=lambda _line: None)
+
+    assert "still answering on http://127.0.0.1:8011" in str(refused.value), (
+        "and it names the node that is answering, not the one that is not")
 
 
 def test_windows_is_promised_only_what_a_windows_job_actually_runs():
