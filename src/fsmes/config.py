@@ -4,7 +4,6 @@ Defaults are chosen so the whole system runs on a laptop with zero setup:
 SQLite database, local simulator endpoints, relative folders.
 """
 
-import os
 import secrets
 from functools import lru_cache
 from importlib import resources
@@ -895,7 +894,11 @@ class Settings(BaseSettings):
                 f"SQLite ({self.database_url.split('?')[0]}): a file cannot be shared by two "
                 "boxes, so point MES_DATABASE_URL ([storage] database_url in a pack) at a "
                 "PostgreSQL database, or turn MES_REDUNDANCY off.")
-        key = os.environ.get("MES_SECRET_KEY", "")
+        # `self.secret_key`, not the environment: this validator runs before
+        # `get_settings` invents a random key for a process that was given
+        # none (line below `_settings`), so an empty one here means nothing
+        # set it - which is the condition that matters.
+        key = self.secret_key
         if not key:
             raise ValueError(
                 "This plant is configured to run on more than one node, so every node has to "
