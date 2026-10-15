@@ -188,6 +188,10 @@ look for is `good_qty        41 agree, 3 differ, 2 not compared, of 46`.
 Then `4-migration.md` — and read it before you answer any question about
 switching the old system off.
 
+**What to send us, once that exists:** `fsmes doctor --out doctor.md` on
+**0.3.1 and newer** writes a file whose second half, *Performance, toward
+migration*, is the part to send; `0-how-to-help.md` says how to ask for it.
+
 *This page scripts `docs/operate/first-plant.md`,
 `docs/operate/shadow-mode.md` and `docs/operate/shadow-scorecard.md` in the
 project's repository. `first-plant.md` is written and untried: no real plant

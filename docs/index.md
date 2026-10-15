@@ -8,6 +8,10 @@ Apache-2.0. Pre-alpha, running simulated plants only (as of 2026-09-07).
     says otherwise. The MES has not run a real plant in production yet.
     Pages say what works and what does not.
 
+**35 seconds on the lab bottling plant: a stop, a sample, a maintenance job, and why each happened.**
+
+![A walk through a running plant: the floor, losses by machine, a stop on the filler's timeline, the SPC sample behind a low fill height, and the rule trace behind a maintenance job](assets/walk.gif)
+
 ## Three doors
 
 <div class="grid cards" markdown>
