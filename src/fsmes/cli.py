@@ -1787,6 +1787,45 @@ def info() -> None:
 
 
 @app.command()
+def doctor(
+    plant: str | None = typer.Option(None, "--plant",
+                                     help="Only this plant, by the name this home knows it by "
+                                          "(the name `fsmes demo <plant>` takes)."),
+    out: Path | None = typer.Option(None, "--out",
+                                    help="Where the file is written. "
+                                         "Default: `doctor.md` in this directory."),
+) -> None:
+    """Write one file describing this installation, with nothing of yours in it.
+
+    What is installed, which plants this home has, which of their processes
+    are alive or gone, whether their ports answer, whether shadow mode is on,
+    and the last lines of each log with every value replaced by its shape.
+    Then, for a plant in shadow mode, how long it has been watching, how much
+    of that window it saw, and how well it agreed with the MES in charge.
+
+    It starts nothing and stops nothing. The file is yours: paste it into your
+    own agent, into a chat with us, into an issue. Nothing sends it anywhere.
+    """
+    from fsmes import doctor as writer
+    from fsmes.doctor import Leak
+
+    try:
+        written = writer.write(out, plant=plant)
+    except Leak as exc:
+        typer.echo("NOT OK  the leak check refused this file, so it was not written.")
+        for line in str(exc).splitlines():
+            typer.echo(f"        {line}")
+        raise typer.Exit(2) from exc
+
+    typer.echo(f"wrote {written.path}  ({written.lines} lines, "
+               f"{written.plants} {'plant' if written.plants == 1 else 'plants'})")
+    typer.echo(written.verdict)
+    if plant:
+        typer.echo(f"Only `{plant}`, as this home spells it. Omit --plant for every plant here.")
+    typer.echo("Read it before you paste it anywhere. Nothing in this product sends it.")
+
+
+@app.command()
 def backup(
     out: Path = typer.Option(Path("backups"), "--out", help="Where the timestamped backup folder is written."),
 ) -> None:
