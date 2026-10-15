@@ -54,7 +54,7 @@ def test_no_command_loses_a_word_of_its_help_to_the_painter():
         if plain != text:
             missing = [
                 (was, now)
-                for was, now in zip(text.splitlines(), plain.splitlines())
+                for was, now in zip(text.splitlines(), plain.splitlines(), strict=False)
                 if was != now
             ]
             lost.append(f"{path} ({where}):\n" + "\n".join(
