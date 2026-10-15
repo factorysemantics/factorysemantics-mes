@@ -128,6 +128,11 @@ jobs:
       # Deliberately NOT in dist/. `pypi` publishes everything in that directory
       # and a zip that is not a Python distribution either fails the upload or
       # ends up on PyPI as something nobody asked for.
+      #
+      # One zip is attached, not one per skill: `fsmes.skills.RELEASED` says
+      # which, and the assistant carries `plant-from-your-mes/` inside it. Two
+      # downloads holding the same folder would be two copies and a question
+      # about which to take.
       - name: The skills zips, with their contents listed
         run: |
           set -euo pipefail
@@ -137,8 +142,10 @@ jobs:
 
           from fsmes import skills
 
-          for name in skills.SKILLS:
-              print(f"built {skills.build_zip(name, Path('.'), Path('skills-dist') / f'{name}.zip')}")
+          for name, download in sorted(skills.RELEASED.items()):
+              built = skills.build_zip(name, Path('.'), Path('skills-dist') / f'{download}.zip')
+              print(f"built {built} from skills/{name}/ "
+                    f"({len(skills.tree(name))} file(s))")
           PY
           for z in skills-dist/*.zip; do python -m zipfile -l "$z"; done
 

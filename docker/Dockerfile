@@ -45,14 +45,16 @@ COPY labs/multiplant/machining/plant.toml \
      ./labs/multiplant/machining/
 COPY labs/multiplant/machining/masterdata ./labs/multiplant/machining/masterdata
 
-# THE ASSISTANT FOLDER, FOR THE SAME REASON. `pyproject.toml` force-includes
-# every file under `skills/plant-from-your-mes/` so that `fsmes skills unpack`
-# works inside the image with no checkout and no internet. Forty-one paths, and
-# one COPY of the directory rather than forty-one lines: unlike `labs/`, nothing
-# generated is ever written into this folder, and the one thing that appears in
-# it on a developer machine - `scripts/__pycache__/` from running the profiler
-# in place - is already excluded by `.dockerignore`, so the whole directory is
-# the honest copy. A file added to the skill then needs no change here.
+# THE ASSISTANT FOLDERS, FOR THE SAME REASON. `pyproject.toml` force-includes
+# every file under `skills/` so that `fsmes skills unpack` works inside the
+# image with no checkout and no internet. Forty-eight paths, and one COPY of
+# each directory rather than forty-eight lines: unlike `labs/`, nothing
+# generated is ever written into these folders, and the one thing that appears
+# in them on a developer machine - `scripts/__pycache__/` from running the
+# profiler in place - is already excluded by `.dockerignore`, so the whole
+# directory is the honest copy. A page added to a skill then needs no change
+# here.
+COPY skills/assistant ./skills/assistant
 COPY skills/plant-from-your-mes ./skills/plant-from-your-mes
 
 RUN pip install --no-cache-dir ".[postgres]"
