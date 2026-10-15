@@ -1717,6 +1717,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#030-to-031" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.3.0 to 0.3.1
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#020-to-030" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4129,6 +4140,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../releases/0.3.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0.3.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../releases/0.3.0/" class="md-nav__link">
         
   
@@ -4325,6 +4364,17 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#030-to-031" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.3.0 to 0.3.1
+      
+    </span>
+  </a>
+  
+</li>
       
         <li class="md-nav__item">
   <a href="#020-to-030" class="md-nav__link">
@@ -4560,6 +4610,18 @@ carries an <strong>Honesty</strong> section for anything that changed what a num
 <em>means</em> — a KPI formula, a state mapping, a counter rule. Read that section
 before upgrading a plant that anyone reads numbers off, because a number that
 changes meaning without anyone noticing is worse than one that breaks.</p>
+<h2 id="030-to-031">0.3.0 to 0.3.1<a class="headerlink" href="#030-to-031" title="Permanent link">&para;</a></h2>
+<p><strong>No migrations.</strong> Nothing in 0.3.1 changes the database schema — <code>d4e8a1c93b70</code>
+is head on both versions — so there is no <code>init-db</code> step, and nothing in the
+CHANGELOG's 0.3.1 section changes what a number means. Upgrade in place:</p>
+<div class="highlight"><pre><span></span><code>pipx<span class="w"> </span>upgrade<span class="w"> </span>factorysemantics-mes<span class="w">                 </span><span class="c1"># or pip install --upgrade</span>
+fsmes<span class="w"> </span>--version<span class="w">                                   </span><span class="c1"># 0.3.1</span>
+fsmes<span class="w"> </span>db-status<span class="w"> </span>--pack<span class="w"> </span>packs/yourplant<span class="w">            </span><span class="c1"># should agree already</span>
+</code></pre></div>
+<p>Take the backup anyway if the plant holds anything you would miss
+(<code>fsmes backup --out /mnt/nas/fsmes</code>): this is <code>0.x</code>, and the habit is the
+point. Coming from 0.2.0 or earlier, do the section below first — it is the one
+with the migrations in it.</p>
 <h2 id="020-to-030">0.2.0 to 0.3.0<a class="headerlink" href="#020-to-030" title="Permanent link">&para;</a></h2>
 <p>Fifteen migrations, all of them additive in shape — twelve new tables and a
 set of nullable columns — and two of them write to rows that already exist.
