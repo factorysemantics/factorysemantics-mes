@@ -54,6 +54,7 @@ import pytest
 from sqlalchemy import create_engine, make_url, text
 
 from fsmes import plant as plants
+from fsmes.cli import app as cli_app
 from fsmes.schema import MIGRATION_LOCK_KEY
 from fsmes.sim import runner
 from fsmes.sim.generate import generate
@@ -84,8 +85,17 @@ MACHINES = ("LD01", "RD01", "WASH01", "QI01", "FILL01", "PAL01")
 # --------------------------------------------------------------- the plumbing
 
 def _server_url(database: str) -> str:
-    """The suite's own URL pointed at a different database on that server."""
-    return str(make_url(SUITE_DATABASE).set(database=database))
+    """The suite's own URL pointed at a different database on that server.
+
+    Rendered with the password in it on purpose: `str(url)` prints it as
+    `***`, which is a URL a person can read and no server will accept, and
+    the failure it gives is `password authentication failed` - a message
+    that reads like the runner's database is set up wrong rather than like a
+    masked password. This box's own cluster trusts loopback and had no
+    password to lose, so the suite was green here and red on the runner.
+    """
+    return make_url(SUITE_DATABASE).set(database=database).render_as_string(
+        hide_password=False)
 
 
 def _make_database(name: str) -> str:
@@ -568,10 +578,25 @@ def _wait_for_line(log: Path, says: str, timeout: float) -> None:
 def test_the_test_runs_the_commands_a_person_runs():
     """A guard, not a behaviour: if the CLI stops taking `--node` or
     `--api-port`, this file's whole premise is gone and it should say so
-    here rather than in a timeout."""
+    here rather than in a timeout.
+
+    It asks the command which switches it takes instead of reading the help
+    screen. On GitHub's runner the help screen is painted: rich calls that
+    runner a terminal, fixes the width at 115 columns whatever `COLUMNS`
+    says, and colours an option's `--` apart from its name - so a painted
+    `--node` does not contain the characters `--node`. #163 spent three
+    pushes on assertions against painted output; this one reads the
+    parameters, and still runs the console script to prove it is there.
+    """
+    from typer.main import get_command
+
+    switches = {switch
+                for param in get_command(cli_app).commands["plant"].params
+                for switch in param.opts}
+    assert {"--node", "--api-port"} <= switches, f"plant takes {sorted(switches)}"
+
     helped = subprocess.run([plants.fsmes_bin(), "plant", "--help"], cwd=REPO,
                             capture_output=True, text=True, encoding="utf-8",
-                            env=dict(os.environ, COLUMNS="200"), timeout=120)
-    assert helped.returncode == 0
-    assert "--node" in helped.stdout and "--api-port" in helped.stdout
+                            timeout=120)
+    assert helped.returncode == 0, helped.stderr
     assert sys.executable  # the console script belongs to this interpreter
