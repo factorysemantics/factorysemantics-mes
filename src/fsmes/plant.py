@@ -226,7 +226,7 @@ def plant_env(name: str, cfg: dict, root: Path, speed: float | None = None) -> d
         # no plant can ever accept another plant's session tokens. Named so a
         # grep shows intent: a pack holds no secret, and a plant that wants a
         # real key names the variable it lives in.
-        env["MES_SECRET_KEY"] = f"lab-{name}-do-not-use-in-production"
+        env["MES_SECRET_KEY"] = identity.lab_secret_key(name)
     return env
 
 

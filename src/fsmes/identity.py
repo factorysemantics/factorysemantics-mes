@@ -44,6 +44,19 @@ PROFILES = ("laptop", "plant", "fleet")
 #: the mistake this module exists to stop.
 LAPTOP_PLANT_NAME = "demo"
 
+#: The tail of the signing key `fsmes plant` hands a plant that named no
+#: variable of its own. It is a lab convenience and it is refused outright on
+#: a redundant plant, where every node has to sign with the *same deliberate*
+#: key or a person signed in on one node is a stranger on the other.
+LAB_KEY_SUFFIX = "-do-not-use-in-production"
+
+
+def lab_secret_key(plant_name: str) -> str:
+    """The stable throwaway key a lab plant signs with, so a restart does not
+    sign everyone out and no plant accepts another plant's tokens."""
+    return f"lab-{plant_name}{LAB_KEY_SUFFIX}"
+
+
 # The characters a unified-namespace topic segment keeps unchanged
 # (`integrations.uns.topics`). A name outside this set would be published
 # with underscores in place of the offending characters, so `/health` and
