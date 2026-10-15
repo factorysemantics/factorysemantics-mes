@@ -1,7 +1,7 @@
 """Kill one of two nodes while the plant is counting, and lose nothing.
 
-Scott, 2026-10-15, after being told at work that their server could not be
-made redundant because of their MES: *"I want the next pypi release to be a
+Scott, 2026-10-15, after hearing of a site that could not make its server
+redundant because of the MES it ran: *"I want the next pypi release to be a
 parallelizable mes. Redundancy is a priority."* The proof he asked for is
 killing one of two boxes while the line runs. This is that, as small as it
 goes and still real: one OPC replay standing in for the machine layer, one

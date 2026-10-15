@@ -6,8 +6,8 @@
 - **Builds on:** [0021](0021-one-database-per-plant.md), [0006](0006-sqlite-laptop-postgresql-plant.md), [0034](0034-a-count-is-owed-until-it-is-booked.md)
 
 ## Context
-A plant engineer was told, at work, that his site could not make its server
-redundant *because of their MES*. Asked whether this one could, the honest
+A plant engineer was told that a site of his could not make its server
+redundant *because of the MES it ran*. Asked whether this one could, the honest
 answer on 2026-10-15 was no, and the reason was specific rather than
 architectural.
 

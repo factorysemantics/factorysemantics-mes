@@ -2,8 +2,8 @@
 
 A plant that runs on two boxes has to answer one question before it may
 write anything: am I the node that reads the machines? Scott, 2026-10-15,
-after being told at work that their server could not be made redundant
-because of their MES: *"I want the next pypi release to be a parallelizable
+after hearing of a site that could not make its server redundant because of
+the MES it ran: *"I want the next pypi release to be a parallelizable
 mes."* The thing underneath that is a lease row, and the failure it exists
 to prevent is the one the code had until today - two readers, each holding
 its own counter baseline in memory, each booking the whole delta, so a plant
