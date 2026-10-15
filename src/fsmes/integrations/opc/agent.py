@@ -24,6 +24,7 @@ from pathlib import Path
 
 import structlog
 from asyncua import Client
+from sqlalchemy import select, tuple_
 
 from fsmes import shadow
 from fsmes.config import Settings
@@ -240,6 +241,20 @@ class _Handler:
         self._consumer: asyncio.Task | None = None
         # Equipment ids do not change while the agent runs: looked up once.
         self._equipment_ids: dict[str, int] = {}
+        # Whether the next history batch is checked against what is already
+        # stored. True at the start because the first batches after
+        # subscribing carry every tag's current value with the source
+        # timestamp it was last published under - which, on a plant whose
+        # other node has just died, is a moment this one already has in
+        # `tag_values`. Booking is safe either way (the baseline comes from
+        # the database, and a reading no higher than the baseline books
+        # nothing), but the history table has no unique key, so the same
+        # reading would appear twice in the one table whose purpose is being
+        # able to argue with the PLC about what it sent. The check stops
+        # itself: the first batch that holds nothing already stored turns it
+        # off, so a running subscription pays for it only while the overlap
+        # lasts.
+        self._check_history_for_repeats = True
         self.stats = _Ingestion()
         # Inspection groups: {equipment: {"spec": manifest block, "tags": expected tag names}}
         # and the groups still being assembled, keyed by the source time the
@@ -764,6 +779,10 @@ class _Handler:
         able to argue with the PLC about what it actually sent.
         """
         with session_scope() as session:
+            if self._check_history_for_repeats:
+                batch = self._readings_not_already_stored(session, batch)
+                if not batch:
+                    return
             for code, tag, value, observed in batch:
                 numeric = isinstance(value, (int, float)) and not isinstance(value, bool)
                 row = TagValue(
@@ -775,6 +794,40 @@ class _Handler:
                 if observed is not None:
                     row.ts = observed
                 session.add(row)
+
+    def _readings_not_already_stored(
+        self, session, batch: list[tuple[str, str, object, object]],
+    ) -> list[tuple[str, str, object, object]]:
+        """The readings in this batch that are not in `tag_values` already.
+
+        One query for the whole batch, asking only about the (machine, tag,
+        moment) triples it carries - the table's own
+        (equipment_id, tag, id) index serves it, and a reading with no
+        source timestamp cannot repeat because its moment is the instant it
+        is written. Finding nothing means the overlap is over, so the next
+        batch is not asked about.
+        """
+        stamped = [(code, tag, observed) for code, tag, _v, observed in batch
+                   if observed is not None]
+        if not stamped:
+            self._check_history_for_repeats = False
+            return batch
+        wanted = {(self._equipment_id(session, code), f"{code}.{tag}", observed)
+                  for code, tag, observed in stamped}
+        here = set(session.execute(
+            select(TagValue.equipment_id, TagValue.tag, TagValue.ts).where(
+                tuple_(TagValue.equipment_id, TagValue.tag, TagValue.ts).in_(sorted(wanted)),
+            )
+        ).all())
+        if not here:
+            self._check_history_for_repeats = False
+            return batch
+        kept = [(code, tag, value, observed) for code, tag, value, observed in batch
+                if observed is None
+                or (self._equipment_id(session, code), f"{code}.{tag}", observed) not in here]
+        log.info("readings this node already has are not stored twice",
+                 repeats=len(batch) - len(kept), of=len(batch), node=self.node)
+        return kept
 
     def _counter_delta(self, equipment_code: str, tag: str, value: int,
                        pending: dict[tuple[str, str], int]) -> int:
