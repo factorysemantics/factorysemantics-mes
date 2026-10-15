@@ -83,6 +83,21 @@ class Settings(BaseSettings):
     api_host: str = "127.0.0.1"
     api_port: int = 8000
 
+    # --- One plant on more than one box -----------------------------------
+    # Off is one box, and nothing below is read: no lease row is written, no
+    # lease row is looked at, and the single-box SQLite demo is untouched.
+    # On, every node of this plant runs the API and exactly one of them holds
+    # each of the roles in `fsmes.domain.leases.ROLES`. Decision 0042.
+    redundancy: bool = False
+    # What this node calls itself in the lease row, on the dashboard and in
+    # `fsmes plant status`. Unset means this box and the port it serves on,
+    # which is a fact rather than a guess; `--node a` names it deliberately.
+    node_id: str = ""
+    # How long a role stays held without a renewal. The holder renews every
+    # third of this, so it has two more tries before anybody may take over;
+    # a failover therefore costs at most about one lease plus a poll.
+    lease_seconds: float = 10.0
+
     # --- Which plant is this ----------------------------------------------
     # What this plant is called, everywhere a reader can see: /health,
     # /shadow, the metrics labels, the dashboard header, `fsmes info`, the
@@ -858,6 +873,50 @@ class Settings(BaseSettings):
         from fsmes import shadow
 
         return shadow.check_settings(self)
+
+    @model_validator(mode="after")
+    def _a_redundant_plant_can_be_redundant(self) -> "Settings":
+        """Refuse to start a redundant plant on a configuration that cannot
+        be redundant, in one sentence each.
+
+        Here, like shadow mode's refusal above, because every process of
+        every node builds Settings - so the reader, the API and the floor all
+        refuse for the same reason instead of one of them starting and the
+        plant being half redundant.
+        """
+        if not self.redundancy:
+            return self
+        from fsmes import identity
+
+        if self.database_url.startswith("sqlite"):
+            raise ValueError(
+                "This plant is configured to run on more than one node, but its database is "
+                f"SQLite ({self.database_url.split('?')[0]}): a file cannot be shared by two "
+                "boxes, so point MES_DATABASE_URL ([storage] database_url in a pack) at a "
+                "PostgreSQL database, or turn MES_REDUNDANCY off.")
+        # `self.secret_key`, not the environment: this validator runs before
+        # `get_settings` invents a random key for a process that was given
+        # none (line below `_settings`), so an empty one here means nothing
+        # set it - which is the condition that matters.
+        key = self.secret_key
+        if not key:
+            raise ValueError(
+                "This plant is configured to run on more than one node, so every node has to "
+                "sign session tokens with the same key: set MES_SECRET_KEY on each of them (a "
+                "pack names the variable it should come from in [serve] secret_key_env), or a "
+                "person signed in on one node is a stranger on the other.")
+        if key.endswith(identity.LAB_KEY_SUFFIX):
+            raise ValueError(
+                "This plant is configured to run on more than one node but is signing session "
+                f"tokens with the lab default ({key}): set MES_SECRET_KEY to a secret of your "
+                "own on every node, because the lab default is in the source of this package "
+                "and anybody can mint a session with it.")
+        if self.lease_seconds < 2:
+            raise ValueError(
+                f"MES_LEASE_SECONDS ([redundancy] lease_seconds) is {self.lease_seconds}, "
+                "which is too short to survive one slow query: a holder renews every third of "
+                "it, so use 2 seconds or more (10 is the default and suits a plant on a LAN).")
+        return self
 
 
 def packaged_default(path: Path) -> Path:

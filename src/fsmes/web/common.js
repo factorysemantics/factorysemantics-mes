@@ -1141,6 +1141,26 @@
             + "no name; times are shown in your browser's zone.";
           slot.appendChild(zone);
         }
+        /* On a plant that runs on more than one node, the address no longer
+           says which box answered. One line, beside the plant's name: which
+           node served this page, and which node is reading the machines. A
+           person watching a failover reads it to know the takeover happened;
+           on a plant that runs on one node there is nothing to say and
+           nothing is said. */
+        const node = who.node;
+        if (node && node.redundancy && node.name) {
+          const holders = node.holders || {};
+          const reader = holders.reader;
+          const line = FS.el("span", "muted small",
+            "served by " + node.name + " · machines read by "
+            + (reader || "nobody yet"));
+          line.title = reader === node.name
+            ? "This node serves the dashboard and holds the reader lease."
+            : "This node serves the dashboard; the reader lease is held "
+              + (reader ? "by " + reader + "." : "by nobody - no node is reading "
+                 + "the machines right now.");
+          slot.appendChild(line);
+        }
       }
       return who;
     })

@@ -105,7 +105,7 @@ Plain HTML/CSS/JS served by FastAPI, no build step, no npm — a plant PC must r
 | Profile | Shape | For |
 |---|---|---|
 | Laptop | one process, SQLite, replay driver | demos, development, evaluation |
-| Plant | compose: Postgres + api (N replicas behind nginx) + connect + one-shot migrate job | a real line (ported topology — the migrate-job-separate-from-API pattern is the keeper) |
+| Plant | compose: Postgres + api (N replicas behind nginx) + connect + one-shot migrate job. More than one whole node of a plant, each serving the API and each taking the lease for the roles that must run once, is [one plant on two boxes](operate/redundancy.md) — decision [0042](decisions/0042-one-plant-many-nodes.md) | a real line (ported topology — the migrate-job-separate-from-API pattern is the keeper) |
 | Fleet | N plant nodes + observe-don't-push console (enroll / telemetry / desired-state-as-intent / drift display) | multi-site (M8; pattern from factorysemantics.com) |
 
 ## Repo layout (proposed)

@@ -162,6 +162,23 @@ SCHEMA: tuple[Section, ...] = (
             "The environment variable holding this plant's token-signing key. The "
             "pack names the variable and never the key."),
     )),
+    Section("redundancy",
+            "Running this plant on more than one box. Off is one box and "
+            "nothing here is read. On, every node serves the dashboard and "
+            "exactly one of them reads the machines, runs the simulated floor "
+            "and prunes the history - decided by a lease row in this plant's "
+            "own database. PostgreSQL only: two boxes cannot share a file. "
+            "A node's *own* name and port are not here, because they are "
+            "facts about a box rather than about the plant: they come from "
+            "`fsmes plant <name> run --node a --api-port 8111`.", (
+        Key("enabled", "bool", "Whether this plant expects more than one node.",
+            "MES_REDUNDANCY"),
+        Key("lease_seconds", "float",
+            "How long a node may stop renewing before another may take its "
+            "work. The holder renews every third of this, so a failover costs "
+            "at most about one lease plus a poll. 10 suits a plant on a LAN.",
+            "MES_LEASE_SECONDS"),
+    )),
     Section("files", "The rest of the pack, by relative path inside this directory.", (
         Key("tag_map", "path", "Which machines exist and what their tags mean.",
             "MES_TAG_MAP_FILE"),

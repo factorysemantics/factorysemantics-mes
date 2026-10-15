@@ -24,6 +24,7 @@ from pathlib import Path
 
 import structlog
 from asyncua import Client
+from sqlalchemy import select, tuple_
 
 from fsmes import shadow
 from fsmes.config import Settings
@@ -34,8 +35,10 @@ from fsmes.integrations.opc.tag_map import MachineMap, load_manifest, load_tag_m
 from fsmes.kernel.tags import COUNTER_TAGS, INSPECTION_PREFIX, INSPECTION_TAGS, SEMANTIC_TAGS
 from fsmes.services import (
     audit,
+    counters,
     equipment,
     execution,
+    leases,
     masterdata,
     serialization,
     spc,
@@ -214,18 +217,44 @@ class _Handler:
     booked in whatever order their threads happened to finish.
     """
 
-    def __init__(self, node_info: dict, evaluator=None, inspections: dict | None = None):
+    def __init__(self, node_info: dict, evaluator=None, inspections: dict | None = None,
+                 baselines: dict[tuple[str, str], int] | None = None,
+                 holds=None, node: str | None = None):
         self.node_info = node_info  # Node -> (MachineMap, tag_name)
         # Approved triggers watch every reading - fast tags and sampled ones
         # alike - and act through the same services a person would.
         self.evaluator = evaluator
-        self.last_counts: dict[tuple[str, str], int] = {}
+        # Where each counter had got to when this handler was built, read from
+        # the database rather than started from nothing. A plant that has
+        # never booked a counter hands over an empty mapping, which is an
+        # empty mapping and not a set of zeroes: the first reading of a
+        # machine with no baseline still books nothing.
+        self.last_counts: dict[tuple[str, str], int] = dict(baselines or {})
+        # Whether this node may write at all. `lambda: True` on a plant that
+        # runs on one box, which is every plant that has not turned
+        # `[redundancy]` on, so nothing below behaves differently there.
+        self.holds = holds or (lambda: True)
+        self.node = node
         # (spec, tag, value, observed-at, arrived-at) in arrival order.
         self._pending: list[tuple] = []
         self._wake = asyncio.Event()
         self._consumer: asyncio.Task | None = None
         # Equipment ids do not change while the agent runs: looked up once.
         self._equipment_ids: dict[str, int] = {}
+        # Whether the next history batch is checked against what is already
+        # stored. True at the start because the first batches after
+        # subscribing carry every tag's current value with the source
+        # timestamp it was last published under - which, on a plant whose
+        # other node has just died, is a moment this one already has in
+        # `tag_values`. Booking is safe either way (the baseline comes from
+        # the database, and a reading no higher than the baseline books
+        # nothing), but the history table has no unique key, so the same
+        # reading would appear twice in the one table whose purpose is being
+        # able to argue with the PLC about what it sent. The check stops
+        # itself: the first batch that holds nothing already stored turns it
+        # off, so a running subscription pays for it only while the overlap
+        # lasts.
+        self._check_history_for_repeats = True
         self.stats = _Ingestion()
         # Inspection groups: {equipment: {"spec": manifest block, "tags": expected tag names}}
         # and the groups still being assembled, keyed by the source time the
@@ -400,6 +429,10 @@ class _Handler:
     def _ingest_with_retry(self, events: list[dict]) -> bool:
         attempts, backoff = self._book_policy()
         for attempt in range(1, attempts + 1):
+            if not self.holds():
+                log.warning("not the reader any more; these inspection events are the "
+                            "other node's", events=len(events), node=self.node)
+                return False
             try:
                 self._ingest(events)
                 return True
@@ -596,6 +629,20 @@ class _Handler:
         """
         attempts, backoff = self._book_policy()
         for attempt in range(1, attempts + 1):
+            if not self.holds():
+                # This node stopped being the reader - between batches, or
+                # while this loop was asleep in a backoff. The other node now
+                # holds the lease and measures its own delta from the
+                # baseline in the database, which is the last one *committed*,
+                # so these readings are not lost by being dropped here: they
+                # are counted by whoever holds the role. Said out loud, with
+                # the size of what was dropped, because a reader that goes
+                # quiet about production is the one thing this module may
+                # never do.
+                log.warning("not the reader any more; this batch is the other node's",
+                            rows=len(decisions), node=self.node,
+                            machines=sorted({spec.equipment for spec, _t, _v in decisions}))
+                return False
             pending: dict[tuple[str, str], int] = {}
             started = time.monotonic()
             try:
@@ -677,6 +724,12 @@ class _Handler:
                     pending.pop((code, tag), None)
                 _failed("failed to book production", exc, equipment=code,
                         units_owed=sum(quantities.values()), **quantities)
+        # The baseline goes down with the booking it belongs to, in this
+        # transaction, after the machines whose booking failed have been
+        # dropped from `pending` above. Either both are committed or neither
+        # is - which is what lets another reader pick the count up exactly
+        # where this one left it, and what makes a restart on one box honest.
+        counters.save(session, pending, self.node)
 
     def _note_unassigned(self, code: str, quantities: dict) -> None:
         """Say that a machine is counting with no order open, and how much.
@@ -726,6 +779,10 @@ class _Handler:
         able to argue with the PLC about what it actually sent.
         """
         with session_scope() as session:
+            if self._check_history_for_repeats:
+                batch = self._readings_not_already_stored(session, batch)
+                if not batch:
+                    return
             for code, tag, value, observed in batch:
                 numeric = isinstance(value, (int, float)) and not isinstance(value, bool)
                 row = TagValue(
@@ -737,6 +794,40 @@ class _Handler:
                 if observed is not None:
                     row.ts = observed
                 session.add(row)
+
+    def _readings_not_already_stored(
+        self, session, batch: list[tuple[str, str, object, object]],
+    ) -> list[tuple[str, str, object, object]]:
+        """The readings in this batch that are not in `tag_values` already.
+
+        One query for the whole batch, asking only about the (machine, tag,
+        moment) triples it carries - the table's own
+        (equipment_id, tag, id) index serves it, and a reading with no
+        source timestamp cannot repeat because its moment is the instant it
+        is written. Finding nothing means the overlap is over, so the next
+        batch is not asked about.
+        """
+        stamped = [(code, tag, observed) for code, tag, _v, observed in batch
+                   if observed is not None]
+        if not stamped:
+            self._check_history_for_repeats = False
+            return batch
+        wanted = {(self._equipment_id(session, code), f"{code}.{tag}", observed)
+                  for code, tag, observed in stamped}
+        here = set(session.execute(
+            select(TagValue.equipment_id, TagValue.tag, TagValue.ts).where(
+                tuple_(TagValue.equipment_id, TagValue.tag, TagValue.ts).in_(sorted(wanted)),
+            )
+        ).all())
+        if not here:
+            self._check_history_for_repeats = False
+            return batch
+        kept = [(code, tag, value, observed) for code, tag, value, observed in batch
+                if observed is None
+                or (self._equipment_id(session, code), f"{code}.{tag}", observed) not in here]
+        log.info("readings this node already has are not stored twice",
+                 repeats=len(batch) - len(kept), of=len(batch), node=self.node)
+        return kept
 
     def _counter_delta(self, equipment_code: str, tag: str, value: int,
                        pending: dict[tuple[str, str], int]) -> int:
@@ -899,11 +990,18 @@ class _Link:
     hour from writing a row every three seconds: only a change is written.
     """
 
-    def __init__(self, codes: list[str], endpoint: str) -> None:
+    def __init__(self, codes: list[str], endpoint: str, holds=None) -> None:
         self.codes = codes
         self.endpoint = endpoint
         self.seen: datetime | None = None
         self.state: ConnectionStateName | None = None
+        # `lambda: True` unless a lease says otherwise. A node that has
+        # *stopped* being the reader must not write "these machines are
+        # disconnected": another node is reading them right now, and that row
+        # would put every machine on the dashboard behind a warning that is
+        # not true. A node shutting down cleanly still holds its lease, so the
+        # row it writes on the way out is still written.
+        self.holds = holds or (lambda: True)
 
     def _now(self) -> datetime:
         return datetime.now(UTC).replace(tzinfo=None)
@@ -913,6 +1011,10 @@ class _Link:
         self.seen = self._now()
 
     def _write(self, state: ConnectionStateName, reason: str | None) -> None:
+        if not self.holds():
+            log.info("not the reader any more; leaving these machines to the node that is",
+                     endpoint=self.endpoint, machines=len(self.codes), would_have_said=state.value)
+            return
         detected = self._now()
         at = self.seen if state is ConnectionStateName.DISCONNECTED else detected
         with session_scope() as session:
@@ -992,7 +1094,14 @@ async def _health_watchdog(client: Client, link: _Link, every: float) -> None:
         link.proof()
 
 
-async def run(settings: Settings) -> None:
+async def run(settings: Settings, holds=None, node: str | None = None) -> None:
+    """Watch one OPC endpoint and write what it says into the MES.
+
+    `holds` is how this process asks whether it is still allowed to write -
+    `lambda: True` on a plant that runs on one box. `node` is what this box
+    calls itself, written onto the counter baselines it moves so a person
+    reading that table can see which node booked up to where.
+    """
     manifest = load_manifest(settings.replay_dir)
     machines = load_tag_map(settings.tag_map_file, manifest)
     inspections = inspection_specs(manifest, machines)
@@ -1000,7 +1109,7 @@ async def run(settings: Settings) -> None:
         log.info("inspection groups mapped", stations=sorted(inspections))
     # What this endpoint's machines can currently be seen through, carried
     # across reconnects so only a *change* is ever written down.
-    link = _Link([m.equipment for m in machines], settings.opc_endpoint)
+    link = _Link([m.equipment for m in machines], settings.opc_endpoint, holds=holds)
     every = health_seconds(settings)
     while True:
         reason = "the agent stopped watching this endpoint"
@@ -1010,8 +1119,14 @@ async def run(settings: Settings) -> None:
             async with client:
                 node_info, order_nodes = await resolve_nodes(client, machines, settings.opc_namespace)
 
+                # Where every counter had got to, per connection: another
+                # node may have been the reader while this one was away, and
+                # a reconnect must continue its count rather than this
+                # process's memory of a count from before.
+                baselines = await asyncio.to_thread(_load_baselines)
                 handler = _Handler(node_info, evaluator=triggers.Evaluator(scope=session_scope),
-                                   inspections=inspections)
+                                   inspections=inspections, baselines=baselines,
+                                   holds=holds, node=node)
 
                 # The tags the MES reasons about arrive at full rate; the
                 # rest are history and are sampled. Splitting them is what
@@ -1268,12 +1383,58 @@ def agent_configs(settings: Settings) -> list[Settings]:
     return configs
 
 
-async def run_all(settings: Settings) -> None:
+def _load_baselines() -> dict[tuple[str, str], int]:
+    """Every counter baseline, or none of them if the database cannot be read.
+
+    Not fatal: a reader that cannot read the baselines starts with none, which
+    means it books nothing from a machine's first reading and the whole delta
+    from its second. That loses the units between the two readings and says
+    so; refusing to start would lose every unit until somebody noticed.
+    """
+    try:
+        with read_only_session() as session:
+            loaded = counters.load(session)
+    except Exception as exc:
+        log.warning("could not read the counter baselines; starting without them",
+                    error=f"{type(exc).__name__}: {exc}"[:160])
+        return {}
+    log.info("counter baselines read", counters=len(loaded),
+             machines=len({code for code, _tag in loaded}))
+    return loaded
+
+
+async def _every_agent(settings: Settings, holds=None, node: str | None = None) -> None:
     """Every agent the plant needs, in one process, each with its own
     connection, subscriptions and tag map, feeding one database."""
     configs = agent_configs(settings)
     if len(configs) == 1:
-        await run(configs[0])
+        await run(configs[0], holds=holds, node=node)
         return
     log.info("agents starting", count=len(configs), endpoints=[c.opc_endpoint for c in configs])
-    await asyncio.gather(*(run(c) for c in configs))
+    await asyncio.gather(*(run(c, holds=holds, node=node) for c in configs))
+
+
+async def run_all(settings: Settings) -> None:
+    """The reader, under the lease when this plant has more than one node.
+
+    A standby does not connect to the OPC server at all. The handoff's first
+    sketch had it subscribe and book nothing, and gating the writes instead of
+    the process would have meant a gate at every call site that writes - a
+    dozen of them, and the next one somebody adds forgotten. One decision
+    point is provable, and a standby that holds no OPC session leaves the
+    server's session count to the node doing the work. The cost is the connect
+    on takeover, which is part of what the test measures: it comes in well
+    under the lease (decision 0042).
+
+    This never exits on losing the lease. `fsmes.plant.run` takes the whole
+    plant down when any child exits, so a reader that exited would also stop
+    its own node's dashboard - the opposite of the point.
+    """
+    lease = leases.for_role(leases.ROLE_READER, settings)
+    if lease is None:
+        await _every_agent(settings)
+        return
+    log.info("this node reads the machines only while it holds the lease",
+             role=lease.role, node=lease.node, lease_s=lease.seconds)
+    await leases.run_while_held(
+        lease, lambda: _every_agent(settings, holds=lease.holds, node=lease.node))

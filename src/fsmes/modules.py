@@ -262,6 +262,12 @@ REGISTRY: tuple[Module, ...] = (
         title="Health, metrics and version",
         kernel=True,
         routers=(Mount("fsmes.api.routers.system", "", ("system",), public=True),),
+        # Which node of this plant may do the work only one node may do. It
+        # belongs to the kernel because it is about the installation rather
+        # than about anything on the floor, and because a plant that could
+        # switch it off would be a plant whose nodes stopped agreeing
+        # (decision 0042).
+        tables=("plant_leases",),
     ),
     Module(
         name="auth",
@@ -711,8 +717,12 @@ REGISTRY: tuple[Module, ...] = (
         # Two tool files, for the same reason there are two routers: the
         # vocabulary is its own thing, read and drafted on its own screen.
         tools=("fsmes.mcp.equipment", "fsmes.mcp.reasons"),
+        # `counter_baselines` is the reader's memory of what each machine's
+        # counter last read, which is what makes a delta a delta. It is here
+        # and not with `production_logs` because it is a fact about a machine's
+        # tag, not about an order: whoever reads the machines owns it.
         tables=("equipment", "equipment_connections", "equipment_states", "tag_values",
-                "uns_publications", "downtime_reasons"),
+                "uns_publications", "downtime_reasons", "counter_baselines"),
     ),
     Module(
         name="dashboard",

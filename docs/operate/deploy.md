@@ -145,6 +145,7 @@ full list; `fsmes fleet plan` shows what a promote would act on.
 
 ## See also
 
+- [One plant on two boxes](redundancy.md)
 - [Plant packs](packs.md)
 - [Plants from a fleet file](registry.md)
 - [Settings reference](../reference/settings.md)

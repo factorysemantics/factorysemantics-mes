@@ -130,10 +130,15 @@ async def _lifespan(app: FastAPI):
 
     # Retention runs in the API process because it is the one long-lived
     # process every deployment has. Hourly, in batches, and it says so on Ops.
+    # On a plant with more than one node it runs in the API process of
+    # whichever node holds `housekeeping`: every node has an API, and a plant
+    # that only serves (`simulate = false`) has no reader to put it in. The
+    # handoff offered the reader's process instead; this is a narrower change
+    # and it covers the plant that has no reader.
     import asyncio
 
     from fsmes.config import get_settings
-    from fsmes.services import retention
+    from fsmes.services import leases, retention
 
     async def _retain() -> None:
         while True:
@@ -152,7 +157,10 @@ async def _lifespan(app: FastAPI):
         with session_scope() as db:
             return retention.prune_tag_values(db, days)
 
-    task = asyncio.create_task(_retain())
+    _housekeeping = leases.for_role(leases.ROLE_HOUSEKEEPING, get_settings())
+    task = asyncio.create_task(
+        _retain() if _housekeeping is None
+        else leases.run_while_held(_housekeeping, _retain))
     try:
         yield
     finally:

@@ -43,6 +43,14 @@ from fsmes.domain.gauges import (
 from fsmes.domain.idempotency import IdempotencyKey
 from fsmes.domain.inbound import InboundEvent, InboundKind, InboundWatermark
 from fsmes.domain.integration import ErpMessage, MessageDirection, MessageStatus
+from fsmes.domain.leases import (
+    ROLE_FLOOR,
+    ROLE_HOUSEKEEPING,
+    ROLE_READER,
+    ROLES,
+    CounterBaseline,
+    PlantLease,
+)
 from fsmes.domain.maintenance import (
     DEFAULT_PRIORITY,
     OPEN_STATUSES,
@@ -105,6 +113,10 @@ __all__ = [
     "PRIORITY_PRODUCTION_CRITICAL",
     "PRIORITY_ROUTINE",
     "PRIORITY_SAFETY",
+    "ROLES",
+    "ROLE_FLOOR",
+    "ROLE_HOUSEKEEPING",
+    "ROLE_READER",
     "AdjustmentStatus",
     "AiTurn",
     "AuditLog",
@@ -114,6 +126,7 @@ __all__ = [
     "CalibrationResult",
     "CheckResult",
     "ConnectionStateName",
+    "CounterBaseline",
     "DispatchRule",
     "DispatchStrategy",
     "Document",
@@ -154,6 +167,7 @@ __all__ = [
     "OrderStatus",
     "Person",
     "PersonnelSkill",
+    "PlantLease",
     "PlantSetting",
     "ProductionLog",
     "ProductionSource",
