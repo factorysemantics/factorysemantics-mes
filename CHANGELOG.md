@@ -10,7 +10,29 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.3.1] — 2026-10-15
+
 ### Added
+
+- **A simulated plant shaped like your own, from the shape file.** 0.3.0 could
+  write the file and do nothing with it. Now
+  `fsmes demo from-shape plant-shape.toml --name acme` reads that one file,
+  asks for the one number it cannot know — how much space sits between each
+  pair of machines — and starts a plant with your machines, your routings,
+  your stop mix, your order sizes and your shifts on
+  `http://127.0.0.1:8010/dashboard`. `--buffer 20 --yes` asks nothing, for a
+  script. `fsmes shape plant <shape> --out <dir>` writes the pack without
+  starting anything, so a person can read it first, and
+  `fsmes skills unpack plant-from-your-mes ./assistant` gets the three MES-box
+  commands out of the installed package with the network off. The shape format
+  grows to **format 2**, backward compatible — the ISA-95 hierarchy, routings
+  read from the source MES, and how the tags are grouped — and a format-1
+  shape loads as one area, one straight line, one node per machine. Proven on
+  Windows in CI against two reference shapes with the network cut. It has
+  never run against a real SQL Server, and the plant is *named* nothing like
+  yours (`ST_01`, `Area 1`) on purpose, so no name of yours can leak.
 
 - **An assistant folder that walks you from install to shadow mode**,
   `fsmes-assistant.zip` on the release page or
@@ -4885,7 +4907,8 @@ number in it comes from a simulated plant.
   MES was not watching. Unlabelled downtime is reported as unlabelled. These
   are the house rules and they are tested.
 
-[Unreleased]: https://github.com/factorysemantics/factorysemantics-mes/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/factorysemantics/factorysemantics-mes/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/factorysemantics/factorysemantics-mes/releases/tag/v0.3.1
 [0.3.0]: https://github.com/factorysemantics/factorysemantics-mes/releases/tag/v0.3.0
 [0.2.0]: https://github.com/factorysemantics/factorysemantics-mes/releases/tag/v0.2.0
 [0.1.0]: https://github.com/factorysemantics/factorysemantics-mes/releases/tag/v0.1.0

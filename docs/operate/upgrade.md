@@ -10,6 +10,23 @@ carries an **Honesty** section for anything that changed what a number
 before upgrading a plant that anyone reads numbers off, because a number that
 changes meaning without anyone noticing is worse than one that breaks.
 
+## 0.3.0 to 0.3.1
+
+**No migrations.** Nothing in 0.3.1 changes the database schema — `d4e8a1c93b70`
+is head on both versions — so there is no `init-db` step, and nothing in the
+CHANGELOG's 0.3.1 section changes what a number means. Upgrade in place:
+
+```bash
+pipx upgrade factorysemantics-mes                 # or pip install --upgrade
+fsmes --version                                   # 0.3.1
+fsmes db-status --pack packs/yourplant            # should agree already
+```
+
+Take the backup anyway if the plant holds anything you would miss
+(`fsmes backup --out /mnt/nas/fsmes`): this is `0.x`, and the habit is the
+point. Coming from 0.2.0 or earlier, do the section below first — it is the one
+with the migrations in it.
+
 ## 0.2.0 to 0.3.0
 
 Fifteen migrations, all of them additive in shape — twelve new tables and a
