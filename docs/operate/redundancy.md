@@ -124,14 +124,25 @@ answered).
 A plant that names no nodes is the ordinary plant on one address. That is
 almost every plant, and nothing above changes it.
 
-**Two nodes on one box, on Windows:** CI starts two nodes of one plant on a
-Windows runner, checks that both answer `/health`, that exactly one of them
-holds all three roles, and that `fleet stop` stops both. What is **not**
-proven on Windows is the kill: the Windows runners ship a PostgreSQL that is
-installed and not started, and a failover without a shared PostgreSQL is not
-a failover. The lease, the takeover and the baselines are proven on Linux —
-in CI and by hand on the author's box — and the node-starting, node-stopping
-and role-holding half is proven on both.
+**Two nodes on one box, on Windows.** A Windows job in CI
+(`two-nodes-on-windows`) starts the PostgreSQL the runner image ships, writes
+the two-node pack above, and then types the three commands a person would:
+`fsmes pack check`, `fsmes fleet create`, `fsmes fleet start`. It checks that
+both nodes answer `/health` under their own names, that each of the three
+roles is held by exactly one node, that both nodes say the same thing about
+who holds what — the holders are in the database they share — that
+`fsmes fleet status` names both, and that `fsmes fleet stop` stops both and
+leaves neither port answering.
+
+What is **not** proven on Windows is the kill. `Popen.terminate()` there does
+not go through the plant's own shutdown handler, so a node killed on Windows
+stops by a different mechanism than a node killed on Linux, and the takeover
+that follows is a different thing to measure. The lease, the takeover in
+lease units and the counters that must not be booked twice are proven on
+Linux — the `postgres` job's two-node test, the `two-nodes-in-compose` job,
+and a run by hand on the author's box. So: starting, answering, holding and
+stopping two nodes is proven on both platforms; surviving a kill is proven on
+Linux only, and nobody should read the Windows job as more than that.
 
 ### A real plant: the reader is its own service
 

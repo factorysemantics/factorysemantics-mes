@@ -475,6 +475,33 @@ def test_the_fleet_list_names_both_nodes_and_states_their_total(tmp_path, monkey
     assert any("node b" in line and "holding unknown" in line for line in said)
 
 
+def test_windows_is_promised_only_what_a_windows_job_actually_runs():
+    """The page says starting, answering, holding and stopping two nodes is
+    proven on Windows and the kill is not. That is a claim about a CI job, so
+    the job has to be there, on a Windows runner, running the script that
+    makes exactly those checks."""
+    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    script = ROOT / ".github" / "scripts" / "two_nodes_on_one_box.py"
+
+    assert "two-nodes-on-windows:" in workflow, (
+        "`redundancy.md` names this job; a page promising a proof that no job "
+        "runs is worse than a page that promises nothing")
+    windows = workflow.split("two-nodes-on-windows:", 1)[1].split("\n  lab:", 1)[0]
+    assert "runs-on: windows-latest" in windows
+    assert "two_nodes_on_one_box.py" in windows
+    assert script.is_file()
+
+    source = script.read_text(encoding="utf-8")
+    for command in ("pack", "check"), ("fleet", "create"), ("fleet", "start"), \
+                   ("fleet", "status"), ("fleet", "stop"):
+        assert f'"{command[0]}", "{command[1]}"' in source, (
+            f"the Windows job is supposed to type `fsmes {' '.join(command)}`")
+    page = (ROOT / "docs" / "operate" / "redundancy.md").read_text(encoding="utf-8")
+    assert "two-nodes-on-windows" in page, "the page names the job it leans on"
+    assert "proven on Windows is the kill" in page, (
+        "the page says in one sentence what Windows does not prove")
+
+
 def test_the_two_node_pack_the_docs_tell_a_person_to_write_would_check_out():
     """The example in `docs/operate/redundancy.md` is read as TOML and held to
     the rules the checker enforces, so the page cannot drift into a pack that
