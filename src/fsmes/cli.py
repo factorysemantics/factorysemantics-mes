@@ -2638,9 +2638,9 @@ def plant(
         fsmes plant all migrate   bring every stopped plant's database to the
                                   current schema (backup first, receipt after)
 
-    A plant with [redundancy] on runs on more than one node against one
-    PostgreSQL. A node is one of these supervisors, named, and two nodes of
-    one plant on one box need a port each:
+    A plant whose pack turns redundancy on runs on more than one node
+    against one PostgreSQL. A node is one of these supervisors, named, and
+    two nodes of one plant on one box need a port each:
 
         fsmes plant bottling run --node a --api-port 8111
         fsmes plant bottling run --node b --api-port 8112
