@@ -167,7 +167,10 @@ function nodesRow(plant, columns) {
     line.appendChild(where);
     const holds = document.createElement("span");
     holds.className = "holds";
-    holds.textContent = "holds " + roleWords(node.roles);
+    // "holds: reads the machines" and not "holds reads the machines":
+    // the words are a sentence about the role, and run together with the
+    // label they read as a typo. Seen on the page on 2026-10-15.
+    holds.textContent = "holds: " + roleWords(node.roles);
     line.appendChild(holds);
     /* A node answering under a different name than the pack gave it is a
        node somebody started by hand with the wrong --node. It is the one
