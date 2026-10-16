@@ -1096,6 +1096,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#two-nodes-on-one-box" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two nodes on one box
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#a-real-plant-the-reader-is-its-own-service" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1119,6 +1130,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#run-it-with-docker-compose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run it with docker compose
+      
+    </span>
+  </a>
   
 </li>
       
@@ -3712,6 +3734,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../decisions/0041-a-characteristic-the-plant-counts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0041 — A characteristic the plant counts, and the chart that judges it
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../decisions/0042-one-plant-many-nodes/" class="md-nav__link">
         
   
@@ -4339,6 +4389,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#two-nodes-on-one-box" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two nodes on one box
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#a-real-plant-the-reader-is-its-own-service" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4362,6 +4423,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#run-it-with-docker-compose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run it with docker compose
+      
+    </span>
+  </a>
   
 </li>
       
@@ -4520,6 +4592,65 @@ for it and finds the head.</p>
 <p><code>--node</code> names the node. Give it a name you will recognise in a log at
 02:00 — the host name is the usual answer. Without <code>--node</code> a node calls
 itself <code>&lt;host&gt;:&lt;port&gt;</code>.</p>
+<h3 id="two-nodes-on-one-box">Two nodes on one box<a class="headerlink" href="#two-nodes-on-one-box" title="Permanent link">&para;</a></h3>
+<p>Two boxes is the point of all this. Two nodes on <em>one</em> box is the cheap way
+to see it work before you own the second box — and it is how the lab on the
+author's desk runs — so a pack may name the nodes that run on this machine:</p>
+<div class="highlight"><pre><span></span><code><span class="k">[serve]</span>
+<span class="n">api_host</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="s2">"127.0.0.1"</span>
+<span class="n">api_port</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="mi">8010</span><span class="w">          </span><span class="c1"># the plant's address: one of its nodes serves here</span>
+<span class="n">secret_key_env</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"MES_BOTTLING_SECRET"</span>
+
+<span class="k">[[serve.nodes]]</span>
+<span class="n">id</span><span class="w">       </span><span class="o">=</span><span class="w"> </span><span class="s2">"a"</span>
+<span class="n">api_port</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">8010</span>
+
+<span class="k">[[serve.nodes]]</span>
+<span class="n">id</span><span class="w">       </span><span class="o">=</span><span class="w"> </span><span class="s2">"b"</span>
+<span class="n">api_port</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">8011</span>
+
+<span class="k">[redundancy]</span>
+<span class="n">enabled</span><span class="w">       </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<span class="n">lease_seconds</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">6</span>
+</code></pre></div>
+<p>Then the fleet commands act on every node the pack names:</p>
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>fleet<span class="w"> </span>start<span class="w"> </span>bottling<span class="w">      </span><span class="c1"># starts node a and node b, each with its own log</span>
+fsmes<span class="w"> </span>fleet<span class="w"> </span>status<span class="w"> </span>bottling<span class="w">     </span><span class="c1"># 2 nodes, 2 answered, and what each one holds</span>
+fsmes<span class="w"> </span>fleet<span class="w"> </span>stop<span class="w"> </span>bottling<span class="w">       </span><span class="c1"># stops both</span>
+</code></pre></div>
+<p>Each node keeps its own pid file and its own log directory
+(<code>logs/bottling/a/</code>, <code>logs/bottling/b/</code>), so stopping the plant stops both
+and a failover is readable in one node's log without the other's lines in
+it. <code>fsmes fleet start</code> on a plant with one node already up starts only the
+one that is down, which is what you want after killing one on purpose.</p>
+<p>What <code>fsmes pack check</code> refuses here, so that you find it before half a
+plant is running: two nodes sharing a port (one of them would fail to bind
+and the plant would look healthy on the other), two nodes sharing a name
+(they would take each other's lease and both believe they hold it), nodes
+named by a pack whose <code>[redundancy]</code> is off (both would read the machines
+and book every count twice), and nodes with no <code>secret_key_env</code> between
+them (whoever signed in on one would be signed out the moment the other
+answered).</p>
+<p>A plant that names no nodes is the ordinary plant on one address. That is
+almost every plant, and nothing above changes it.</p>
+<p><strong>Two nodes on one box, on Windows.</strong> A Windows job in CI
+(<code>two-nodes-on-windows</code>) starts the PostgreSQL the runner image ships, writes
+the two-node pack above, and then types the three commands a person would:
+<code>fsmes pack check</code>, <code>fsmes fleet create</code>, <code>fsmes fleet start</code>. It checks that
+both nodes answer <code>/health</code> under their own names, that each of the three
+roles is held by exactly one node, that both nodes say the same thing about
+who holds what — the holders are in the database they share — that
+<code>fsmes fleet status</code> names both, and that <code>fsmes fleet stop</code> stops both and
+leaves neither port answering.</p>
+<p>What is <strong>not</strong> proven on Windows is the kill. <code>Popen.terminate()</code> there does
+not go through the plant's own shutdown handler, so a node killed on Windows
+stops by a different mechanism than a node killed on Linux, and the takeover
+that follows is a different thing to measure. The lease, the takeover in
+lease units and the counters that must not be booked twice are proven on
+Linux — the <code>postgres</code> job's two-node test, the <code>two-nodes-in-compose</code> job,
+and a run by hand on the author's box. So: starting, answering, holding and
+stopping two nodes is proven on both platforms; surviving a kill is proven on
+Linux only, and nobody should read the Windows job as more than that.</p>
 <h3 id="a-real-plant-the-reader-is-its-own-service">A real plant: the reader is its own service<a class="headerlink" href="#a-real-plant-the-reader-is-its-own-service" title="Permanent link">&para;</a></h3>
 <p><code>fsmes plant &lt;name&gt; run</code> serves the API. On a plant whose pack says
 <code>simulate = false</code> it has always served only the API — the reader that
@@ -4553,6 +4684,60 @@ nodes on one box never append to one file.</p>
 <li><strong><code>lease_seconds</code> under 2.</strong> A lease shorter than the time a busy box can
   take to renew one is a plant that fails over because it was busy.</li>
 </ul>
+<h2 id="run-it-with-docker-compose">Run it with docker compose<a class="headerlink" href="#run-it-with-docker-compose" title="Permanent link">&para;</a></h2>
+<p>If you would rather see it than read about it, there is a compose file that
+is one plant on two nodes: one PostgreSQL, one machine layer, two nodes of
+the lab's bottling plant, and nginx in front of them so there is one address.</p>
+<div class="highlight"><pre><span></span><code>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>docker/docker-compose.redundant.yml<span class="w"> </span>up<span class="w"> </span>--build<span class="w">   </span><span class="c1"># 1</span>
+<span class="c1"># open http://localhost:8000/dashboard                             # 2</span>
+docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>docker/docker-compose.redundant.yml<span class="w"> </span><span class="nb">kill</span><span class="w"> </span>node-a<span class="w">  </span><span class="c1"># 3</span>
+docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>docker/docker-compose.redundant.yml<span class="w"> </span>start<span class="w"> </span>node-a<span class="w"> </span><span class="c1"># 4</span>
+</code></pre></div>
+<p>What you see:</p>
+<ol>
+<li>Four or five minutes the first time, while the image builds and the line's
+   replay data is generated. Then the log settles into two nodes talking to
+   one database, and one of them saying it took the three roles.</li>
+<li>The dashboard, on one address, with the header saying <strong>served by <em>a</em> ·
+   machines read by <em>a</em></strong>. The counts move while you read it. Sign in as
+   <code>ADMIN</code> / <code>admin</code>.</li>
+<li>A power cut, as far as the plant is concerned: <code>kill</code> sends no shutdown
+   and waits for nothing. Leave the page open and do not reload it. Within
+   about a lease the header says <strong>served by <em>b</em> · machines read by <em>b</em></strong>
+   and the counts carry on from where they were — not from zero, because the
+   counter baselines the dead node left behind are in the database. You are
+   not asked to sign in again: both nodes sign sessions with the same key.</li>
+<li>Node a comes back as a standby. It serves the dashboard again and holds
+   nothing, because b is holding the roles and a node that comes back does
+   not take work off a node that is doing it.</li>
+</ol>
+<p>One command does all four and checks every claim in them:</p>
+<div class="highlight"><pre><span></span><code>bash<span class="w"> </span>scripts/kill-a-node.sh
+</code></pre></div>
+<p>It prints the takeover in lease units with the bound beside it, how many
+requests the one address refused while a node died (it should be none), what
+each machine booked against what its counters moved, and how many readings
+were stored twice (it should be none). It is a shell script because
+everything in it is <code>docker compose</code> and SQL; the MES itself knows nothing
+about containers. The same script runs on every pull request in the
+<code>two-nodes-in-compose</code> job, so this page cannot quietly stop being true.</p>
+<p>When you are done: <code>docker compose -f docker/docker-compose.redundant.yml
+down -v</code> throws the containers and the data away.</p>
+<p>Two things about this compose file worth knowing before you copy it:</p>
+<ul>
+<li><strong>The machine layer is one service, shared.</strong> A simulated OPC server
+  started by a node would die with that node, and the surviving reader would
+  see the replay restart from the beginning — which reads as a PLC reset, so
+  nothing would be booked. A real plant has one PLC and points both nodes at
+  it; that is what this file imitates. It is also why a redundant plant's
+  nodes never start <code>run-opc-sim</code> themselves.</li>
+<li><strong>The pack is the lab's bottling line with three things changed</strong>, in
+  <code>docker/redundant/plant.toml</code>: a PostgreSQL URL, a <code>secret_key_env</code>, and
+  <code>[redundancy] enabled = true</code>. Nothing else about the plant differs. The
+  other compose file, <code>docker/docker-compose.yml</code>, is untouched and is a
+  different demo: one plant, N stateless API replicas, one of everything
+  else.</li>
+</ul>
 <h2 id="seeing-which-node-is-which">Seeing which node is which<a class="headerlink" href="#seeing-which-node-is-which" title="Permanent link">&para;</a></h2>
 <p><code>/health</code> carries a <code>node</code> block: the node's name, whether it was named or
 is calling itself after its host and port, <code>lease_seconds</code>, the roles this
@@ -4566,7 +4751,30 @@ can read:</p>
 <p>The dashboard says it in its header: <strong>served by <em>b</em> · machines read by
 <em>a</em></strong>. If the line says <em>machines read by nobody yet</em>, no node holds the
 reader lease — which is what you see in the seconds after a failover, and
-what you would see if the database were unreachable from every node.</p>
+what you would see if the database were unreachable from every node. <strong>The
+header follows a failover on the page's own poll</strong> — within five seconds,
+with no reload — so a page left open on a phone shows the takeover as it
+happens.</p>
+<p>The <a href="../fleet/">fleet console</a> shows a plant whose pack names its nodes once,
+with its nodes under it: how many there are and how many answered, then one
+line each saying where that node is and what it holds in words — <em>reads the
+machines</em>, <em>runs the floor</em>, <em>prunes the history</em>, or <em>nothing yet</em> for a
+standby. A node that did not answer is <strong>unknown</strong> there and never a node
+holding nothing. Its <code>fleet.json</code> carries the same, node by node, for
+anything else that wants to read it.</p>
+<p>A plant with nodes is also <em>read</em> at whichever node answers. The address in
+its pack is one node of it, so when that is the node that died, the console
+and <code>fsmes fleet status</code> ask another one and fill the row from there — the
+plant is answering, because it is. The silent node is still named as silent
+on its own line underneath. The node that answered has to be the same plant:
+it is asked the same ownership question as the first address, and a port
+answering as something else is refused rather than believed.</p>
+<p><code>fsmes fleet stop</code> and <code>fsmes fleet apply</code> ask every node for the same
+reason. Both act on a running plant and refuse one that has gone silent, and
+a plant whose first node is the one that died is a plant that is running —
+<code>stop</code> is the verb a person reaches for next. When no node answers at all,
+the refusal counts the pid file each node writes, not one file a plant with
+nodes never has, and says how many it read.</p>
 <h2 id="what-a-failover-costs">What a failover costs<a class="headerlink" href="#what-a-failover-costs" title="Permanent link">&para;</a></h2>
 <p>One lease, plus a renewal interval to notice, plus whatever the new holder
 needs to connect to the machines. With <code>lease_seconds = 10</code> that is on the
@@ -4586,8 +4794,8 @@ other node is holding.</p>
 <ul>
 <li><strong>The front door is yours.</strong> Two nodes are two addresses. Give people one
   of them with a DNS name they can repoint, a floating address, or a proxy —
-  nginx in front of the API, as <code>docker/docker-compose.yml</code> already does.
-  This product does not pick for you.</li>
+  nginx in front of both nodes, as <code>docker/docker-compose.redundant.yml</code>
+  does. This product does not pick for you.</li>
 <li><strong>The database is not made redundant by this.</strong> One PostgreSQL is one
   PostgreSQL. Its own standby, its own backups and its own failover are
   PostgreSQL's job, and well-documented there. See

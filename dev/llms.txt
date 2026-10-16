@@ -106,6 +106,7 @@
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0038-an-agent-is-an-account-with-a-role-a-budget-and-a-cadence/)
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0039-an-analysis-is-recorded-code-that-can-only-read/)
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0040-the-chart-type-follows-the-sampling-plan/)
+- [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0041-a-characteristic-the-plant-counts/)
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0042-one-plant-many-nodes/)
 - [Develop — Decisions — Template](https://docs.factorysemantics.com/dev/decisions/TEMPLATE/)
 - [Agents](https://docs.factorysemantics.com/dev/agents/)

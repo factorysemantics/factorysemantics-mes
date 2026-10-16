@@ -3778,6 +3778,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../decisions/0041-a-characteristic-the-plant-counts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0041 — A characteristic the plant counts, and the chart that judges it
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../decisions/0042-one-plant-many-nodes/" class="md-nav__link">
         
   
@@ -4640,8 +4668,13 @@ fsmes<span class="w"> </span>pack<span class="w"> </span>migrate<span class="w">
 </tr>
 <tr>
 <td><code>[serve]</code></td>
-<td><code>api_host</code>, <code>api_port</code>, <code>opc_endpoint</code>, <code>simulate</code>, <code>speed</code>, <code>secret_key_env</code></td>
-<td>What it serves, and where</td>
+<td><code>api_host</code>, <code>api_port</code>, <code>opc_endpoint</code>, <code>simulate</code>, <code>speed</code>, <code>secret_key_env</code>, <code>[[serve.nodes]]</code></td>
+<td>What it serves, and where. <code>[[serve.nodes]]</code> names the nodes of one plant that run on this box, each with an <code>id</code> and an <code>api_port</code> of its own; leave it out for the plant that serves one address, which is nearly every plant — see <a href="../redundancy/">two boxes, one plant</a></td>
+</tr>
+<tr>
+<td><code>[redundancy]</code></td>
+<td><code>enabled</code>, <code>lease_seconds</code></td>
+<td>Whether two copies of this plant may run against one database, and how long a role is held between renewals. Needs PostgreSQL and a <code>secret_key_env</code></td>
 </tr>
 <tr>
 <td><code>[files]</code></td>
