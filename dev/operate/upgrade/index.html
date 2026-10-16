@@ -1745,6 +1745,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#031-to-040" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.3.1 to 0.4.0
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#030-to-031" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4224,6 +4235,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../releases/0.4.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0.4.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../releases/0.3.1/" class="md-nav__link">
         
   
@@ -4448,6 +4487,17 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#031-to-040" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.3.1 to 0.4.0
+      
+    </span>
+  </a>
+  
+</li>
       
         <li class="md-nav__item">
   <a href="#030-to-031" class="md-nav__link">
@@ -4694,6 +4744,31 @@ carries an <strong>Honesty</strong> section for anything that changed what a num
 <em>means</em> — a KPI formula, a state mapping, a counter rule. Read that section
 before upgrading a plant that anyone reads numbers off, because a number that
 changes meaning without anyone noticing is worse than one that breaks.</p>
+<h2 id="031-to-040">0.3.1 to 0.4.0<a class="headerlink" href="#031-to-040" title="Permanent link">&para;</a></h2>
+<p><strong>One migration, <code>b6f0c2a71d58</code></strong> — 0.3.1's head was <code>d4e8a1c93b70</code>. It adds
+two tables, <code>plant_leases</code> and <code>counter_baselines</code>, and changes no column of
+any table you already have:</p>
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>backup<span class="w"> </span>--out<span class="w"> </span>/mnt/nas/fsmes<span class="w">                 </span><span class="c1"># first, always</span>
+<span class="c1"># stop the agent and the API</span>
+pipx<span class="w"> </span>upgrade<span class="w"> </span>factorysemantics-mes<span class="w">                 </span><span class="c1"># or pip install --upgrade</span>
+fsmes<span class="w"> </span>--version<span class="w">                                   </span><span class="c1"># 0.4.0</span>
+fsmes<span class="w"> </span>db-status<span class="w"> </span>--pack<span class="w"> </span>packs/yourplant<span class="w">            </span><span class="c1"># what you are at, and what 0.4.0 expects</span>
+fsmes<span class="w"> </span>init-db<span class="w">   </span>--pack<span class="w"> </span>packs/yourplant<span class="w">            </span><span class="c1"># runs the migration the wheel carries</span>
+fsmes<span class="w"> </span>db-status<span class="w"> </span>--pack<span class="w"> </span>packs/yourplant<span class="w">            </span><span class="c1"># should now agree; it exits non-zero if not</span>
+<span class="c1"># start them again</span>
+</code></pre></div>
+<p><strong>On a plant that runs on one box there is nothing else to do.</strong> The two new
+tables sit unused until a pack carries <code>[redundancy] enabled = true</code>, and a
+plant that does not is served exactly as it was.</p>
+<p>One thing changes for a single-box plant anyway, and it is in the CHANGELOG's
+<strong>Honesty</strong> section: the baseline each machine counter is measured from now
+lives in the database rather than in the reader's memory, so a reader that
+restarts no longer books the counter's whole value as new production. A plant
+that was restarted while it was counting has had this happen to it; nothing in
+this upgrade goes back and corrects what was already booked.</p>
+<p>Running two nodes is a thing you turn on afterwards, not part of the upgrade:
+<a href="../redundancy/">one plant on two boxes</a> is the recipe, and it needs PostgreSQL —
+<code>[redundancy]</code> with a SQLite URL is refused.</p>
 <h2 id="030-to-031">0.3.0 to 0.3.1<a class="headerlink" href="#030-to-031" title="Permanent link">&para;</a></h2>
 <p><strong>No migrations.</strong> Nothing in 0.3.1 changes the database schema — <code>d4e8a1c93b70</code>
 is head on both versions — so there is no <code>init-db</code> step, and nothing in the
