@@ -76,13 +76,41 @@ def test_the_body_is_the_release_page_and_not_the_changelog_section():
     assert len(body) < len(page) + 2_000, "the body is much longer than the page it is"
 
 
-def test_the_body_does_not_carry_the_note_about_a_page_written_before_the_tag():
-    version = this_version()
-    assert "Not yet tagged" in (REPO / "docs" / "releases" / f"{version}.md").read_text()
-    body = notes(version).stdout
+def test_the_note_about_a_page_written_before_the_tag_is_dropped_and_dated(
+    tmp_path: Path,
+):
+    """A page is written before the tag, so it carries a note to the maintainer
+    and no date. Neither belongs in what a stranger reads on the release.
+
+    Asked of a page this test writes rather than of the tree's own. A page
+    whose release has been cut has had the box taken out of it - that is the
+    last step of tagging, and two of them sat in `docs/releases/` with it
+    still in weeks afterwards - so the tree is sometimes the before state and
+    sometimes the after one, and only one of those proves the stripping.
+    """
+    (tmp_path / "docs" / "releases").mkdir(parents=True)
+    (tmp_path / "CHANGELOG.md").write_text("# Changelog\n")
+    (tmp_path / "docs" / "releases" / "9.9.9.md").write_text(
+        "# 9.9.9\n\n*Reference.*\n\n"
+        "> **Not yet tagged.** This page is written before the tag so that the\n"
+        "> release body is reviewed rather than typed on release night.\n\n"
+        "**Released:** *on tagging.* **Previous:** 9.9.8.\n\n---\n\nWhat it is.\n")
+    body = notes("9.9.9", cwd=tmp_path).stdout
+
     assert "Not yet tagged" not in body
     assert "*on tagging.*" not in body
     assert re.search(r"\*\*Released:\*\* \d{4}-\d{2}-\d{2}\.", body), body[:400]
+    assert "What it is." in body, "the page itself survived the stripping"
+
+
+def test_the_body_for_this_tree_names_a_date_and_no_note_to_the_maintainer():
+    """Whichever state the tree is in: before the tag the box is stripped and
+    the date is filled in, after it the page carries its own date already."""
+    body = notes(this_version()).stdout
+
+    assert "Not yet tagged" not in body
+    assert "*on tagging.*" not in body
+    assert re.search(r"\*\*Released:\*\* \d{4}-\d{2}-\d{2}", body), body[:400]
 
 
 def test_links_between_documentation_pages_become_links_a_reader_can_follow():
@@ -133,3 +161,18 @@ def test_an_earlier_release_whose_page_exists_still_composes(version: str):
     result = notes(version)
     assert result.returncode == 0, result.stderr
     assert result.stdout.startswith(f"# {version}\n")
+
+
+def test_a_release_already_cut_carries_no_note_about_a_page_written_before_it():
+    """The box is a note to the maintainer about a page written ahead of the
+    tag, and taking it out is the last step of tagging. 0.3.0's page kept its
+    for three weeks and 0.3.1's for a day - both on PyPI, both telling a
+    reader the release was not yet tagged. This is the only version whose page
+    may still say it."""
+    unreleased = this_version()
+    stale = sorted(page.stem for page in (REPO / "docs" / "releases").glob("*.md")
+                   if page.stem != unreleased
+                   and "Not yet tagged" in page.read_text(encoding="utf-8"))
+    assert not stale, (
+        f"{', '.join(stale)} are released and their pages still say they are not "
+        f"tagged; this tree is {unreleased}")
