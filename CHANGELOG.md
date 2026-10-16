@@ -10,6 +10,10 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.4.0] — 2026-10-16
+
 ### Added
 
 - **A plant can run on two boxes and keep counting when one of them dies.**
@@ -5060,7 +5064,8 @@ number in it comes from a simulated plant.
   MES was not watching. Unlabelled downtime is reported as unlabelled. These
   are the house rules and they are tested.
 
-[Unreleased]: https://github.com/factorysemantics/factorysemantics-mes/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/factorysemantics/factorysemantics-mes/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/factorysemantics/factorysemantics-mes/releases/tag/v0.4.0
 [0.3.1]: https://github.com/factorysemantics/factorysemantics-mes/releases/tag/v0.3.1
 [0.3.0]: https://github.com/factorysemantics/factorysemantics-mes/releases/tag/v0.3.0
 [0.2.0]: https://github.com/factorysemantics/factorysemantics-mes/releases/tag/v0.2.0
