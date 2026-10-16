@@ -1,0 +1,5594 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="An open-source, modular, agent-native Manufacturing Execution System.">
+      
+      
+      
+        <link rel="canonical" href="https://docs.factorysemantics.com/0.4/develop/experiments/">
+      
+      
+        <link rel="prev" href="../erp-connectors/">
+      
+      
+        <link rel="next" href="../../design/STYLE/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-ProperDocs 1.6.7, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Explanation — experiments in the lab - FactorySemantics MES</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="deep-orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#explanation-experiments-in-the-lab" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="FactorySemantics MES" class="md-header__button md-logo" aria-label="FactorySemantics MES" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            FactorySemantics MES
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Explanation — experiments in the lab
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="deep-orange"  aria-label="Dark"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="blue-grey" data-md-color-accent="deep-orange"  aria-label="Light"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/factorysemantics/factorysemantics-mes" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    factorysemantics/factorysemantics-mes
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../plant/" class="md-tabs__link">
+          
+  
+  
+  Plant
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../operate/" class="md-tabs__link">
+          
+  
+  
+  Operate
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+  Develop
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../agents/" class="md-tabs__link">
+          
+  
+  
+  Agents
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../releases/" class="md-tabs__link">
+          
+  
+  
+  Releases
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../LANDSCAPE/" class="md-tabs__link">
+          
+  
+  
+  History
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="FactorySemantics MES" class="md-nav__button md-logo" aria-label="FactorySemantics MES" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    FactorySemantics MES
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/factorysemantics/factorysemantics-mes" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    factorysemantics/factorysemantics-mes
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plant
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Plant
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plant/first-line/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial — your first line
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_3" id="__nav_2_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — connect to Kepware
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    How-to — connect to Kepware
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../onboarding/GUIDE-IT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    For IT
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../onboarding/GUIDE-ENGINEERING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    For Engineering
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plant/reading-oee/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — read OEE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plant/reading-a-trend/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — follow a reading back to what caused it
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plant/quality-signals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — when a control chart notices something
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plant/shifts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — shifts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plant/never-invent-production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — never invent production
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operate
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Operate
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operate
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/run-it-on-your-own-box/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — run it on your own box
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/doctor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — one file to paste when something is wrong
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/first-plant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial — beside your existing MES
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/deploy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial — deploy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/redundancy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — one plant on two boxes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/opc-readonly/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — read-only OPC UA commissioning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/opc-disconnections/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — losing sight of a machine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/coverage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — how much of the window did the MES see
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/assistant-coverage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — what the floor assistant can do for you
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/who-names-the-reasons/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — who names the downtime reasons
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/ai/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — the AI screen and what it records
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/quality-severities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — who names the severities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/quality-numbers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — this plant's own quality numbers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/erp-settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — what this plant asks of its ERP link
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/engineering-numbers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — this plant's own engineering numbers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/administration-numbers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — this plant's own administration numbers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/packs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — plant packs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/the-simulated-floor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — what the simulated floor does
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/registry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — plants from a fleet file
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/fleet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — the fleet this installation owns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/modules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — switch a module off
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/plant-from-your-mes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — your plant in it without sending us your data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/shadow-mode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — running beside an existing MES
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/shadow-scorecard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — the shadow scorecard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/erpnext/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — the ERPNext connector
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/uns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — the unified namespace (MQTT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/backup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — backup and restore
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/tls/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — TLS in front of the API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/upgrade/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — upgrading between versions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/releasing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — cutting a release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/confirmation-files/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — the confirmation handoff
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/erp-confirmations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — the ERP confirmation contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/inbound/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — inbound events from other systems
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — settings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — REST API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/first-week/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — the first week
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Develop
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Develop
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Develop
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../your-first-module/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial — your first module
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../erp-connectors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — writing an ERP connector
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — experiments in the lab
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — experiments in the lab
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The plan
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-a-scenario-can-script" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a scenario can script
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What a scenario can script">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-these-two-are-worth-a-measurement-of-their-own" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why these two are worth a measurement of their own
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a-quality-excursion-with-a-process-cause" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A quality excursion with a process cause
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#disconnect-names-no-station-because-it-belongs-to-no-machine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        disconnect names no station, because it belongs to no machine
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-a-run-writes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a run writes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-measurements-and-what-each-cannot-tell-you" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The measurements, and what each cannot tell you
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The measurements, and what each cannot tell you">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#booking-did-the-mes-book-what-the-line-made" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        booking — did the MES book what the line made?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#downtime-were-the-scripted-stops-seen-and-the-planned-ones-kept-out" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        downtime — were the scripted stops seen, and the planned ones kept out?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#oee-does-the-mess-oee-match-the-hour-the-line-actually-had" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        oee — does the MES's OEE match the hour the line actually had?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#latency-how-long-after-the-line-did-the-screen-say-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        latency — how long after the line did the screen say it?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#console-did-the-fleet-console-count-the-plants-the-run-actually-had" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        console — did the fleet console count the plants the run actually had?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connection-what-did-the-mes-say-about-the-minutes-it-could-not-see" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        connection — what did the MES say about the minutes it could not see?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#not-measured-yet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Not measured yet
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-a-runs-numbers-are-withheld" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When a run's numbers are withheld
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-you-said-while-watching-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What you said while watching it
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What you said while watching it">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#from-the-terminal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        From the terminal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where it lands
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-several-runs-together" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading several runs together
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes-and-handing-a-run-to-somebody-else" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes, and handing a run to somebody else
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-starters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The starters
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/STYLE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Style
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/m8-packs-and-fleet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design — M8 packs and fleet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/config-assistance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design — configuration assistance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/config-audit-2026-09-21/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design — the configuration audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/agentic-harness/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design — the agentic harness
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/deep-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design — deep analysis in the AI tab
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/pack-in-pack/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design — a pack inside a pack
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_13" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_13" id="__nav_4_13_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisions
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_13">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Decisions
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0001-apache-2-with-dco/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0001 — Apache-2.0 with the DCO, not copyleft, not a CLA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0002-kernel-and-modules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0002 — A kernel plus modules that register through entry points
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0003-one-mcp-server/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0003 — One product MCP server with per-area tool files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0004-never-invent-production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0004 — Never invent production: the counter discipline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0005-plain-html-no-build-step/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0005 — Plain HTML, CSS and JS for the operator UI, no build step
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0006-sqlite-laptop-postgresql-plant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0006 — SQLite on a laptop, PostgreSQL in a plant, no historian product
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0007-fresh-public-history/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0007 — The public repository starts from a clean first commit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0008-erp-connectors-are-modules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0008 — ERP connectors are modules inside the package
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0009-organisation-not-personal-account/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0009 — The project lives in a GitHub organisation named factorysemantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0010-github-discussions-only/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0010 — GitHub Discussions is the only community venue
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0011-mkdocs-material-generated-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0011 — MkDocs Material, with the developer reference generated from the code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0012-contributor-covenant-3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0012 — Contributor Covenant 3.0 as the code of conduct
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0013-governance-is-one-page/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0013 — Governance is one page: one maintainer, proposals in public, and what happens if he stops
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0014-first-public-version-is-0-1-0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0014 — The first public version is 0.1.0, cut only when a readiness checklist is green
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0015-mcp-registry-name/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0015 — The MCP server is registered as com.factorysemantics/mes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0016-no-trademark-registration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0016 — No trademark registration for the name
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0017-one-public-demo-gated-and-bounded/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0017 — One public demo, hosted by the maintainer, gated by an emailed link and bounded by limits
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0018-public-on-2026-09-08-and-the-pre-tag-check/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0018 — Public on 2026-09-08, and a release check that runs the built wheel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0019-count-everything-the-machine-counted/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0019 — Count everything the machine counted: over-runs are booked, surplus is unassigned production
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0020-what-supported-means-for-an-erp-connector/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0020 — What "supported" means for an ERP connector, and what it is called before that
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0021-one-database-per-plant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0021 — A fleet is many databases, and site scoping is identity, not partitioning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0022-what-a-plant-pack-may-contain/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0022 — A plant pack is data, carries no code and no secrets, and cannot change what a number means
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0023-the-fleet-console-observes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0023 — The console manages only the plants it owns, observes every other plant, and silence is unknown
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0024-a-nonconformance-has-a-life/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0024 — A non-conformance is worked through review and a disposition, and cannot be closed without one
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0025-performance-is-measured-not-capped/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0025 — OEE performance is measured against the rating, and never capped at 1.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0026-counts-that-outrun-the-run-time/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0026 — Counted work that will not fit inside the run time names the disagreement, not a culprit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0027-an-spc-signal-raises-a-hold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0027 — An SPC signal raises a quality hold, and an inspected characteristic with a specification is a check
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0028-which-shift-a-minute-belongs-to/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0028 — A shift is half-open, belongs to the day it started, and covers nothing it does not roster
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0029-an-order-does-not-finish-itself/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0029 — An order does not finish itself at its quantity; the over-run it reports is the true one
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0030-a-lost-connection-is-unknown-time/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0030 — A lost connection is a dimension of its own, and the gap it leaves is unknown time
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0031-a-judgment-is-a-proposal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0031 — A judgment is a proposal: what a probability may touch, and what it may never touch
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0032-a-hosted-judgment-and-the-shadow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0032 — A hosted judgment is an outbound path, classified by the state it sends
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0033-availability-is-a-share-of-what-was-watched/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0033 — Availability is a share of what was watched, and every figure says how much that was
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0034-a-count-is-owed-until-it-is-booked/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0034 — A count the machine made is owed until it is booked, and a reading that fails is retried rather than forgotten
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0035-configuration-is-authored-by-roles-and-selected-by-operators/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0035 — Configuration is authored by the role that owns it, and selected by the operator
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0036 — The chart draws every rule; the plant chooses which raise a hold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0038-an-agent-is-an-account-with-a-role-a-budget-and-a-cadence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0038 — An agent in this plant is an account with a role, a budget, a cadence and a data class, and what it produces is a proposal
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0039-an-analysis-is-recorded-code-that-can-only-read/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0039 — A deep analysis is a recorded computation that can only read, and it counts people before it names one
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0040-the-chart-type-follows-the-sampling-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0040 — The chart type follows the sampling plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0041-a-characteristic-the-plant-counts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0041 — A characteristic the plant counts, and the chart that judges it
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0042-one-plant-many-nodes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0042 — A plant is its database, and a node is a process that asks the database whether it may write
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/TEMPLATE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Template
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Agents
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/connect-mcp-client/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — connect an MCP client
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/write-discipline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — the write discipline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/evals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — evals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ai/ASSIST-EVAL/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — does the assistant do what people ask
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releases
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Releases
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/0.4.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0.4.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/0.3.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0.3.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/0.3.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0.3.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/0.2.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0.2.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    History
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    History
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../LANDSCAPE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Landscape
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../history/private-era/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The private era
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The plan
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-a-scenario-can-script" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a scenario can script
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What a scenario can script">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-these-two-are-worth-a-measurement-of-their-own" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why these two are worth a measurement of their own
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a-quality-excursion-with-a-process-cause" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A quality excursion with a process cause
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#disconnect-names-no-station-because-it-belongs-to-no-machine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        disconnect names no station, because it belongs to no machine
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-a-run-writes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a run writes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-measurements-and-what-each-cannot-tell-you" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The measurements, and what each cannot tell you
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The measurements, and what each cannot tell you">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#booking-did-the-mes-book-what-the-line-made" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        booking — did the MES book what the line made?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#downtime-were-the-scripted-stops-seen-and-the-planned-ones-kept-out" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        downtime — were the scripted stops seen, and the planned ones kept out?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#oee-does-the-mess-oee-match-the-hour-the-line-actually-had" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        oee — does the MES's OEE match the hour the line actually had?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#latency-how-long-after-the-line-did-the-screen-say-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        latency — how long after the line did the screen say it?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#console-did-the-fleet-console-count-the-plants-the-run-actually-had" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        console — did the fleet console count the plants the run actually had?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connection-what-did-the-mes-say-about-the-minutes-it-could-not-see" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        connection — what did the MES say about the minutes it could not see?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#not-measured-yet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Not measured yet
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-a-runs-numbers-are-withheld" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When a run's numbers are withheld
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-you-said-while-watching-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What you said while watching it
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What you said while watching it">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#from-the-terminal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        From the terminal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where it lands
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-several-runs-together" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading several runs together
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes-and-handing-a-run-to-somebody-else" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes, and handing a run to somebody else
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-starters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The starters
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/develop/experiments.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="explanation-experiments-in-the-lab">Explanation — experiments in the lab<a class="headerlink" href="#explanation-experiments-in-the-lab" title="Permanent link">&para;</a></h1>
+<p>An experiment is a <strong>plant</strong>, a <strong>scenario</strong> and a <strong>set of measurements</strong>, run
+as one command, leaving one directory somebody else can read.</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>fsmes<span class="w"> </span>lab<span class="w"> </span>run<span class="w"> </span>labs/experiments/one-line-bad-hour.toml
+</code></pre></div>
+<p>The pieces this joins all existed first: packs describe plants, the generator
+turns a line description into the data a replay obeys, the scorer reads the MES
+through its own HTTP API, and the runner builds an ephemeral plant and tears it
+down again. What was missing was the join — and a result that is still readable
+next week.</p>
+<p>Nothing starts by itself. A person types the command. The plant it builds is
+ephemeral: its own database, its own ports on loopback, gone when the questions
+have been asked, so it never disturbs a plant you already have running.</p>
+<h2 id="the-plan">The plan<a class="headerlink" href="#the-plan" title="Permanent link">&para;</a></h2>
+<p>A plan is TOML, because trying a different plant should be an edit and not a
+patch. Paths are relative to the plan file, so a plan and the packs it names
+travel together.</p>
+<div class="highlight"><pre><span></span><code><span class="n">name</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="s2">"one-line-bad-hour"</span>
+<span class="n">packs</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"../multiplant/bottling"</span><span class="p">]</span>
+
+<span class="n">duration</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3600</span><span class="w">          </span><span class="c1"># line seconds; omitted keeps each line's own</span>
+<span class="n">speed</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="mi">20</span><span class="w">            </span><span class="c1"># 20 replays a scripted hour in three minutes</span>
+<span class="n">seed</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="mi">42</span><span class="w">            </span><span class="c1"># omitted keeps each line's own</span>
+<span class="n">measure</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"booking"</span><span class="p">,</span><span class="w"> </span><span class="s2">"downtime"</span><span class="p">,</span><span class="w"> </span><span class="s2">"oee"</span><span class="p">]</span>
+
+<span class="c1"># Vary a pack without editing it. The copy the run builds from lands in the</span>
+<span class="c1"># results directory; the pack on disk is never touched. `modules` and `words`</span>
+<span class="c1"># only — anything more is a different plant, and belongs in its own pack.</span>
+<span class="k">[overlay.machining.modules]</span>
+<span class="n">serialization</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
+
+<span class="c1"># A plant named here plays this script instead of its pack's own. The</span>
+<span class="c1"># vocabulary is closed — see below. A plan that wants the bottling line's</span>
+<span class="c1"># reference *hour* states it: that pack's own line is an eight-hour shift, so</span>
+<span class="c1"># that the plant it builds does not play the same hour over and over, and a</span>
+<span class="c1"># plan asking for 3600 seconds of a shift is refused rather than cutting a</span>
+<span class="c1"># scripted event in half. `one-line-bad-hour.toml` and</span>
+<span class="c1"># `two-plants-two-zones.toml` therefore carry the hour's script themselves.</span>
+<span class="k">[scenario.machining]</span>
+<span class="n">events</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">type</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"down"</span><span class="p">,</span><span class="w"> </span><span class="n">station</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"Mill"</span><span class="p">,</span><span class="w"> </span><span class="n">start</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">600</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">720</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">]</span>
+
+<span class="c1"># A pack whose plant is seeded by a script rather than by master data — the</span>
+<span class="c1"># scale labs, whose master data is generated rather than written. A pack may</span>
+<span class="c1"># never name a script (decision 0022); a plan is not a pack. A plant with</span>
+<span class="c1"># neither is refused before anything is started.</span>
+<span class="k">[init.megafactory]</span>
+<span class="n">script</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"../megafactory/init.py"</span>
+
+<span class="c1"># The on-screen design panel, on for every lab plant so a note can be left</span>
+<span class="c1"># while you are looking at the thing you want to complain about. Claude is off</span>
+<span class="c1"># unless a plan asks for it: taking a note is work the on-device model does for</span>
+<span class="c1"># nothing, and a run left going while you make coffee should not bill an API.</span>
+<span class="k">[feedback]</span>
+<span class="n">chat</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<span class="n">claude</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
+
+<span class="c1"># The simulated shift supervisor. On everywhere: a plant whose order book is</span>
+<span class="c1"># worked — an order finished when the line has made its quantity, the next one</span>
+<span class="c1"># released — is what a plant looks like. Turn it off for a plan whose subject</span>
+<span class="c1"># is a line running past its order, so the over-run is scripted rather than an</span>
+<span class="c1"># accident of cadence. `labs/experiments/over-run.toml` is the one that does.</span>
+<span class="k">[floor]</span>
+<span class="n">finish_orders</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
+
+<span class="c1"># The simulated production planner, the same way. On wherever the pack asks</span>
+<span class="c1"># for a depth (`planning.keep_planned` in its floor script). Turn it off for a</span>
+<span class="c1"># plan whose subject is a book running out, so the book stays the one the pack</span>
+<span class="c1"># wrote instead of being topped up behind the line. `over-run.toml` turns both</span>
+<span class="c1"># off, and says why in the file.</span>
+<span class="n">plan_orders</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
+</code></pre></div>
+<p><code>duration</code>, <code>seed</code> and <code>speed</code> are the whole of the determinism story: <strong>the
+same seed twice is the same run</strong>, and the report states the seed it used. A
+plan that shortens <code>duration</code> past a scripted event is refused rather than run
+with half a script.</p>
+<h2 id="what-a-scenario-can-script">What a scenario can script<a class="headerlink" href="#what-a-scenario-can-script" title="Permanent link">&para;</a></h2>
+<p>The vocabulary is closed, and a plan that names anything else is refused
+before a directory is made, with the list printed:</p>
+<table>
+<thead>
+<tr>
+<th>Event</th>
+<th>What the line does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>down</code></td>
+<td>the machine has broken: it makes nothing and reports DOWN</td>
+</tr>
+<tr>
+<td><code>changeover</code></td>
+<td>the whole line is changing over: planned, and never downtime</td>
+</tr>
+<tr>
+<td><code>micro_stops</code></td>
+<td>short random stops, pre-rolled from the seed so a run repeats</td>
+</tr>
+<tr>
+<td><code>drift</code></td>
+<td>an analog ramps from its base to <code>to</code> across the window</td>
+</tr>
+<tr>
+<td><code>scrap_burst</code></td>
+<td>the station's scrap rate is <code>scrap_pct</code> for the window</td>
+</tr>
+<tr>
+<td><code>counter_reset</code></td>
+<td>the station's counters go back to zero at <code>at</code></td>
+</tr>
+<tr>
+<td><code>starve</code></td>
+<td>nothing arrives: the machine is willing and has nothing to work on</td>
+</tr>
+<tr>
+<td><code>block</code></td>
+<td>nowhere to put it: the machine is willing and downstream is full</td>
+</tr>
+<tr>
+<td><code>disconnect</code></td>
+<td>the OPC endpoint closes: the line runs on and the MES cannot see it</td>
+</tr>
+</tbody>
+</table>
+<p><code>starve</code> and <code>block</code> script the <strong>cause</strong>, not the symptom, and the rest of
+the line follows on its own: starve the first station and every station after
+it starves in turn as its buffer drains, the way it would on the floor. So the
+run's total starved seconds are mostly knock-on, and the table in the report
+shows the scripted windows separately from the line's own total.</p>
+<h3 id="why-these-two-are-worth-a-measurement-of-their-own">Why these two are worth a measurement of their own<a class="headerlink" href="#why-these-two-are-worth-a-measurement-of-their-own" title="Permanent link">&para;</a></h3>
+<p>A machine with nothing to work on, or nowhere to put what it has made, is
+making nothing and <strong>there is nothing wrong with it</strong>. Booking those minutes as
+downtime invents a breakdown that never happened and reports an availability
+figure that is wrong in the direction nobody checks — it looks <em>worse</em>, so it
+is believed. It is the changeover fault from the other side, and
+<code>labs/experiments/starved-and-blocked.toml</code> is the starter that looks for it.</p>
+<h3 id="a-quality-excursion-with-a-process-cause">A quality excursion with a process cause<a class="headerlink" href="#a-quality-excursion-with-a-process-cause" title="Permanent link">&para;</a></h3>
+<p>The washer runs three degrees hot; scrap climbs, and downstream the filler
+underweights every bottle by nine grams — warm, wet bottles fill short — with
+no alarm of its own. The failed fill-weight checks land on the filler and the
+cause is at the washer, which is the whole difficulty of the thing.</p>
+<p>Since the control chart's rules are judged when a reading is recorded
+(decision <a href="../../decisions/0027-an-spc-signal-raises-a-hold/">0027</a>), a run now
+shows the hold being raised while the line is still running the thing that
+caused it: look for <code>spc signal</code> in the log, with the rule and the NC it
+raised. <code>labs/experiments/scrap-burst.toml</code> is the starter, and it runs at 2× — much
+slower than the others — for a reason it states. What sets how fast readings
+reach the chart is not the floor's cadence but how often the MES stores a new
+value for the tag the floor is reading, and a control chart draws no limits
+until it has twelve of them. At 20× half an hour of line time is nine
+readings and a run in which nothing could fire however wrong the line went.
+The cost is a quarter of an hour of wall clock: the other starters ask what
+the MES counted, and counting is quick; this one asks about a judgement over a
+series.</p>
+<p>The distance worth measuring — from the first underweight bottle to the moment
+the hold exists — is not measured yet: <code>quality</code> is a planned measurement, not
+a built one. The starter exists first so the measurement has a run to be built
+against.</p>
+<h3 id="disconnect-names-no-station-because-it-belongs-to-no-machine"><code>disconnect</code> names no station, because it belongs to no machine<a class="headerlink" href="#disconnect-names-no-station-because-it-belongs-to-no-machine" title="Permanent link">&para;</a></h3>
+<p>A <code>disconnect</code> is a fault in the <strong>observer</strong>, not in the plant. The replay
+stops its OPC server outright for the window and starts it again afterwards;
+the machines keep running, the counters keep counting, and the generated
+tables are byte-for-byte what they would have been. What changes is that
+nothing is there to read them, which is exactly what a switch losing power
+costs a plant.</p>
+<p>So it takes no <code>station</code> — asking which machine the network outage happened to
+has no answer — and it can be scripted over a <code>down</code> on purpose, which is the
+sharpest case there is: a real breakdown the MES genuinely could not see. A
+fault inside a scripted outage is scored <strong>unknown</strong>, never missed;
+<code>labs/experiments/lost-connection.toml</code> is the starter that uses it.</p>
+<h2 id="what-a-run-writes">What a run writes<a class="headerlink" href="#what-a-run-writes" title="Permanent link">&para;</a></h2>
+<p>One directory per run, under <code>lab-results/</code> unless <code>--results</code> says otherwise:</p>
+<table>
+<thead>
+<tr>
+<th>In the directory</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>plan.toml</code></td>
+<td>the plan as it was read</td>
+</tr>
+<tr>
+<td><code>line/&lt;plant&gt;.json</code></td>
+<td>the line description each plant actually played</td>
+</tr>
+<tr>
+<td><code>replay/&lt;plant&gt;/</code></td>
+<td>the data generated from it — the replay's own input</td>
+</tr>
+<tr>
+<td><code>packs/&lt;plant&gt;/</code></td>
+<td>the pack each plant was built from, overlay applied</td>
+</tr>
+<tr>
+<td><code>recorded/&lt;plant&gt;.json</code></td>
+<td>what the MES answered, view by view</td>
+</tr>
+<tr>
+<td><code>recorded/&lt;plant&gt;-scorecard.json</code></td>
+<td>the scorecard <code>fsmes score</code> writes</td>
+</tr>
+<tr>
+<td><code>truth.json</code></td>
+<td>what the line actually did, per station and per order</td>
+</tr>
+<tr>
+<td><code>scores.json</code></td>
+<td>every measurement, with the truth beside each number</td>
+</tr>
+<tr>
+<td><code>report.html</code></td>
+<td>one self-contained page — no network, no build step</td>
+</tr>
+<tr>
+<td><code>notes.md</code></td>
+<td>what a person saw that no number caught</td>
+</tr>
+<tr>
+<td><code>feedback/conversations.jsonl</code></td>
+<td>the run's copy of what was said at its screens</td>
+</tr>
+<tr>
+<td><code>watched/&lt;plant&gt;.json</code></td>
+<td>what each screen was showing, look by look, while the hour played</td>
+</tr>
+<tr>
+<td><code>fleet/phases.json</code></td>
+<td>what <code>fsmes fleet console</code> said at each phase, and the fleet it watched</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The directory is the unit.</strong> Hand somebody that folder and they have the
+plan, the script, the data, the answers, the scores and the page, with nothing
+to install. <code>fsmes lab list</code> shows the runs you have; <code>fsmes lab open &lt;run&gt;</code>
+re-renders the report, which is how notes written after the run reach the page.</p>
+<h2 id="the-measurements-and-what-each-cannot-tell-you">The measurements, and what each cannot tell you<a class="headerlink" href="#the-measurements-and-what-each-cannot-tell-you" title="Permanent link">&para;</a></h2>
+<h3 id="booking-did-the-mes-book-what-the-line-made"><code>booking</code> — did the MES book what the line made?<a class="headerlink" href="#booking-did-the-mes-book-what-the-line-made" title="Permanent link">&para;</a></h3>
+<p>Per station and in total, because a plant fixes one machine at a time and
+confirms an order against the total.</p>
+<p><em>What it cannot tell you.</em> A replay <strong>loops</strong>: when the file runs out the
+counters wrap to zero and the hour starts again. A run is always left playing a
+little past the end, because the agent needs time to book what it has already
+read — so the MES is right to book whatever the line made in that overlap. The
+measurement states the overlap in line seconds and prints an <strong>expected range</strong>
+rather than a single number.</p>
+<p>The consequence is worth knowing before you plan a run: <strong>the band grows with
+speed.</strong> At 20× an eight-second drain is 160 line seconds of production; at
+120× it is nearly a thousand. So</p>
+<ul>
+<li><strong>under-booking is sharp at any speed</strong> — the overlap can only ever add, so a
+  single unit fewer than the truth is a real finding;</li>
+<li><strong>over-booking is blurred by the band</strong> — a run at 120× cannot see a plant
+  booking 16 units against an order for 15.</li>
+</ul>
+<p>For that class of fault read the <strong>over-run the MES reports itself</strong>, which is
+in the orders table and owes nothing to the band. And run slowly when the
+question is booking.</p>
+<p><em>Orders, and how far past them the line ran.</em> The line publishes the order it
+is running, and the tag map's <code>line</code> block says where and how that value names
+an order in this MES (<a href="../../operate/opc-readonly/#if-the-line-publishes-the-order-it-is-running">the tag map's side of it</a>).
+With that read rather than guessed, each order the line published gets a row:
+what the line made under it, what the MES booked against it, what the order was
+for, and how far past it each side says the line ran.</p>
+<p>Three things about that row are worth knowing before you read one:</p>
+<ul>
+<li><strong>The ordered quantity is the MES's own.</strong> An order is for what the plant was
+  told it was for; a second copy of that number in the line description would
+  be a second place for it to be wrong, and a disagreement between the two
+  would read as a fault in a plant that had none. What is compared is
+  <em>production</em>.</li>
+<li><strong>The join is read, not asserted.</strong> It comes out of the plant's own wiring
+  file. A pack whose map has no <code>line</code> block leaves every order <em>unknown</em> and
+  the report says which block would end that, rather than quietly matching on
+  a resemblance between two numbers.</li>
+<li><strong>The truth side is a range and the MES's is not.</strong> The replay loops, so
+  units made in the overlap are production the MES was right to book. The
+  over-run the MES reports about itself owes the band nothing — which is what
+  makes it the sharp reading for the sixteen-against-fifteen class of fault.</li>
+</ul>
+<p>An order the line published that the MES never held is <em>unknown</em> with the
+reason, not a difference. An order the MES holds that the line never published
+is listed and is not one either: a plant holds orders that are not running.</p>
+<h3 id="downtime-were-the-scripted-stops-seen-and-the-planned-ones-kept-out"><code>downtime</code> — were the scripted stops seen, and the planned ones kept out?<a class="headerlink" href="#downtime-were-the-scripted-stops-seen-and-the-planned-ones-kept-out" title="Permanent link">&para;</a></h3>
+<p>The first two questions are the scorer's, read off the run's own scorecard
+rather than asked a second time: was a scripted breakdown detected, and how
+late, and was a changeover misclassified as downtime. Calling a planned stop
+downtime destroys every availability figure a plant reports, silently, which is
+why it is the first row of the section.</p>
+<p>Added beside them: how many seconds of downtime the MES reports against how
+many the line actually spent down. The MES records <strong>wall</strong> seconds and the
+script is written in <strong>line</strong> seconds, so the MES's figure is multiplied by the
+replay speed to compare. Both are labelled.</p>
+<p><em>Lags.</em> The shortest event a run could notice at all is one sampling interval
+of line time — thirty line seconds at 60×. A detection lag smaller than that is
+quantisation, so it is printed as <em>within resolution</em>, with the resolution
+beside it, rather than as a signed number somebody could put in a trend. A
+sweep once reported a breakdown detected one second <em>before</em> it was scripted.</p>
+<p><em>Starved and blocked.</em> Every scripted <code>starve</code> and <code>block</code> window is checked
+against what the MES recorded <strong>for that machine</strong>: unlike a changeover, which
+is the whole line stopping together, having nothing to work on is a fact about
+one station, so a neighbour that really did break in the same minutes is not
+counted against it. A window the MES was not watching scores <em>unknown</em>, never a
+pass. Beside the table, the line's own total seconds starved and blocked —
+most of which is the knock-on nobody scripted.</p>
+<p><em>What it cannot tell you.</em> Nothing in a run labels a stop — no downtime labels
+arrive by file, no operator names one — so the unlabelled share the MES reports
+has no truth beside it and says so. An event too brief to survive the sampling
+interval at the speed you chose is scored <em>unknown</em>, not <em>missed</em>: that would
+blame the MES for a limit of the harness. The report says the shortest event
+this run could have resolved.</p>
+<h3 id="oee-does-the-mess-oee-match-the-hour-the-line-actually-had"><code>oee</code> — does the MES's OEE match the hour the line actually had?<a class="headerlink" href="#oee-does-the-mess-oee-match-the-hour-the-line-actually-had" title="Permanent link">&para;</a></h3>
+<p>Availability, performance and quality per station, against the script. Three
+things stop this being a subtraction, and all three are stated rather than
+quietly corrected for:</p>
+<ul>
+<li><strong>The windows differ.</strong> The MES measures over the window it was watching; the
+  script is exactly <code>duration</code> long. An availability difference smaller than
+  that mismatch is not evidence, and the page does not mark it as one.</li>
+<li>
+<p><strong>The clocks differ, and only performance notices.</strong> Availability and quality
+  are each a ratio of two things measured the same way, so the replay speed
+  cancels out of both. Performance does not cancel: its numerator is priced in
+  the line's own seconds — the rated cycle somebody wrote down — and its
+  denominator is run time the MES measured on the wall clock. Replay an hour at
+  20x and the MES's run time is a twentieth of the line's.</p>
+<p>Since 2026-09-18 <strong>the MES settles this itself</strong> when it is told the speed:
+<code>fsmes fleet start --speed</code> puts <code>MES_SIM_SPEED</code> in the environment of
+every process of that plant, the API included, and the API restates the run
+time on the line's clock before dividing — and says so, on <code>/health</code>, in
+<code>/metrics</code> and in a bar across every screen. The report's <strong>P MES</strong> column
+is the same arithmetic done here, from the MES's own three numbers, which
+is what makes it a check on the MES rather than a repetition of it. Each
+station also carries its own band — both sides divide by run time, and the
+MES drains past the end of the script — and a difference inside that band
+is not called a finding.
+* <strong>The rated cycle may differ.</strong> Performance prices units against what the
+  machine could have made, and the MES uses its master data's
+  <code>ideal_cycle_seconds</code> while the script uses the line's <code>rate_per_min</code>. Where
+  the two disagree the row says <em>not like for like</em> instead of reporting the
+  difference as a fault.</p>
+</li>
+</ul>
+<p>Neither side caps performance, and neither invents one. Where the MES's counted
+work will not fit inside its run time it reports no performance figure at all,
+and the ratio it would have been sits on <code>performance_ratio</code> — which is what
+this report reads, because above 1.0 there is no reported figure to read. See
+<a href="../../plant/reading-oee/">reading OEE</a>.</p>
+<p><em>Every number says which clock it is on.</em> In <code>scores.json</code> the MES's block has
+no plain <code>performance</code>, <code>oee</code>, <code>runtime_seconds</code> or <code>downtime_seconds</code> at all.
+It has <code>performance_as_reported</code>, <code>performance_ratio_as_reported</code> and
+<code>performance_line_clock</code>,
+<code>runtime_wall_seconds</code> and <code>runtime_line_seconds</code>, and so on, and the one the
+difference was computed from is the line-clock one. Availability and quality
+keep their plain names, because they are the two the replay speed cancels out
+of. A file that kept the wall-clock figure under the plain name while the
+comparison beside it used the line-clock one was one object answering two ways,
+and nobody reading it later could tell which number the difference came from.</p>
+<p><em>When the MES's own two numbers do not agree.</em> Separately from any comparison
+with the script, a station can report more units than its own recorded run time
+holds at the cycle it rates the machine at. Where the script prices the machine
+the same way and fitted its units inside its running seconds, neither the
+replay speed nor the master data explains that, and the report names the
+station under <strong>Counts and run time that do not agree</strong>. It is the one row on
+the page that survives any argument about the truth — and it still does not say
+which of the two numbers is the wrong one.</p>
+<h3 id="latency-how-long-after-the-line-did-the-screen-say-it"><code>latency</code> — how long after the line did the screen say it?<a class="headerlink" href="#latency-how-long-after-the-line-did-the-screen-say-it" title="Permanent link">&para;</a></h3>
+<p>Every other measurement asks the plant one question at the end. This one is
+built out of what the run saw <strong>while the hour played</strong>, because by the time a
+run is over a stop that took four minutes to appear and one that appeared at
+once have left the same trace.</p>
+<p>So a run that asks for <code>latency</code> <strong>watches</strong>. Twice a second, or however often
+the plan says, it asks two screens what they are showing:</p>
+<table>
+<thead>
+<tr>
+<th>Screen</th>
+<th>What it answers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/equipment/states</code></td>
+<td>the operations screen's own feed: what each machine is doing now</td>
+</tr>
+<tr>
+<td><code>/line/events</code></td>
+<td>the line view's feed: station status, and the units booked since the last look</td>
+</tr>
+<tr>
+<td><code>/health</code></td>
+<td>that the plant is alive — and <strong>nothing about any machine</strong>, so how long an event took to reach it is not a question it can answer. It is asked, and the report says so rather than leaving the route out</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><span class="n">measure</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"downtime"</span><span class="p">,</span><span class="w"> </span><span class="s2">"latency"</span><span class="p">]</span>
+
+<span class="c1"># How often the run looks, in WALL seconds. At 20x, half a second is ten</span>
+<span class="c1"># seconds of line time — and that is the resolution of every lag reported.</span>
+<span class="k">[watch]</span>
+<span class="n">every</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.5</span>
+</code></pre></div>
+<p><em>The resolution is the polling interval.</em> A screen is only ever known to have
+shown something <strong>by</strong> the look that saw it, so a lag smaller than one interval
+of line time is quantisation and prints as <em>within resolution</em> — the same rule
+as a detection lag, and the same reason. A plan whose interval is so coarse
+that every lag would land inside it is refused with the arithmetic, rather than
+running for six minutes to produce a page of shrugs.</p>
+<p><em>Not seen is not the same as late.</em> An event no look caught is <em>unknown</em> with
+which of the reasons it was: nobody was looking yet, the screen did not answer,
+the run ended. A zero or a maximum standing in for silence is exactly what this
+lab exists to stop being reported.</p>
+<p><em>Each screen is asked separately.</em> Two screens showing one machine two
+different states at one instant is a finding nothing else here would catch, so
+they are never merged into one answer.</p>
+<p><em>Watching must not change what it is measuring.</em> These are HTTP requests
+against the same API the run is scored through, on a machine that is also
+replaying a line and running an agent. The default interval is a wall-clock
+second, not the agent's publishing interval — which can be fifty milliseconds —
+and the routes are the cheap ones. A run whose harness was perturbed into
+falling behind has its verdict withheld anyway, which is the safety net; the
+interval is what keeps it from being needed.</p>
+<p>Beside the events, <strong>how far behind the line's own count the line view ran</strong>:
+the machine the line ends at, against the line's own good count, look by look.
+Counted in <em>units</em>, because turning a backlog into seconds needs a rate and a
+line that is starved, blocked or down has not got one — the seconds would be
+invented at exactly the moments worth measuring.</p>
+<p>The raw looks are kept in <code>watched/&lt;plant&gt;.json</code>, whatever this version of the
+measurement made of them. A version that asked the wrong question is worth
+re-running against an hour somebody already paid for.</p>
+<p><em>What it cannot tell you.</em> Nothing configures a broker in these runs, so how
+long an event took to reach the unified namespace is <em>unknown</em> and says so.</p>
+<h3 id="console-did-the-fleet-console-count-the-plants-the-run-actually-had"><code>console</code> — did the fleet console count the plants the run actually had?<a class="headerlink" href="#console-did-the-fleet-console-count-the-plants-the-run-actually-had" title="Permanent link">&para;</a></h3>
+<p>The console's whole promise is
+<a href="../../decisions/0023-the-fleet-console-observes/">decision 0023</a>'s: a plant that
+did not answer is <strong>unknown</strong>, never healthy and never down. Nothing tested that
+against plants that really start and really stop, because a console needs
+several plants and a lab run has always had exactly one at a time.</p>
+<p>Which turns out to be the fixture. The lab runs its plants <strong>one after
+another</strong> — two replaying at speed on one laptop compete for the same cores, and
+a run whose harness fell behind has its numbers withheld — so at any moment
+during a several-plant experiment exactly one plant is answering and the rest
+are not. The console's hardest case, arriving for free, on real ports and over
+real HTTP.</p>
+<p>A run that asks for <code>console</code> starts one, tells it each plant's address the
+moment that plant comes up, and asks <code>/fleet.json</code> at each phase:</p>
+<div class="highlight"><pre><span></span><code>before any plant had started        0 plants
+while bottling was running          1 plant,  1 answered, 0 unknown
+after bottling had been torn down   1 plant,  0 answered, 1 unknown
+while machining was running         2 plants, 1 answered, 1 unknown
+after every plant had stopped       2 plants, 0 answered, 2 unknown
+</code></pre></div>
+<p>Three things about how it is run:</p>
+<ul>
+<li><strong>A real console on a real port</strong>, started as <code>fsmes fleet console</code> and asked
+  over HTTP — not the same code called in process. What a person opens is a page
+  served by a route, and a measurement that skipped the route would not notice
+  the day the route broke.</li>
+<li><strong>Its own fleet, and only this run's plants in it.</strong> The console's root is a
+  directory under the results directory with its own empty fleet file, so an
+  experiment's console can never pick up the plants somebody already has running
+  on this machine — which would make the totals meaningless and, worse,
+  plausible.</li>
+<li><strong>It is told, never discovered.</strong> An ephemeral plant claims its ports when it
+  starts, so each is written into the console's own ownership file as <em>observed</em>
+  at the moment the run first looks at it. A plant the run has not reached yet
+  is not in the file, and the measurement counts it as such: not yet built and
+  not answering are different facts.</li>
+</ul>
+<p>Two numbers come out. <strong>How many phases the console's count of answering plants
+matched the truth</strong>, and <strong>how many stopped plants it read as anything other
+than unknown</strong> — which is a defect at any value above zero, and the same fault
+as calling a changeover downtime, at fleet scale.</p>
+<p><em>What it cannot tell you.</em> Whether a console would still be right about a plant
+that is up but wedged, or about twelve plants rather than two. The phases are
+the ones this run happened to live through.</p>
+<h3 id="connection-what-did-the-mes-say-about-the-minutes-it-could-not-see"><code>connection</code> — what did the MES say about the minutes it could not see?<a class="headerlink" href="#connection-what-did-the-mes-say-about-the-minutes-it-could-not-see" title="Permanent link">&para;</a></h3>
+<p>The measurement this exists for, and the only one that <strong>has</strong> to be read from
+during the run. By the time the hour is over the plant has reconnected and
+every screen says so; the question is what they said while the link was down.</p>
+<p>It is <a href="../../decisions/0030-a-lost-connection-is-unknown-time/">decision 0030</a>
+put to a plant that is really losing a real socket. Per scripted outage:</p>
+<ul>
+<li><strong>Did the machines read as disconnected?</strong> Not down, not idle, and not the
+  state they were in when the link died.</li>
+<li><strong>Did any single look disagree with itself?</strong> The plant saying it cannot see
+  a machine, while a screen in the same instant says what that machine is
+  doing. Per look and not across the window — the looks before the agent's
+  health check came round are legitimately still showing the last state it
+  heard, and counting those would report the detection lag as a lie.</li>
+<li><strong>Did <code>/health</code> say how many machines were dark?</strong> The number a monitor
+  reads.</li>
+<li><strong>Did the window come back as unknown time?</strong> Read off the OEE answer at the
+  end, which is where a plant's numbers actually come from.</li>
+</ul>
+<p>Two resolutions bound it, and both are printed rather than assumed. The
+<strong>polling interval</strong> is the same one <code>latency</code> states. The <strong>agent's own
+health check</strong> is the new one: it asks its server whether the session is alive
+every <code>opc_health_periods</code> publish intervals, so an outage shorter than a
+couple of those, restated on the line's clock, could not have been seen by
+anything. Such a window is reported as <em>unknown</em> with the arithmetic beside
+it, never as missed.</p>
+<p><em>What it cannot tell you.</em> Whether a real OPC server fails the way a stopped
+one does. A socket that closes is one failure mode; a server that accepts
+connections and answers nothing, a certificate that expires mid-session, a
+switch that drops half the packets are others, and none of them is scripted
+here yet.</p>
+<p><em>The direction of the difference matters.</em> The MES almost always records
+<strong>more</strong> unknown time than was scripted, because it takes up to one health
+check to notice the link has gone and up to one retry to find it back. That
+overhang is honest — it is the MES saying it does not know, when it does not
+know. <strong>Less</strong> unknown time than was scripted is the fault: the MES
+accounting for minutes it could not see. The report names which of the two it
+found rather than printing a difference the reader has to interpret.</p>
+<h3 id="not-measured-yet">Not measured yet<a class="headerlink" href="#not-measured-yet" title="Permanent link">&para;</a></h3>
+<p><code>quality</code> and <code>agent-eval</code> are named in the design and are not built. A plan
+that asks for one is <strong>refused by name</strong>: silently dropping a measurement is how
+a report comes to say less than its plan asked for without anybody noticing.</p>
+<h2 id="when-a-runs-numbers-are-withheld">When a run's numbers are withheld<a class="headerlink" href="#when-a-runs-numbers-are-withheld" title="Permanent link">&para;</a></h2>
+<p>If the replay could not keep the speed it was asked for, or the agent booked
+readings long after they arrived, the comparison is about the harness and not
+about the MES. The runner already withholds the scorecard's headline numbers in
+that case; the lab withholds every measurement for the same reason and prints
+it at the top of the plant's section. The per-event detail is still worth
+reading. The numbers are not worth trending.</p>
+<p>The fix is a slower replay. The report prints the speed the replay actually
+sustained, so the next run can ask for one it can keep.</p>
+<h2 id="what-you-said-while-watching-it">What you said while watching it<a class="headerlink" href="#what-you-said-while-watching-it" title="Permanent link">&para;</a></h2>
+<p>Reviewing a product means noticing something on a screen. A note typed into a
+terminal an hour later is a memory; a note typed into the screen while the line
+is stopped is evidence. So the design panel is <strong>on for every lab plant</strong>, and
+the run ties what you say to itself.</p>
+<p>Four tags make a remark into evidence:</p>
+<table>
+<thead>
+<tr>
+<th>Tag</th>
+<th>Where it comes from</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>lab_run</code></td>
+<td>the plant's own environment, set by <code>fsmes lab run</code></td>
+</tr>
+<tr>
+<td><code>lab_plant</code></td>
+<td>the same</td>
+</tr>
+<tr>
+<td><code>screen</code></td>
+<td>the panel, which knows which screen you are on</td>
+</tr>
+<tr>
+<td>the moment</td>
+<td>the run, which knows its own <code>t0</code> and the script it played</td>
+</tr>
+</tbody>
+</table>
+<p>The run id is deliberately <strong>not</strong> taken from the browser. A run id that
+arrived in a request body would let any page claim any run, and the whole value
+of a tagged note is that the tag is not a guess. A body that disagrees with the
+plant's environment is filed against no run rather than against the one it
+claims.</p>
+<p>The moment is resolved by the run, for the same reason: a plant does not know
+when the replay's first tick was — that instant is decided by the runner, which
+waits for the log line rather than guessing it. So every note carries the
+<strong>line second</strong> it was made at and the scripted events live at that second:</p>
+<blockquote>
+<p>— SCOTT · <code>2026-09-14-one-line-bad-hour</code> · bottling · line second 3,100,
+during down at LD (3,000 to 3,180 s)</p>
+</blockquote>
+<p>A note made before the first tick says so rather than being rounded to second
+zero, and one made after the script ran out says that: a remark about a plant
+that had stopped is a different remark.</p>
+<h3 id="from-the-terminal">From the terminal<a class="headerlink" href="#from-the-terminal" title="Permanent link">&para;</a></h3>
+<p>For a run watched without a browser:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>fsmes<span class="w"> </span>lab<span class="w"> </span>note<span class="w"> </span><span class="m">2026</span>-09-14-one-line-bad-hour<span class="w"> </span><span class="se">\</span>
+<span class="w">      </span><span class="s2">"the orders list does not say how many there are"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--screen<span class="w"> </span>/dashboard/orders<span class="w"> </span>--plant<span class="w"> </span>bottling
+</code></pre></div>
+<p>It goes into the same store with the same tags. A note made while the run is
+going is picked up when the run exports its feedback at the end; one made
+afterwards is picked up by <code>fsmes lab open</code>, which re-exports before it
+re-renders.</p>
+<h3 id="where-it-lands">Where it lands<a class="headerlink" href="#where-it-lands" title="Permanent link">&para;</a></h3>
+<p>At the end of the run the conversations tagged to it are <strong>copied</strong> into
+<code>feedback/conversations.jsonl</code> and rendered in <code>report.html</code> beside the section
+for the screen they name — a note about the work orders screen sits under the
+booking table, not in an appendix. Notes about a screen with no measurement
+behind it yet are still printed, in the plant's own block.</p>
+<p>The store itself (<code>~/.local/share/fsmes/design.db</code>, or wherever
+<code>MES_DESIGN_STORE</code> points) is never moved, emptied or written into a plant's
+database. It is one person's notes going back weeks; a run takes a copy of the
+part that belongs to it.</p>
+<p>Everything is printed <strong>verbatim</strong>, with who said it and when. Nothing here
+summarises or scores: a remark that turns out to be wrong is still what
+somebody said while they were looking at the screen.</p>
+<h2 id="reading-several-runs-together">Reading several runs together<a class="headerlink" href="#reading-several-runs-together" title="Permanent link">&para;</a></h2>
+<p>One run is an instrument reading. A finding is a thing that happened twice.</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>fsmes<span class="w"> </span>lab<span class="w"> </span>review<span class="w"> </span>--out<span class="w"> </span>findings.md
+<span class="gp">$ </span>fsmes<span class="w"> </span>lab<span class="w"> </span>review<span class="w"> </span><span class="m">2026</span>-09-13-one-line-bad-hour<span class="w"> </span><span class="m">2026</span>-09-14-one-line-bad-hour<span class="w"> </span>--out<span class="w"> </span>findings.md
+</code></pre></div>
+<p>It clusters three things across the runs you name — every note left at a
+screen, every row where the MES and the script differed, and every question a
+run could not answer — by the screen and the measurement they belong to. Each
+cluster names its runs, its plants, its stations and its numbers, and quotes
+the notes verbatim.</p>
+<p>Three rules:</p>
+<ul>
+<li><strong>It never says which side is right.</strong> A run states the truth the generator
+  obeyed and the answer the MES gave; putting several of those beside each
+  other adds no authority to either. A test forbids the words.</li>
+<li><strong>Every line is cited.</strong> A roll-up nobody can trace back is a rumour.</li>
+<li><strong>It works with no model at all.</strong> Clustering is by screen and measurement,
+  which are facts in the files, so CI runs it and so can a machine with no
+  Ollama. When the local model is there it is asked for one thing: a short
+  heading for a cluster somebody has to skim. <code>--no-model</code> is the plain
+  version; a heading that comes back as a verdict is dropped for the plain one.</li>
+</ul>
+<h2 id="notes-and-handing-a-run-to-somebody-else">Notes, and handing a run to somebody else<a class="headerlink" href="#notes-and-handing-a-run-to-somebody-else" title="Permanent link">&para;</a></h2>
+<p><code>notes.md</code> is written from a template with three headings — <em>what I saw on the
+screens</em>, <em>what was wrong</em>, <em>what I want next</em> — and rendered at the end of the
+report, so a person's observations travel with the numbers. Write it, then:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>fsmes<span class="w"> </span>lab<span class="w"> </span>open<span class="w"> </span><span class="m">2026</span>-09-14-one-line-bad-hour
+</code></pre></div>
+<p>which re-renders the page from <code>scores.json</code> and the notes. Nothing is
+recomputed; the numbers are the ones the run measured.</p>
+<p>To hand a run over, copy the directory. That is the whole procedure.</p>
+<h2 id="the-starters">The starters<a class="headerlink" href="#the-starters" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Plan</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>labs/experiments/one-line-bad-hour.toml</code></td>
+<td>the six-station bottling line playing the six classic faults in an hour at 20×</td>
+</tr>
+<tr>
+<td><code>labs/experiments/two-plants-two-zones.toml</code></td>
+<td>Kansas City and Northgate, different products, clocks, modules and words, one after another at 30× — and what a fleet console made of the pair</td>
+</tr>
+<tr>
+<td><code>labs/experiments/starved-and-blocked.toml</code></td>
+<td>twenty minutes in which nothing breaks and nothing is made: the empties run out, then the palletiser stops taking cases — and how long each took to reach a screen</td>
+</tr>
+<tr>
+<td><code>labs/experiments/scrap-burst.toml</code></td>
+<td>half an hour at 2× in which the washer runs hot, the filler underweights, and the control chart raises the hold</td>
+</tr>
+</tbody>
+</table>
+<p>Both run in CI on every pull request, which is what stops the instrument
+rotting between the times anybody uses it. CI also proves the feedback loop
+with no model anywhere: it leaves a note against the first run, checks that the
+note appears in that run's report beside the booking table it is about, and
+rolls both runs up into a <code>findings.md</code> that cites each of them and quotes the
+note.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../erp-connectors/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Reference — writing an ERP connector">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Reference — writing an ERP connector
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../../design/STYLE/" class="md-footer__link md-footer__link--next" aria-label="Next: Style">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Style
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Apache-2.0. Every number on this site comes from a simulated plant unless it says otherwise.
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/factorysemantics/factorysemantics-mes" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://factorysemantics.com" target="_blank" rel="noopener" title="factorysemantics.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M351.9 280H161c2.9 64.5 17.2 123.9 37.5 167.4 11.4 24.5 23.7 41.8 35.1 52.4 11.2 10.5 18.9 12.2 22.9 12.2s11.7-1.7 22.9-12.2c11.4-10.6 23.7-28 35.1-52.4 20.3-43.5 34.6-102.9 37.5-167.4zm-191-48h190.9c-2.8-64.5-17.1-123.9-37.4-167.4-11.4-24.4-23.7-41.8-35.1-52.4C268.1 1.7 260.4 0 256.4 0s-11.7 1.7-22.9 12.2c-11.4 10.6-23.7 28-35.1 52.4-20.3 43.5-34.6 102.9-37.5 167.4m-48 0c3.5-85.6 25.6-165.1 57.9-217.3C78.7 47.3 10.9 131.2 1.5 232zM1.5 280c9.4 100.8 77.2 184.7 169.3 217.3-32.3-52.2-54.4-131.7-57.9-217.3zm398.4 0c-3.5 85.6-25.6 165.1-57.9 217.3 92.1-32.7 159.9-116.5 169.3-217.3zm111.4-48C501.9 131.2 434.1 47.3 342 14.7c32.3 52.2 54.4 131.7 57.9 217.3z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.footer", "content.tabs.link", "content.code.copy", "content.action.edit", "search.suggest", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "kind": "operation_confirmation",
+  "message_key": "WO-2026-0042:op10",
+  "order": "WO-2026-0042",
+  "erp_reference": "4400042",
+  "material": "FG-COLA",
+  "seq": 10,
+  "operation": "Mix",
+  "equipment": "MIX01",
+  "work_center": "LINE1",
+  "cost_center": "CC-PKG-1",
+  "input_qty": 15.0,
+  "good_qty": 16.0,
+  "scrap_qty": 0.0,
+  "wip_qty": -1.0,
+  "setup_seconds": 900.0,
+  "machine_seconds": 480.0,
+  "labour_seconds": 24.0,
+  "started_at": "2026-03-04T07:30:00",
+  "completed_at": "2026-03-04T07:38:00",
+  "components": []
+}

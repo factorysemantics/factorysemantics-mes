@@ -1,0 +1,5248 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="An open-source, modular, agent-native Manufacturing Execution System.">
+      
+      
+      
+        <link rel="canonical" href="https://docs.factorysemantics.com/0.4/operate/plant-from-your-mes/">
+      
+      
+        <link rel="prev" href="../modules/">
+      
+      
+        <link rel="next" href="../shadow-mode/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-ProperDocs 1.6.7, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>How-to — your plant in it without sending us your data - FactorySemantics MES</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="deep-orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#your-plant-in-factorysemantics-without-sending-anyone-your-data" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="FactorySemantics MES" class="md-header__button md-logo" aria-label="FactorySemantics MES" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            FactorySemantics MES
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              How-to — your plant in it without sending us your data
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="deep-orange"  aria-label="Dark"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="blue-grey" data-md-color-accent="deep-orange"  aria-label="Light"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/factorysemantics/factorysemantics-mes" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    factorysemantics/factorysemantics-mes
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../plant/" class="md-tabs__link">
+          
+  
+  
+  Plant
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+  Operate
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../develop/" class="md-tabs__link">
+          
+  
+  
+  Develop
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../agents/" class="md-tabs__link">
+          
+  
+  
+  Agents
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../releases/" class="md-tabs__link">
+          
+  
+  
+  Releases
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../LANDSCAPE/" class="md-tabs__link">
+          
+  
+  
+  History
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="FactorySemantics MES" class="md-nav__button md-logo" aria-label="FactorySemantics MES" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    FactorySemantics MES
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/factorysemantics/factorysemantics-mes" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    factorysemantics/factorysemantics-mes
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plant
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Plant
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plant/first-line/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial — your first line
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_3" id="__nav_2_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — connect to Kepware
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    How-to — connect to Kepware
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../onboarding/GUIDE-IT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    For IT
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../onboarding/GUIDE-ENGINEERING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    For Engineering
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plant/reading-oee/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — read OEE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plant/reading-a-trend/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — follow a reading back to what caused it
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plant/quality-signals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — when a control chart notices something
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plant/shifts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — shifts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plant/never-invent-production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — never invent production
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operate
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Operate
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operate
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../run-it-on-your-own-box/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — run it on your own box
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../doctor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — one file to paste when something is wrong
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../first-plant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial — beside your existing MES
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deploy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial — deploy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../redundancy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — one plant on two boxes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../opc-readonly/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — read-only OPC UA commissioning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../opc-disconnections/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — losing sight of a machine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coverage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — how much of the window did the MES see
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../assistant-coverage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — what the floor assistant can do for you
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../who-names-the-reasons/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — who names the downtime reasons
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ai/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — the AI screen and what it records
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quality-severities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — who names the severities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quality-numbers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — this plant's own quality numbers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../erp-settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — what this plant asks of its ERP link
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../engineering-numbers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — this plant's own engineering numbers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../administration-numbers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — this plant's own administration numbers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../packs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — plant packs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../the-simulated-floor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — what the simulated floor does
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../registry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — plants from a fleet file
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fleet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — the fleet this installation owns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — switch a module off
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — your plant in it without sending us your data
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — your plant in it without sending us your data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-leaves-the-building" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What leaves the building
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What leaves the building">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-does-not-leave" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What does not leave
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#three-things-that-make-that-checkable-rather-than-a-promise" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Three things that make that checkable rather than a promise
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-whole-path-end-to-end" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The whole path, end to end
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The whole path, end to end">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-install-once-on-the-pc-you-will-watch-the-plant-from" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Install, once, on the PC you will watch the plant from
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-write-the-assistant-folder-out-of-the-installation-offline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Write the assistant folder out of the installation — offline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-on-the-mes-box-three-commands-by-hand" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. On the MES box: three commands, by hand
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-one-command-and-the-plant-is-on-screen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. One command, and the plant is on screen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#read-the-pack-before-you-start-anything" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Read the pack before you start anything
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-the-shape-carries-that-the-plant-uses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the shape carries that the plant uses
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-3-in-more-detail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3 in more detail
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 3 in more detail">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#on-sql-server-where-there-is-no-driver" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        On SQL Server, where there is no driver
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#before-you-point-step-5-at-a-production-box" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Before you point step 5 at a production box
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-we-have-actually-proven-and-what-we-have-not" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What we have actually proven, and what we have not
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#building-the-zip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Building the zip
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-the-file-goes-next" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where the file goes next
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Where the file goes next">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#format-1-and-format-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Format 1 and format 2
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pack-in-pack-routings-and-opc-structures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pack-in-pack, routings and OPC structures
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shadow-mode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — running beside an existing MES
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shadow-scorecard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — the shadow scorecard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../erpnext/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — the ERPNext connector
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../uns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — the unified namespace (MQTT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../backup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — backup and restore
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tls/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — TLS in front of the API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upgrade/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — upgrading between versions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releasing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — cutting a release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../confirmation-files/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — the confirmation handoff
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/erp-confirmations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — the ERP confirmation contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../inbound/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — inbound events from other systems
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — settings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — REST API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../first-week/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — the first week
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Develop
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Develop
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../develop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Develop
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../develop/your-first-module/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial — your first module
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../develop/erp-connectors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — writing an ERP connector
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../develop/experiments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — experiments in the lab
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/STYLE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Style
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/m8-packs-and-fleet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design — M8 packs and fleet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/config-assistance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design — configuration assistance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/config-audit-2026-09-21/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design — the configuration audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/agentic-harness/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design — the agentic harness
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/deep-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design — deep analysis in the AI tab
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/pack-in-pack/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design — a pack inside a pack
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_13" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_13" id="__nav_4_13_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisions
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_13">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Decisions
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0001-apache-2-with-dco/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0001 — Apache-2.0 with the DCO, not copyleft, not a CLA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0002-kernel-and-modules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0002 — A kernel plus modules that register through entry points
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0003-one-mcp-server/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0003 — One product MCP server with per-area tool files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0004-never-invent-production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0004 — Never invent production: the counter discipline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0005-plain-html-no-build-step/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0005 — Plain HTML, CSS and JS for the operator UI, no build step
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0006-sqlite-laptop-postgresql-plant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0006 — SQLite on a laptop, PostgreSQL in a plant, no historian product
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0007-fresh-public-history/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0007 — The public repository starts from a clean first commit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0008-erp-connectors-are-modules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0008 — ERP connectors are modules inside the package
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0009-organisation-not-personal-account/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0009 — The project lives in a GitHub organisation named factorysemantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0010-github-discussions-only/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0010 — GitHub Discussions is the only community venue
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0011-mkdocs-material-generated-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0011 — MkDocs Material, with the developer reference generated from the code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0012-contributor-covenant-3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0012 — Contributor Covenant 3.0 as the code of conduct
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0013-governance-is-one-page/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0013 — Governance is one page: one maintainer, proposals in public, and what happens if he stops
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0014-first-public-version-is-0-1-0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0014 — The first public version is 0.1.0, cut only when a readiness checklist is green
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0015-mcp-registry-name/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0015 — The MCP server is registered as com.factorysemantics/mes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0016-no-trademark-registration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0016 — No trademark registration for the name
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0017-one-public-demo-gated-and-bounded/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0017 — One public demo, hosted by the maintainer, gated by an emailed link and bounded by limits
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0018-public-on-2026-09-08-and-the-pre-tag-check/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0018 — Public on 2026-09-08, and a release check that runs the built wheel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0019-count-everything-the-machine-counted/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0019 — Count everything the machine counted: over-runs are booked, surplus is unassigned production
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0020-what-supported-means-for-an-erp-connector/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0020 — What "supported" means for an ERP connector, and what it is called before that
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0021-one-database-per-plant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0021 — A fleet is many databases, and site scoping is identity, not partitioning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0022-what-a-plant-pack-may-contain/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0022 — A plant pack is data, carries no code and no secrets, and cannot change what a number means
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0023-the-fleet-console-observes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0023 — The console manages only the plants it owns, observes every other plant, and silence is unknown
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0024-a-nonconformance-has-a-life/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0024 — A non-conformance is worked through review and a disposition, and cannot be closed without one
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0025-performance-is-measured-not-capped/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0025 — OEE performance is measured against the rating, and never capped at 1.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0026-counts-that-outrun-the-run-time/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0026 — Counted work that will not fit inside the run time names the disagreement, not a culprit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0027-an-spc-signal-raises-a-hold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0027 — An SPC signal raises a quality hold, and an inspected characteristic with a specification is a check
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0028-which-shift-a-minute-belongs-to/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0028 — A shift is half-open, belongs to the day it started, and covers nothing it does not roster
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0029-an-order-does-not-finish-itself/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0029 — An order does not finish itself at its quantity; the over-run it reports is the true one
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0030-a-lost-connection-is-unknown-time/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0030 — A lost connection is a dimension of its own, and the gap it leaves is unknown time
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0031-a-judgment-is-a-proposal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0031 — A judgment is a proposal: what a probability may touch, and what it may never touch
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0032-a-hosted-judgment-and-the-shadow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0032 — A hosted judgment is an outbound path, classified by the state it sends
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0033-availability-is-a-share-of-what-was-watched/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0033 — Availability is a share of what was watched, and every figure says how much that was
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0034-a-count-is-owed-until-it-is-booked/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0034 — A count the machine made is owed until it is booked, and a reading that fails is retried rather than forgotten
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0035-configuration-is-authored-by-roles-and-selected-by-operators/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0035 — Configuration is authored by the role that owns it, and selected by the operator
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0036 — The chart draws every rule; the plant chooses which raise a hold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0038-an-agent-is-an-account-with-a-role-a-budget-and-a-cadence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0038 — An agent in this plant is an account with a role, a budget, a cadence and a data class, and what it produces is a proposal
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0039-an-analysis-is-recorded-code-that-can-only-read/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0039 — A deep analysis is a recorded computation that can only read, and it counts people before it names one
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0040-the-chart-type-follows-the-sampling-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0040 — The chart type follows the sampling plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0041-a-characteristic-the-plant-counts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0041 — A characteristic the plant counts, and the chart that judges it
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0042-one-plant-many-nodes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0042 — A plant is its database, and a node is a process that asks the database whether it may write
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/TEMPLATE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Template
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Agents
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/connect-mcp-client/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — connect an MCP client
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/write-discipline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — the write discipline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/evals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — evals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ai/ASSIST-EVAL/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — does the assistant do what people ask
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releases
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Releases
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/0.4.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0.4.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/0.3.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0.3.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/0.3.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0.3.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/0.2.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0.2.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    History
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    History
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../LANDSCAPE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Landscape
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../history/private-era/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The private era
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-leaves-the-building" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What leaves the building
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What leaves the building">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-does-not-leave" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What does not leave
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#three-things-that-make-that-checkable-rather-than-a-promise" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Three things that make that checkable rather than a promise
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-whole-path-end-to-end" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The whole path, end to end
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The whole path, end to end">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-install-once-on-the-pc-you-will-watch-the-plant-from" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Install, once, on the PC you will watch the plant from
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-write-the-assistant-folder-out-of-the-installation-offline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Write the assistant folder out of the installation — offline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-on-the-mes-box-three-commands-by-hand" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. On the MES box: three commands, by hand
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-one-command-and-the-plant-is-on-screen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. One command, and the plant is on screen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#read-the-pack-before-you-start-anything" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Read the pack before you start anything
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-the-shape-carries-that-the-plant-uses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the shape carries that the plant uses
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-3-in-more-detail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3 in more detail
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 3 in more detail">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#on-sql-server-where-there-is-no-driver" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        On SQL Server, where there is no driver
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#before-you-point-step-5-at-a-production-box" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Before you point step 5 at a production box
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-we-have-actually-proven-and-what-we-have-not" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What we have actually proven, and what we have not
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#building-the-zip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Building the zip
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-the-file-goes-next" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where the file goes next
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Where the file goes next">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#format-1-and-format-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Format 1 and format 2
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pack-in-pack-routings-and-opc-structures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pack-in-pack, routings and OPC structures
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/operate/plant-from-your-mes.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="your-plant-in-factorysemantics-without-sending-anyone-your-data">Your plant in FactorySemantics, without sending anyone your data<a class="headerlink" href="#your-plant-in-factorysemantics-without-sending-anyone-your-data" title="Permanent link">&para;</a></h1>
+<p><strong>What it is.</strong> A folder — inside <code>fsmes-assistant.zip</code> on the release page, or
+<code>fsmes skills unpack plant-from-your-mes .</code> out of an installation — that
+you unpack next to your own AI assistant. You ask it <em>"I want to put my plant
+into FactorySemantics without giving away anything proprietary — how?"</em>, and it
+walks you through read-only queries against your own MES database, in widening
+steps, and writes <strong>one file: <code>plant-shape.toml</code></strong>.</p>
+<p>You read that file before it goes anywhere. Then it is yours to send, or not.</p>
+<p>Nothing in this folder runs a simulation and nothing in it needs the internet.
+Producing the file is the whole job.</p>
+<p><strong>Then one command turns that file into a plant you can click around</strong>, on the
+PC you installed FactorySemantics on:</p>
+<div class="highlight"><pre><span></span><code>fsmes demo from-shape plant-shape.toml --name acme
+</code></pre></div>
+<p>It asks you one question — how many pieces of space there are between two
+machines — and starts a plant with your machine count, your line order, your
+rates and scrap, your tags' units and noise, your stop mix, your order sizes and
+your shifts on <code>http://127.0.0.1:8010/dashboard</code>. The whole path is below.</p>
+<h2 id="what-leaves-the-building">What leaves the building<a class="headerlink" href="#what-leaves-the-building" title="Permanent link">&para;</a></h2>
+<p>One text file. It holds counts, shares, distributions and patterns:</p>
+<ul>
+<li>how many machines, in line order, as <code>ST-01</code>, <code>ST-02</code> …</li>
+<li>how fast each one runs, how much it scraps, how long it actually ran</li>
+<li>every tag as <code>AN-01</code>, <code>CT-01</code>, <code>DS-01</code> — what kind of signal it is, its unit,
+  where it sits, how much it wobbles, how often it is sampled, and whether it
+  only moves while the machine runs</li>
+<li>the share of time in each state, how long stops last, what kind of thing goes
+  wrong as a category, and <strong>how many stops carry no reason at all</strong></li>
+<li>your quality loop: checks, failures, non-conformances, what happens to them</li>
+<li>order sizes, how long an order stays open, your shift pattern</li>
+<li>how you number your paperwork, as a shape: <code>AAA-AA-###</code></li>
+<li>what your MES says to your ERP — how often, how big, how often it fails — as
+  a shape, not as endpoint names</li>
+<li>and a list of <strong>things your MES tracks that FactorySemantics does not model
+  yet</strong>, described by shape. Tool changes and their cost, energy, whatever you
+  have. That list is a feature request written by your own plant.</li>
+</ul>
+<h3 id="what-does-not-leave">What does not leave<a class="headerlink" href="#what-does-not-leave" title="Permanent link">&para;</a></h3>
+<p>No order number, work order, job, batch, lot, serial, pallet or container id. No
+person, operator, customer, supplier or crew name. No item code or description.
+No price. No address. No free text of any kind — not a downtime note, not a
+comment, not a title. No recipe values. Not one of your table or column names.</p>
+<p>Your downtime wording stays in your database. The file carries the <em>category</em> —
+mechanical, electrical, material, quality, operator, changeover, maintenance,
+tooling, process — and a sentence we wrote, trimmed to the same length as yours,
+so a simulated plant reads like a plant and not like a form.</p>
+<h3 id="three-things-that-make-that-checkable-rather-than-a-promise">Three things that make that checkable rather than a promise<a class="headerlink" href="#three-things-that-make-that-checkable-rather-than-a-promise" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Every query is <code>SELECT</code> only and bounded.</strong> They are short, they are in
+   <code>queries/</code>, and you can read all thirty-four of them in ten minutes. A test in
+   this repository fails if one of them ever contains <code>INSERT</code>, <code>UPDATE</code>,
+   <code>DELETE</code>, <code>DROP</code>, <code>CREATE</code>, <code>EXEC</code> or a second statement.</li>
+<li><strong>Nothing phones home and nothing installs.</strong> The three scripts use the
+   Python standard library and nothing else — no database driver, no package, no
+   network code at all. A test fails if one of them ever imports anything else.</li>
+<li><strong>The leak check can refuse.</strong> Before the file is written, every identifying
+   string in your database is compared, case-insensitively, against the finished
+   text. If one appears, <strong>the file is not written</strong>. Its verdict is the first
+   thing in the file: <em>"passed: 0 of 1,015 identifying values appear in this
+   file"</em>.</li>
+</ol>
+<h2 id="the-whole-path-end-to-end">The whole path, end to end<a class="headerlink" href="#the-whole-path-end-to-end" title="Permanent link">&para;</a></h2>
+<p>Four moves, three machines, nothing leaving the building. <strong>The only machine
+that ever needs the internet is the one you install on, and only once.</strong></p>
+<h3 id="1-install-once-on-the-pc-you-will-watch-the-plant-from">1. Install, once, on the PC you will watch the plant from<a class="headerlink" href="#1-install-once-on-the-pc-you-will-watch-the-plant-from" title="Permanent link">&para;</a></h3>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Windows</label><label for="__tabbed_1_2">Linux and macOS</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="n">pipx</span> <span class="n">install</span> <span class="n">factorysemantics-mes</span>
+<span class="n">fsmes</span> <span class="p">-</span><span class="n">-version</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code>pipx<span class="w"> </span>install<span class="w"> </span>factorysemantics-mes<span class="w">     </span><span class="c1"># or: uv tool install factorysemantics-mes</span>
+fsmes<span class="w"> </span>--version
+</code></pre></div>
+</div>
+</div>
+</div>
+<h3 id="2-write-the-assistant-folder-out-of-the-installation-offline">2. Write the assistant folder out of the installation — offline<a class="headerlink" href="#2-write-the-assistant-folder-out-of-the-installation-offline" title="Permanent link">&para;</a></h3>
+<p>The folder is already inside the installed package. This copies it somewhere you
+can carry it. No release page, no zip, no internet.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Windows</label><label for="__tabbed_2_2">Linux and macOS</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="n">fsmes</span> <span class="n">skills</span> <span class="n">list</span>
+<span class="n">fsmes</span> <span class="n">skills</span> <span class="n">unpack</span> <span class="n">plant-from-your-mes</span> <span class="p">.\</span><span class="n">assistant</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>skills<span class="w"> </span>list
+fsmes<span class="w"> </span>skills<span class="w"> </span>unpack<span class="w"> </span>plant-from-your-mes<span class="w"> </span>./assistant
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>Copy <code>assistant\plant-from-your-mes</code> onto the box that has your MES on it — a
+network share, a memory stick, however files get there at your site.</p>
+<h3 id="3-on-the-mes-box-three-commands-by-hand">3. On the MES box: three commands, by hand<a class="headerlink" href="#3-on-the-mes-box-three-commands-by-hand" title="Permanent link">&para;</a></h3>
+<p>That box needs <strong>no fsmes, no database driver, no internet and no AI</strong> — just a
+<code>python</code> 3.11 or newer. The scripts are standard library only and a test in this
+repository fails if one of them ever imports anything else.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Windows</label><label for="__tabbed_3_2">Linux and macOS</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="nb">cd </span><span class="p">.\</span><span class="n">plant-from-your-mes</span>
+<span class="n">python</span> <span class="n">scripts</span><span class="p">\</span><span class="n">profile</span><span class="p">.</span><span class="n">py</span> <span class="p">-</span><span class="n">-sqlite</span> <span class="n">plant</span><span class="p">.</span><span class="n">db</span> <span class="p">-</span><span class="n">-propose-mapping</span> <span class="n">mapping</span><span class="p">.</span><span class="n">toml</span>
+<span class="c"># read mapping.toml back to somebody who knows the schema, and correct it</span>
+<span class="n">python</span> <span class="n">scripts</span><span class="p">\</span><span class="n">profile</span><span class="p">.</span><span class="n">py</span> <span class="p">-</span><span class="n">-sqlite</span> <span class="n">plant</span><span class="p">.</span><span class="n">db</span> <span class="p">-</span><span class="n">-mapping</span> <span class="n">mapping</span><span class="p">.</span><span class="n">toml</span> <span class="p">-</span><span class="n">-out</span> <span class="n">plant-shape</span><span class="p">.</span><span class="n">toml</span>
+<span class="n">python</span> <span class="n">scripts</span><span class="p">\</span><span class="n">explain</span><span class="p">.</span><span class="n">py</span> <span class="n">plant-shape</span><span class="p">.</span><span class="n">toml</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>./plant-from-your-mes
+python<span class="w"> </span>scripts/profile.py<span class="w"> </span>--sqlite<span class="w"> </span>plant.db<span class="w"> </span>--propose-mapping<span class="w"> </span>mapping.toml
+<span class="c1"># read mapping.toml back to somebody who knows the schema, and correct it</span>
+python<span class="w"> </span>scripts/profile.py<span class="w"> </span>--sqlite<span class="w"> </span>plant.db<span class="w"> </span>--mapping<span class="w"> </span>mapping.toml<span class="w"> </span>--out<span class="w"> </span>plant-shape.toml
+python<span class="w"> </span>scripts/explain.py<span class="w"> </span>plant-shape.toml
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>On SQL Server there is no driver here on purpose — see
+<a href="#on-sql-server-where-there-is-no-driver">On SQL Server, where there is no driver</a>
+below. The middle command runs the leak check and <strong>refuses to write the file</strong>
+if one identifying value from your database got in.</p>
+<p>Read <code>plant-shape.toml</code>. It is yours. Carry it back to the first PC.</p>
+<h3 id="4-one-command-and-the-plant-is-on-screen">4. One command, and the plant is on screen<a class="headerlink" href="#4-one-command-and-the-plant-is-on-screen" title="Permanent link">&para;</a></h3>
+<div class="tabbed-set tabbed-alternate" data-tabs="4:2"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Windows</label><label for="__tabbed_4_2">Linux and macOS</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="n">fsmes</span> <span class="n">demo</span> <span class="n">from-shape</span> <span class="p">.\</span><span class="n">plant-shape</span><span class="p">.</span><span class="n">toml</span> <span class="p">-</span><span class="n">-name</span> <span class="n">acme</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>demo<span class="w"> </span>from-shape<span class="w"> </span>./plant-shape.toml<span class="w"> </span>--name<span class="w"> </span>acme
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>It asks you <strong>one</strong> question — how many pieces of space sit between two machines,
+the conveyor or the table or the tote — because no MES records it and it is what
+decides whether a stopped machine starves the next one. The default is 20. Then
+it builds the plant, generates one eight-hour shift, starts the simulated floor,
+a real OPC UA server and the dashboard on <code>http://127.0.0.1:8010/dashboard</code>, and
+tells you how to sign in.</p>
+<p><code>--buffer 20 --yes</code> answers the question in advance, for a script. Stop it the
+way you stop any plant:</p>
+<div class="highlight"><pre><span></span><code>fsmes demo acme stop
+</code></pre></div>
+<p>This is what came out of the second reference shape — a brownfield plant with two
+areas, cells under them, two routings that meet at a shared machine, and two
+machines sharing one OPC device folder. Nothing on these screens was configured:
+every name, level and parent came out of the shape file.</p>
+<p><img alt="The Master data page's equipment list for a plant built from a format-2 shape:
+an enterprise, a site, two areas, four cells and six stations - fourteen of
+fourteen, with each row's ISA-95 level and parent beside
+it." src="../images/shape-equipment.png" /></p>
+<p><img alt="The State Timeline on ST_03's machine page over a fifteen-minute window, the
+same plant a few minutes in: ten intervals - running broken by three short
+starvation gaps, a mechanical stop and a changeover still open at the right
+edge - with the breadcrumb above it reading BRIGHT, BRIGHT1, Area 1, Cell CL_02,
+ST_03, and a legend naming the four states drawn." src="../images/shape-timeline.png" /></p>
+<p>The banner across the top of both shots is the plant saying it is replaying at
+three times wall clock, which is how these were taken: a stop that lasts twelve
+seconds on the line draws as four seconds here. At <code>--speed 1</code>, the default, the
+two clocks are the same clock.</p>
+<h3 id="read-the-pack-before-you-start-anything">Read the pack before you start anything<a class="headerlink" href="#read-the-pack-before-you-start-anything" title="Permanent link">&para;</a></h3>
+<p><code>fsmes shape plant</code> is step 4 without the plant: it writes the pack, prints what
+it did with your shape, and stops.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="5:2"><input checked="checked" id="__tabbed_5_1" name="__tabbed_5" type="radio" /><input id="__tabbed_5_2" name="__tabbed_5" type="radio" /><div class="tabbed-labels"><label for="__tabbed_5_1">Windows</label><label for="__tabbed_5_2">Linux and macOS</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="n">fsmes</span> <span class="n">shape</span> <span class="n">plant</span> <span class="p">.\</span><span class="n">plant-shape</span><span class="p">.</span><span class="n">toml</span> <span class="p">-</span><span class="n">-out</span> <span class="p">.\</span><span class="n">acme</span> <span class="p">-</span><span class="n">-buffer</span> <span class="n">20</span>
+<span class="n">fsmes</span> <span class="n">pack</span> <span class="n">check</span> <span class="p">.\</span><span class="n">acme</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>shape<span class="w"> </span>plant<span class="w"> </span>./plant-shape.toml<span class="w"> </span>--out<span class="w"> </span>./acme<span class="w"> </span>--buffer<span class="w"> </span><span class="m">20</span>
+fsmes<span class="w"> </span>pack<span class="w"> </span>check<span class="w"> </span>./acme
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>Both commands print three lists, and the lists are the point:</p>
+<ul>
+<li><strong>what was asked</strong> — the buffer, and nothing else;</li>
+<li><strong>what is stated here because the shape could not say it</strong> — the specification
+  band and where its width came from, and, when your MES has no routing table,
+  that the one routing is your station order rather than a measured route;</li>
+<li><strong>what your shape carries that this plant does not use</strong>, with one line each
+  saying why. Counter and discrete tags, the range each tag was seen in, your
+  numbering grammar, your ERP call rates, the tables the skill could not map.
+  Twelve of them for our own bottling example. They are in the pack too, under
+  <code>[from_shape]</code> in <code>plant.toml</code>, for whoever opens it later.</li>
+</ul>
+<h3 id="what-the-shape-carries-that-the-plant-uses">What the shape carries that the plant uses<a class="headerlink" href="#what-the-shape-carries-that-the-plant-uses" title="Permanent link">&para;</a></h3>
+<p>Your machine count and their line order; each machine's rate, scrap share and
+run time; every tag's kind, unit, base, spread, sampling interval and whether it
+only moves while the machine runs; the share of time in each state and how long
+stops last; your stop categories, as <code>downtime_reasons.json</code>, in your own
+proportions; your quality loop's check and failure rates and its dispositions,
+as <code>nc_severities.json</code>; your order sizes, as a book of work orders; and your
+shift pattern. With a <strong>format 2</strong> shape it also carries your areas and cells,
+your routings, and how your tags are grouped under channel/device folders — see
+<code>FORMAT.md</code>.</p>
+<h2 id="step-3-in-more-detail">Step 3 in more detail<a class="headerlink" href="#step-3-in-more-detail" title="Permanent link">&para;</a></h2>
+<p>SQL Server first, because that is what the first plant to try this runs. SQLite
+works too and is what this repository's own test uses.</p>
+<p>The folder also ships on the release page, for a box that never sees the pip
+install. It is stage 2 of <code>fsmes-assistant.zip</code>, which is the one download:</p>
+<div class="highlight"><pre><span></span><code>unzip<span class="w"> </span>fsmes-assistant.zip
+<span class="nb">cd</span><span class="w"> </span>fsmes-assistant/plant-from-your-mes
+</code></pre></div>
+<p>Out of an installation instead, with no download at all:</p>
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>skills<span class="w"> </span>unpack<span class="w"> </span>plant-from-your-mes<span class="w"> </span>.
+<span class="nb">cd</span><span class="w"> </span>plant-from-your-mes
+</code></pre></div>
+<p>Your assistant reads <code>SKILL.md</code> and does the rest. If you would rather drive it
+yourself, it is the three commands again, with what each is for:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. Guess which table is which, from names alone. Read this back out loud —</span>
+<span class="c1">#    it will get some lines wrong, and correcting it is the whole skill.</span>
+python<span class="w"> </span>scripts/profile.py<span class="w"> </span>--sqlite<span class="w"> </span>plant.db<span class="w"> </span>--propose-mapping<span class="w"> </span>mapping.toml
+
+<span class="c1"># 2. Write the one file. This runs the leak check and refuses on a hit.</span>
+python<span class="w"> </span>scripts/profile.py<span class="w"> </span>--sqlite<span class="w"> </span>plant.db<span class="w"> </span>--mapping<span class="w"> </span>mapping.toml<span class="w"> </span>--out<span class="w"> </span>plant-shape.toml
+
+<span class="c1"># 3. Read it back in plain words.</span>
+python<span class="w"> </span>scripts/explain.py<span class="w"> </span>plant-shape.toml
+</code></pre></div>
+<h3 id="on-sql-server-where-there-is-no-driver">On SQL Server, where there is no driver<a class="headerlink" href="#on-sql-server-where-there-is-no-driver" title="Permanent link">&para;</a></h3>
+<p>The folder deliberately installs nothing, so it cannot connect to SQL Server
+itself. Two ways round it:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Get the exact SQL to paste into SSMS, Azure Data Studio or sqlcmd</span>
+python<span class="w"> </span>scripts/profile.py<span class="w"> </span>--mapping<span class="w"> </span>mapping.toml<span class="w"> </span>--dialect<span class="w"> </span>mssql<span class="w"> </span>--emit-sql<span class="w"> </span>./to-run
+
+<span class="c1"># Save each result as &lt;query name&gt;.csv, then</span>
+python<span class="w"> </span>scripts/profile.py<span class="w"> </span>--csv-dir<span class="w"> </span>results/<span class="w"> </span>--dialect<span class="w"> </span>mssql<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--mapping<span class="w"> </span>mapping.toml<span class="w"> </span>--out<span class="w"> </span>plant-shape.toml
+</code></pre></div>
+<p>There are seventeen queries per dialect. Most come out ready to paste. The
+per-table and per-column ones come out as <code>*.template.sql</code> with a line saying
+what to substitute — you run those once per table you care about — and so does
+any query your mapping has no answer for, a routing table you do not have being
+the common one. The script says how many of each it wrote.</p>
+<p>In CSV mode the leak check has no database to sample, so save the output of
+<code>04b_column_sample.sql</code> as one value per line and pass <code>--samples values.txt</code>.
+If you do not, the file says the check ran against a smaller sample. It says so
+in the file, where you can see it.</p>
+<h3 id="before-you-point-step-5-at-a-production-box">Before you point step 5 at a production box<a class="headerlink" href="#before-you-point-step-5-at-a-production-box" title="Permanent link">&para;</a></h3>
+<p><code>05b_tag_samples.sql</code> reads your tag history, which is the big table. Look at
+the plan: it should be a backward scan of an index on the timestamp, not a sort.
+Run it out of hours. Lower <code>--row-cap</code> if you need to. On SQL Server,
+<code>01_inventory.sql</code> deliberately uses the row count the engine already keeps
+rather than <code>COUNT(*)</code> on every table, because an exact count over a historian
+can take minutes and escalate locks — <code>01b_row_count.sql</code> is there for the
+handful where the exact number matters.</p>
+<h2 id="what-we-have-actually-proven-and-what-we-have-not">What we have actually proven, and what we have not<a class="headerlink" href="#what-we-have-actually-proven-and-what-we-have-not" title="Permanent link">&para;</a></h2>
+<p><strong>Proven.</strong> The skill is run blind, in this repository's test suite, against a
+SQL MES it was not written for: <code>tests/unknown_mes.py</code> builds a deliberately
+foreign schema — its own table names, a state column of three-letter words, tag
+history in one tall table — and fills it from the bottling line's own generated
+hour. With no hint about that schema, the skill proposes the mapping from the
+catalogue alone, and the plant it describes is bottling: six stations in line
+order, every rate within a tenth of nameplate, every scrap share within a third
+of a percentage point, and <strong>all twenty analog tags recovered with the right base
+and the right spread</strong>. Not one order code, lot, pallet, operator code,
+inspector code, non-conformance number or technician's note from that database
+appears in the output. See
+<code>tests/test_a_plant_shape_built_blind_from_an_unknown_sql_mes_is_the_bottling_line.py</code>.</p>
+<p><code>skills/plant-from-your-mes/example/plant-shape.toml</code> is what that run produces.
+Read it; it is the best answer to "what exactly would I be sending?"</p>
+<p><strong>Also proven: the whole path, on Windows and on Linux, with the network off.</strong>
+A job on every pull request builds the wheel, installs it in a fresh virtual
+environment in a directory holding none of this repository's files, writes the
+assistant folder out of the installation, and then runs the three commands under
+a <em>second</em> virtual environment with nothing in it at all — <code>import fsmes</code> fails
+there, which is the only honest way to prove the scripts need nothing but a
+plain python. Every step after the install runs with outbound HTTP pointed at
+the discard port, and the job proves that by trying one request itself and
+requiring it to fail. It does this twice, for two reference shapes:</p>
+<ul>
+<li>the flat MES — one line, one straight routing, one tag folder per machine, no
+  routing table at all (a format-1 shape);</li>
+<li>a brownfield plant — two areas with cells under them, two routings that meet
+  at a shared machine, and two machines sharing one OPC device folder (a
+  format-2 shape), which is <code>example/plant-shape-grouped.toml</code>.</li>
+</ul>
+<p>Both end at a running dashboard with six stations on it, the right number of
+areas, the OPC server answering, every machine watched and a counted lot on the
+p chart. See <code>.github/scripts/plant_from_shape.py</code>.</p>
+<p><strong>Not proven.</strong> There is no SQL Server on this machine or on the CI runner, so
+<strong>no SQL Server has ever parsed the <code>queries/mssql/</code> set.</strong> What is checked is
+structural: every placeholder resolves, each query is one bounded <code>SELECT</code> in
+SQL Server quoting, and none of the SQLite-only spellings has been copied across
+(<code>LIMIT</code>, <code>substr</code>, <code>GROUP BY 1</code>). The first person to run them against a real
+instance is the one who finds out whether SQL Server agrees. Expect to fix a
+line or two, and expect the timestamp comparisons to be the place it happens:
+these queries compare a timestamp column against an ISO text value, which SQL
+Server converts implicitly and which can behave differently on a <code>datetime2</code>
+with an unusual collation or a non-UTC column.</p>
+<p><strong>Also not proven:</strong> that the mapping proposal works on anything but the two
+invented schemas it has been tried against. It matches on table and column names
+and on nothing else. On a real plant it will get lines wrong, which is exactly
+why <code>SKILL.md</code> tells the assistant to read the draft back to a person before
+profiling with it. A wrong mapping leaks nothing — it describes a plant that is
+not yours, and you will hear that in the first three lines of <code>explain.py</code>.</p>
+<h2 id="building-the-zip">Building the zip<a class="headerlink" href="#building-the-zip" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>skills-zip<span class="w"> </span>--check<span class="w">            </span><span class="c1"># what CI runs: every folder matches its list</span>
+fsmes<span class="w"> </span>skills-zip<span class="w"> </span>assistant<span class="w">          </span><span class="c1"># writes fsmes-assistant.zip, this folder inside it</span>
+uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>zipfile<span class="w"> </span>-l<span class="w"> </span>fsmes-assistant.zip
+</code></pre></div>
+<p><code>fsmes-assistant.zip</code> is the only skills zip a release attaches, and this folder
+is in it: a second download would be a second copy of these files and a question
+about which one to take. There is still one copy in git — <code>skills/</code> has no
+<code>assistant/plant-from-your-mes/</code> in it — and the nesting is made at build time
+from <code>fsmes.skills.INCLUDES</code>.</p>
+<p>The contents are a list in <code>src/fsmes/skills.py</code>, not a glob, so adding a file
+to the skill is a line in a diff and a stray file fails the check in either
+direction.</p>
+<h2 id="where-the-file-goes-next">Where the file goes next<a class="headerlink" href="#where-the-file-goes-next" title="Permanent link">&para;</a></h2>
+<p><code>FORMAT.md</code> in the folder says what every section means and how each field maps
+onto the simulator's own <code>line.json</code>. It also lists, plainly, what a plant shape
+carries that the generator has no field for yet, and the one thing a plant shape
+cannot know and somebody has to be asked: <strong>buffer capacity between machines.</strong>
+No MES we have seen records it.</p>
+<p><code>fsmes demo from-shape</code> and <code>fsmes shape plant</code> read that file and nothing else
+— no database, no network — and build a plant pack out of it:
+<code>plant.toml</code>, <code>line.json</code>, <code>tag_map.json</code>, <code>floor.json</code> and master data. The
+pack format is <a href="../packs/">one folder of declarative data</a>, so the pack a shape
+builds is the same kind of thing as the two this project ships, and <code>fsmes pack
+check</code> reads it the same way.</p>
+<h3 id="format-1-and-format-2">Format 1 and format 2<a class="headerlink" href="#format-1-and-format-2" title="Permanent link">&para;</a></h3>
+<p><code>[meta] shape_format</code> says which. A file with no such key is format 1.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>format 1</th>
+<th>format 2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>machines, rates, scrap, tags, stops, quality, orders, shifts</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>areas and cells (<code>[hierarchy]</code>)</td>
+<td>no — one area</td>
+<td>measured where the MES has the tables</td>
+</tr>
+<tr>
+<td>routings (<code>[routings]</code>)</td>
+<td>no — one straight line in station order</td>
+<td>measured; a routing that branches stays branched</td>
+</tr>
+<tr>
+<td>how tags are grouped (<code>[tag_nodes]</code>)</td>
+<td>no — one node per machine</td>
+<td>measured; several machines can share one node</td>
+</tr>
+</tbody>
+</table>
+<p>A format-1 file still reads exactly as it always did, and it still builds a
+plant: one area, one straight line, one node per machine. Where format 2 has no
+answer — your MES keeps no routing table, say — the file says <code>found = false</code>
+with the reason, the shape report says so out loud, and nothing is guessed in
+silence.</p>
+<h3 id="pack-in-pack-routings-and-opc-structures">Pack-in-pack, routings and OPC structures<a class="headerlink" href="#pack-in-pack-routings-and-opc-structures" title="Permanent link">&para;</a></h3>
+<p>A plant with areas, cells and branching routings is one pack with a deeper
+<code>equipment.json</code> — no nesting involved. Several plants are the fleet, not a
+nested pack. The reasoning and the recommendation are on one page:
+<a href="../../design/pack-in-pack/">a pack inside a pack</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../modules/" class="md-footer__link md-footer__link--prev" aria-label="Previous: How-to — switch a module off">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                How-to — switch a module off
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../shadow-mode/" class="md-footer__link md-footer__link--next" aria-label="Next: How-to — running beside an existing MES">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                How-to — running beside an existing MES
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Apache-2.0. Every number on this site comes from a simulated plant unless it says otherwise.
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/factorysemantics/factorysemantics-mes" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://factorysemantics.com" target="_blank" rel="noopener" title="factorysemantics.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M351.9 280H161c2.9 64.5 17.2 123.9 37.5 167.4 11.4 24.5 23.7 41.8 35.1 52.4 11.2 10.5 18.9 12.2 22.9 12.2s11.7-1.7 22.9-12.2c11.4-10.6 23.7-28 35.1-52.4 20.3-43.5 34.6-102.9 37.5-167.4zm-191-48h190.9c-2.8-64.5-17.1-123.9-37.4-167.4-11.4-24.4-23.7-41.8-35.1-52.4C268.1 1.7 260.4 0 256.4 0s-11.7 1.7-22.9 12.2c-11.4 10.6-23.7 28-35.1 52.4-20.3 43.5-34.6 102.9-37.5 167.4m-48 0c3.5-85.6 25.6-165.1 57.9-217.3C78.7 47.3 10.9 131.2 1.5 232zM1.5 280c9.4 100.8 77.2 184.7 169.3 217.3-32.3-52.2-54.4-131.7-57.9-217.3zm398.4 0c-3.5 85.6-25.6 165.1-57.9 217.3 92.1-32.7 159.9-116.5 169.3-217.3zm111.4-48C501.9 131.2 434.1 47.3 342 14.7c32.3 52.2 54.4 131.7 57.9 217.3z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.footer", "content.tabs.link", "content.code.copy", "content.action.edit", "search.suggest", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
