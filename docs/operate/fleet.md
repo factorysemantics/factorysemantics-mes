@@ -80,6 +80,20 @@ A pack that carries no master data builds a plant with no machines on it. That i
 
 The ownership gate, then the machinery that already runs plants (`fsmes plant <name> start|stop`). Start and stop are local process control: there is no remote start in this product and this decision adds none.
 
+**Every node the pack names.** A plant whose pack names its nodes under
+`[[serve.nodes]]` — two copies of one plant on this box, sharing one database,
+as [Two boxes, one plant](redundancy.md) describes — is started and stopped a
+node at a time, and `start` and `stop` act on all of them:
+
+```
+  bottling node a started -> http://127.0.0.1:8010/dashboard (PIDs 81422, 81423, 81424)
+  bottling node b started -> http://127.0.0.1:8011/dashboard (PIDs 81431, 81432, 81433)
+```
+
+Each node keeps its own pid file and its own log directory, so `start` on a
+plant whose node `a` is already up starts only `b` and says so. A plant that
+names no nodes is the ordinary plant on one address, started exactly as before.
+
 **`fsmes fleet stop <name> --force`.** `stop` acts on a running plant, so a plant that has stopped answering `/health` is refused: a plant is never managed through a gap in which nobody can see it. There is one state where that leaves a person stuck, and it is real — on 2026-09-14 a plant stopped answering `/health` while still answering `/pack`, still running, and the only way out was `kill`. The refusal now says whether the pid file still names live processes, and names them:
 
 ```
@@ -90,6 +104,11 @@ alive (81422, 81423), so this is a plant that is running and cannot be talked
 to. `--force` stops it: what this installation owns it may stop, and ownership
 is the safety property here, not liveness.
 ```
+
+A plant that names nodes keeps one pid file per node, so the refusal reads
+every one of them and says how many nodes it asked about. It also asks each
+node's address before it refuses at all: a plant still serving on its second
+node is a plant that is running, and `stop` stops it without the flag.
 
 `--force` gives up **liveness and nothing else**. Conditions 1 and 3 still hold in full, and condition 2 is still corroborated — by the instance id in the plant's own data directory, the half of it that is readable while the plant is silent, exactly as `start` and `apply` corroborate it. A plant this installation did not create is refused with the flag exactly as it is without it, and so is a plant that has taken its ownership back by deleting that id. It is the only verb in this product that takes the flag.
 
@@ -102,6 +121,22 @@ is the safety property here, not liveness.
 ### `fsmes fleet status <name>` and `fsmes fleet list`
 
 Reads. `status` says whether the plant is owned and **why** — the same question every verb asks, answered before you hit it. `list` states its total: *"N plants, M answered, K answered but empty, L unknown; J owned"*. The number recorded is never the number seen.
+
+A plant that names nodes states their total too, and what each one is holding:
+
+```
+2 plants, 2 answered, 0 answered but empty, 0 unknown; 2 owned.
+  bottling       owned     answered  http://127.0.0.1:8010
+    2 nodes, 2 answered
+    node a      answered  http://127.0.0.1:8010   holding reader, floor, housekeeping
+    node b      answered  http://127.0.0.1:8011   holding nothing yet
+  machining      owned     answered  http://127.0.0.1:8020
+```
+
+*holding* is one of three answers, and they are not the same: the roles a node
+said it holds, **nothing yet** when it answered and holds none of them, and
+**unknown** when it did not answer — a node nobody heard from is never a node
+holding nothing.
 
 Three states, and the distinctions are the point:
 
@@ -157,6 +192,19 @@ One page. Every plant in the list — the packs this machine runs, the plants th
 | last answered | when this console last heard from it |
 
 At the top: **"3 plants, 2 answered, 0 answered but empty, 1 unknown"**, and below it how many are owned, how many are recorded here but not answering, and how many are only watched. The number in the list is never the number seen.
+
+**A plant with nodes is one row, with its nodes under it.** Two copies of one
+plant sharing one database are one plant, so the page shows it once — the row
+is the plant, and beneath it a line per node: the node's own name, whether it
+answered, its own address, and what it is holding. Exactly one node holds each
+role (*reads the machines*, *runs the floor*, *prunes the history*), and the
+line says which in words rather than in role names. The nodes line states its
+total the way every list here does — *"2 nodes, 1 answered"* — and a node that
+did not answer holds **unknown**, never nothing. A plant that names one node,
+which is nearly every plant, has no nodes line at all and looks exactly as it
+did before. `/fleet.json` carries the same under each plant: a `nodes` list,
+each entry with the node's name, address, whether it answered and the roles it
+holds, and `nodes_answered` beside it.
 
 **The port is 8090, and that is not arbitrary.** It was 8100 until 2026-09-14, which is the first port `fsmes score` and `fsmes sweep` hand an ephemeral plant — so a scored run started in the same minute as a console took the console's port, and what answered on it afterwards was a plant's sign-in page wearing the console's address. The console's port and the simulator's range are named constants now, and `tests/test_fleet_console.py` fails if they ever overlap again.
 
@@ -214,6 +262,7 @@ No password is ever written here — `credential_env` names the variable one liv
 ## See also
 
 - [Plant packs](packs.md) — what a pack may contain, and `fsmes pack check`
+- [Two boxes, one plant](redundancy.md) — nodes, the roles, and what a failover looks like
 - [Plants from a fleet file](registry.md) — `fsmes plant`, the machinery underneath
 - [Beside your existing MES](first-plant.md) — the engineers' front door
 - [Decision 0023 — the console manages only the plants it owns](../decisions/0023-the-fleet-console-observes.md)

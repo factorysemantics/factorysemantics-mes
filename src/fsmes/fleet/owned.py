@@ -377,7 +377,8 @@ def agrees(entry: Entry, said: dict | None) -> tuple[bool, str]:
                   "installation gave it")
 
 
-def gate(verb: str, name: str, *, data_dir: Path, ask=None, force: bool = False) -> Ownership:
+def gate(verb: str, name: str, *, data_dir: Path, ask=None, force: bool = False,
+         nodes: tuple[str, ...] = ()) -> Ownership:
     """Refuse unless this installation owns this plant. Called first, always.
 
     Every write path in `fsmes.fleet.commands` begins with this call, and a
@@ -389,6 +390,13 @@ def gate(verb: str, name: str, *, data_dir: Path, ask=None, force: bool = False)
     plant that is silent. See `WHILE_SILENT_IF_FORCED`. It is never a way
     past ownership, and a plant this installation did not create refuses the
     same either way.
+
+    `nodes` are the ids its pack names, when it names any. They change no
+    decision here; they are how the refusal counts the processes a silent
+    plant has left, because two nodes of one plant keep one pid file each
+    and counting only the plant's own file reports zero about two live
+    processes. Unknown is not zero, least of all in the sentence a person
+    reads before typing `--force`.
     """
     if verb not in WRITE_VERBS:
         raise ValueError(f"{verb!r} is not a write verb; the gate knows {WRITE_VERBS}.")
@@ -455,13 +463,20 @@ def gate(verb: str, name: str, *, data_dir: Path, ask=None, force: bool = False)
         if verb in WHILE_SILENT_IF_FORCED and entry.control == LOCAL:
             from fsmes import plant as plants
 
-            running = plants.pids_in(Path(entry.data_dir), name)
+            where = Path(entry.data_dir)
+            running = plants.pids_in(where, name)
+            for node in nodes:
+                running += plants.pids_in(where, plants.keyed(name, node))
             if running:
                 offer = (f" Its pid file names {len(running)} process(es) that are still "
                          f"alive ({', '.join(str(p) for p in running)}), so this is a plant "
                          f"that is running and cannot be talked to. `--force` stops it: "
                          f"what this installation owns it may stop, and ownership is the "
                          f"safety property here, not liveness.")
+            elif nodes:
+                offer = (f" Nothing is alive in the pid files its {len(nodes)} nodes "
+                         f"write ({', '.join(nodes)}), so there may be nothing left to "
+                         "stop; `--force` clears the record either way.")
             else:
                 offer = (" Nothing in its pid file is alive, so there may be nothing left "
                          "to stop; `--force` clears the record either way.")

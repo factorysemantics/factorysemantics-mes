@@ -42,6 +42,17 @@ td .name { font-weight: 600; }
 td .label { color: var(--muted); display: block; font-size: 12px; }
 td .why { color: var(--muted); display: block; font-size: 12px; max-width: 46ch; }
 
+/* The nodes of one plant, on their own row under it: the plant is listed
+   once and its nodes sit beneath it, so a two-node plant is one plant on
+   this page and not two. */
+tr.nodes td { padding-top: 0; border-bottom: 1px solid var(--line); }
+tr.nodes .count { color: var(--muted); font-size: 12px; display: block; }
+tr.nodes .node { display: block; font-size: 13px; padding: 2px 0 2px 16px; }
+tr.nodes .node b { display: inline-block; min-width: 7ch; font-weight: 600; }
+tr.nodes .node .pill { margin: 0 8px; }
+tr.nodes .node .holds { color: var(--muted); margin-left: 8px; }
+tr.nodes .node .why { display: inline; margin-left: 8px; }
+
 .pill {
   display: inline-block;
   padding: 1px 8px;

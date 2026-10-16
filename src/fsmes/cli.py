@@ -52,7 +52,7 @@ app = typer.Typer(
 #: eventually report on the wrong one - which it did, on 2026-09-14, and a
 #: script rolled a healthy plant back on the strength of it.
 PACK_OPTION = typer.Option(None, "--pack", help="A pack directory; use the database its "
-                                                "`[storage]` names.")
+                                                "storage table names.")
 PLANT_OPTION = typer.Option(None, "--plant", help="A plant in the fleet file; use the "
                                                   "database the fleet gives it.")
 
@@ -116,7 +116,7 @@ def db_status(
     """What revision a database is at, and whether that is the current one.
 
     **Which database is the first line, every time.** With `--pack` it is the
-    one that pack's `[storage]` names, password read from the file the pack
+    one that pack's storage table names, password read from the file the pack
     names; with `--plant` it is the one the fleet file gives that plant; with
     neither it is this process's own setting, and the line says that it is
     only the default. On 2026-09-14 this command answered "there is no
@@ -302,7 +302,7 @@ def add_user(code: str, name: str, password: str, role: str | None = None) -> No
     """Create a sign-in account (roles: viewer, operator, supervisor, admin).
 
     Leave `--role` out and the account gets the role this plant starts people
-    on - `[admin] default_new_account_role`, which ships `operator`.
+    on - the admin table's `default_new_account_role`, which ships `operator`.
     """
     from fsmes.db import session_scope
     from fsmes.services import auth
@@ -2321,7 +2321,7 @@ def pack_status(
     """Which pack this plant runs, whether it has drifted, and its schema.
 
     The schema line is about **this pack's** database - the one its
-    `[storage] database_url` names, with the password read from the file the
+    the storage table's `database_url` names, with the password read from the file the
     pack names - and the line above it says which database that was. Before
     2026-09-14 it was about whatever database this process happened to be
     configured for, which is how it reported "never migrated" about a plant
@@ -3042,7 +3042,7 @@ def run_operations(
     pages on top of a working database, and a line runs one order for as long
     as the plant is up.
 
-    What else it does is the plant's own, as data: `[files] floor` in the pack
+    What else it does is the plant's own, as data: the files table's `floor` in the pack
     names a script saying which gauge takes a reading, which of them is
     drifting between calibrations, which of the plant's approved words a stop
     gets named with, and what happens to the material behind a finding. A
@@ -4232,7 +4232,7 @@ def jev_ask(
     costs is printed before anything is asked, and above the cap it stops and
     waits to be told to go ahead.
 
-    Needs a key (`MES_JEV_API_KEY`) and the `[jev]` extra. Without one it
+    Needs a key (`MES_JEV_API_KEY`) and the `jev` extra. Without one it
     writes a file saying it was not asked and why, which is a record, not a
     failure.
     """

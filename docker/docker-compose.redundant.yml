@@ -1,0 +1,184 @@
+# One plant on two boxes: one PostgreSQL, two nodes, nginx in front so there
+# is one address.
+#
+#   docker compose -f docker/docker-compose.redundant.yml up --build
+#   open http://localhost:8000/dashboard
+#   docker compose -f docker/docker-compose.redundant.yml kill node-a
+#
+# The header keeps saying which node serves the page and which one reads the
+# machines; within about a lease of the kill it says the surviving node reads
+# them, the counts keep moving, and nobody is signed out. Bring the dead node
+# back with `start node-a` and it stands by, holding nothing.
+#
+# `bash scripts/kill-a-node.sh` does all of that and checks it.
+#
+# This is a second file, beside `docker/docker-compose.yml`, which is
+# unchanged: that one is the single-agent twin at scale (N stateless API
+# replicas), this one is one plant on two nodes with a lease deciding which
+# of them reads the machines. They are different demos of different things
+# and they do not share a database.
+#
+# What is in here:
+#
+#   postgres   the one database the two nodes share. Two boxes cannot share a
+#              file, so a redundant plant is PostgreSQL only.
+#   prepare    runs once: builds the pack into the `plant` volume from the
+#              lab's bottling line plus `docker/redundant/plant.toml`,
+#              generates the line's replay data, creates the schema and seeds
+#              the master data.
+#   opc-sim    the machine layer. There is one of it, shared, like the
+#              database: a simulated OPC server started by a node would die
+#              with that node and the surviving reader would see the replay
+#              restart, which reads as a PLC reset. A real plant points both
+#              nodes at its PLC and does not run this service at all.
+#   node-a     `fsmes plant bottling run --node a` - a whole MES.
+#   node-b     the same, named b. Both serve the dashboard; exactly one of
+#              them holds each of the three roles that must run once.
+#   proxy      nginx on :8000, the one address.
+
+name: mes-two-nodes
+
+x-node: &node
+  build:
+    context: ..
+    dockerfile: docker/Dockerfile
+  # Named, so the five services that share it build it once and so CI can
+  # build it with its own cache and have `up` find it already there.
+  image: factorysemantics-mes:two-nodes
+  environment: &node-env
+    # Which fleet file every process reads: the one `prepare` wrote into the
+    # volume. This is what makes `--node a` and `--node b` two nodes of one
+    # plant instead of two plants.
+    FSMES_PLANT_REGISTRY: /plant/fleet.toml
+    # The token-signing key both nodes use, named by the pack's
+    # `[serve] secret_key_env`. One key for both nodes is why a failover does
+    # not sign anybody out. Change it for anything beyond a local trial.
+    MES_TWO_NODE_SECRET: ${MES_TWO_NODE_SECRET:-two-nodes-sharing-one-demo-key}
+    MES_ADMIN_PASSWORD: ${MES_ADMIN_PASSWORD:-admin}
+    MES_OPERATOR_PASSWORD: ${MES_OPERATOR_PASSWORD:-operator}
+    MES_LOG_LEVEL: INFO
+  volumes:
+    - plant:/plant
+  # A killed node stays dead until somebody starts it again: this demo is
+  # about what the *other* node does, and a restart policy would hide it.
+  restart: "no"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: mes
+      POSTGRES_PASSWORD: mes
+      POSTGRES_DB: mes_two_nodes
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mes -d mes_two_nodes"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  # Runs once and exits. Both nodes migrate under an advisory lock, so this
+  # is not here to avoid a race - it is here so the plant exists before
+  # either node starts: `fsmes plant <name> run` supervises a plant, it does
+  # not create one, and two nodes standing by against a database with no
+  # tables is exactly what that looks like.
+  prepare:
+    <<: *node
+    command:
+      - sh
+      - -c
+      - |
+        set -e
+        echo "building the two-node bottling pack in /plant ..."
+        mkdir -p /plant/bottling/masterdata
+        cp /app/labs/multiplant/bottling/floor.json \
+           /app/labs/multiplant/bottling/line.json \
+           /app/labs/multiplant/bottling/tag_map.json /plant/bottling/
+        cp -a /app/labs/multiplant/bottling/masterdata/. /plant/bottling/masterdata/
+        cp /overlay/plant.toml /plant/bottling/plant.toml
+        cp /overlay/fleet.toml /plant/fleet.toml
+        if [ -d /plant/bottling/out ]; then
+          echo "the line's replay data is already generated"
+        else
+          fsmes sim-generate /plant/bottling/line.json --out /plant/bottling/out
+        fi
+        fsmes plant bottling init --root /plant
+        echo "the plant is ready; two nodes can stand up against it"
+    volumes:
+      - plant:/plant
+      - ./redundant:/overlay:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  opc-sim:
+    <<: *node
+    environment:
+      <<: *node-env
+      MES_PLANT_NAME: bottling
+      # The server binds every interface so both nodes can reach it; the
+      # nodes' own endpoint (in the pack) names this container.
+      MES_OPC_ENDPOINT: opc.tcp://0.0.0.0:4840/fsmes/bottling
+      MES_REPLAY_DIR: /plant/bottling/out
+      MES_TAG_MAP_FILE: /plant/bottling/tag_map.json
+      MES_SIM_SPEED: ${MES_SIM_SPEED:-10}
+      MES_LOG_DIR: /plant/logs/opc-sim
+    command: fsmes run-opc-sim --replay
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; socket.create_connection(('127.0.0.1', 4840), 3).close()\""]
+      interval: 5s
+      timeout: 4s
+      retries: 12
+    depends_on:
+      prepare:
+        condition: service_completed_successfully
+
+  node-a:
+    <<: *node
+    command: fsmes plant bottling run --node a --root /plant
+    networks:
+      default:
+        # Both nodes answer to `nodes`, so the proxy has one name to resolve
+        # and Docker's DNS drops a node that is not running.
+        aliases: [nodes]
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request as u; u.urlopen('http://127.0.0.1:8010/health')\""]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+    depends_on:
+      opc-sim:
+        condition: service_healthy
+
+  node-b:
+    <<: *node
+    command: fsmes plant bottling run --node b --root /plant
+    networks:
+      default:
+        aliases: [nodes]
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request as u; u.urlopen('http://127.0.0.1:8010/health')\""]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+    depends_on:
+      opc-sim:
+        condition: service_healthy
+
+  proxy:
+    image: nginx:alpine
+    volumes:
+      - ./nginx.redundant.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "8000:80"
+    # Only on node-a, so this proxy can be up and serving before the second
+    # node exists - which is how `scripts/kill-a-node.sh` brings them up one
+    # at a time, and what a plant adding its second node looks like.
+    depends_on:
+      node-a:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  plant:

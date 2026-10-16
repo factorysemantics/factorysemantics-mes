@@ -192,6 +192,7 @@ nav:
           - decisions/0038-an-agent-is-an-account-with-a-role-a-budget-and-a-cadence.md
           - decisions/0039-an-analysis-is-recorded-code-that-can-only-read.md
           - decisions/0040-the-chart-type-follows-the-sampling-plan.md
+          - decisions/0041-a-characteristic-the-plant-counts.md
           - decisions/0042-one-plant-many-nodes.md
           - Template: decisions/TEMPLATE.md
   - Agents:

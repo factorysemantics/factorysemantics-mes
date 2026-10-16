@@ -226,3 +226,93 @@ def test_a_plant_on_one_node_says_nothing_about_nodes(browser, plant):
         assert "machines read by" not in said, said
     finally:
         _close(page)
+
+
+def _open_with_changing_node(browser, state, base, path="/dashboard"):
+    """The dashboard, with every `/health` answered from a block the test can
+    change between polls.
+
+    The mutable is the point: the page polls `/health` for as long as it is
+    open, so a failover is one dictionary assignment here and the page has to
+    notice it on its own. Every answer is held back by `HELD_MS`, the later
+    polls as well as the first, so a header that only ever reads the answer it
+    already has would fail rather than pass by being quick.
+    """
+    page = browser.new_page()
+
+    def held(route):
+        if state.get("refuse"):
+            state["refused"] = state.get("refused", 0) + 1
+            route.abort()
+            return
+        answer = route.fetch()
+        body = answer.json()
+        body["node"] = state["node"]
+        page.wait_for_timeout(HELD_MS)
+        state["answered"] = state.get("answered", 0) + 1
+        route.fulfill(status=answer.status, json=body)
+
+    page.route("**/health", held)
+    page.goto(f"{base}{path}", wait_until="load", timeout=30000)
+    return page
+
+
+def _reading(reader, here=HERE):
+    return {"name": here, "named": True, "redundancy": True, "lease_seconds": 10.0,
+            "roles": ["reader"] if reader == here else [],
+            "holders": {"reader": reader, "floor": reader, "housekeeping": reader}}
+
+
+def test_the_header_follows_a_failover_without_a_reload(browser, plant):
+    """The moment the whole feature exists for: the node that was reading the
+    machines dies, and the page a person is already looking at says so.
+
+    Until 2026-10-15 this line was written once when the page loaded, so on a
+    live failover it went on naming a dead node until somebody reloaded - and
+    nobody watching a plant fail over thinks to reload the page. The marker
+    below is how this test knows there was no reload: a variable set on the
+    window after the page loaded would not survive one.
+    """
+    state = {"node": _reading(READER)}
+    page = _open_with_changing_node(browser, state, plant)
+    try:
+        page.wait_for_function(HEADER_SAYS, arg=f"machines read by {READER}", timeout=20000)
+        page.evaluate("() => { window.__notReloaded = true; }")
+
+        # node-a dies; node-b takes the reader lease. Nothing is clicked and
+        # nothing is reloaded - the page's own poll is the only thing running.
+        state["node"] = _reading(HERE)
+
+        page.wait_for_function(HEADER_SAYS, arg=f"machines read by {HERE}", timeout=30000)
+        said = page.locator("#plant-name").text_content()
+        assert f"served by {HERE}" in said, said
+        assert READER not in said, f"the dead node is still named: {said}"
+        assert page.evaluate("() => window.__notReloaded === true"), (
+            "the header only changed because the page reloaded, which is not "
+            "what a person watching a failover does")
+        assert state["answered"] >= 2, (
+            f"the page asked /health {state['answered']} times, so it never polled")
+    finally:
+        _close(page)
+
+
+def test_a_poll_that_fails_leaves_the_last_thing_known_on_the_screen(browser, plant):
+    """A request lost while a node is dying is exactly when this line matters.
+
+    Blanking it would turn one lost request into "nobody is reading the
+    machines", which is a different and much worse claim than "this is what
+    was true a moment ago". Unknown is not nobody.
+    """
+    state = {"node": _reading(HERE)}
+    page = _open_with_changing_node(browser, state, plant)
+    try:
+        page.wait_for_function(HEADER_SAYS, arg=f"machines read by {HERE}", timeout=20000)
+        state["refuse"] = True
+        # Long enough for at least two polls to be refused.
+        page.wait_for_timeout(11000)
+        assert state.get("refused", 0) >= 1, "no poll was actually refused"
+        said = page.locator("#plant-name").text_content()
+        assert f"machines read by {HERE}" in said, said
+    finally:
+        state["refuse"] = False
+        _close(page)

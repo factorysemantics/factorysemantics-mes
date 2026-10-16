@@ -1,0 +1,74 @@
+# The bottling plant as a pack, on two nodes against one PostgreSQL.
+#
+# This is `labs/multiplant/bottling` with three differences and nothing else:
+#
+#   * `[storage] database_url` is the compose PostgreSQL. Two nodes share one
+#     database; two boxes cannot share a file, so SQLite is refused here.
+#   * `[serve] api_host` is 0.0.0.0 and `secret_key_env` names the variable
+#     the signing key arrives in, so both nodes sign the same tokens and
+#     nobody is asked to sign in again when one of them dies.
+#   * `[redundancy]` is on, with a lease a person can watch expire.
+#
+# The line's own data - the wiring, the master data, the generated replay -
+# is the lab pack's, copied in by the `prepare` service. One line, one way to
+# build it; this file is only what makes it a plant on two boxes.
+#
+# Nothing here is secret: the pack names the variable the key lives in and
+# never the key.
+
+[pack]
+format = 1
+requires = ">=0.3.1"
+
+[plant]
+name       = "bottling"
+label      = "ACME Beverages / Kansas City - 6-station bottling line (two nodes)"
+timezone   = "America/Chicago"
+profile    = "fleet"
+enterprise = "ACME"
+site       = "KC1"
+
+[storage]
+# The compose PostgreSQL. The password is `mes` because this file, this
+# database and the box it runs on are all one `docker compose` demo on one
+# machine; a real plant writes `database_password_file` here and keeps the
+# password in a file the pack does not carry.
+database_url = "postgresql+psycopg://mes:mes@postgres:5432/mes_two_nodes"
+
+[serve]
+# Every node serves the dashboard, and nginx in front of them is the one
+# address a person uses. 0.0.0.0 because the proxy is in another container.
+api_host     = "0.0.0.0"
+api_port     = 8010
+opc_endpoint = "opc.tcp://opc-sim:4840/fsmes/bottling"
+simulate     = true
+# 10 replays ten seconds of the shift every second, so a person watching the
+# dashboard sees the counts move while they read the page.
+speed        = 10.0
+# The variable holding the token-signing key. Both nodes get the same one
+# from the compose file, which is why a failover signs nobody out.
+secret_key_env = "MES_TWO_NODE_SECRET"
+
+[redundancy]
+# On: two nodes, one of them holding each role.
+enabled = true
+# Six seconds. The holder renews every two; a node that stops renewing has
+# its work taken over about a lease later. Short enough to watch, long
+# enough that a slow container does not lose its roles to a hiccup.
+lease_seconds = 6.0
+
+[files]
+tag_map    = "tag_map.json"
+replay_dir = "out"
+masterdata = "masterdata"
+floor      = "floor.json"
+
+[oee]
+coverage_floor = 0.8
+
+[erp]
+mode = "off"
+
+[quality]
+hold_rules  = [1, 2, 3, 4, 5]
+major_rules = [1, 5]

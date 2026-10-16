@@ -109,6 +109,14 @@ def compile_pack(pack: fmt.Pack) -> dict:
         "api_host": serve.get("api_host", "127.0.0.1"),
         "api_port": serve.get("api_port"),
         "simulate": serve.get("simulate", True),
+        # The nodes of this plant on this box, when the pack names more than
+        # one: `[{"id": "a", "api_port": 8110}, ...]`, empty for the ordinary
+        # plant that serves one address. `fsmes.plant` reads it to start, stop
+        # and ask after each node; nothing else in the configuration differs
+        # between them, which is what makes them nodes of one plant.
+        "nodes": [{"id": str(node["id"]), "api_port": int(node["api_port"])}
+                  for node in pack.nodes()
+                  if node.get("id") and isinstance(node.get("api_port"), int)],
         "speed": serve.get("speed"),
         "accounts": pack.accounts(),
         "database_url": storage.get("database_url"),

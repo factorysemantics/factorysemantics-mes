@@ -1113,6 +1113,84 @@
     .then((r) => (r.ok ? r.json() : null))
     .catch(() => null);
 
+  /* ---- which node answered, and which node is reading the machines ----
+
+     On a plant that runs on more than one node, the address no longer says
+     which box answered. One line, beside the plant's name: which node served
+     this page, and which node is reading the machines. A person watching a
+     failover reads it to know the takeover happened; on a plant that runs on
+     one node there is nothing to say and nothing is said.
+
+     It is drawn from a /health body, and *redrawn* from every later one. The
+     line used to be written once when the page loaded, which meant that after
+     a failover - the one moment anybody is looking at it - it kept naming a
+     node that was dead until somebody reloaded the page (found on a live
+     failover on 2026-10-15). The span is kept and its text replaced rather
+     than removed and appended, so nothing in the header moves. */
+  const NODE_SLOT = "plant-node";
+
+  FS.nodeSays = function (who) {
+    /* What the line says about this /health body, or null when a plant has
+       nothing to say: one node, or a node that does not know its own name. */
+    const node = (who && who.node) || null;
+    if (!node || !node.redundancy || !node.name) return null;
+    const reader = (node.holders || {}).reader;
+    return {
+      text: "served by " + node.name + " · machines read by "
+        + (reader || "nobody yet"),
+      title: reader === node.name
+        ? "This node serves the dashboard and holds the reader lease."
+        : "This node serves the dashboard; the reader lease is held "
+          + (reader ? "by " + reader + "." : "by nobody - no node is reading "
+             + "the machines right now."),
+    };
+  };
+
+  FS.drawNode = function (who) {
+    const slot = FS.$("#plant-name");
+    if (!slot) return;
+    const says = FS.nodeSays(who);
+    let line = FS.$("#" + NODE_SLOT);
+    if (!says) {
+      if (line) line.remove();
+      return;
+    }
+    if (!line) {
+      line = FS.el("span", "muted small");
+      line.id = NODE_SLOT;
+      slot.appendChild(line);
+    }
+    line.textContent = says.text;
+    line.title = says.title;
+  };
+
+  /* Re-read /health on a timer and redraw the line, for as long as the page
+     is open. Only on a plant that says it runs on more than one node: a
+     single-node plant starts no timer and makes no request it did not make
+     before.
+
+     /health, and not the dashboard's own summary: the summary is cached for a
+     second behind a version read that knows nothing about leases, it is only
+     polled by one of the twenty-six screens that carry this header, and the
+     node block costs two small queries. One source of truth for every page.
+
+     A poll that fails leaves the last line standing rather than blanking it:
+     a request lost while a node dies is exactly when this line matters, and
+     the next poll a second later says who holds the lease now. */
+  const NODE_POLL_MS = 5000;
+  let nodeTimer = null;
+
+  FS.watchNode = function (ms) {
+    if (nodeTimer) return nodeTimer;
+    nodeTimer = setInterval(() => {
+      fetch("/health")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((who) => { if (who) FS.drawNode(who); })
+        .catch(() => null);
+    }, ms || NODE_POLL_MS);
+    return nodeTimer;
+  };
+
   /* The plant's identity, fetched once per page and shared. Public, like
      /shadow, and for the same reason: the sign-in screen needs it too.
      After buildHeader, which is what puts #plant-name on the page. */
@@ -1141,27 +1219,9 @@
             + "no name; times are shown in your browser's zone.";
           slot.appendChild(zone);
         }
-        /* On a plant that runs on more than one node, the address no longer
-           says which box answered. One line, beside the plant's name: which
-           node served this page, and which node is reading the machines. A
-           person watching a failover reads it to know the takeover happened;
-           on a plant that runs on one node there is nothing to say and
-           nothing is said. */
-        const node = who.node;
-        if (node && node.redundancy && node.name) {
-          const holders = node.holders || {};
-          const reader = holders.reader;
-          const line = FS.el("span", "muted small",
-            "served by " + node.name + " · machines read by "
-            + (reader || "nobody yet"));
-          line.title = reader === node.name
-            ? "This node serves the dashboard and holds the reader lease."
-            : "This node serves the dashboard; the reader lease is held "
-              + (reader ? "by " + reader + "." : "by nobody - no node is reading "
-                 + "the machines right now.");
-          slot.appendChild(line);
-        }
+        FS.drawNode(who);
       }
+      if (who.node && who.node.redundancy) FS.watchNode();
       return who;
     })
     .catch(() => null);  // an identity that could not load must not break a screen

@@ -192,13 +192,24 @@ def _fleet_lists(directory: Path, root: Path) -> bool:
 
 
 def start(name: str, *, root: Path, speed: float | None = None, echo=print) -> owned.Ownership:
-    """Start an owned plant. Nothing here starts a plant on its own."""
+    """Start an owned plant. Nothing here starts a plant on its own.
+
+    A plant whose pack names nodes is started node by node, and one of them
+    already answering is not a reason to stop: that is exactly the state a
+    person is in after one node died and they want it back. `plants.start`
+    skips each node whose own pid file names live processes and says so.
+    """
     where = data_dir(root)
-    ownership = owned.gate("start", name, data_dir=where)
-    if ownership.answering:
-        echo(f"  {name} is already answering on {ownership.entry.base}.")
+    asking = _asking(name, root, where)
+    ownership = owned.gate("start", name, data_dir=where, ask=asking)
+    cfg = _config(ownership.entry)
+    if ownership.answering and not plants.node_list(cfg):
+        echo(f"  {name} is already answering on {asking.at}.")
         return ownership
-    plants.start(name, _config(ownership.entry), root, speed, echo=echo)
+    if ownership.answering:
+        echo(f"  {name} is answering on {asking.at}; starting any node of it "
+             "that is not running.")
+    plants.start(name, cfg, root, speed, echo=echo)
     return ownership
 
 
@@ -211,7 +222,12 @@ def stop(name: str, *, root: Path, force: bool = False, echo=print) -> owned.Own
     data directory says so - and what this installation owns it may stop.
     """
     where = data_dir(root)
-    ownership = owned.gate("stop", name, data_dir=where, force=force)
+    # Asked at every node its pack names: a plant whose first node is the one
+    # that died is a plant that is running, and `stop` is the verb a person
+    # reaches for next.
+    asking = _asking(name, root, where)
+    ownership = owned.gate("stop", name, data_dir=where, force=force,
+                           ask=asking, nodes=asking.ids)
     if force and not ownership.answering:
         echo(f"  {name} is not answering; stopping it anyway because this installation "
              f"created it and the instance id in {ownership.entry.data_dir} still matches.")
@@ -222,11 +238,15 @@ def stop(name: str, *, root: Path, force: bool = False, echo=print) -> owned.Own
 def apply(name: str, *, root: Path, directory: Path | None = None, echo=print) -> owned.Entry:
     """Apply a pack to an owned, stopped plant, and record the new fingerprint."""
     where = data_dir(root)
-    ownership = owned.gate("apply", name, data_dir=where)
+    # Every node, for the same reason `stop` asks every node: a pack applied
+    # while the plant's second node is serving the floor upgrades a database
+    # underneath a live process just as surely as the first one would.
+    asking = _asking(name, root, where)
+    ownership = owned.gate("apply", name, data_dir=where, ask=asking)
     entry = ownership.entry
     if ownership.answering:
         raise Refused(
-            f"{name} is still answering on {entry.base}. Stop it first: applying a pack "
+            f"{name} is still answering on {asking.at}. Stop it first: applying a pack "
             "to a plant that is running upgrades a database underneath a live process.")
 
     pack_dir = Path(directory).expanduser().resolve() if directory else Path(entry.pack)
@@ -267,6 +287,11 @@ class Plant:
     #: How many orders this plant has planned, released and running. `None`
     #: is *this plant did not say*, which is not an empty book.
     book_said: dict | None = None
+    #: This plant's nodes, when its pack names more than one: one entry each,
+    #: as `fsmes.plant.node_status` answers them. Empty for the ordinary plant
+    #: that serves one address, and empty when the pack could not be read -
+    #: the pack is the only place nodes are named.
+    nodes: tuple[dict, ...] = ()
 
     @property
     def state(self) -> str:
@@ -286,18 +311,93 @@ class Plant:
         return "empty" if observe.is_empty(self.pack_said) else "answered"
 
 
+def _nodes(entry: owned.Entry | None, root: Path) -> tuple[dict, ...]:
+    """What each node of this plant says, when its pack names more than one.
+
+    Empty for the plant that serves one address, which is almost every plant,
+    and empty when the pack is not where the ownership entry says it is: a
+    read verb says what it found and never raises on the way to a status
+    line. The row's `pack` line is where an unreadable pack shows up.
+    """
+    if entry is None:
+        return ()
+    try:
+        cfg = _config(entry)
+    except (Refused, fmt.PackError, OSError):
+        return ()
+    return tuple(plants.node_status(entry.name, cfg, root, one)
+                 for one in plants.node_list(cfg))
+
+
+class _Asking:
+    """`/health`, asked at the plant's address and then at its other nodes.
+
+    A plant that runs as two nodes is reached at whichever node answers. The
+    address in the ownership record is one node of it, and when that is the
+    node that died, every verb here used to behave as though nobody had heard
+    from the plant: `status` and `list` said `unknown` about a plant that was
+    still booking on its other node, and `stop` refused to stop a plant that
+    was running. Seen on this box on 2026-10-15, with node a killed and node
+    b serving the floor.
+
+    So the question *did this plant answer* is asked of the plant and not of
+    one address of it. The answer still goes through the whole ownership
+    question - same plant name, same instance id - so a port answering as
+    something else is refused rather than believed, and `at` says which
+    address answered, because a row that reports one node's health under
+    another node's address is a worse lie than `unknown`.
+
+    A plant whose pack names no nodes asks exactly once, as it always did.
+    """
+
+    def __init__(self, bases, ask=None, ids=()) -> None:
+        self.others = tuple(one for one in bases if one)
+        #: The node ids behind those addresses, for the one caller that needs
+        #: to count a silent plant's pid files rather than ask it anything.
+        self.ids = tuple(str(one) for one in ids if one)
+        self.ask = ask or observe.health
+        self.at = ""
+
+    def __call__(self, base: str, **kwargs):
+        self.at = base
+        first = self.ask(base, **kwargs)
+        if first.answered:
+            return first
+        for one in self.others:
+            if one == base:
+                continue
+            answer = self.ask(one, **kwargs)
+            if answer.answered:
+                self.at = one
+                return answer
+        return first
+
+
+def _asking(name: str, root: Path, where: Path, ask=None) -> _Asking:
+    """The asker for one plant, with the nodes its pack names behind it."""
+    nodes = _nodes(owned.load(where).entry(name), root)
+    return _Asking([one["base"] for one in nodes], ask,
+                   ids=[one["id"] for one in nodes])
+
+
 def status(name: str, *, root: Path, echo=print, ask=None, ask_book=None) -> Plant:
     """One plant: whether it is owned, whether it answered, and its drift."""
     where = data_dir(root)
     ask_book = ask_book or observe.book
-    ownership = owned.describe(name, data_dir=where, ask=ask)
+    asking = _asking(name, root, where, ask)
+    ownership = owned.describe(name, data_dir=where, ask=asking)
     entry = ownership.entry
-    base = entry.base if entry else ""
+    nodes = _nodes(entry, root)
+    # The address that answered - and the recorded one when none did, or when
+    # what answered there was not this plant: a row that reads `unknown` says
+    # where it looked first, not where it looked last.
+    base = (asking.at if ownership.answering else entry.base) if entry else ""
     row = Plant(name=name, owned=ownership.owned, reason=ownership.reason, base=base,
                 answered=ownership.answering, said=ownership.said,
                 pack_said=(observe.pack(base).body if ownership.answering else None),
                 book_said=(ask_book(base) if ownership.answering else None),
                 supervisor=(plants.supervisor(root, name) if entry else None),
+                nodes=nodes,
                 label=str((ownership.said or {}).get("label", "")))
     for line in render(row):
         echo(line)
@@ -361,6 +461,12 @@ def render(row: Plant) -> list[str]:
             lines.append(f"    modules    {len(modules.get('on', []))} on, "
                          f"{len(modules.get('off', []))} off, of "
                          f"{modules.get('total', 'unknown')}")
+    if row.nodes:
+        answered = sum(1 for one in row.nodes if one["answered"])
+        lines.append(f"    nodes      {len(row.nodes)}, {answered} answered")
+        for one in row.nodes:
+            lines.append(f"      {one['id']:<6} {one['health']:<18} {one['base']}"
+                         f"   holding {plants.holding(one['roles'])}")
     if row.supervisor:
         lines.append(f"    started by {row.supervisor}")
     return lines
@@ -383,10 +489,14 @@ def listing(*, root: Path, echo=print, ask=None, ask_pack=None) -> dict:
     record = owned.load(where)
     rows: list[Plant] = []
     for entry in sorted(record.owned, key=lambda e: e.name):
-        ownership = owned.describe(entry.name, data_dir=where, ask=ask)
+        nodes = _nodes(entry, root)
+        asking = _Asking([one["base"] for one in nodes], ask)
+        ownership = owned.describe(entry.name, data_dir=where, ask=asking)
+        base = asking.at if ownership.answering else entry.base
         rows.append(Plant(name=entry.name, owned=ownership.owned, reason=ownership.reason,
-                          base=entry.base, answered=ownership.answering, said=ownership.said,
-                          pack_said=(ask_pack(entry.base).body if ownership.answering else None),
+                          base=base, answered=ownership.answering, said=ownership.said,
+                          pack_said=(ask_pack(base).body if ownership.answering else None),
+                          nodes=nodes,
                           supervisor=plants.supervisor(root, entry.name)))
     for watched in sorted(record.observed, key=lambda o: o.name):
         answer = ask(watched.url)
@@ -406,6 +516,12 @@ def listing(*, root: Path, echo=print, ask=None, ask_pack=None) -> dict:
     for row in rows:
         echo(f"  {row.name:<14} {('owned' if row.owned else 'observed'):<9} "
              f"{row.state:<9} {row.base}{'   ' + observe.empty_because(row.pack_said) if row.state == 'empty' else ''}")
+        if row.nodes:
+            echo(f"    {len(row.nodes)} nodes, "
+                 f"{sum(1 for one in row.nodes if one['answered'])} answered")
+        for one in row.nodes:
+            echo(f"    node {one['id']:<9} {'answered' if one['answered'] else 'unknown':<9} "
+                 f"{one['base']}   holding {plants.holding(one['roles'])}")
     if not rows:
         echo("  Nothing yet. `fsmes fleet create <pack>` makes the first one.")
     return {"totals": totals, "plants": rows}

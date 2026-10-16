@@ -493,6 +493,128 @@ jobs:
             esac
           done
 
+  two-nodes-in-compose:
+    # The two-box demo, killed on purpose, on every pull request.
+    #
+    # `docker/docker-compose.redundant.yml` is one PostgreSQL, one machine
+    # layer, two nodes of the bottling plant and nginx in front of them, and
+    # `scripts/kill-a-node.sh` kills one node and checks the other carried
+    # on: the reader lease moved within three leases, the counters kept
+    # moving, every machine booked exactly what it counted, no reading was
+    # stored twice, and the one address kept answering. It is the same claim
+    # `postgres`'s two-node test makes, made through containers and a proxy
+    # instead of two processes - which is what anybody who tries this product
+    # will actually run.
+    #
+    # Linux only. `docker compose` on the Windows runner has no Linux daemon
+    # to run these images on, and a plant engineer's Windows box is covered by
+    # `half-dead-plant` and `two-nodes-on-windows` instead.
+    #
+    # Behind `image`: there is nothing to learn from a compose demo of an
+    # image that does not build, and the layer cache that job wrote makes the
+    # build here a cache hit rather than a second four-minute pip install.
+    # The timing this job asserts is in lease units measured against the
+    # database's own clock, never in seconds on a shared runner.
+    needs: image
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: Build the image the compose file names
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: factorysemantics-mes:two-nodes
+          # Read-only: `image` owns this scope, and two jobs writing one
+          # scope evict each other's layers.
+          cache-from: type=gha,scope=ci-image
+
+      - name: Kill one of two nodes and check the plant carried on
+        run: bash scripts/kill-a-node.sh
+
+      - name: What the containers said
+        # Always, pass or fail: a failover nobody can read the logs of is a
+        # green check or a red one and nothing else.
+        if: always()
+        run: |
+          docker compose -f docker/docker-compose.redundant.yml ps -a || true
+          docker compose -f docker/docker-compose.redundant.yml logs --no-color --tail 200 || true
+
+      - name: Put it away
+        if: always()
+        run: docker compose -f docker/docker-compose.redundant.yml down -v || true
+
+  two-nodes-on-windows:
+    # Scott, about this release: "must run on windows." Nobody on this
+    # project has a Windows machine, so this job is where the two-node
+    # machinery is read on one.
+    #
+    # It names its nodes in the pack, builds the plant once, starts it with
+    # `fsmes fleet start`, and checks that both nodes answer `/health` under
+    # their own names, that each of the three roles is held by exactly one of
+    # them, that `fleet status` names both, and that `fleet stop` stops both.
+    # The PostgreSQL is the one the runner image ships - installed and
+    # stopped, so the job starts it.
+    #
+    # What this job does NOT do is kill a node. `Popen.terminate()` on
+    # Windows does not go through the plant's own shutdown handler, so a
+    # killed node there is a different mechanism from a killed node on Linux
+    # and deserves a proof of its own rather than a claim made here. The
+    # lease, the takeover in lease units and the counters that must not be
+    # booked twice are proven by the `postgres` job and by
+    # `two-nodes-in-compose`, both Linux.
+    #
+    # Windows only: the Linux half of the same claim is the `postgres` job,
+    # which runs the whole two-node failover test, and running this script
+    # there as well would buy the weaker half of a stronger proof.
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Start the PostgreSQL this runner ships
+        shell: pwsh
+        run: |
+          $service = Get-Service -Name "postgresql*" | Select-Object -First 1
+          if (-not $service) { throw "this runner image has no PostgreSQL service" }
+          Write-Host "service $($service.Name) is $($service.Status)"
+          Set-Service -Name $service.Name -StartupType Manual
+          Start-Service -Name $service.Name
+          $env:PGPASSWORD = "root"
+          $ready = $false
+          foreach ($try in 1..30) {
+            & "$env:PGBIN\pg_isready.exe" -h 127.0.0.1 -p 5432 -U postgres
+            if ($LASTEXITCODE -eq 0) { $ready = $true; break }
+            Start-Sleep -Seconds 2
+          }
+          if (-not $ready) { throw "PostgreSQL never accepted a connection" }
+          & "$env:PGBIN\createdb.exe" -h 127.0.0.1 -p 5432 -U postgres two_nodes
+          if ($LASTEXITCODE -ne 0) { throw "could not create the database" }
+
+      - name: Install
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[postgres]"
+
+      - name: Two nodes of one plant, started and stopped by the fleet
+        shell: bash
+        env:
+          # The runner image's own password for its own PostgreSQL. It is in
+          # the image's documentation, it is reachable from this job and from
+          # nothing else, and the database it opens is deleted with the
+          # runner.
+          PGPASSWORD: root
+        run: |
+          python .github/scripts/two_nodes_on_one_box.py \
+            --database-url "postgresql+psycopg://postgres:root@127.0.0.1:5432/two_nodes" \
+            --speed 60
+
   lab:
     # The lab's starter experiments, on a runner.
     #
