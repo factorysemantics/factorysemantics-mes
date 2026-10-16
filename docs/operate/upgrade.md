@@ -10,6 +10,38 @@ carries an **Honesty** section for anything that changed what a number
 before upgrading a plant that anyone reads numbers off, because a number that
 changes meaning without anyone noticing is worse than one that breaks.
 
+## 0.3.1 to 0.4.0
+
+**One migration, `b6f0c2a71d58`** — 0.3.1's head was `d4e8a1c93b70`. It adds
+two tables, `plant_leases` and `counter_baselines`, and changes no column of
+any table you already have:
+
+```bash
+fsmes backup --out /mnt/nas/fsmes                 # first, always
+# stop the agent and the API
+pipx upgrade factorysemantics-mes                 # or pip install --upgrade
+fsmes --version                                   # 0.4.0
+fsmes db-status --pack packs/yourplant            # what you are at, and what 0.4.0 expects
+fsmes init-db   --pack packs/yourplant            # runs the migration the wheel carries
+fsmes db-status --pack packs/yourplant            # should now agree; it exits non-zero if not
+# start them again
+```
+
+**On a plant that runs on one box there is nothing else to do.** The two new
+tables sit unused until a pack carries `[redundancy] enabled = true`, and a
+plant that does not is served exactly as it was.
+
+One thing changes for a single-box plant anyway, and it is in the CHANGELOG's
+**Honesty** section: the baseline each machine counter is measured from now
+lives in the database rather than in the reader's memory, so a reader that
+restarts no longer books the counter's whole value as new production. A plant
+that was restarted while it was counting has had this happen to it; nothing in
+this upgrade goes back and corrects what was already booked.
+
+Running two nodes is a thing you turn on afterwards, not part of the upgrade:
+[one plant on two boxes](redundancy.md) is the recipe, and it needs PostgreSQL —
+`[redundancy]` with a SQLite URL is refused.
+
 ## 0.3.0 to 0.3.1
 
 **No migrations.** Nothing in 0.3.1 changes the database schema — `d4e8a1c93b70`
