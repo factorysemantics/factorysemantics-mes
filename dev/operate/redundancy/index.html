@@ -4589,6 +4589,19 @@ fsmes<span class="w"> </span>plant<span class="w"> </span>kc1<span class="w"> </
 run the schema command on both boxes at the same time, that is safe too — the
 first one into the database holds the migration lock while the second waits
 for it and finds the head.</p>
+<p><strong>A new database starts with nobody in it.</strong> A plant moved onto a PostgreSQL
+of its own gets the schema and the pack's master data, and its <em>accounts</em> are
+a separate thing: a book built from nothing has none, and every sign-in
+answers <em>invalid credentials</em> until somebody makes one. The commands above —
+<code>fsmes plant kc1 init</code> and <code>fsmes plant kc1 migrate</code> — make them, and so do
+<code>fsmes fleet create</code> and (since 0.4.0) <code>fsmes fleet apply</code> when it finds a
+book with no account in it at all. <code>fsmes fleet apply</code> on a plant that <em>has</em>
+accounts leaves them alone: it is not the command that brings back one you
+deleted on purpose. One account by hand is <code>fsmes add-user</code>.</p>
+<p>On a simulated plant this is the failure you will actually meet, because the
+floor signs in before anybody does: <code>could not sign in … why=this plant
+answered and refused the credentials, so there is likely no FLOOR-SIM account
+in its book</code>. That line names the commands that fix it.</p>
 <p><code>--node</code> names the node. Give it a name you will recognise in a log at
 02:00 — the host name is the usual answer. Without <code>--node</code> a node calls
 itself <code>&lt;host&gt;:&lt;port&gt;</code>.</p>
@@ -4614,10 +4627,33 @@ author's desk runs — so a pack may name the nodes that run on this machine:</p
 <span class="n">lease_seconds</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">6</span>
 </code></pre></div>
 <p>Then the fleet commands act on every node the pack names:</p>
-<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>fleet<span class="w"> </span>start<span class="w"> </span>bottling<span class="w">      </span><span class="c1"># starts node a and node b, each with its own log</span>
-fsmes<span class="w"> </span>fleet<span class="w"> </span>status<span class="w"> </span>bottling<span class="w">     </span><span class="c1"># 2 nodes, 2 answered, and what each one holds</span>
-fsmes<span class="w"> </span>fleet<span class="w"> </span>stop<span class="w"> </span>bottling<span class="w">       </span><span class="c1"># stops both</span>
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>fleet<span class="w"> </span>start<span class="w"> </span>bottling<span class="w">           </span><span class="c1"># the machines, then node a and node b</span>
+fsmes<span class="w"> </span>fleet<span class="w"> </span>status<span class="w"> </span>bottling<span class="w">          </span><span class="c1"># 2 nodes, 2 answered, and what each one holds</span>
+fsmes<span class="w"> </span>fleet<span class="w"> </span>stop<span class="w"> </span>bottling<span class="w"> </span>--node<span class="w"> </span>b<span class="w">   </span><span class="c1"># stops node b; node a and the machines keep going</span>
+fsmes<span class="w"> </span>fleet<span class="w"> </span>stop<span class="w"> </span>bottling<span class="w">            </span><span class="c1"># stops both nodes, then the machines</span>
 </code></pre></div>
+<p><strong>The machines belong to the plant, not to a node.</strong> On a <em>simulated</em> pack —
+the bottling lab, <code>fsmes demo</code> — <code>fsmes fleet start</code> starts the one OPC
+replay both nodes read, before either node, and <code>fsmes fleet stop</code> stops it
+after both. There is one of it, shared, like the database: a replay started
+inside a node would die with that node, and the surviving reader would see
+the line start over from the beginning, which reads as a PLC reset and books
+nothing. It is left alone when it is already playing — both when this
+installation's own pid file still names it and when anything else already
+answers on the endpoint the pack names — so <code>fsmes fleet start</code> is safe to
+type at a plant with one node down, and a replay you started by hand, or the
+one <code>docker compose</code> owns, is never stopped by <code>fsmes fleet stop</code>. It writes
+its log under <code>logs/bottling/machines/</code>.</p>
+<p>On a plant whose pack says <code>simulate = false</code> there is nothing here to start:
+its machine layer is a PLC somebody else runs, and the nodes are two readers
+of it (<em><a href="#a-real-plant-the-reader-is-its-own-service">A real plant</a></em> below).</p>
+<p><code>fsmes fleet stop &lt;plant&gt; --node &lt;id&gt;</code> is a <em>graceful</em> stop of one node — it
+is asked, then told, and it lets go of its leases on the way out. It is for
+taking a box down on purpose, and it is <strong>not</strong> the proof that the plant
+survives a box dying: that proof is a <code>kill</code>, which is what
+<code>scripts/kill-a-node.sh</code> does and what the measurements below were taken
+from. A node the pack does not name is refused by name, with the nodes it
+does have.</p>
 <p>Each node keeps its own pid file and its own log directory
 (<code>logs/bottling/a/</code>, <code>logs/bottling/b/</code>), so stopping the plant stops both
 and a failover is readable in one node's log without the other's lines in
