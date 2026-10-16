@@ -2449,6 +2449,9 @@ def fleet_stop(
     force: bool = typer.Option(False, "--force", help=(
         "Stop a plant this installation created even though it has stopped "
         "answering. Ownership still has to hold.")),
+    node: str | None = typer.Option(None, "--node", help=(
+        "Stop one node of this plant by name and leave the rest running. A "
+        "graceful stop, not a box dying.")),
 ) -> None:
     """Stop an owned plant. Refuses any plant this installation did not create.
 
@@ -2459,12 +2462,17 @@ def fleet_stop(
     was `kill`. `--force` is the way out. It gives up **liveness**, never
     ownership: a plant this installation did not create is refused with the
     flag exactly as it is without it.
+
+    `--node <id>` stops one node of a plant whose pack names its nodes, and
+    leaves the other nodes and the shared machine layer running. It asks the
+    node to stop and then tells it, so it is a planned stop and not the proof
+    of a failover: that proof is a kill.
     """
     from fsmes.fleet import commands
     from fsmes.fleet import owned as ownership
 
     try:
-        commands.stop(name, root=_fleet_root(root), force=force, echo=typer.echo)
+        commands.stop(name, root=_fleet_root(root), force=force, echo=typer.echo, node=node)
     except (ownership.NotOwned, commands.Refused, ownership.OwnershipError) as exc:
         _refused(exc)
 

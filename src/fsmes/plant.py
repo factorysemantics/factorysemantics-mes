@@ -44,6 +44,7 @@ import sys
 import time
 import tomllib
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from datetime import datetime
@@ -769,6 +770,72 @@ def processes(cfg: dict) -> list[Process]:
     return [*opc, api, floor]
 
 
+#: The shared machine layer's own key, written beside the nodes' but never one
+#: of them: it holds no lease, serves no browser, and there is one of it per
+#: plant rather than one per node.
+MACHINES = "machines"
+
+
+def machine_layer(cfg: dict) -> list[Process]:
+    """The processes that belong to the plant rather than to one node of it.
+
+    One of them, and only for a *simulated* plant whose pack names nodes: the
+    replay that plays this plant's line. `processes` above leaves it out of
+    every node on purpose - a machine layer started by a node dies with that
+    node, and the surviving reader then sees the replay restart from the
+    beginning, which reads as a PLC reset and books nothing. Until 0.4.0 that
+    meant nobody started it at all: after the four commands of
+    `docs/operate/redundancy.md` the console said *6 of 6 disconnected* and
+    nothing was booked. So the plant starts it, once, which is what a real
+    plant's machine layer already is - one endpoint both nodes are pointed at.
+
+    A plant that says `simulate = false` has none of this. Its machine layer
+    is the PLC, nothing here starts it and nothing here stops it.
+    """
+    if not (simulates(cfg) and redundant(cfg) and node_list(cfg)):
+        return []
+    return [Process(("run-opc-sim", "--replay"),
+                    "the OPC server this plant's machines answer on",
+                    "opc-replay.jsonl", settle=2.5)]
+
+
+def endpoint(cfg: dict) -> str:
+    """Where this plant's machines answer, as the pack wrote it."""
+    return str((cfg.get("env") or {}).get("MES_OPC_ENDPOINT", ""))
+
+
+def machines_answering(cfg: dict, timeout: float = 0.5) -> bool:
+    """Is something already listening where this plant's machines answer?
+
+    Asked of the host and port in the endpoint and of nothing else. A second
+    replay on a bound port is a process that fails to bind and dies, leaving a
+    pid in a pid file that names nothing - so a machine layer somebody else
+    already started (by hand, off the page this replaces, or by a run whose
+    pid file went missing) is left alone rather than duplicated.
+
+    An endpoint with no port in it, or one that does not parse, is answered
+    *no*: refusing to start a machine layer that may not be there is the
+    worse of the two mistakes.
+    """
+    url = endpoint(cfg)
+    if not url:
+        return False
+    try:
+        parsed = urllib.parse.urlparse(url)
+        host, port = parsed.hostname, parsed.port
+    except ValueError:
+        return False
+    if not port:
+        return False
+    # A server bound to every interface is reached on loopback; the endpoint
+    # a pack writes for `docker compose` says 0.0.0.0, which is not an
+    # address anything connects to.
+    where = "127.0.0.1" if host in (None, "", "0.0.0.0") else host
+    with contextlib.suppress(OSError), socket.create_connection((where, port), timeout=timeout):
+        return True
+    return False
+
+
 def procs_file(root: Path, name: str) -> Path:
     """Where the roles of this plant's processes are recorded, beside its pid
     file and written at the same moment."""
@@ -834,6 +901,11 @@ def start(name: str, cfg: dict, root: Path, speed: float | None = None, echo=pri
     whatever order they came up in.
     """
     if node is None and node_list(cfg):
+        # The machine layer first, and once: the nodes are readers of it, and
+        # a reader that comes up before the machines answer spends its first
+        # seconds logging connection errors.
+        if machine_layer(cfg):
+            start_machines(name, cfg, root, speed, echo=echo)
         for one in node_list(cfg):
             start(name, cfg, root, speed, echo=echo, node=one["id"],
                   api_port=one["api_port"])
@@ -846,8 +918,27 @@ def start(name: str, cfg: dict, root: Path, speed: float | None = None, echo=pri
         return
 
     env = plant_env(name, cfg, root, speed, node=node, api_port=api_port)
-    mes = fsmes_command()
     here = root / log_dir(name, node)
+
+    post_boot = cfg["post_boot"] if simulates(cfg) and cfg.get("post_boot") else None
+    launched = _launch(key, processes(cfg), env, root, here, post_boot=post_boot)
+    serving = {**cfg, "api_port": api_port} if api_port is not None else cfg
+    echo(f"  {said} started -> {dashboard_url(serving)} "
+         f"(PIDs {', '.join(str(pid) for _spec, pid in launched)})")
+
+
+def _launch(key: str, specs: list[Process], env: dict[str, str], root: Path, here: Path,
+            post_boot: str | None = None) -> list[tuple[Process, int]]:
+    """Start one group of a plant's processes, detached, behind one log sink,
+    and record what was started.
+
+    One group is a node of a plant, or the plant's own shared machine layer,
+    or a plant that has neither - each with its own pid file, its own roles
+    file and its own log directory, which is what `stop` and `status` read
+    back. Nothing here decides *which* processes: that is `processes` and
+    `machine_layer` above.
+    """
+    mes = fsmes_command()
     here.mkdir(parents=True, exist_ok=True)
     log_path = here / "plant.log"
 
@@ -876,7 +967,7 @@ def start(name: str, cfg: dict, root: Path, speed: float | None = None, echo=pri
     log = sink.stdin
 
     launched: list[tuple[Process, int]] = []
-    for spec in processes(cfg):
+    for spec in specs:
         child = subprocess.Popen([*mes, *spec.args], cwd=root, env=env,
                                  stdout=log, stderr=subprocess.STDOUT, **_detached())
         launched.append((spec, child.pid))
@@ -890,8 +981,8 @@ def start(name: str, cfg: dict, root: Path, speed: float | None = None, echo=pri
     # here for a lab tool that composes a configuration in code, which is
     # code, gets reviewed, and is where the two scale labs put their breadth
     # seeding.
-    if simulates(cfg) and cfg.get("post_boot"):
-        child = subprocess.Popen([sys.executable, cfg["post_boot"]], cwd=root, env=env,
+    if post_boot:
+        child = subprocess.Popen([sys.executable, post_boot], cwd=root, env=env,
                                  stdout=log, stderr=subprocess.STDOUT, **_detached())
         launched.append((POST_BOOT, child.pid))
 
@@ -911,16 +1002,53 @@ def start(name: str, cfg: dict, root: Path, speed: float | None = None, echo=pri
         json.dumps([{"pid": pid, "role": spec.role, "log": spec.log} for spec, pid in launched],
                    indent=1),
         encoding="utf-8")
-    serving = {**cfg, "api_port": api_port} if api_port is not None else cfg
-    echo(f"  {said} started -> {dashboard_url(serving)} "
-         f"(PIDs {', '.join(str(p) for p in pids)})")
+    return launched
+
+
+def start_machines(name: str, cfg: dict, root: Path, speed: float | None = None,
+                   echo=print) -> None:
+    """Start this plant's shared machine layer, once.
+
+    Idempotent two ways, because both happen on a box where a node has been
+    killed on purpose: a pid file of ours that still names live processes
+    (a second `fsmes fleet start`), and something answering on the plant's
+    OPC endpoint with no pid file of ours beside it. Either way the machines
+    that are already playing are left playing - restarting them would restart
+    the replay, and a replay that restarts reads as a PLC reset.
+    """
+    key = keyed(name, MACHINES)
+    if running_pids(root, key):
+        echo(f"  {name}: the machines are already playing.")
+        return
+    if machines_answering(cfg):
+        echo(f"  {name}: something already answers on {endpoint(cfg)}, so the "
+             "machines are left as they are.")
+        return
+    # The machine layer is not a node and is not given a node's name: it takes
+    # no lease and serves no browser. It gets a log directory of its own for
+    # the same reason each node does - one file, one writer.
+    env = plant_env(name, cfg, root, speed)
+    env["MES_LOG_DIR"] = log_dir(name, MACHINES)
+    launched = _launch(key, machine_layer(cfg), env, root, root / log_dir(name, MACHINES))
+    echo(f"  {name}: the machines started on {endpoint(cfg)} "
+         f"(PIDs {', '.join(str(pid) for _spec, pid in launched)})")
 
 
 def stop(name: str, cfg: dict, root: Path, echo=print, node: str | None = None) -> None:
-    """Stop this plant. Every node of it, when its pack names more than one."""
+    """Stop this plant. Every node of it, when its pack names more than one.
+
+    `node` stops one node and leaves the rest of the plant running. It is a
+    graceful stop - the node is asked, then told - so it is not the proof
+    that a plant survives a box dying; that proof is a `kill`, and
+    `docs/operate/redundancy.md` says so.
+    """
     if node is None and node_list(cfg):
         for one in node_list(cfg):
             stop(name, cfg, root, echo=echo, node=one["id"])
+        # The machine layer last: the nodes read it, and a reader whose
+        # machines go away first spends its last seconds logging that.
+        if machine_layer(cfg):
+            stop_machines(name, cfg, root, echo=echo)
         return
 
     key = keyed(name, node)
@@ -928,10 +1056,35 @@ def stop(name: str, cfg: dict, root: Path, echo=print, node: str | None = None) 
     pids = running_pids(root, key)
     if not pids:
         echo(f"  {said} is not running.")
-        pid_file(root, key).unlink(missing_ok=True)
-        procs_file(root, key).unlink(missing_ok=True)
+        _forget(root, key)
         return
 
+    _end(pids)
+    _forget(root, key)
+    echo(f"  {said} stopped ({len(pids)} process(es)).")
+
+
+def stop_machines(name: str, cfg: dict, root: Path, echo=print) -> None:
+    """Stop this plant's shared machine layer.
+
+    Only what this installation started: a machine layer somebody else is
+    running - a real PLC, a replay started by hand, the one `docker compose`
+    owns - has no pid file of ours and is left exactly as it is.
+    """
+    key = keyed(name, MACHINES)
+    pids = running_pids(root, key)
+    if not pids:
+        _forget(root, key)
+        echo(f"  {name}: the machines were not started by this plant, so they are "
+             "left as they are.")
+        return
+    _end(pids)
+    _forget(root, key)
+    echo(f"  {name}: the machines stopped ({len(pids)} process(es)).")
+
+
+def _end(pids: list[int]) -> None:
+    """Ask every one of these to stop, wait, then tell the ones that did not."""
     for pid in pids:
         with contextlib.suppress(OSError):
             _ask_to_stop(pid)
@@ -943,9 +1096,11 @@ def stop(name: str, cfg: dict, root: Path, echo=print, node: str | None = None) 
         with contextlib.suppress(OSError):
             _force_stop(pid)
 
+
+def _forget(root: Path, key: str) -> None:
+    """Drop the two files that named these processes."""
     pid_file(root, key).unlink(missing_ok=True)
     procs_file(root, key).unlink(missing_ok=True)
-    echo(f"  {said} stopped ({len(pids)} process(es)).")
 
 
 def supervisor(root: Path, name: str) -> str:

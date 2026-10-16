@@ -323,3 +323,70 @@ def test_a_fleet_file_that_cannot_be_read_gets_the_nudge(tmp_path, monkeypatch):
     assert not commands._fleet_lists(pack, tmp_path)
     fleet.write_text("this is not toml = = =\n", encoding="utf-8")
     assert not commands._fleet_lists(pack, tmp_path)
+
+
+# ------------------------------ and a pack applied to an empty book, likewise
+
+
+def _a_book_with_nothing_in_it(where: Path, name: str) -> None:
+    """Throw away the plant's database, the way moving a plant does.
+
+    The lab moved bottling from its SQLite file to a PostgreSQL cluster on
+    2026-10-16 by pointing the pack at the new one and running `fleet apply`.
+    What `apply` met there was an empty book, which is this: the schema
+    built from nothing, no master data, no accounts. The engine is disposed
+    first because an open handle is a file Windows will not let anybody
+    delete.
+    """
+    from fsmes.config import get_settings
+    from fsmes.db import get_engine, get_sessionmaker
+
+    _release(get_settings, get_engine, get_sessionmaker)
+    (commands.data_dir(where) / f"{name}.db").unlink()
+
+
+def test_applying_a_pack_to_a_book_with_nothing_in_it_leaves_accounts_in_it(nowhere):
+    """What the lab's move to PostgreSQL met on 2026-10-16.
+
+    `fleet apply` against a book that was not there ran the migrations and
+    seeded the master data, and that was all. The login said *invalid
+    credentials*, both floor processes died saying "could not sign in", and
+    nothing said why; the lab was rescued with `fsmes add-user` by hand.
+    `create` ends with the accounts for exactly this reason, and now so does
+    `apply`, in the one case where it cannot be taking a decision away.
+    """
+    from fastapi.testclient import TestClient
+
+    from fsmes.api.app import create_app
+
+    commands.create(a_pack(nowhere, "bottling"), root=nowhere, echo=lambda _: None)
+    _a_book_with_nothing_in_it(nowhere, "bottling")
+
+    lines: list[str] = []
+    commands.apply("bottling", root=nowhere, echo=said(lines))
+
+    with TestClient(create_app()) as client:
+        answer = client.post("/auth/login", json={"code": "ADMIN", "password": "admin"})
+    assert answer.status_code == 200, (
+        "a plant whose book was built from nothing by `fleet apply` still cannot be "
+        f"signed in to: {answer.text}")
+    assert any("no accounts in it" in line for line in lines), (
+        "`apply` made the accounts without saying so on a line of its own; a person "
+        f"reading this output cannot tell what it did: {lines}")
+
+
+def test_applying_a_pack_to_a_plant_that_has_accounts_says_nothing_about_them(nowhere):
+    """`apply` is not the verb that re-creates a deleted account.
+
+    The whole plant is left alone here - this is the ordinary `apply`, run
+    twice a week on a plant somebody is using - and the only promise is that
+    it does not announce accounts it did not make, which is how a person
+    would learn it had re-made one they had removed on purpose.
+    """
+    commands.create(a_pack(nowhere, "bottling"), root=nowhere, echo=lambda _: None)
+
+    lines: list[str] = []
+    commands.apply("bottling", root=nowhere, echo=said(lines))
+
+    assert not any("accounts" in line for line in lines), lines
+    assert not commands._nobody_can_sign_in()

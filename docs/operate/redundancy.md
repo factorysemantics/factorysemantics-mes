@@ -69,6 +69,21 @@ run the schema command on both boxes at the same time, that is safe too — the
 first one into the database holds the migration lock while the second waits
 for it and finds the head.
 
+**A new database starts with nobody in it.** A plant moved onto a PostgreSQL
+of its own gets the schema and the pack's master data, and its *accounts* are
+a separate thing: a book built from nothing has none, and every sign-in
+answers *invalid credentials* until somebody makes one. The commands above —
+`fsmes plant kc1 init` and `fsmes plant kc1 migrate` — make them, and so do
+`fsmes fleet create` and (since 0.4.0) `fsmes fleet apply` when it finds a
+book with no account in it at all. `fsmes fleet apply` on a plant that *has*
+accounts leaves them alone: it is not the command that brings back one you
+deleted on purpose. One account by hand is `fsmes add-user`.
+
+On a simulated plant this is the failure you will actually meet, because the
+floor signs in before anybody does: `could not sign in … why=this plant
+answered and refused the credentials, so there is likely no FLOOR-SIM account
+in its book`. That line names the commands that fix it.
+
 `--node` names the node. Give it a name you will recognise in a log at
 02:00 — the host name is the usual answer. Without `--node` a node calls
 itself `<host>:<port>`.
@@ -101,10 +116,36 @@ lease_seconds = 6
 Then the fleet commands act on every node the pack names:
 
 ```bash
-fsmes fleet start bottling      # starts node a and node b, each with its own log
-fsmes fleet status bottling     # 2 nodes, 2 answered, and what each one holds
-fsmes fleet stop bottling       # stops both
+fsmes fleet start bottling           # the machines, then node a and node b
+fsmes fleet status bottling          # 2 nodes, 2 answered, and what each one holds
+fsmes fleet stop bottling --node b   # stops node b; node a and the machines keep going
+fsmes fleet stop bottling            # stops both nodes, then the machines
 ```
+
+**The machines belong to the plant, not to a node.** On a *simulated* pack —
+the bottling lab, `fsmes demo` — `fsmes fleet start` starts the one OPC
+replay both nodes read, before either node, and `fsmes fleet stop` stops it
+after both. There is one of it, shared, like the database: a replay started
+inside a node would die with that node, and the surviving reader would see
+the line start over from the beginning, which reads as a PLC reset and books
+nothing. It is left alone when it is already playing — both when this
+installation's own pid file still names it and when anything else already
+answers on the endpoint the pack names — so `fsmes fleet start` is safe to
+type at a plant with one node down, and a replay you started by hand, or the
+one `docker compose` owns, is never stopped by `fsmes fleet stop`. It writes
+its log under `logs/bottling/machines/`.
+
+On a plant whose pack says `simulate = false` there is nothing here to start:
+its machine layer is a PLC somebody else runs, and the nodes are two readers
+of it (*[A real plant](#a-real-plant-the-reader-is-its-own-service)* below).
+
+`fsmes fleet stop <plant> --node <id>` is a *graceful* stop of one node — it
+is asked, then told, and it lets go of its leases on the way out. It is for
+taking a box down on purpose, and it is **not** the proof that the plant
+survives a box dying: that proof is a `kill`, which is what
+`scripts/kill-a-node.sh` does and what the measurements below were taken
+from. A node the pack does not name is refused by name, with the nodes it
+does have.
 
 Each node keeps its own pid file and its own log directory
 (`logs/bottling/a/`, `logs/bottling/b/`), so stopping the plant stops both

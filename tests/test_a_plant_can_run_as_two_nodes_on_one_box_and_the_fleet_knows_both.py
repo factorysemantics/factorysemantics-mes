@@ -677,7 +677,8 @@ def test_stopping_a_plant_whose_first_node_died_stops_the_plant(tmp_path, monkey
     monkeypatch.setattr(commands, "_config", lambda entry: _two_nodes())
     stopped: list[tuple[str, Path]] = []
     monkeypatch.setattr(commands.plants, "stop",
-                        lambda name, cfg, root, echo=print: stopped.append((name, root)))
+                        lambda name, cfg, root, echo=print, node=None:
+                        stopped.append((name, root)))
 
     ownership = commands.stop("bottling", root=tmp_path, echo=lambda _line: None)
 
@@ -804,3 +805,229 @@ def test_the_lab_fleet_file_this_repository_ships_still_reads(tmp_path, monkeypa
     assert len(loaded) == len(listed), f"{len(listed)} packs listed, {len(loaded)} loaded"
     for name, cfg in loaded.items():
         assert cfg["nodes"] == [], f"{name} names no nodes today, and reads as it did"
+
+
+# ------------------------------------------- the machines the two nodes share
+
+
+def _two_simulated_nodes() -> dict:
+    """The same two-node plant, simulated: a replay instead of a real PLC."""
+    return {**_two_nodes(simulate=True),
+            "env": {"MES_REDUNDANCY": "true",
+                    "MES_OPC_ENDPOINT": "opc.tcp://127.0.0.1:4845/fsmes/bottling"}}
+
+
+def test_starting_a_simulated_two_node_plant_starts_the_machines_once_and_first(
+        a_plant_that_starts_nothing):
+    """The gap the steward's live run found on 2026-10-16.
+
+    A single-node simulated plant starts its own replay; a pack with
+    `[[serve.nodes]]` deliberately does not, because a machine layer started
+    by a node dies with that node and the surviving reader sees the replay
+    restart - which reads as a PLC reset and books nothing. Nobody started it
+    instead: after the four commands of `docs/operate/redundancy.md` the
+    console said *6 of 6 disconnected*.
+
+    So the plant starts it, once, before either node, with a pid file and a
+    log directory of its own and no node name anywhere on it.
+    """
+    root = a_plant_that_starts_nothing
+    said: list[str] = []
+    plants.start("bottling", _two_simulated_nodes(), root, echo=said.append)
+
+    assert "the machines started on opc.tcp://127.0.0.1:4845/fsmes/bottling" in said[0], (
+        f"the machines are announced first, on the address the pack names: {said}")
+    assert [line.split()[0:3] for line in said[1:]] == [["bottling", "node", "a"],
+                                                        ["bottling", "node", "b"]]
+    shared = [pid for pid, node in Fake.started if not node]
+    assert len(shared) == 2, (
+        "the machine layer is the replay and its log sink, started once and "
+        f"belonging to no node; {len(shared)} children were started without a node id")
+    assert shared == [pid for pid, _node in Fake.started[:2]], (
+        "and started before either node, so no reader comes up to a silent endpoint")
+    assert sorted(node for _pid, node in Fake.started if node) == ["a"] * 4 + ["b"] * 4, (
+        "each node still starts the four processes it started before")
+
+    recorded = json.loads(
+        plants.procs_file(root, "bottling-machines").read_text(encoding="utf-8"))
+    assert [row["role"] for row in recorded] == [
+        "the OPC server this plant's machines answer on", "the log sink"]
+    assert (root / "logs" / "bottling" / "machines" / "sink.log").is_file()
+    for node in ("a", "b"):
+        roles = [row["role"] for row in json.loads(
+            plants.procs_file(root, f"bottling-{node}").read_text(encoding="utf-8"))]
+        assert "the OPC server this plant's machines answer on" not in roles, (
+            f"node {node} is playing the line itself; killing it would reset the PLC")
+
+
+def test_a_plant_that_is_not_simulated_starts_no_machines(a_plant_that_starts_nothing):
+    """Two nodes against a real PLC: there is nothing of ours to start, and
+    starting anything on that endpoint would be this box pretending to be the
+    plant's machines."""
+    root = a_plant_that_starts_nothing
+    said: list[str] = []
+    plants.start("bottling", _two_nodes(), root, echo=said.append)
+
+    assert not any("machines" in line for line in said), said
+    assert not plants.pid_file(root, "bottling-machines").exists()
+
+
+def test_a_second_fleet_start_does_not_start_a_second_replay(
+        a_plant_that_starts_nothing, monkeypatch):
+    """`fsmes fleet start` is what brings a killed node back (the lab's
+    `crew lab-revive`), so it is typed on a plant that is already running.
+    Two replays on one endpoint is one of them failing to bind and the other
+    playing the line twice over."""
+    root = a_plant_that_starts_nothing
+    monkeypatch.setattr(plants, "running_pids",
+                        lambda r, name: [4242] if name.endswith("-machines") else [])
+    said: list[str] = []
+    plants.start("bottling", _two_simulated_nodes(), root, echo=said.append)
+
+    assert "the machines are already playing" in said[0], said
+    assert all(node for _pid, node in Fake.started), (
+        "something without a node id was started, which is a second machine layer")
+
+
+def test_machines_already_answering_on_the_endpoint_are_left_alone(
+        a_plant_that_starts_nothing, monkeypatch):
+    """The other way it happens: a replay somebody started by hand, or the one
+    `docker compose` owns, with no pid file of ours beside it."""
+    root = a_plant_that_starts_nothing
+    monkeypatch.setattr(plants, "machines_answering", lambda cfg, **k: True)
+    said: list[str] = []
+    plants.start("bottling", _two_simulated_nodes(), root, echo=said.append)
+
+    assert "something already answers on opc.tcp://127.0.0.1:4845/fsmes/bottling" in said[0]
+    assert "left as they are" in said[0]
+    assert not plants.pid_file(root, "bottling-machines").exists()
+
+
+def test_what_answering_on_the_endpoint_means_is_read_off_the_pack(monkeypatch):
+    """The question asked of the address the pack wrote, and asked of nothing
+    when the pack wrote no address: a plant whose endpoint is unknown is not a
+    plant whose machines are answering."""
+    asked: list[tuple[str, int]] = []
+
+    class Open:
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    def answered(where, timeout=None):
+        asked.append(where)
+        return Open()
+
+    monkeypatch.setattr(plants.socket, "create_connection", answered)
+    assert plants.machines_answering(_two_simulated_nodes()) is True
+    assert asked == [("127.0.0.1", 4845)]
+    assert plants.machines_answering(_two_nodes()) is False, "no endpoint, no claim"
+    assert plants.machines_answering({"env": {"MES_OPC_ENDPOINT": "opc.tcp://host/no-port"}}) \
+        is False, "an endpoint with no port cannot be asked"
+
+    def refused(where, timeout=None):
+        raise OSError("connection refused")
+
+    monkeypatch.setattr(plants.socket, "create_connection", refused)
+    assert plants.machines_answering(_two_simulated_nodes()) is False
+
+
+def test_stopping_a_simulated_two_node_plant_stops_the_machines_last(
+        a_plant_that_starts_nothing, monkeypatch):
+    root = a_plant_that_starts_nothing
+    plants.start("bottling", _two_simulated_nodes(), root, echo=lambda line: None)
+
+    monkeypatch.setattr(plants, "running_pids", lambda r, name: [9001])
+    monkeypatch.setattr(plants, "_alive", lambda pid: False)
+    monkeypatch.setattr(plants, "_ask_to_stop", lambda pid: None)
+    said: list[str] = []
+    plants.stop("bottling", _two_simulated_nodes(), root, echo=said.append)
+
+    assert [line.strip() for line in said] == [
+        "bottling node a stopped (1 process(es)).",
+        "bottling node b stopped (1 process(es)).",
+        "bottling: the machines stopped (1 process(es))."]
+    assert not plants.pid_file(root, "bottling-machines").exists()
+
+
+def test_machines_this_installation_did_not_start_are_not_stopped(
+        a_plant_that_starts_nothing, monkeypatch):
+    """`fleet stop` on a plant pointed at the compose demo's machines, or at a
+    real PLC that happens to be simulated elsewhere: nothing of ours is
+    running, so nothing is killed and the line says so."""
+    root = a_plant_that_starts_nothing
+    monkeypatch.setattr(plants, "running_pids",
+                        lambda r, name: [] if name.endswith("-machines") else [9001])
+    monkeypatch.setattr(plants, "_alive", lambda pid: False)
+    monkeypatch.setattr(plants, "_ask_to_stop", lambda pid: None)
+    said: list[str] = []
+    plants.stop("bottling", _two_simulated_nodes(), root, echo=said.append)
+
+    assert "were not started by this plant" in said[-1], said
+
+
+# ------------------------------------------------------- stopping one node
+
+
+def test_stopping_one_node_by_name_leaves_the_rest_of_the_plant_running(
+        a_plant_that_starts_nothing, monkeypatch):
+    """A graceful stop of one node, for a person taking a box down on purpose.
+
+    Not the proof that a plant survives a box dying: that proof is a `kill`,
+    because a node asked to stop lets go of its leases on the way out and a
+    node whose power is cut does not.
+    """
+    root = a_plant_that_starts_nothing
+    plants.start("bottling", _two_simulated_nodes(), root, echo=lambda line: None)
+
+    monkeypatch.setattr(plants, "running_pids", lambda r, name: [9001])
+    monkeypatch.setattr(plants, "_alive", lambda pid: False)
+    asked: list[int] = []
+    monkeypatch.setattr(plants, "_ask_to_stop", asked.append)
+    said: list[str] = []
+    plants.stop("bottling", _two_simulated_nodes(), root, echo=said.append, node="b")
+
+    assert [line.strip() for line in said] == ["bottling node b stopped (1 process(es))."]
+    assert asked == [9001]
+    assert plants.pid_file(root, "bottling-a").is_file(), "node a was left running"
+    assert plants.pid_file(root, "bottling-machines").is_file(), (
+        "the machines were left playing; the node that is still up is reading them")
+    assert not plants.pid_file(root, "bottling-b").exists()
+
+
+def test_stopping_a_node_the_pack_does_not_name_is_refused_with_the_ones_it_has(
+        tmp_path, monkeypatch):
+    """A typo must not read as "that node is not running", which is a sentence a
+    person would go and do something about."""
+    where = commands.data_dir(tmp_path)
+    _ownership_of(where)
+    monkeypatch.setattr(commands, "_nodes", lambda entry, root: _two_node_rows())
+    monkeypatch.setattr(commands.observe, "health", _answering_at("http://127.0.0.1:8011"))
+    monkeypatch.setattr(commands, "_config", lambda entry: _two_nodes())
+    stopped: list[str | None] = []
+    monkeypatch.setattr(commands.plants, "stop",
+                        lambda name, cfg, root, echo=print, node=None: stopped.append(node))
+
+    with pytest.raises(commands.Refused) as refusal:
+        commands.stop("bottling", root=tmp_path, echo=lambda _line: None, node="c")
+    assert "has no node 'c'" in str(refusal.value)
+    assert "a, b" in str(refusal.value), "the refusal names the nodes it does have"
+    assert stopped == [], "nothing was stopped on the way to the refusal"
+
+    commands.stop("bottling", root=tmp_path, echo=lambda _line: None, node="b")
+    assert stopped == ["b"], "and the node the pack does name is stopped"
+
+
+def test_stopping_a_named_node_of_a_plant_whose_pack_names_none_says_so(
+        tmp_path, monkeypatch):
+    """`--node` typed at an ordinary plant. There is one process tree and
+    stopping it is `fsmes fleet stop` with no option at all."""
+    where = commands.data_dir(tmp_path)
+    _ownership_of(where)
+    monkeypatch.setattr(commands.observe, "health", _answering_at("http://127.0.0.1:8010"))
+    monkeypatch.setattr(commands, "_config", lambda entry: {"simulate": False, "api_port": 8010})
+    monkeypatch.setattr(commands.plants, "stop",
+                        lambda name, cfg, root, echo=print, node=None: None)
+
+    with pytest.raises(commands.Refused) as refusal:
+        commands.stop("bottling", root=tmp_path, echo=lambda _line: None, node="a")
+    assert "no nodes at all" in str(refusal.value)

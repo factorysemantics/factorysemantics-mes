@@ -10,7 +10,160 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **A plant can run on two boxes and keep counting when one of them dies.**
+  Two or more **nodes** of one plant against one PostgreSQL, with the pack
+  saying so:
+
+  ```toml
+  [redundancy]
+  enabled       = true
+  lease_seconds = 10
+  ```
+
+  Three jobs that must run once — reading the machines, the simulated floor,
+  and pruning the history — are held one at a time by a row in a new
+  `plant_leases` table, claimed and renewed against the **database's** clock
+  and never the box's. A holder that cannot renew stops at once and comes
+  back as a standby; the other node has the job within a lease or two. The
+  dashboard on the surviving node keeps answering, a person signed in on one
+  node is signed in on the other (the pack names the variable holding the
+  signing key, `secret_key_env`, and a plant with `[redundancy]` on refuses
+  to start without it), and production is booked **exactly once** — the
+  counters are absolute, and a new `counter_baselines` table carries each
+  one's baseline in the same transaction as the booking it belongs to, so a
+  node taking over continues the count rather than starting it again.
+  `fsmes plant <name> run --node <id> --api-port <port>` names a node and
+  moves it off the plant's own port; `/health` grows a `node` block saying
+  which node answered, how long its lease is, what it holds and who holds
+  the rest; `fsmes plant <name> status` says the same as a line. PostgreSQL
+  only: `[redundancy]` with a SQLite URL refuses in one sentence, and the
+  single-box SQLite demo is untouched. Measured in lease units on one
+  machine, not in seconds. What it does **not** do is in
+  [one plant on two boxes](docs/operate/redundancy.md) and decision 0042:
+  the front door is yours (two nodes are two addresses), the database's own
+  standby is PostgreSQL's job, the PLC write path stays single, ERP sync and
+  the UNS publisher are still one copy each, and a conversation on the AI tab
+  starts over after a failover. (#177)
+
+- **The two-box demo, and the kill test anyone can run.**
+  `docker compose -f docker/docker-compose.redundant.yml up` brings up one
+  PostgreSQL, the simulated machines, two nodes of one plant and nginx in
+  front of both on one address; `bash scripts/kill-a-node.sh` brings it up,
+  waits for the counts to move, kills a node outright, watches the one
+  address until the other node holds the reader, and prints the takeover in
+  lease units with a check that nothing was booked twice and nothing was
+  lost. A CI job (`two-nodes-in-compose`) runs that same script on every
+  pull request. On this product's own box on 2026-10-16 the reader was on the
+  second node after 1.13 leases of 6 s, 0 of the requests asked during the
+  failover were refused, all 6 machines booked exactly what their counters
+  moved, and 0 readings were booked twice. (#178)
+
+- **The screens say which box holds what.** The line beside the plant's name
+  on the dashboard — *served by b · machines read by a* — used to be written
+  once when the page loaded, which left it naming a dead node until somebody
+  reloaded; it now follows a takeover on the page's own poll, within five
+  seconds and with no reload, and only on a plant that says it runs on more
+  than one node (a single-node plant starts no timer and makes no request it
+  did not make before). The [fleet console](docs/operate/fleet.md) shows such
+  a plant once with its nodes under it — how many there are and how many
+  answered, then one line each saying where that node is and what it holds in
+  words — and `fsmes fleet status`, `fsmes fleet list` and `/fleet.json`
+  carry the same. A node that did not answer is **unknown** there, never a
+  node holding nothing. (#178)
+
+- **A pack may name the nodes that run on one box**, which is the cheap way
+  to see all of this before you own the second box:
+
+  ```toml
+  [[serve.nodes]]
+  id       = "a"
+  api_port = 8010
+  ```
+
+  `fsmes fleet start`, `stop`, `status`, `list` and `apply` then act on every
+  node the pack names, each with its own pid file and its own log directory,
+  and `fsmes pack check` refuses the four ways a node list half-starts a
+  plant (two nodes sharing a port or a name, nodes named with `[redundancy]`
+  off, no signing key between them). A pack that names no nodes is the
+  ordinary plant on one address and behaves exactly as it did. (#178)
+
+- **`fsmes fleet start` starts the machines a two-node simulated plant
+  shares, and `fleet stop` stops them.** A simulated plant on one node starts
+  its own OPC replay; a pack that named nodes deliberately did not, because a
+  replay started inside a node dies with that node and the surviving reader
+  then sees the line start over — which reads as a PLC reset and books
+  nothing. Nobody started it instead: after the four commands in
+  [one plant on two boxes](docs/operate/redundancy.md) the console said
+  *6 of 6 disconnected* and nothing was booked. The plant now starts it once,
+  before either node, with a log directory of its own; it is left playing
+  when it is already playing, both when this installation's own pid file
+  names it and when anything else already answers on the endpoint the pack
+  names, so a replay you started by hand — or the one `docker compose` owns —
+  is never stopped by `fsmes fleet stop`. A plant whose pack says
+  `simulate = false` starts nothing here: its machine layer is a PLC somebody
+  else runs.
+
+- **`fsmes fleet stop <plant> --node <id>`** stops one node of a plant and
+  leaves the others and the shared machines running, for taking one box down
+  on purpose. It is a graceful stop — the node is asked, then told, and it
+  lets go of its leases on the way out — so it is not the proof that a plant
+  survives a box dying: that proof is a `kill`, and the docs say which is
+  which. A node the pack does not name is refused by name, with the nodes it
+  does have.
+
+### Fixed
+
+- **A plant whose first node died could not be stopped.** `fsmes fleet stop`
+  asked one address — the one in the ownership record — and counted a pid
+  file a plant with nodes never writes, so a plant running happily on its
+  second node refused to stop at all: *nothing in its pid file is alive, so
+  there may be nothing left to stop*, with three live processes. `stop`,
+  `apply` and `start` now ask every node the pack names, and a refusal counts
+  every node's pid file and says how many it read. (#178)
+
+- **The console's row for a plant running on its second node was `unknown`
+  in every column** — no label, no schema, no machines, no orders — because
+  the row was filled from the address in the pack, which was the node that
+  had died. A plant with nodes is now read at whichever node answers, and the
+  silent node is still named as silent on its own line underneath. The node
+  that answered is asked the same ownership question as the first address, so
+  a port answering as something else is refused rather than believed. (#178)
+
+- **`fsmes fleet apply` to a book with nothing in it leaves accounts in it.**
+  Pointing an existing pack at a new PostgreSQL ran the migrations and seeded
+  the plant's master data and stopped there: every sign-in answered *invalid
+  credentials*, and on a simulated plant both floor processes died saying
+  *could not sign in* with nothing saying why. `apply` now makes the accounts
+  `fsmes fleet create` makes, in the one case where it cannot be taking
+  anybody's decision away — a book with no account in it at all — and says on
+  a line of its own that it did. A plant that has accounts is left alone:
+  `apply` is not the command that brings back one you deleted. And the
+  floor's own line now names the likeliest cause, which is either a plant
+  that answered and refused the credentials or a plant that never answered
+  at all.
+
+### Honesty
+
+- **A restart no longer re-books what was already booked, on one box or
+  two.** Production is counted from absolute machine counters, and until now
+  the baseline each counter was measured from lived in the reader's memory:
+  a reader that restarted treated the counter's whole value as new
+  production. One migration, `b6f0c2a71d58`, adds `plant_leases` and
+  `counter_baselines`; nothing to do on a single-box plant, where the two
+  tables sit unused until `[redundancy]` is turned on.
+
+- **Windows: what is and is not proven.** A CI job
+  (`two-nodes-on-windows`) builds a two-node pack, checks it, creates it,
+  starts it and stops it, and holds that both nodes answer under their own
+  names and that each of the three roles is held by exactly one of them. The
+  **kill is not proven on Windows**: `Popen.terminate()` there does not go
+  through the plant's own shutdown handler, so a node killed that way stops
+  by a different mechanism than a node whose power is cut, and the takeover
+  that follows is a different thing to measure. The lease, the takeover in
+  lease units and the counts that must not be booked twice are proven on
+  Linux only.
 
 ## [0.3.1] — 2026-10-15
 
