@@ -107,8 +107,8 @@ def recorded(monkeypatch) -> list[str]:
     done: list[str] = []
     monkeypatch.setattr(plants, "start", lambda name, cfg, root, speed=None, echo=print:
                         done.append(f"start {name}"))
-    monkeypatch.setattr(plants, "stop", lambda name, cfg, root, echo=print:
-                        done.append(f"stop {name}"))
+    monkeypatch.setattr(plants, "stop", lambda name, cfg, root, echo=print, node=None:
+                        done.append(f"stop {name}" + (f" node {node}" if node else "")))
     return done
 
 

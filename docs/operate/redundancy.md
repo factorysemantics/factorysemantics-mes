@@ -101,10 +101,36 @@ lease_seconds = 6
 Then the fleet commands act on every node the pack names:
 
 ```bash
-fsmes fleet start bottling      # starts node a and node b, each with its own log
-fsmes fleet status bottling     # 2 nodes, 2 answered, and what each one holds
-fsmes fleet stop bottling       # stops both
+fsmes fleet start bottling           # the machines, then node a and node b
+fsmes fleet status bottling          # 2 nodes, 2 answered, and what each one holds
+fsmes fleet stop bottling --node b   # stops node b; node a and the machines keep going
+fsmes fleet stop bottling            # stops both nodes, then the machines
 ```
+
+**The machines belong to the plant, not to a node.** On a *simulated* pack —
+the bottling lab, `fsmes demo` — `fsmes fleet start` starts the one OPC
+replay both nodes read, before either node, and `fsmes fleet stop` stops it
+after both. There is one of it, shared, like the database: a replay started
+inside a node would die with that node, and the surviving reader would see
+the line start over from the beginning, which reads as a PLC reset and books
+nothing. It is left alone when it is already playing — both when this
+installation's own pid file still names it and when anything else already
+answers on the endpoint the pack names — so `fsmes fleet start` is safe to
+type at a plant with one node down, and a replay you started by hand, or the
+one `docker compose` owns, is never stopped by `fsmes fleet stop`. It writes
+its log under `logs/bottling/machines/`.
+
+On a plant whose pack says `simulate = false` there is nothing here to start:
+its machine layer is a PLC somebody else runs, and the nodes are two readers
+of it (*[A real plant](#a-real-plant-the-reader-is-its-own-service)* below).
+
+`fsmes fleet stop <plant> --node <id>` is a *graceful* stop of one node — it
+is asked, then told, and it lets go of its leases on the way out. It is for
+taking a box down on purpose, and it is **not** the proof that the plant
+survives a box dying: that proof is a `kill`, which is what
+`scripts/kill-a-node.sh` does and what the measurements below were taken
+from. A node the pack does not name is refused by name, with the nodes it
+does have.
 
 Each node keeps its own pid file and its own log directory
 (`logs/bottling/a/`, `logs/bottling/b/`), so stopping the plant stops both

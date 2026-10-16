@@ -9,7 +9,8 @@ or signals a process. Two of them only read.
                     data, accounts - and record the ownership
     start <name>    the existing `fsmes plant <name> start` machinery, reached
                     only through the gate
-    stop <name>     the same, for stopping
+    stop <name>     the same, for stopping - the whole plant, or one node of
+                    it by name
     apply <name>    check the pack, then apply it to an owned, stopped plant
     status <name>   what the console shows, plus drift              (reads)
     list            owned and observed, with totals                 (reads)
@@ -213,13 +214,19 @@ def start(name: str, *, root: Path, speed: float | None = None, echo=print) -> o
     return ownership
 
 
-def stop(name: str, *, root: Path, force: bool = False, echo=print) -> owned.Ownership:
-    """Stop an owned plant.
+def stop(name: str, *, root: Path, force: bool = False, echo=print,
+         node: str | None = None) -> owned.Ownership:
+    """Stop an owned plant, or one named node of it.
 
     `force` is for one state and says so when it refuses without it: a plant
     this installation created, whose pid file names live processes, that has
     stopped answering `/health`. It is still owned - the instance id in its
     data directory says so - and what this installation owns it may stop.
+
+    `node` stops one node and leaves the rest of the plant - the other nodes
+    and the shared machine layer - running. It is a graceful stop, so it is
+    not the proof that the plant survives a box dying: that proof is a kill,
+    and `docs/operate/redundancy.md` says which is which.
     """
     where = data_dir(root)
     # Asked at every node its pack names: a plant whose first node is the one
@@ -231,7 +238,15 @@ def stop(name: str, *, root: Path, force: bool = False, echo=print) -> owned.Own
     if force and not ownership.answering:
         echo(f"  {name} is not answering; stopping it anyway because this installation "
              f"created it and the instance id in {ownership.entry.data_dir} still matches.")
-    plants.stop(name, _config(ownership.entry), root, echo=echo)
+    cfg = _config(ownership.entry)
+    if node is not None:
+        named = [one["id"] for one in plants.node_list(cfg)]
+        if node not in named:
+            raise Refused(
+                f"{name} has no node {node!r}. Its pack names "
+                + (f"{len(named)}: {', '.join(named)}." if named
+                   else "no nodes at all, so the plant is the only thing to stop."))
+    plants.stop(name, cfg, root, echo=echo, node=node)
     return ownership
 
 
