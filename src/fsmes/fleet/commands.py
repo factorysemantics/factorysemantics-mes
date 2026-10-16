@@ -11,7 +11,9 @@ or signals a process. Two of them only read.
                     only through the gate
     stop <name>     the same, for stopping - the whole plant, or one node of
                     it by name
-    apply <name>    check the pack, then apply it to an owned, stopped plant
+    apply <name>    check the pack, then apply it to an owned, stopped plant,
+                    and give a book with no account in it the accounts
+                    `create` would have made
     status <name>   what the console shows, plus drift              (reads)
     list            owned and observed, with totals                 (reads)
 
@@ -125,6 +127,39 @@ def _lab_accounts(echo=print) -> dict[str, str]:
                 out[code] = "already there"
         echo(f"      account {code} ({role}): {out[code]}")
     return out
+
+
+def _nobody_can_sign_in() -> bool:
+    """Has this plant's book nobody in it who can sign in?
+
+    Asked after `fsmes pack apply` has pointed this process at the plant's
+    own database, so it is that book being counted and not this process's
+    default one.
+
+    Counted as *accounts*, not as people. A pack's master data puts people on
+    the plant's books who have no password on purpose - bottling has seven
+    maintenance tradespeople, and `Person.password_hash` null means *cannot
+    sign in* - so a book freshly built from a pack is full of personnel and
+    empty of accounts, which is exactly the state that left both floors
+    saying "could not sign in" on 2026-10-16.
+
+    Unknown is not zero: a question that cannot be asked - no schema, a
+    database that stopped answering - is answered *no*, because making
+    accounts in a book we could not read would be a guess.
+    """
+    from sqlalchemy import func, select
+
+    from fsmes.db import session_scope
+    from fsmes.domain import Person
+
+    try:
+        with session_scope() as session:
+            accounts = session.execute(
+                select(func.count()).select_from(Person)
+                .where(Person.password_hash.is_not(None))).scalar_one()
+            return int(accounts) == 0
+    except Exception:
+        return False
 
 
 def create(directory: Path, *, root: Path, echo=print) -> owned.Entry:
@@ -272,6 +307,18 @@ def apply(name: str, *, root: Path, directory: Path | None = None, echo=print) -
             "applying one plant's pack to another would rename a running plant's data.")
     echo(f"  {name}: pack checks out")
     applier.apply(pack_dir, into=where, echo=echo)
+    # A pack applied to a book that was not there before builds the schema and
+    # seeds the master data, and until 0.4.0 that was all: nobody could sign
+    # in, the simulated floor died saying "could not sign in", and nothing
+    # said why (the lab's move to PostgreSQL, 2026-10-16). `create` ends with
+    # the accounts for exactly this reason; so does this, in the one case
+    # where it cannot be taking somebody's decision away - a book with no
+    # account in it at all. A plant that has accounts is left alone: `apply`
+    # is not the verb that re-creates a deleted one.
+    if not pack.accounts() and _nobody_can_sign_in():
+        echo(f"  {name}: this book has no accounts in it; making the ones "
+             "`fsmes fleet create` makes")
+        _lab_accounts(echo)
 
     from dataclasses import replace
 

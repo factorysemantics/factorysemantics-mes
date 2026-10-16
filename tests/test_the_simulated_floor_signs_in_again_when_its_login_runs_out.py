@@ -292,3 +292,34 @@ def test_a_floor_that_was_never_signed_in_is_not_quietly_signed_in():
             return plant.logins
 
     assert asyncio.run(_go()) == 0
+
+
+# ------------------------------- and when it never signed in in the first place
+
+
+def test_a_floor_that_never_signed_in_says_which_of_the_two_causes_it_was():
+    """The lab's move to PostgreSQL, 2026-10-16: both floors died at startup.
+
+    The line they left was *could not sign in*, with the address and the user
+    and nothing a person could act on. Two causes want two different things
+    done - an account that is not in the book, and a plant that is not there -
+    and the floor knows which it met, because it is holding the exception.
+    """
+    from fsmes.sim.operations import _why_the_login_never_came
+
+    refused = httpx.HTTPStatusError(
+        "401", request=httpx.Request("POST", "http://plant/auth/login"),
+        response=httpx.Response(401))
+    said = _why_the_login_never_came(refused, "FLOOR-SIM")
+    assert "no FLOOR-SIM account in its book" in said
+    assert "fsmes add-user" in said and "fsmes fleet create" in said, (
+        "the line names the commands that fix it, which is the whole point of it")
+
+    silent = _why_the_login_never_came(
+        httpx.ConnectError("refused", request=httpx.Request("POST", "http://plant/auth/login")),
+        "FLOOR-SIM")
+    assert "nothing answered on this address" in silent
+
+    assert "not known" in _why_the_login_never_came(KeyError("token"), "FLOOR-SIM"), (
+        "anything else is reported as not known; unknown is a valid answer and a "
+        "guess in this line would send a person to the wrong place")

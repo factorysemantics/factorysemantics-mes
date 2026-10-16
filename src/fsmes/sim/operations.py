@@ -419,6 +419,25 @@ def _as_moment(value) -> datetime | None:
 _MIN_SECONDS_BETWEEN_RENEWALS = 5.0
 
 
+def _why_the_login_never_came(exc: Exception | None, user: str) -> str:
+    """The likeliest reason the floor never signed in, in words a person can
+    act on.
+
+    Two causes, and they want different things done. A plant that answered
+    and refused the credentials has a book with no such account in it - which
+    is what a book built from nothing by a schema command looks like. A plant
+    that never answered at all is a plant that is not there yet. Anything
+    else is reported as not known rather than guessed at.
+    """
+    if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in (401, 403):
+        return (f"this plant answered and refused the credentials, so there is likely no "
+                f"{user} account in its book - `fsmes add-user` makes one, and "
+                f"`fsmes fleet create` or `fsmes fleet apply` makes the whole set")
+    if isinstance(exc, httpx.HTTPError):
+        return "nothing answered on this address in the two minutes we waited"
+    return "not known; the error is beside this line"
+
+
 def _seconds_this_token_has_left(token: str) -> float | None:
     """How long the plant says this login is good for, read from the token.
 
@@ -2359,14 +2378,22 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
         crew = Floor(settings, crew_client, rng, script, speed)
 
         # The API comes up alongside us; keep trying rather than dying first.
+        last: Exception | None = None
         for _attempt in range(60):
             try:
                 await floor.sign_in(user, password)
                 break
-            except (httpx.HTTPError, KeyError):
+            except (httpx.HTTPError, KeyError) as exc:
+                last = exc
                 await asyncio.sleep(2.0)
         else:
-            log.error("could not sign in", base=base, user=user)
+            # Two minutes of trying and then one line, which used to be the
+            # whole of what a person got: on 2026-10-16 both nodes of a plant
+            # whose book had just been moved to a new database died here, and
+            # nothing said that the book had no accounts in it. The likeliest
+            # cause is now in the line.
+            log.error("could not sign in", base=base, user=user,
+                      why=_why_the_login_never_came(last, user), error=str(last)[:160])
             return
         try:
             await shift.sign_in(supervisor, supervisor_password)

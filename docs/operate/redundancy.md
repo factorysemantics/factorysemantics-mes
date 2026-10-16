@@ -69,6 +69,21 @@ run the schema command on both boxes at the same time, that is safe too — the
 first one into the database holds the migration lock while the second waits
 for it and finds the head.
 
+**A new database starts with nobody in it.** A plant moved onto a PostgreSQL
+of its own gets the schema and the pack's master data, and its *accounts* are
+a separate thing: a book built from nothing has none, and every sign-in
+answers *invalid credentials* until somebody makes one. The commands above —
+`fsmes plant kc1 init` and `fsmes plant kc1 migrate` — make them, and so do
+`fsmes fleet create` and (since 0.4.0) `fsmes fleet apply` when it finds a
+book with no account in it at all. `fsmes fleet apply` on a plant that *has*
+accounts leaves them alone: it is not the command that brings back one you
+deleted on purpose. One account by hand is `fsmes add-user`.
+
+On a simulated plant this is the failure you will actually meet, because the
+floor signs in before anybody does: `could not sign in … why=this plant
+answered and refused the credentials, so there is likely no FLOOR-SIM account
+in its book`. That line names the commands that fix it.
+
 `--node` names the node. Give it a name you will recognise in a log at
 02:00 — the host name is the usual answer. Without `--node` a node calls
 itself `<host>:<port>`.
