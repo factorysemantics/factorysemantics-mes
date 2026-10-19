@@ -1,0 +1,104 @@
+<!doctype html>
+<!--
+  The stage `scripts/record-kill-a-node.py` films: a caption bar, the Line
+  view of each node side by side, and a terminal strip underneath that the
+  recorder fills with the output of the real `docker` commands it runs.
+
+  It is served over http on 127.0.0.1 rather than opened as a file, because a
+  file:// page is a different origin from the nodes and the browser keeps the
+  sign-in cookie out of the two frames. Which node is on which side comes from
+  the query string — `?a=8001&b=8002` — so the recorder can put its nodes on
+  whatever ports are free without this file being rewritten.
+
+  Nothing here is part of the product. The one thing it draws over a node's
+  own page is the grey "no answer" panel, and the caption under the published
+  recording says so.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<title>two nodes, one plant</title>
+<style>
+  html, body { margin: 0; background: #0b0e14; color: #e6e6e6;
+               font-family: system-ui, sans-serif; width: 1600px; height: 900px; overflow: hidden }
+  #cap { height: 56px; line-height: 56px; padding: 0 20px; font-size: 26px; font-weight: 600;
+         background: #151a24; border-bottom: 1px solid #2a3140; white-space: nowrap; overflow: hidden }
+  #cap b { color: #ffd23f }
+  .row { display: flex; height: 584px }
+  .pane { position: relative; width: 800px; height: 584px; border-right: 1px solid #2a3140 }
+  .pane:last-child { border-right: 0 }
+  .pane iframe { width: 1200px; height: 876px; zoom: 0.6667; border: 0; background: #0b0e14 }
+  .tag { position: absolute; left: 0; top: 0; padding: 4px 12px; font-size: 15px;
+         background: #1f2633; color: #9fb3c8; border-bottom-right-radius: 8px; z-index: 3 }
+  .dead { position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+          background: rgba(11, 14, 20, .72); z-index: 2; font-size: 34px; font-weight: 700;
+          color: #ff6b6b; text-align: center; line-height: 1.3 }
+  #term { height: 260px; background: #000; color: #d7ffd7;
+          font: 17px/24px ui-monospace, Menlo, Consolas, monospace; padding: 10px 18px;
+          white-space: pre; overflow: hidden; border-top: 1px solid #2a3140 }
+  #term .p { color: #7fd1ff }
+</style>
+</head>
+<body>
+<div id="cap">Two nodes, one bottling plant, one PostgreSQL.</div>
+<div class="row">
+  <div class="pane">
+    <div class="tag" id="tag-a"></div>
+    <div class="dead" id="dead-a"></div>
+    <iframe id="fa"></iframe>
+  </div>
+  <div class="pane">
+    <div class="tag" id="tag-b"></div>
+    <div class="dead" id="dead-b"></div>
+    <iframe id="fb"></iframe>
+  </div>
+</div>
+<div id="term"><span class="p">$ </span></div>
+<script>
+  const ask = new URLSearchParams(location.search);
+  const PORT = { a: ask.get('a') || '8001', b: ask.get('b') || '8002' };
+  const LINE = ask.get('line') || 'SIMLINE';
+  // Which window the two dashboards report over. It is the product's own
+  // `?hours=`, passed straight through: a plant that has been up for less
+  // time than its window withholds every figure that needs one, which is
+  // correct, and makes a dull picture.
+  const HOURS = ask.get('hours') || '8';
+  for (const which of ['a', 'b']) {
+    const where = 'http://127.0.0.1:' + PORT[which];
+    document.getElementById('tag-' + which).innerHTML =
+      'node ' + which + '  ·  127.0.0.1:' + PORT[which];
+    document.getElementById('f' + which).src =
+      where + '/dashboard/line?line=' + encodeURIComponent(LINE) + '&hours=' + encodeURIComponent(HOURS);
+  }
+
+  // The terminal strip. `termType` types a command a character at a time so a
+  // viewer can read it; `termOut` puts the real output underneath it. The
+  // recorder runs the command itself and hands the output back here — nothing
+  // on this page talks to docker.
+  const term = document.getElementById('term');
+  const LINES = 9;
+  function trim() {
+    const lines = term.innerText.split('\n');
+    if (lines.length > LINES) term.innerText = lines.slice(lines.length - LINES).join('\n');
+  }
+  window.termType = async (cmd, ms) => {
+    for (const ch of cmd) { term.append(ch); await new Promise(r => setTimeout(r, ms || 45)); }
+  };
+  window.termOut = (text) => {
+    term.append('\n' + text.replace(/\s+$/, '') + '\n');
+    trim();
+    const prompt = document.createElement('span');
+    prompt.className = 'p';
+    prompt.textContent = '$ ';
+    term.append(prompt);
+  };
+  window.cap = (html) => { document.getElementById('cap').innerHTML = html; };
+  window.dead = (which, text) => {
+    const panel = document.getElementById('dead-' + which);
+    panel.innerHTML = text;
+    panel.style.display = text ? 'flex' : 'none';
+  };
+  window.ready = () => true;
+</script>
+</body>
+</html>

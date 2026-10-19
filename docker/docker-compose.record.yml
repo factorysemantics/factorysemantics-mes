@@ -1,0 +1,22 @@
+# Recording only. Lay this over `docker-compose.redundant.yml` to give each
+# node its own address on the host, so one browser page can watch both at
+# once:
+#
+#   docker compose -p mes-record \
+#     -f docker/docker-compose.redundant.yml \
+#     -f docker/docker-compose.record.yml up -d node-a node-b
+#
+# The demo itself keeps the one address on :8000 and hides which node answers,
+# which is the point of it — and the wrong thing for a recording that has to
+# show a node dying. `bash scripts/record-kill-a-node.sh` uses this file and
+# its own project name; nothing here is part of the product.
+#
+# The ports come from the environment so two recordings, or a recording beside
+# the plain `mes-two-nodes` demo, do not fight over them.
+services:
+  node-a:
+    ports:
+      - "127.0.0.1:${FSMES_RECORD_PORT_A:-8001}:8010"
+  node-b:
+    ports:
+      - "127.0.0.1:${FSMES_RECORD_PORT_B:-8002}:8010"

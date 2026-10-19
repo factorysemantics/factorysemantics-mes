@@ -14,6 +14,12 @@ Run one module on a laptop for a five-person shop, or the full suite across a fl
 
 ---
 
+**One plant on two boxes: a real `docker kill` on the node reading the machines, and the other one picks them up.**
+
+![One bottling plant running as two nodes side by side, each on its own address; a real docker kill on node a, which is reading the machines; node b taking the machines over seven seconds later with the counts carried across; node a started again and answering, as a standby](docs/assets/kill-a-node.gif)
+
+Node a held the machines and was killed; node b was reading them 6.6 seconds later; node a answered again 1.2 seconds after it was started, holding nothing. Two things in it are staged and nothing else is: the yellow line is the dashboard's own header line, enlarged so it can be read at this size, and the grey "no answer" panel is drawn by the recorder over a page that is really greying itself and saying "reconnecting". `bash scripts/record-kill-a-node.sh` makes the whole recording again from a checkout — kill included — so this can be a picture of the version you install. [What a failover costs](docs/operate/redundancy.md#what-a-failover-costs).
+
 ## Why this exists
 
 Three facts, verified 2026-08-28 (sources in [docs/LANDSCAPE.md](docs/LANDSCAPE.md)):
