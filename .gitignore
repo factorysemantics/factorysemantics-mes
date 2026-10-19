@@ -78,3 +78,8 @@ lab-results/
 # Skill zips, built by `fsmes skills-zip` and attached to a release.
 /skills-dist/
 /*.zip
+
+# Where `scripts/record-kill-a-node.sh` writes. A recording is a file made on
+# one machine on one day; what belongs in the repository is the script that
+# makes it, and the one GIF under docs/assets/ that a page points at.
+recordings/
