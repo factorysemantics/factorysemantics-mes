@@ -44,8 +44,10 @@
 #   --out DIR       where to write (default: recordings/kill-a-node)
 #   --hours N       the window the two dashboards report over (default: 1)
 #   --warm-up MIN   minutes the plant must have been watching before filming
-#                   (default: 80% of --hours, which is what the screens ask
-#                   for before they report a figure; 0 to film straight away)
+#                   (default: the whole window and two minutes over, so every
+#                   card reads "watched 100%"; 80% of the window is the least
+#                   the screens will report a figure on at all, so a shorter
+#                   wait than the default still works; 0 to film straight away)
 #   --port-a N      host port for node a (default: 8001)
 #   --port-b N      host port for node b (default: 8002)
 #   --project NAME  compose project name (default: mes-record)
@@ -67,7 +69,7 @@ PORT_B=8002
 # An hour, not the screens' usual eight: the recording is made on a plant
 # somebody has just started, and a figure is reported only once the MES has
 # watched 80% of the window it is asked about. An hour means a warm-up of
-# forty-eight minutes instead of a working day.
+# about an hour instead of a working day.
 HOURS=1
 WARM_UP=
 PROJECT=mes-record
@@ -215,8 +217,15 @@ say "the plant is counting: $booked_now units booked from the machines"
 # database, so how long it has been watching is how long its PostgreSQL has
 # been up: a node killed and started again does not reset that, and a second
 # run against a plant that is already warm waits for nothing.
-[ -n "$WARM_UP" ] || WARM_UP="$("$PYTHON" -c 'import sys; print(round(float(sys.argv[1]) * 60 * 0.8))' "$HOURS")"
+# The whole window, and two minutes over. 80% of it is all the screens ask
+# for before they report a figure, but the clock they count is their own -
+# it starts when the nodes begin reading the machines, which is a minute or
+# so after the database is up - and at exactly 80% the cards came out at
+# 78.8%, withheld, on 2026-10-19. Waiting the window out also makes every
+# card read "watched 100%", which is the picture that was approved.
+[ -n "$WARM_UP" ] || WARM_UP="$("$PYTHON" -c 'import sys; print(round(float(sys.argv[1]) * 60) + 2)' "$HOURS")"
 step "waiting until the plant has been watching $WARM_UP minutes, for a $HOURS-hour window"
+note "that is most of an hour on the default window; nothing is wrong"
 watching() {  # minutes since this plant's database came up
   "$PYTHON" - "$(docker inspect --format '{{.State.StartedAt}}' "$(name_of postgres)")" <<'PY'
 import datetime, sys

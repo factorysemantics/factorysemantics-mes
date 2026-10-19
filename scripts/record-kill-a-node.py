@@ -53,9 +53,12 @@ READ_A_CAPTION_MS = 4000
 LOOK_AT_THE_TAKEOVER_MS = 9000
 LOOK_AT_THE_COMEBACK_MS = 7000
 
-# The dashboard's header line polls every five seconds, so a caption written
-# the instant /health changes can be ahead of the pixels behind it.
-LET_THE_HEADER_CATCH_UP_MS = 1500
+# The dashboard's header line polls on its own schedule, so a caption written
+# the instant `/health` changes is ahead of the pixels behind it: for a second
+# or two the yellow line still names the node that just died. The caption is
+# the claim and the yellow line is the evidence for it, so the caption waits
+# for the line rather than guessing how long it takes.
+HEADER_CATCH_UP_LIMIT_MS = 15000
 
 
 def frame_css(port_a: int, port_b: int) -> str:
@@ -154,6 +157,27 @@ class Recorder:
         said = (ran.stdout + ran.stderr).rstrip()
         self.page.evaluate("text => window.termOut(text)", said)
         return said
+
+
+def wait_for_header(page, which: str, limit_ms: int = HEADER_CATCH_UP_LIMIT_MS) -> float:
+    """Wait until the node's own header line names it as the one reading the machines.
+
+    The line lives inside the node's page, which is a different origin from the
+    stage, so it is read through Playwright's frame rather than from the stage's
+    own scripts. Returns the seconds waited, for the marks file; gives up
+    quietly, because a caption a little early is better than no recording.
+    """
+    want = f"read by {which}"
+    started = time.monotonic()
+    while (time.monotonic() - started) * 1000 < limit_ms:
+        try:
+            said = page.frame_locator(f"#f{which}").locator("#plant-node").inner_text(timeout=1000)
+        except Exception:
+            said = ""
+        if want in said.lower():
+            break
+        page.wait_for_timeout(250)
+    return time.monotonic() - started
 
 
 def wait_for_both_nodes(base_a: str, base_b: str, seconds: int = 120) -> str:
@@ -255,7 +279,8 @@ def record(args: argparse.Namespace) -> dict:
                 raise SystemExit(f"node {other} did not take the reader within {args.patience}s")
             rec.mark(f"{other} took the machines after {took:.1f} s")
 
-            page.wait_for_timeout(LET_THE_HEADER_CATCH_UP_MS)
+            waited = wait_for_header(page, other)
+            rec.mark(f"{other}'s own header line says so, {waited:.1f} s after it took them")
             rec.caption(
                 f"<b>{took:.0f} seconds later:</b> {other} reads the machines. "
                 "The numbers kept moving; nobody signed in again.",
