@@ -80,7 +80,7 @@ BUILD=0; DOWN=0; KEEP_RAW=0; QUIET=0
 # to animate one over it, so a GIF that comes out heavy is re-made smaller
 # rather than committed broken. First setting that fits wins; the run says which.
 GIF_LIMIT_BYTES=$((10 * 1024 * 1024))
-GIF_SETTINGS=("7 1100" "6 1000" "5 900" "5 800")
+GIF_SETTINGS=("7 1100" "6 1100" "6 1000" "5 900" "5 800")
 # The first seconds are the two dashboards drawing themselves, which is nothing
 # to look at. The mp4 keeps them; the GIF, which has to tell its story in a
 # loop, does not.

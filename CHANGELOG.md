@@ -10,7 +10,16 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **A recording of a node being killed, on the README and the redundancy
+  page.** Two nodes of the bottling plant side by side, `docker kill` on the
+  one holding the `reader` lease, and the other one reading the machines a few
+  seconds later. `bash scripts/record-kill-a-node.sh` makes it again from a
+  checkout, so the picture can be of the version people install rather than of
+  whatever the box looked like the day it was first made. A developer tool: it
+  needs Docker, `ffmpeg` and a Python with Playwright, it is not in the wheel,
+  it is not in CI, and it is not asked to run on Windows.
 
 ## [0.4.0] — 2026-10-16
 

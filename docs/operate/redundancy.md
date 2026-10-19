@@ -353,6 +353,33 @@ one PostgreSQL with `lease_seconds = 4` and the line replayed at 6x: the
 counters' own movement exactly, per machine. Your numbers will differ; the
 shape will not.
 
+Or watch it cost something. One plant as two nodes side by side, each on its
+own address, and a real `docker kill` on the one holding the machines:
+
+![One bottling plant running as two nodes side by side, each on its own address; a real docker kill on node a, which is reading the machines; node b taking the machines over seven seconds later with the counts carried across; node a started again and answering, as a standby](../assets/kill-a-node.gif)
+
+Node a held the machines and was killed; node b was reading them 6.6
+seconds later; node a answered again 1.2 seconds after `docker start`,
+holding nothing. Two things in it are staged and nothing else is: the
+yellow line is the dashboard's own header line, enlarged so it can be read
+at this size, and the grey "no answer" panel is drawn by the recorder over
+a page that is really greying itself and saying "reconnecting". The seconds
+are the ones measured on the machine it was recorded on, and they are
+printed by the script that records it: `bash scripts/record-kill-a-node.sh`
+from a checkout makes the whole thing again, so the picture can be of the
+version you are running rather than of the day it was first made. ([The
+same minute as an mp4](../assets/kill-a-node.mp4), if a loop is
+distracting.)
+
+One thing in it is worth reading twice. For the few seconds between the kill
+and the takeover the machine cards go idle and the line reads `0/6 running`,
+and then they are all running again. That is this being a *simulated* plant:
+the floor that moves those machines is itself one of the jobs held by a lease,
+so it stops while its lease moves, exactly as the reader does. On a real plant
+the machines are machines and do not pause — what pauses is the MES reading
+them, and the counters are absolute, so the units made in the gap are booked
+when the new holder catches up rather than lost.
+
 A node that comes back comes back as a standby. It does not take a role the
 other node is holding.
 
