@@ -65,6 +65,7 @@ from plant_from_wheel import (
     port_answers,
     print_in_the_words_the_plant_used,
     say,
+    the_port_is_back,
     until,
     venv_bin,
 )
@@ -191,8 +192,7 @@ def main() -> int:
         fail("stop recovered the plant without saying what it found; a command that "
              f"silently does more than it was asked is worse: {recovery!r}")
     for where, what in ((API, "the dashboard"), (OPC, "the OPC server")):
-        if port_answers(where):
-            fail(f"{what} is still listening on {where[1]} after stop")
+        the_port_is_back(where, what)
     say("  both ports are back")
 
     say(f"== and again: fsmes demo {PLANT} --speed {args.speed:g} ==")

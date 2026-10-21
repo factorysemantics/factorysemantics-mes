@@ -301,6 +301,21 @@ def port_answers(where: tuple[str, int]) -> bool:
         return False
 
 
+def the_port_is_back(where: tuple[str, int], what: str, *, ceiling: float = 30) -> None:
+    """Wait for a stopped plant's socket to close, the way the way up waits.
+
+    The same spelling as `plant_from_wheel.the_port_is_back`, kept here because
+    this script shares no code with that one on purpose. `stop` returning is
+    not the same thing as the socket being gone: on Windows a listening socket
+    can outlive the process that owned it by a moment, and one bare connect
+    straight after `stop` failed three CI jobs on 2026-10-16 on plants that had
+    stopped perfectly well. The ceiling is a grace period, not a measurement:
+    nothing here asserts a clock.
+    """
+    until(f"{what} has stopped listening on {where[1]}",
+          lambda: not port_answers(where), ceiling=ceiling, every=0.5)
+
+
 def what_is_on_screen(shape: dict, speed: float) -> None:
     """Every fact the handoff asks of a running plant, asked of this one."""
     until("the dashboard answers", lambda: ask("/health").get("status") == "ok",
@@ -475,8 +490,7 @@ def one_shape_all_the_way(shape: dict, *, repo: Path, work: Path, fsmes: Path,
         say("== stopping ==")
         run([str(fsmes), "demo", name, "stop"], cwd=work, env=started, timeout=600)
     for where, what in ((API, "the dashboard"), (OPC, "the OPC server")):
-        if port_answers(where):
-            fail(f"{what} is still listening on {where[1]} after stop")
+        the_port_is_back(where, what)
     say("  both ports are back")
 
 
