@@ -216,6 +216,20 @@ def port_answers(where: tuple[str, int]) -> bool:
         return False
 
 
+def the_port_is_back(where: tuple[str, int], what: str, *, ceiling: float = 30) -> None:
+    """Wait for a stopped plant's socket to close, the way the way up waits.
+
+    `stop` returning is not the same thing as the socket being gone: on Windows
+    a listening socket can outlive the process that owned it by a moment, and
+    one bare connect straight after `stop` failed three CI jobs on 2026-10-16
+    on plants that had stopped perfectly well. So this is the same poll for a
+    state as everything on the way up. The ceiling is a grace period, not a
+    measurement: nothing here asserts a clock.
+    """
+    until(f"{what} has stopped listening on {where[1]}",
+          lambda: not port_answers(where), ceiling=ceiling, every=0.5)
+
+
 def the_plant_is_what_the_lab_runs(speed: float) -> None:
     """Every fact the handoff asks for, asked of the running plant."""
     until("the dashboard answers", lambda: ask("/health").get("status") == "ok",
@@ -342,8 +356,7 @@ def main() -> int:
             fail(f"`fsmes demo {PLANT} stop` exited {stopped.returncode}")
 
     for where, what in ((API, "the dashboard"), (OPC, "the OPC server")):
-        if port_answers(where):
-            fail(f"{what} is still listening on {where[1]} after stop")
+        the_port_is_back(where, what)
     say("  both ports are back")
 
     say(f"\nThe wheel brought {PLANT} up on {sys.platform} and put it back down.")

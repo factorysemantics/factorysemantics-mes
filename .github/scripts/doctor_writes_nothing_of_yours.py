@@ -61,9 +61,9 @@ from plant_from_wheel import (
     PLANT,
     fail,
     install,
-    port_answers,
     print_in_the_words_the_plant_used,
     say,
+    the_port_is_back,
     until,
     venv_bin,
 )
@@ -291,8 +291,7 @@ def main() -> int:
     stopped_command = run([fsmes, "demo", PLANT, "stop"], cwd=work, env=environment)
     if stopped_command.returncode != 0:
         fail(f"`fsmes demo {PLANT} stop` exited {stopped_command.returncode}")
-    if port_answers(API):
-        fail(f"something is still listening on {API[1]} after stop")
+    the_port_is_back(API, "the dashboard")
     logs = home / "logs" / PLANT
     # The console logs last, so that they are among the most recently written
     # and `doctor` reads them: a stopped plant has no record of its processes
