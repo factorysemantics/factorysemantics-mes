@@ -909,25 +909,23 @@ def test_what_answering_on_the_endpoint_means_is_read_off_the_pack(monkeypatch):
     plant whose machines are answering."""
     asked: list[tuple[str, int]] = []
 
-    class Open:
-        def __enter__(self): return self
-        def __exit__(self, *a): return False
+    def answered(host, port, timeout=None):
+        asked.append((host, port))
+        return True
 
-    def answered(where, timeout=None):
-        asked.append(where)
-        return Open()
-
-    monkeypatch.setattr(plants.socket, "create_connection", answered)
+    # `plants.answers` is the one port question in this product - the start
+    # check, `fsmes doctor` and a stop waiting for its own port all ask
+    # through it - so this is where the asking is watched from.
+    monkeypatch.setattr(plants, "answers", answered)
     assert plants.machines_answering(_two_simulated_nodes()) is True
     assert asked == [("127.0.0.1", 4845)]
     assert plants.machines_answering(_two_nodes()) is False, "no endpoint, no claim"
     assert plants.machines_answering({"env": {"MES_OPC_ENDPOINT": "opc.tcp://host/no-port"}}) \
         is False, "an endpoint with no port cannot be asked"
+    assert asked == [("127.0.0.1", 4845)], (
+        "an address nobody wrote down is not asked about at all")
 
-    def refused(where, timeout=None):
-        raise OSError("connection refused")
-
-    monkeypatch.setattr(plants.socket, "create_connection", refused)
+    monkeypatch.setattr(plants, "answers", lambda host, port, timeout=None: False)
     assert plants.machines_answering(_two_simulated_nodes()) is False
 
 

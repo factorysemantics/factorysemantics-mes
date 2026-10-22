@@ -804,6 +804,55 @@ def endpoint(cfg: dict) -> str:
     return str((cfg.get("env") or {}).get("MES_OPC_ENDPOINT", ""))
 
 
+def answers(host: str, port: int, *, timeout: float = 0.6) -> bool:
+    """Is something already listening there?
+
+    The one port question in this product, and every caller asks it through
+    here: `fsmes.firstrun.answers` before a start, `fsmes.doctor` when it
+    writes down what was listening, `machines_answering` below, and
+    `ports_are_back` on the way out of a stop.
+
+    A connection, not a bind: the question is whether this port is somebody
+    else's, and a bind test on Windows can succeed against a socket that is
+    about to refuse us anyway - which is also what lets this see a socket
+    that is still closing. A host of `0.0.0.0` is asked on loopback, because
+    that is where a plant on this box is reached.
+    """
+    where = "127.0.0.1" if host in ("", "0.0.0.0", "::") else host
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.settimeout(timeout)
+        try:
+            return probe.connect_ex((where, port)) == 0
+        except OSError:
+            return False
+
+
+def opc_address(cfg: dict) -> tuple[str, int] | None:
+    """The host and port in this plant's OPC endpoint, as something connects
+    to them.
+
+    `None` when the pack states no endpoint, when it states one with no port,
+    or when it states one that does not parse: every caller here treats *we
+    could not work out an address* as a reason to leave the machine layer
+    alone, never as a port to act on.
+
+    A server bound to every interface is reached on loopback; the endpoint a
+    pack writes for `docker compose` says 0.0.0.0, which is not an address
+    anything connects to.
+    """
+    url = endpoint(cfg)
+    if not url:
+        return None
+    try:
+        parsed = urllib.parse.urlparse(url)
+        host, port = parsed.hostname, parsed.port
+    except ValueError:
+        return None
+    if not port:
+        return None
+    return ("127.0.0.1" if host in (None, "", "0.0.0.0") else host, int(port))
+
+
 def machines_answering(cfg: dict, timeout: float = 0.5) -> bool:
     """Is something already listening where this plant's machines answer?
 
@@ -817,23 +866,10 @@ def machines_answering(cfg: dict, timeout: float = 0.5) -> bool:
     *no*: refusing to start a machine layer that may not be there is the
     worse of the two mistakes.
     """
-    url = endpoint(cfg)
-    if not url:
+    where = opc_address(cfg)
+    if where is None:
         return False
-    try:
-        parsed = urllib.parse.urlparse(url)
-        host, port = parsed.hostname, parsed.port
-    except ValueError:
-        return False
-    if not port:
-        return False
-    # A server bound to every interface is reached on loopback; the endpoint
-    # a pack writes for `docker compose` says 0.0.0.0, which is not an
-    # address anything connects to.
-    where = "127.0.0.1" if host in (None, "", "0.0.0.0") else host
-    with contextlib.suppress(OSError), socket.create_connection((where, port), timeout=timeout):
-        return True
-    return False
+    return answers(*where, timeout=timeout)
 
 
 def procs_file(root: Path, name: str) -> Path:
@@ -1034,6 +1070,83 @@ def start_machines(name: str, cfg: dict, root: Path, speed: float | None = None,
          f"(PIDs {', '.join(str(pid) for _spec, pid in launched)})")
 
 
+#: How long `stop` will hold the command while a port it was listening on
+#: finishes closing. A grace period, not a measurement: nothing asserts a
+#: clock on it, and it is four times the two seconds every Windows cell
+#: measured on 2026-10-21 (PR #184). A port still there when it passes is
+#: said out loud rather than waited on for ever.
+PORT_GRACE = 8.0
+
+
+def listening_on(cfg: dict, node: str | None = None) -> list[tuple[str, str, int]]:
+    """The ports the processes of this plant - or of this one node of it -
+    listen on, and what each is for.
+
+    Read from the configuration the pack compiled to, which is the only place
+    a plant's ports are stated (house rule 4). Only ever ports *this*
+    installation's processes bound: a plant that says `simulate = false`
+    answers its API and nothing else, because its machine layer is a PLC that
+    nothing here started and nothing here will wait for.
+
+    `node=MACHINES` asks about the shared machine layer rather than about a
+    node: the replay's endpoint, and only when this plant has one of its own.
+    """
+    if node == MACHINES:
+        if not machine_layer(cfg):
+            return []
+        where = opc_address(cfg)
+        return [("the OPC server", *where)] if where else []
+
+    named = [one for one in node_list(cfg) if one["id"] == node]
+    serving = node_cfg(cfg, named[0]) if named else cfg
+    out: list[tuple[str, str, int]] = []
+    if serving.get("api_port"):
+        out.append(("the dashboard and the API",
+                    str(serving.get("api_host") or "127.0.0.1"), int(serving["api_port"])))
+    if any("run-opc-sim" in spec.args for spec in processes(serving)):
+        where = opc_address(serving)
+        if where:
+            out.append(("the OPC server", *where))
+    return out
+
+
+def ports_are_back(said: str, cfg: dict, echo=print, node: str | None = None,
+                   ceiling: float = PORT_GRACE) -> None:
+    """Hold the command until what this plant was listening on has gone quiet.
+
+    `stop` returning is not the same thing as the port being gone. On Windows
+    a listening socket can outlive the process that owned it by about two
+    seconds - every Windows cell of PR #184 measured that on 2026-10-21, and
+    every Linux cell measured zero - and a start inside those two seconds
+    refuses: `firstrun.in_the_way` finds the port in use and says *stop that
+    program*, about a plant the person has just stopped and a process that no
+    longer exists. So the wait belongs here, on the way down, where what is
+    holding the port is known to have been ours. A start that waited for a
+    port to close would be a start that talks itself past somebody else's
+    program.
+
+    Nothing is printed when there was nothing to wait for, which is every
+    Linux stop and most Windows ones: the cost there is one connect per port.
+    """
+    for what, host, port in listening_on(cfg, node):
+        if not answers(host, port):
+            continue
+        started, free = time.monotonic(), False
+        while time.monotonic() - started < ceiling:
+            time.sleep(0.1)
+            if not answers(host, port):
+                free = True
+                break
+        waited = time.monotonic() - started
+        if free:
+            echo(f"  {said}: {host}:{port} ({what}) was still closing; "
+                 f"it is free after {waited:.1f} s.")
+        else:
+            echo(f"  {said}: {host}:{port} ({what}) is still closing after "
+                 f"{waited:.0f} s. If starting it again refuses that port, nothing is "
+                 "holding it but the socket: give it a moment and start it again.")
+
+
 def stop(name: str, cfg: dict, root: Path, echo=print, node: str | None = None) -> None:
     """Stop this plant. Every node of it, when its pack names more than one.
 
@@ -1062,6 +1175,10 @@ def stop(name: str, cfg: dict, root: Path, echo=print, node: str | None = None) 
     _end(pids)
     _forget(root, key)
     echo(f"  {said} stopped ({len(pids)} process(es)).")
+    # Not before the line above: the processes are gone either way, and a
+    # person watching should read *stopped* first and the wait, if there is
+    # one, after it.
+    ports_are_back(said, cfg, echo=echo, node=node)
 
 
 def stop_machines(name: str, cfg: dict, root: Path, echo=print) -> None:
@@ -1081,6 +1198,7 @@ def stop_machines(name: str, cfg: dict, root: Path, echo=print) -> None:
     _end(pids)
     _forget(root, key)
     echo(f"  {name}: the machines stopped ({len(pids)} process(es)).")
+    ports_are_back(name, cfg, echo=echo, node=MACHINES)
 
 
 def _end(pids: list[int]) -> None:

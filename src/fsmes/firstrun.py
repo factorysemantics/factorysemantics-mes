@@ -25,7 +25,6 @@ came from.
 
 from __future__ import annotations
 
-import socket
 import urllib.parse
 from dataclasses import dataclass
 from pathlib import Path
@@ -186,14 +185,14 @@ def answers(host: str, port: int, *, timeout: float = 0.6) -> bool:
     else's, and a bind test on Windows can succeed against a socket that is
     about to refuse us anyway. A host of `0.0.0.0` is asked on loopback,
     because that is where a plant on this box is reached.
+
+    The connect itself is `fsmes.plant.answers`, because the other side of
+    this - a stop waiting for its own port to close - asks the same question
+    from below this module, and two spellings of it would be two spellings
+    that drift. The name stays here: it is what `fsmes.doctor` and this
+    module's own start check call, and what the egress register names.
     """
-    where = "127.0.0.1" if host in ("", "0.0.0.0", "::") else host
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
-        probe.settimeout(timeout)
-        try:
-            return probe.connect_ex((where, port)) == 0
-        except OSError:
-            return False
+    return plants.answers(host, port, timeout=timeout)
 
 
 def _who_else(port: int, *, name: str, data_dir: Path) -> str:
@@ -202,6 +201,21 @@ def _who_else(port: int, *, name: str, data_dir: Path) -> str:
         if entry.name != name and int(entry.api_port) == port:
             return entry.name
     return ""
+
+
+def _is_its_own(port: int, *, name: str, data_dir: Path) -> bool:
+    """Is that this plant's own recorded port?
+
+    Said apart from `_who_else` because it is a different sentence. Nothing
+    of this plant is running - `look` above has already found no live
+    processes - so a port that is still answering on the address this
+    installation recorded for it is its socket finishing closing, which on
+    Windows takes about two seconds. `fsmes.plant.stop` waits for exactly
+    that before it returns; this is what is left to say when the wait's
+    grace period was not enough.
+    """
+    return any(entry.name == name and int(entry.api_port) == port
+               for entry in owned.load(data_dir).owned)
 
 
 def in_the_way(name: str, pack: Path, *, data_dir: Path, logs: Path | None = None,
@@ -247,6 +261,9 @@ def in_the_way(name: str, pack: Path, *, data_dir: Path, logs: Path | None = Non
             held = (f"{mine}, another plant this installation made and is still running. "
                     f"Stop it with `fsmes demo {mine} stop`, or give this plant another port "
                     f"in its pack.")
+        elif _is_its_own(port, name=name, data_dir=data_dir):
+            held = (f"{name}'s own socket, still closing. None of its processes is alive, "
+                    "so there is nothing to stop: wait a moment and start it again.")
         else:
             held = ("another program on this PC - nothing this installation made is "
                     "recorded on that port. Stop that program, or give this plant another "
