@@ -25,7 +25,9 @@ What it asserts, in order, and why each one:
   there including the counted one, the OPC replay port answers, the floor is
   watching with every machine connected and a check recorded, and at least one
   counted lot has been inspected;
-* `fsmes demo bottling stop` puts the ports back.
+* `fsmes demo bottling stop` puts the ports back **before it returns**, so
+  `fsmes demo bottling start` in the next breath starts the plant instead of
+  refusing on a port that is still closing.
 
 Facts, never seconds: every wait below is a poll for a state with a generous
 ceiling, and the times it prints are information for the Result, not gates. A
@@ -225,9 +227,69 @@ def the_port_is_back(where: tuple[str, int], what: str, *, ceiling: float = 30) 
     on plants that had stopped perfectly well. So this is the same poll for a
     state as everything on the way up. The ceiling is a grace period, not a
     measurement: nothing here asserts a clock.
+
+    Since `fsmes.plant.ports_are_back` the product waits for its own ports, so
+    after a `stop` this now returns at once - `the_ports_are_back_already`
+    below is what holds it to that. This stays for the callers that ask after
+    something was *killed*, where nothing waited for anything.
     """
     until(f"{what} has stopped listening on {where[1]}",
           lambda: not port_answers(where), ceiling=ceiling, every=0.5)
+
+
+def the_ports_are_back_already(what_happened: str) -> None:
+    """Ask each port once, with no poll, straight after a command returned.
+
+    A poll would pass whether the product waited or not, which is the whole
+    question here: `fsmes.plant.stop` holds the command until the ports its
+    processes were listening on are free, because on Windows a listening
+    socket outlives its process by about two seconds and a start inside those
+    two seconds used to refuse - naming a program that no longer existed. One
+    connect each, now, is the only shape of check that can tell the difference.
+    """
+    still = [f"{where[0]}:{where[1]} ({what})"
+             for where, what in ((API, "the dashboard"), (OPC, "the OPC server"))
+             if port_answers(where)]
+    if still:
+        fail(f"{what_happened} returned while {', '.join(still)} was still listening. "
+             "`stop` is meant to wait for its own ports before it comes back, so that "
+             "the next start does not meet a port that is still closing.")
+    say(f"  both ports were already free when {what_happened} returned")
+
+
+def and_a_start_in_the_next_breath_works(fsmes: Path, work: Path, environment: dict,
+                                         speed: float) -> None:
+    """Stop, then start again at once - the thing a person actually types.
+
+    On 2026-10-21 every Windows cell of this project's CI waited about two
+    seconds after `stop` for the plant's socket to disappear, and every Linux
+    cell waited zero (PR #184). CI learned to wait; the product had not, so on
+    a Windows PC `fsmes demo bottling stop` followed by `fsmes demo bottling
+    start` said *127.0.0.1:8010 is already in use ... Stop that program* about
+    the plant that had just been stopped. This is that pair of commands, in
+    that order, with nothing between them.
+    """
+    say("== and a start in the next breath: fsmes demo bottling start ==")
+    again = subprocess.run([str(fsmes), "demo", PLANT, "start", "--speed", str(speed)],
+                           cwd=work, env=environment, capture_output=True,
+                           timeout=2700, **AS_WORDS)
+    said = (again.stdout or "") + (again.stderr or "")
+    say(said)
+    if "already in use" in said:
+        fail("the start refused a port that nothing is holding: this is the sentence "
+             "the whole change exists to remove")
+    if again.returncode != 0:
+        fail(f"`fsmes demo {PLANT} start` exited {again.returncode} straight after a stop")
+    until("the dashboard answers again", lambda: ask("/health").get("status") == "ok",
+          ceiling=300)
+
+    say("== stopping again ==")
+    last = subprocess.run([str(fsmes), "demo", PLANT, "stop"], cwd=work, env=environment,
+                          capture_output=True, timeout=600, **AS_WORDS)
+    say((last.stdout or "") + (last.stderr or ""))
+    if last.returncode != 0:
+        fail(f"`fsmes demo {PLANT} stop` exited {last.returncode} the second time")
+    the_ports_are_back_already("the second stop")
 
 
 def the_plant_is_what_the_lab_runs(speed: float) -> None:
@@ -355,11 +417,11 @@ def main() -> int:
         if stopped.returncode != 0:
             fail(f"`fsmes demo {PLANT} stop` exited {stopped.returncode}")
 
-    for where, what in ((API, "the dashboard"), (OPC, "the OPC server")):
-        the_port_is_back(where, what)
-    say("  both ports are back")
+    the_ports_are_back_already("the stop")
+    and_a_start_in_the_next_breath_works(fsmes, work, environment, args.speed)
 
-    say(f"\nThe wheel brought {PLANT} up on {sys.platform} and put it back down.")
+    say(f"\nThe wheel brought {PLANT} up on {sys.platform}, put it back down, and "
+        "started it again in the next breath.")
     return 0
 
 
