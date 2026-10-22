@@ -10,6 +10,23 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ## [Unreleased]
 
+### Fixed
+
+- **On Windows, stopping a plant and starting it again in the next breath
+  works.** `fsmes demo <plant> stop` no longer comes back while the plant's
+  ports are still closing. A listening socket there outlives the process that
+  owned it by about two seconds — every Windows cell of this project's CI
+  measured that, and every Linux cell measured zero — and a start inside those
+  two seconds refused with *127.0.0.1:8010 is already in use … Stop that
+  program*, about the plant that had just been stopped and a process that no
+  longer existed. `stop` now holds the command until the ports its own
+  processes were listening on are free, with an eight-second grace period, and
+  says which port it waited on only when it had to wait: on Linux the output
+  is unchanged. If the grace period is not enough, it says which port is still
+  closing rather than claiming it is done, and a start that meets a plant's own
+  closing socket now says to wait a moment rather than to go and stop a
+  program that is not there.
+
 ### Added
 
 - **A recording of a node being killed, on the README and the redundancy
