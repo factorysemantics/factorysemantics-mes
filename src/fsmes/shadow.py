@@ -382,7 +382,9 @@ REGISTER: tuple[Outbound, ...] = (
         note="before `fsmes demo <plant>` launches anything it asks whether "
              "the dashboard port and the OPC port are already in use, so it "
              "can say which one and what to do instead of starting five "
-             "processes that fail at bind one by one. It connects to "
+             "processes that fail at bind one by one. The connect itself is "
+             "`fsmes.plant:answers`, which `plant.supervisor` above covers "
+             "and a stop asks the same way on its way out. It connects to "
              "127.0.0.1 and closes; it sends no bytes and reads none",
     ),
     Outbound(

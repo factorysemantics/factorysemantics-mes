@@ -197,6 +197,38 @@ def test_a_start_blocked_by_this_installations_own_plant_names_that_plant(tmp_pa
     assert "fsmes demo bottling stop" in said[1]
 
 
+def test_a_start_that_meets_this_plants_own_closing_socket_says_to_wait_not_to_stop(tmp_path):
+    """The two seconds after a stop on Windows, said as what they are.
+
+    `fsmes.plant.stop` waits for its own ports before it returns, so this is
+    only ever reached when that grace period was not enough. What must not
+    happen then is the sentence of 2026-10-21: *another program on this PC -
+    stop that program*, about the plant the person just stopped, whose
+    processes are all gone.
+    """
+    from fsmes.fleet import owned
+
+    with socket.socket() as held:
+        held.bind(("127.0.0.1", 0))
+        held.listen(1)
+        taken = held.getsockname()[1]
+        pack = a_pack(tmp_path, port=taken, opc=_a_free_port())
+        data = standalone.data_dir(tmp_path)
+        owned.remember(data, owned.Entry(
+            name="bottling", pack=str(pack), instance_id="abc", data_dir=str(data),
+            api_host="127.0.0.1", api_port=taken, control=owned.LOCAL, created_at="",
+            created_on_host="", created_by_user="", product_version="", pack_fingerprint=""))
+
+        said = firstrun.in_the_way("bottling", pack, data_dir=data)
+
+    assert f"127.0.0.1:{taken} is already in use" in said[0]
+    assert "bottling's own socket, still closing" in said[1]
+    assert "wait a moment and start it again" in said[1]
+    assert "Stop that program" not in said[1], (
+        "there is nothing to stop: every process of this plant is gone and what is "
+        "left is the socket")
+
+
 def test_a_start_on_a_half_dead_plant_sends_a_person_to_the_stop_that_recovers_it(
         tmp_path, monkeypatch):
     pack = a_pack(tmp_path)
