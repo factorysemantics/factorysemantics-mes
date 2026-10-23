@@ -19,15 +19,29 @@ through them, burns the overlay into the picture, and writes, into one folder:
   * `marks.json`, the seconds each mark landed at and the planned timings
 
 It is the generalisation of `scripts/record-kill-a-node.py`, which films one
-story and brings up its own two-node plant to film it. This one films a plant
-somebody else started and **never starts, stops or writes to anything**: a take
-that needed the lab plant restarted would not be a recording of the lab plant.
-Any request the page makes that is not a GET (the one sign-in aside) fails the
-take rather than being filmed, because these scenes are shot against plants
-that are not ours to change.
+story and brings up its own two-node plant to film it.
 
-Two things on screen are this file's and not the product's, and the README of
-every folder it writes says so:
+By default a scene films a plant somebody else started and **changes nothing**:
+any request the page makes that is not a GET (the one sign-in aside) fails the
+take rather than being filmed, because the plants most scenes are shot against
+are not ours to change, and a take that needed the lab plant restarted would
+not be a recording of the lab plant.
+
+Two things a scene may say to get out of that, and only together:
+
+  * `[plant]` — bring up a plant of this take's own from a pack, on the ports
+    that pack names, in a temporary home, and stop it and delete it when the
+    take ends. `[plant] roll_when_*` holds the camera, off camera, until the
+    plant reaches the state the scene opens on: a wait inside a scene is
+    filmed, and a clip has forty-five seconds.
+  * `allow_writes` — let the page write. Some stories *are* writes: a hold is
+    taken under review by somebody deciding to, and a clip of quality work
+    with nothing written in it is a tour. This is honoured only when `base` is
+    a loopback address and refused everywhere else, before the browser opens,
+    because the lab fleet and the public demo answer on this box too.
+
+Two things on screen are this file's and not the product's — three, when a
+scene starts its own plant — and the README of every folder it writes says so:
 
   1. the caption bar along the bottom — the `say` lines, burnt in
   2. the badge at the right-hand end of that bar, which names the version the
@@ -45,14 +59,19 @@ Chromium (`pip install -e ".[dev]" && playwright install chromium`).
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import json
 import math
 import os
 import shutil
+import socket
 import subprocess
+import sys
+import tempfile
 import time
 import tomllib
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -136,6 +155,7 @@ def load_scene(path: Path) -> dict:
         scene.setdefault(key, value)
     scene["out"] = scene.get("out") or f"recordings/{scene['name']}"
     scene["title"] = scene.get("title") or scene["name"]
+    scene["notes"] = list(scene.get("notes") or [])
 
     for number, step in enumerate(steps, start=1):
         where = f"{path}: step {number}"
@@ -172,6 +192,9 @@ def load_scene(path: Path) -> dict:
             if step.get("attribute") and step.get("equals") is None:
                 raise SystemExit(f"{where}: `attribute` needs `equals`")
             step.setdefault("timeout", WAIT_TIMEOUT_SECONDS)
+
+    if scene.get("plant"):
+        scene["plant"] = plant_defaults(scene["plant"])
 
     scene["step"] = steps
     return scene
@@ -441,9 +464,44 @@ def readme(scene: dict, facts: dict) -> str:
         " in every frame of the GIF, which the recording checks before it writes this page",
         "- the product's floating Assistant and Design buttons are hidden, because they sit where"
         " the caption bar goes",
+    ]
+    plant = scene.get("plant")
+    if plant:
+        lines += [
+            f"- **the plant itself**: built fresh from `{plant['pack']}` into a temporary home, run at"
+            f" **{plant['speed']}x** the line's clock, and stopped and deleted when the take ended."
+            " Nothing in the checkout and no plant anybody else started was touched.",
+        ]
+        if plant.get("roll_when_chart"):
+            lines += [
+                f"- **when the camera started**: it waited, off camera, for"
+                f" `{plant['roll_when_chart']}` to have drawn at least"
+                f" {plant.get('roll_when_readings', 0)} readings and be in control, with its newest"
+                f" reading {plant['roll_when_beyond_sigma']:.0f} sigma or more"
+                f"{' below' if plant.get('roll_when_below_centre') else ' from'} centre — the reading"
+                " that fires no rule on its own. The rule then fires on camera. The waiting is cut"
+                " from the clip; nothing between the event and what follows it is.",
+            ]
+    lines += [
         "",
-        "Everything else is the plant's own screens, read live. Nothing was started, stopped or"
-        " written to in order to make this.",
+        "Everything else is the plant's own screens, read live, and every figure on them is the"
+        " plant's own.",
+    ]
+    if scene.get("allow_writes"):
+        lines += [
+            "",
+            "This scene is allowed to write, which is how the operator takes the hold under review:"
+            " that click is a real `POST` to a real plant, and the hold really is under review"
+            " afterwards. The recording refuses to run at all unless the plant is at a loopback"
+            " address.",
+        ]
+    # A scene's own footnotes, after everything about how the take was made:
+    # some things on screen need a sentence that is nobody's fault and cannot
+    # go in a caption. The clip has forty-five seconds; the folder does not.
+    if scene.get("notes"):
+        lines += ["", "## Worth knowing", ""]
+        lines += [f"- {note}" for note in scene["notes"]]
+    lines += [
         "",
         "## The files",
         "",
@@ -545,6 +603,334 @@ def badge_in_every_frame(
     return bool(colours) and not frames_without_the_badge(colours, want, tolerance)
 
 
+# ----------------------------------------------------------- the scratch plant
+
+# Ports on this box that belong to something somebody is reading, and which a
+# scratch plant must never be given. The lab fleet has been up since 2026-10-22
+# and the public demo is the only plant on this box standing orders allow to
+# simulate; a take that bound one of these would not fail, it would quietly
+# film the wrong plant, or stop one Scott is watching. The pre-flight names
+# what usually owns a port so the person reading the refusal knows whether to
+# worry.
+PORTS_THAT_BELONG_TO_SOMETHING_ELSE = {
+    8090: "the lab's fleet console",
+    8110: "the lab's bottling plant",
+    8111: "the lab's second copy of the bottling plant",
+    8120: "the lab's machining plant",
+    9030: "the public cutlery demo",
+    4941: "the lab's OPC endpoint",
+    4942: "the lab's second OPC endpoint",
+    4943: "the public demo's OPC endpoint",
+    5433: "the public demo's PostgreSQL",
+    5434: "the public demo's second PostgreSQL",
+}
+
+#: How long to wait for a plant that has just been started to answer /health.
+PLANT_UP_SECONDS = 60.0
+#: How often to ask the plant a question while waiting for it.
+POLL_SECONDS = 1.0
+
+
+def plant_defaults(spec: dict) -> dict:
+    """Fill in a `[plant]` table and refuse anything this script would guess at."""
+    if not spec.get("pack"):
+        raise SystemExit("[plant]: a scratch plant needs a `pack` — the directory with plant.toml")
+    spec.setdefault("speed", 1.0)
+    spec.setdefault("roll_when_chart", None)
+    spec.setdefault("roll_when_in_control", True)
+    spec.setdefault("roll_when_beyond_sigma", 0.0)
+    spec.setdefault("roll_when_timeout_seconds", 300.0)
+    if spec["roll_when_chart"] and "/" not in str(spec["roll_when_chart"]):
+        raise SystemExit("[plant]: `roll_when_chart` is `MATERIAL/characteristic`, e.g. FG-BOTTLE/fill_weight")
+    return spec
+
+
+def ports_of_pack(pack: Path) -> dict[int, str]:
+    """The ports this pack's own plant.toml says it will listen on.
+
+    Read from the pack rather than restated in the scene file: the plant
+    boundary is config, and two places to change a port is one place to forget.
+    """
+    with (pack / "plant.toml").open("rb") as raw:
+        settings = tomllib.load(raw)
+    serve = settings.get("serve") or {}
+    ports = {}
+    if serve.get("api_port"):
+        ports[int(serve["api_port"])] = "its API"
+    endpoint = serve.get("opc_endpoint") or ""
+    opc = urllib.parse.urlsplit(endpoint).port if "//" in endpoint else None
+    if opc:
+        ports[int(opc)] = "its OPC endpoint"
+    return ports
+
+
+def port_is_free(port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        return probe.connect_ex(("127.0.0.1", port)) != 0
+
+
+def refuse_a_port_that_is_not_ours(ports: dict[int, str]) -> None:
+    """Every port the scratch plant wants, free and not somebody else's. Before, and after."""
+    for port, what in sorted(ports.items()):
+        owner = PORTS_THAT_BELONG_TO_SOMETHING_ELSE.get(port)
+        if owner:
+            raise SystemExit(
+                f"this pack wants port {port} for {what}, and {port} is where {owner} answers. "
+                "A scratch plant gets a port of its own or none: change the pack's `[serve]`."
+            )
+        if not port_is_free(port):
+            raise SystemExit(
+                f"port {port} is busy, and the scratch plant wants it for {what}. Something is already "
+                f"listening there — find out what before this take binds to it or films it by mistake "
+                f"(`ss -ltnp | grep :{port}`)."
+            )
+
+
+class ScratchPlant:
+    """A plant this take built, started, and is responsible for taking away.
+
+    It lives in a temporary directory of its own with its own fleet registry,
+    so `fsmes fleet` can only ever see this one plant: `stop` cannot reach a
+    plant somebody else created, and nothing is stopped by matching a command
+    line, which is how two of Scott's lab plants went down for six minutes on
+    2026-09-22.
+    """
+
+    def __init__(self, name: str, home: Path, env: dict[str, str], ports: dict[int, str]) -> None:
+        self.name = name
+        self.home = home
+        self.env = env
+        self.ports = ports
+        self.running = False
+
+    def _fsmes(self, *words: str, root: bool = False) -> subprocess.CompletedProcess:
+        """Run one `fsmes` command with this plant's registry and nothing else's.
+
+        `root` adds `--root`, which only the `fleet` verbs take: they look up a
+        repository to work from, and `sim-generate` takes a path and refuses
+        the option. It is passed where it belongs rather than to everything.
+        """
+        if root:
+            words = (*words, "--root", str(REPO))
+        return subprocess.run(
+            [sys.executable, "-m", "fsmes", *words],
+            cwd=str(REPO), env=self.env, capture_output=True, text=True, encoding="utf-8", check=False,
+        )
+
+    def start(self, speed: float) -> None:
+        done = self._fsmes("fleet", "start", self.name, "--speed", str(speed), root=True)
+        if done.returncode != 0:
+            raise SystemExit(f"could not start the scratch plant:\n{done.stdout}\n{done.stderr}")
+        self.running = True
+
+    def stop(self) -> None:
+        """Stop the plant and take its home away. Safe to call twice."""
+        if self.running:
+            done = self._fsmes("fleet", "stop", self.name, root=True)
+            self.running = False
+            if done.returncode != 0:
+                print(f"  the scratch plant would not stop cleanly:\n{done.stdout}\n{done.stderr}", flush=True)
+        shutil.rmtree(self.home, ignore_errors=True)
+        still_busy = [f"{port} ({what})" for port, what in sorted(self.ports.items()) if not port_is_free(port)]
+        if still_busy:
+            print(f"  these ports are still busy after stopping the scratch plant: {', '.join(still_busy)}",
+                  flush=True)
+        else:
+            print(f"  scratch plant stopped, its home removed, "
+                  f"{' and '.join(str(port) for port in sorted(self.ports))} free", flush=True)
+
+
+def start_a_scratch_plant(spec: dict) -> ScratchPlant:
+    """Build a plant from a pack in a temporary home, start it, and wait for it.
+
+    The pack is copied rather than used where it lies, and the replay it needs
+    is generated into the copy: a take must not leave anything behind in the
+    checkout, and `out/` under a lab pack is a hundred megabytes nobody asked
+    for.
+    """
+    pack = (REPO / spec["pack"]).resolve()
+    if not (pack / "plant.toml").is_file():
+        raise SystemExit(f"[plant]: {spec['pack']} has no plant.toml, so it is not a pack")
+
+    ports = ports_of_pack(pack)
+    refuse_a_port_that_is_not_ours(ports)
+
+    with (pack / "plant.toml").open("rb") as raw:
+        name = (tomllib.load(raw).get("plant") or {}).get("name")
+    if not name:
+        raise SystemExit(f"[plant]: {spec['pack']}/plant.toml has no `[plant] name`")
+
+    home = Path(tempfile.mkdtemp(prefix=f"scene-plant-{name}-"))
+    print(f"== bringing up a scratch {name} plant from {spec['pack']} at {spec['speed']}x, in {home}",
+          flush=True)
+    shutil.copytree(pack, home / "pack")
+    (home / "fleet.toml").write_text(
+        f'packs = ["pack"]\n\n[environment]\ndata_dir = "{(home / "data").as_posix()}"\n',
+        encoding="utf-8",
+    )
+    env = {**os.environ, "FSMES_PLANT_REGISTRY": str(home / "fleet.toml")}
+    plant = ScratchPlant(name, home, env, ports)
+
+    line = home / "pack" / "line.json"
+    if line.is_file():
+        print("  generating the replay this pack's line describes", flush=True)
+        made = plant._fsmes("sim-generate", str(line))
+        if made.returncode != 0:
+            plant.stop()
+            raise SystemExit(f"could not generate the replay:\n{made.stdout}\n{made.stderr}")
+
+    built = plant._fsmes("fleet", "create", str(home / "pack"), root=True)
+    if built.returncode != 0:
+        plant.stop()
+        raise SystemExit(f"could not build the scratch plant:\n{built.stdout}\n{built.stderr}")
+
+    plant.start(float(spec["speed"]))
+    return plant
+
+
+def wait_for_the_plant(base: str, seconds: float = PLANT_UP_SECONDS) -> None:
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        if ask(f"{base}/health"):
+            return
+        time.sleep(POLL_SECONDS)
+    raise SystemExit(f"the scratch plant did not answer {base}/health within {seconds:.0f}s")
+
+
+def a_signed_in_reader(base: str, user: str, password: str):
+    """An opener that has signed in, for the questions asked before the camera rolls."""
+    import http.cookiejar
+
+    jar = http.cookiejar.CookieJar()
+    reader = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+    sign_in = urllib.request.Request(
+        f"{base}/auth/login",
+        data=json.dumps({"code": user, "password": password}).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+    )
+    try:
+        reader.open(sign_in, timeout=10)
+    except (OSError, urllib.error.URLError) as refused:
+        raise SystemExit(f"could not sign in to {base} as {user} to watch the chart: {refused}") from refused
+    return reader
+
+
+def wait_for_the_shot(base: str, spec: dict, user: str, password: str) -> dict:
+    """Hold the camera until the chart is in the state the scene opens on.
+
+    This is the waiting a camera operator does, and it is done here rather than
+    in the scene because a `wait_for` inside a scene is filmed: a minute of an
+    unchanging chart is a minute of the clip, and the clip has forty-five
+    seconds. The take rolls on a chart that is in control with a reading
+    already out at the edge of it — the point that fires no rule on its own —
+    so that the rule fires while the camera is on the chart rather than before
+    it arrives.
+
+    Nothing here writes. It asks the plant the same question the chart asks.
+    """
+    material, _, characteristic = str(spec["roll_when_chart"]).partition("/")
+    reader = a_signed_in_reader(base, user, password)
+    url = f"{base}/quality/spc/{urllib.parse.quote(material)}/{urllib.parse.quote(characteristic)}"
+    want_sigma = float(spec["roll_when_beyond_sigma"])
+    want_in_control = bool(spec["roll_when_in_control"])
+    want_readings = int(spec.get("roll_when_readings") or 0)
+    want_below = bool(spec.get("roll_when_below_centre"))
+    deadline = time.monotonic() + float(spec["roll_when_timeout_seconds"])
+    started = time.monotonic()
+    last = ""
+
+    while time.monotonic() < deadline:
+        try:
+            with reader.open(url, timeout=10) as answer:
+                chart = json.load(answer)
+        except (OSError, urllib.error.URLError, ValueError):
+            time.sleep(POLL_SECONDS)
+            continue
+        control = chart.get("control") or {}
+        points = chart.get("points") or []
+        centre, sigma = control.get("centre"), control.get("sigma")
+        newest = points[-1]["value"] if points else None
+        out = abs(centre - newest) / sigma if (newest is not None and centre is not None and sigma) else 0.0
+        in_control = chart.get("stable")
+        enough = centre is not None
+        drawn = int(chart.get("n") or 0)
+        # Two things the sigma on its own does not say, and both have cost a
+        # take. A chart with a dozen readings estimates its limits from a dozen
+        # numbers, so an ordinary wobble reads as two and a half sigma: one take
+        # rolled on reading eighteen, filmed a wobble, waited the whole of its
+        # patience for a rule that was never coming, and stopped. And a reading
+        # that far out *above* centre is not the event this scene narrates —
+        # the caption says a reading drops, and it has to be a drop.
+        settled = drawn >= want_readings
+        the_right_way = (newest < centre) if (want_below and newest is not None and centre is not None) else True
+
+        said = (f"  {time.monotonic() - started:5.0f}s  {chart.get('n') or 0:3d} readings, "
+                f"{'in control' if in_control else 'out of control' if enough else 'not enough to say'}"
+                f"{f', newest {out:.1f} sigma out' if enough else ''}")
+        if said != last:
+            print(said, flush=True)
+            last = said
+
+        if enough and settled and the_right_way and (in_control or not want_in_control) and out >= want_sigma:
+            print(f"  rolling: {chart.get('n')} readings, the chart in control, "
+                  f"the newest reading {out:.1f} sigma from centre", flush=True)
+            return chart
+        time.sleep(POLL_SECONDS)
+
+    raise SystemExit(
+        f"the chart never reached the state this scene opens on within "
+        f"{float(spec['roll_when_timeout_seconds']):.0f}s — at least {want_readings} readings, "
+        f"{'in control, ' if want_in_control else ''}the newest {want_sigma:.0f} sigma or more "
+        f"{'below' if want_below else 'from'} centre. Nothing was filmed. The replay this pack "
+        "describes may have moved on, or the speed may be wrong for it."
+    )
+
+
+# --------------------------------------------------------- what may be written
+
+
+def on_loopback(base: str) -> bool:
+    """Whether this base URL names a plant on this box, by its address alone.
+
+    A name is read as an address and nothing more: `localhost` and the
+    `127.0.0.0/8` and `::1` literals are on this box, and everything else is
+    not. A hostname that happens to resolve to a loopback address today is not
+    accepted, because the whole point of this rule is that a person reading a
+    scene file can see for themselves which plant a take is allowed to change,
+    and a name's answer can be different tomorrow.
+    """
+    host = urllib.parse.urlsplit(base).hostname
+    if host is None:
+        return False
+    if host == "localhost" or host.endswith(".localhost"):
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def refuse_to_write_off_this_box(scene: dict) -> None:
+    """Refuse a take that may write unless the plant it films is on this box.
+
+    `allow_writes` exists because an operator doing their job is a write — a
+    hold is taken under review by somebody deciding to, and a clip of quality
+    work with nothing written in it is a tour rather than a story — and the
+    plant a take does that on is a scratch plant the take brought up itself.
+    The lab plants and the public demo answer on addresses that are not
+    loopback, and somebody is watching them. Between "films a plant" and
+    "changes a plant somebody else is reading" there is otherwise one line in a
+    scene file and a `--base` nobody re-read, so the address decides.
+    """
+    if not scene["allow_writes"] or on_loopback(scene["base"]):
+        return
+    raise SystemExit(
+        f"this scene sets `allow_writes = true` and films {scene['base']}, which is not on this box. "
+        "A take may only write to a plant at a loopback address — a scratch plant it started itself. "
+        "Drop `allow_writes`, or point `base` at 127.0.0.1."
+    )
+
+
 # ------------------------------------------------------------------ the take
 
 
@@ -579,6 +965,7 @@ def record(scene: dict, out: Path) -> dict:
     # Imported here and not at the top: --plan, and every test, works without a browser installed.
     from playwright.sync_api import sync_playwright
 
+    refuse_to_write_off_this_box(scene)
     base = scene["base"].rstrip("/")
     plant, version = the_plant(base)
     badge = scene["badge"].format(version=version, plant=plant)
@@ -671,8 +1058,9 @@ def main() -> None:
     print(f"== {scene['title']} — {len(scene['step'])} steps, "
           f"{planned_seconds(scene):.1f} s filmed, {gif_seconds(scene):.1f} s in the GIF "
           f"against a {budget:.0f} s budget", flush=True)
-    if gif_seconds(scene) > budget:
-        raise SystemExit(f"the scene is planned at {gif_seconds(scene):.1f} s, over its own {budget:.0f} s budget")
+    if planned_seconds(scene) > budget:
+        raise SystemExit(f"the scene is planned at {planned_seconds(scene):.1f} s of film, "
+                         f"over its own {budget:.0f} s budget")
 
     if args.plan:
         for number, step in enumerate(scene["step"], start=1):
@@ -687,7 +1075,35 @@ def main() -> None:
         if not shutil.which(tool):
             raise SystemExit(f"no `{tool}` on PATH; it makes the mp4 and the GIF")
 
-    made = record(scene, out)
+    # A take that writes may only write to a plant on this box, and the answer
+    # cannot wait until the browser is open: the refusal comes before anything
+    # is started, asked or filmed.
+    refuse_to_write_off_this_box(scene)
+
+    # A scene with a `[plant]` table brings its own plant up and takes it down
+    # again, whatever happens to the take in between — a scratch plant left
+    # running holds its ports, and the next run of this script would refuse.
+    plant_spec = scene.get("plant")
+    scratch = None
+    try:
+        if plant_spec:
+            if not on_loopback(scene["base"]):
+                raise SystemExit(
+                    f"this scene starts its own plant but films {scene['base']}, which is not on this box. "
+                    "A scratch plant is reached at a loopback address."
+                )
+            scratch = start_a_scratch_plant(plant_spec)
+            wait_for_the_plant(scene["base"].rstrip("/"))
+            if plant_spec["roll_when_chart"]:
+                print("== waiting for the chart to reach the state this scene opens on", flush=True)
+                wait_for_the_shot(scene["base"].rstrip("/"), plant_spec,
+                                  scene["user"], scene["password"])
+
+        made = record(scene, out)
+    finally:
+        if scratch is not None:
+            print("\n== taking the scratch plant away", flush=True)
+            scratch.stop()
 
     print("\n== making the mp4 and the GIF", flush=True)
     mp4 = out / f"{scene['name']}.mp4"
@@ -742,8 +1158,14 @@ def main() -> None:
 
     if not ok:
         raise SystemExit("the badge is not in every frame of the GIF; the take cannot be published")
-    if length > budget + 0.5:
-        raise SystemExit(f"the GIF runs {length:.1f} s, over the scene's own {budget:.0f} s budget")
+    # The whole take and not the loop. The GIF drops the head of the take, but
+    # `mpv --loop` plays the mp4, and the mp4 is the one a person sits through:
+    # a take whose GIF came in at 44 s and whose mp4 ran 46.5 s is over budget,
+    # and the first version of this check called it fine.
+    whole = round(length + float(scene["gif_skip_seconds"]), 1)
+    if whole > budget + 0.5:
+        raise SystemExit(f"the take runs {whole:.1f} s, over the scene's own {budget:.0f} s budget "
+                         f"— the GIF is {length:.1f} s of it, and the mp4 is the whole of it")
     if not math.isclose(length, gif_seconds(scene), abs_tol=max(4.0, gif_seconds(scene) * 0.25)):
         print(f"  note   the take ran {length:.1f} s against a plan of {gif_seconds(scene):.1f} s"
               " — a `wait_for` waited, or the plant was slow")

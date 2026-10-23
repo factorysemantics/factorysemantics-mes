@@ -1,132 +1,217 @@
-# SPC on the line — topic 2 of the MES fundamentals series.
+# SPC on the line: a reading arrives, trips a rule, and an operator takes the hold.
 #
-#   python scripts/record-scene.py scripts/scenes/02-spc-on-the-line.toml
-#   python scripts/record-scene.py scripts/scenes/02-spc-on-the-line.toml --base http://<a plant>:8110
+# The first take of this scene filmed a chart that was already out of control
+# when the camera arrived, on the lab plant, which no take may write to. It was
+# honest and it was flat: nothing happened, and the operator's part of the
+# story — deciding to look at a hold — is a write.
 #
-# The story: a chart filling from the filler's own readings, a point outside
-# the limits, the rule that caught it named, the hold it raised waiting on the
-# quality page, and the two moves the operator has. Capability is withheld on
-# camera because the process is unstable, and one line says why — that moment
-# is the point of the scene, not an accident of the plant it was filmed on.
-#
-# It wants a bottling plant that has been running about an hour, with fill
-# weight out of control: a fresh plant has a chart with nothing in it and the
-# `wait_for` steps below will time out rather than film an empty one.
-#
-# `base` is the plant `fsmes demo bottling` starts, so the command above
-# re-makes this from scratch for anybody. The takes in ~/Work/gifs were filmed
-# against the lab's bottling plant with --base; each folder's README says which
-# plant and which version it was.
+# So this take brings up its own plant, films the event happening, and lets the
+# operator do the one thing the story is about.
 
 name = "spc-on-the-line"
 title = "SPC on the line"
 out = "~/Work/gifs/mes-fundamentals/02-spc-on-the-line"
 base = "http://127.0.0.1:8010"
 badge = "pre-alpha · simulated plant · v{version}"
+# Forty-five seconds of mp4 — the whole take, which is what `mpv --loop`
+# plays and what a person sits through. The GIF is that less the head it
+# skips. The scripted part of this scene is about twenty-nine seconds; the
+# rest of the budget is the one wait that is filmed, below, which is why that
+# wait has a cap on it.
 budget_seconds = 45
-gif_skip_seconds = 2.5
+# The head the published loop drops: the page arriving, before the first
+# sentence is on it. It cannot be longer than that first settle, or the loop
+# would open after the caption it is meant to open on. It is not a saving:
+# the mp4 still carries those seconds, and the mp4 is what the budget is on.
+gif_skip_seconds = 2.0
 width = 1280
 height = 720
 
-# ---------------------------------------------------------------- the chart
+# Taking a hold under review is a write, and without it this is a tour of two
+# screens rather than somebody doing their job. The runner honours this only
+# against a plant at a loopback address — the scratch plant below — and refuses
+# the take outright against anything else, because the lab plants and the
+# public demo answer on this box too and somebody is reading them.
+allow_writes = true
+
+# A footnote for whoever opens the folder. The rule numbers on screen are the
+# first thing a reader of this clip will trip over.
+notes = [
+  "The chart names one rule and the hold often names another. One drop trips both the individuals chart and the moving range, usually a reading apart, and this MES keeps one hold for one excursion — headed by whichever rule reached it first, with the rest joined to it. Two numbers, one drop.",
+]
+
+[plant]
+# The plant this take films is built fresh from the same pack the lab's
+# bottling plant uses, in a temporary home, on the ports that pack names
+# (8010 and 4841), and is stopped and deleted when the take ends. The lab
+# plant is not touched, read, or pointed at.
+pack = "labs/multiplant/bottling"
+
+# One wall second is twenty line seconds. The speed is not a matter of taste:
+# the chart's limits are estimated from the gaps between consecutive readings,
+# so a faster replay samples more of the line between them, widens sigma, and
+# swallows the very step this scene is about. At 60x the filler's scripted
+# four-gram drop is barely one sigma and fires nothing at all. At 20x sigma
+# settles around 2.4 g, the chart is in control about twenty-five seconds in,
+# and the drop the pack's own line.json scripts at line second 2400 arrives
+# around a hundred and fifteen seconds in and fires rule 2 about ten seconds
+# after that.
+speed = 20
+
+# Where the camera starts rolling. The runner waits here, off camera, because a
+# wait inside the scene is filmed and the clip has forty-five seconds: holding
+# on an unchanging chart for a minute and a half would be the whole clip.
+#
+# It waits for the chart to be in control AND for the newest reading to be two
+# sigma or more from centre. That is the first reading of the filler's drop —
+# the one that fires no rule by itself, because rule 2 wants two of three out
+# there. So the camera opens on a chart that is genuinely in control with the
+# trouble already visible at the bottom of it, and the rule fires while the
+# camera is on the chart instead of before it arrived.
+#
+# Two readings' worth of hard-won detail. The chart must have drawn at least
+# twenty-five readings first: before that the limits are estimated from a
+# handful of moving ranges and an ordinary wobble reads as two and a half
+# sigma. A take that rolled on reading eighteen filmed exactly that, held on a
+# chart that was never going to trip anything, and stopped. The pack's drop
+# arrives around reading thirty, by which time the limits have settled and a
+# reading that far out is the step and not the noise.
+#
+# And the reading must be *below* centre. The caption says a reading drops; a
+# spike upward would fire a rule just as well and make the caption a lie.
+roll_when_chart = "FG-BOTTLE/fill_weight"
+roll_when_in_control = true
+roll_when_beyond_sigma = 2.0
+roll_when_readings = 25
+roll_when_below_centre = true
+roll_when_timeout_seconds = 300
+
+# --- the chart, in control
 
 [[step]]
 do = "goto"
 url = "/dashboard/spc?spec=FG-BOTTLE%7Cfill_weight"
-settle = 3.0
+settle = 2.0
 
 [[step]]
 do = "wait_for"
 selector = "#verdict"
-text = "out of control"
+text = "in control"
 
+# The page opens at the top, where the verdict is; the chart is below the fold
+# on a 720-high frame, because this plant's replay banner and the navigation
+# take the first 190 pixels. So the camera is put on the chart and kept there:
+# the clip is about a point moving, and a point nobody can see moves for
+# nobody. `start` with an offset of 215 puts the chart's top just under the
+# header that stays on screen.
 [[step]]
 do = "say"
-line = "Fill weight on the bottling line. Two hundred readings from the filler."
-hold = 4.5
+line = "Fill weight on the bottling line. The chart is in control."
+hold = 3.5
+scroll_to = "#chart"
+scroll_block = "start"
+scroll_offset = 215
 
 [[step]]
 do = "mark"
-name = "the-chart"
+name = "the-chart-in-control"
 
+# --- the reading that trips it, while the camera is on the chart
+
+# The one wait that is filmed, and the only one that should be: this is the
+# event. The SPC page polls about every ten seconds, so this is usually two or
+# three seconds and occasionally a whole poll cycle; thirteen is one cycle and
+# a little, and past that the reading did not land and the take should fail
+# where a person can see it rather than quietly run long.
+[[step]]
+do = "wait_for"
+selector = "#verdict"
+text = "out of control"
+timeout = 13
+
+# The same framing again, not because the reader scrolled but because the
+# verdict above the chart just grew by a line and pushed it down. The rules
+# this firing raised are listed further down the page, and that table is left
+# off camera: the hold on the quality page two shots from here says the same
+# thing, and it says it where a person would act on it.
 [[step]]
 do = "say"
-line = "The chart is out of control. Four rules have fired."
+line = "A reading drops, and the chart calls it: out of control."
 hold = 4.0
+scroll_to = "#chart"
+scroll_block = "start"
+scroll_offset = 215
 
-# Cp, Cpk and Pp all read "withheld" on an unstable process. The scene waits
-# for that word before claiming it, so the line is never said over a number.
+[[step]]
+do = "mark"
+name = "the-reading-that-tripped-it"
+
 [[step]]
 do = "wait_for"
 selector = "#f-cp"
 text = "withheld"
 
+# Up to the summary row, where Cp and Cpk now read "withheld", with the
+# verdict under them saying so in words. This is the one number the product
+# refuses to print, and refusing it is the point.
 [[step]]
 do = "say"
-line = "Capability is withheld while the process is unstable — a number here would be a lie."
-hold = 5.0
-
-# --------------------------------------------------------------- the reading
-
-[[step]]
-do = "click"
-selector = "#open-point"
-
-[[step]]
-do = "wait_for"
-js = "document.querySelector('#point-panel').dataset.point !== ''"
-
-# Scrolled so the panel's own rows clear the caption bar: the order and the
-# machine are the two the line claims, and a line over a covered row is the
-# recording saying something the picture does not.
-[[step]]
-do = "say"
-line = "Any flagged point opens: the reading, the time, the order, the machine."
+line = "Capability is withheld now — a number on an unstable process would be a lie."
 hold = 4.5
-scroll_to = "#point-panel"
+scroll_to = "#verdict"
 scroll_block = "start"
-scroll_offset = 240
+scroll_offset = 320
 
-[[step]]
-do = "mark"
-name = "the-reading"
-
-[[step]]
-do = "say"
-line = "The chart raised a hold on it. Nobody typed that in."
-hold = 4.0
-
-# ------------------------------------------------------------------ the hold
+# --- the hold, and the operator
 
 [[step]]
 do = "goto"
 url = "/dashboard/quality?material=FG-BOTTLE&characteristic=fill_weight&n_q=SPC+rule"
-settle = 2.5
+settle = 2.0
 
+# "SPC rule" and not the name of one rule. Which rule catches this reading is
+# the chart's business and not the scene's: the drop is scripted into the
+# pack's line, but how many readings landed before it — and so how wide the
+# limits are when it arrives — moves by a reading or two between takes, and a
+# scene that waits for rule 2 by name waits for ever on the take where rule 1
+# got there first. The rule is named on camera by the plant, in the hold, which
+# is the only place it should be named from.
 [[step]]
 do = "wait_for"
-selector = "#n-count"
-text = "still open matching"
+selector = "#ncs"
+text = "SPC rule"
 
-# The line names no count and no characteristic on purpose. The first take of
-# this scene said "four holds on this characteristic"; by the next take the
-# plant had raised a fifth, and the filter matches every SPC-raised hold on the
-# material, fill_height among them. A caption the live page can contradict is
-# the recording inventing production. What every row here does say, always, is
-# the rule, the readings and the order.
+# The overlay does not say which rule this hold is for, and the reason is not
+# shyness. One drop trips more than one rule: the individuals chart catches the
+# reading, and the moving range catches the gap between it and the one before —
+# often a reading earlier. The MES keeps one hold per excursion and heads it
+# with whichever rule caught it first, so the number on the hold is frequently
+# not the number the chart showed a moment ago. Both are true and they are the
+# same drop, but a caption that says "the rule" invites a viewer to match two
+# numbers that were never meant to match. What matters, and what the screen
+# proves with its own timestamp, is that nobody typed this hold.
 [[step]]
 do = "say"
-line = "Each hold names the rule that fired, the readings, and the order."
-hold = 4.5
+line = "The MES raised the hold itself, the moment the drop landed."
+hold = 4.0
 scroll_to = "#ncs"
 scroll_block = "start"
 scroll_offset = 250
 
 [[step]]
-do = "mark"
-name = "the-hold"
+do = "click"
+selector = "button[data-assist=\"nc-review\"]"
+
+[[step]]
+do = "wait_for"
+selector = "#ncs"
+text = "under review"
 
 [[step]]
 do = "say"
-line = "The operator takes it under review, or decides. On the record."
-hold = 4.5
+line = "The operator takes it under review. On the record."
+hold = 3.5
+
+[[step]]
+do = "mark"
+name = "the-hold-under-review"
