@@ -500,6 +500,29 @@ Then open the dashboard and look at a shift from before the upgrade. History
 that was there before and is not there now is the thing to catch, and it is
 caught by looking, not by a command.
 
+### When `fsmes --version` still prints the old version
+
+The upgrade worked and you are typing a different copy of it. A PC can hold
+more than one Python, and `pipx` keeps its own: `py -m pip install --upgrade`
+upgrades the copy `py` owns, and leaves the `fsmes` on your PATH — which may
+be pipx's — exactly where it was.
+
+**How to tell.** `py -m fsmes --version` is the copy `py` owns;
+`fsmes --version` is the one on PATH. If they disagree, that is the whole
+story. `where fsmes` on Windows (`which fsmes` elsewhere) says which one the
+bare command is.
+
+**The rule: upgrade the one that owns the command you type.** If `where fsmes`
+points into a `pipx` folder, `pipx upgrade factorysemantics-mes`; otherwise
+`py -m pip install --upgrade factorysemantics-mes`. Either way,
+`py -m fsmes …` always runs the copy `py` has, so it is the way to be sure
+which version you are running.
+
+`py -m fsmes doctor` puts both facts in one file: the version, how it was
+installed (pipx, pip or uv), where the `fsmes` on your PATH is, and the Python
+that is running the copy you invoked — [one file to paste when something is
+wrong](doctor.md).
+
 ## See also
 
 - [Backup and restore](backup.md)

@@ -12,6 +12,25 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Fixed
 
+- **`fsmes demo <plant> stop --force` answers in words instead of refusing.**
+  `fsmes fleet stop` names `--force` when it will not touch a plant that is
+  not answering, so that is the word people arrive with — and typed on the
+  demo command it printed typer's bare `No such option: --force` and stopped
+  nothing. The demo path has passed `--force` to the fleet by itself for two
+  releases, so the flag is unnecessary rather than missing. It is now accepted
+  (hidden, not advertised) and answered in one sentence naming the command it
+  belongs to, and the plant stops either way. The gate is unchanged: `--force`
+  gives up liveness, never ownership, and `fsmes fleet stop` keeps asking
+  for it.
+- **The upgrade pages say what to do when two Pythons disagree.** After
+  `py -m pip install --upgrade factorysemantics-mes`, `fsmes --version` can
+  still print the old version, because the `fsmes` on PATH belongs to pipx or
+  to another Python. [Upgrading between versions](docs/operate/upgrade.md),
+  [run it on your own box](docs/operate/run-it-on-your-own-box.md) and the
+  assistant folder's install page now say how to tell (`py -m fsmes --version`
+  against `fsmes --version`; `where fsmes`, or `which`) and the rule: upgrade
+  the one that owns the command you type.
+
 - **On Windows, stopping a plant and starting it again in the next breath
   works.** `fsmes demo <plant> stop` no longer comes back while the plant's
   ports are still closing. A listening socket there outlives the process that

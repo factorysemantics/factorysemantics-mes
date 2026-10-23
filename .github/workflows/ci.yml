@@ -297,7 +297,9 @@ jobs:
     # kill the API process and nothing else - and proves the product talks a
     # person out of it: `status` names the process that is gone and the log
     # that says why, `stop` recovers it with no flag, and the plant starts
-    # again afterwards.
+    # again afterwards - and `stop --force`, the flag `fsmes fleet stop` puts
+    # in a person's head and the one he typed on 2026-10-15, is answered in a
+    # sentence rather than refused with `No such option`.
     #
     # Beside `wheel-plant` and on both runners for the same reason: it is all
     # processes, pids and console output, which is exactly where Windows
@@ -315,7 +317,7 @@ jobs:
           python-version: "3.12"
       - run: python -m pip install --upgrade pip build
       - run: python -m build --wheel
-      - name: A half-dead plant is described, recovered with no flag, and started again
+      - name: A half-dead plant is described, recovered with no flag, started again, and stopped with the flag people guess
         shell: bash
         run: python .github/scripts/recover_a_half_dead_plant.py --wheel "$(ls dist/*.whl)" --speed 60
 

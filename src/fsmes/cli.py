@@ -1341,6 +1341,11 @@ def demo(
              f"(default {BUFFER_DEFAULT}). Asked for if you leave it out."),
     yes: bool = typer.Option(
         False, "--yes", help="from-shape only: ask nothing. For a script."),
+    force: bool = typer.Option(
+        False, "--force", hidden=True,
+        help="Accepted and not needed: `fsmes demo <plant> stop` already stops a "
+             "plant that is not answering. Taken so that a person who guessed it "
+             "gets a sentence instead of `No such option`."),
     hours: float = typer.Option(
         8.0, help="from-shape only: how long a shift the replay covers."),
     seed: int = typer.Option(
@@ -1365,6 +1370,19 @@ def demo(
     `from-shape` reads nothing but that file. Stop it, later, the same way as
     any other: `fsmes demo <name> stop`.
     """
+    if force:
+        # Imported here, not at the top: `fsmes --help` should not pay for
+        # the fleet's record reader to print a sentence about a flag.
+        from fsmes import firstrun
+
+        # Said before anything happens, and then ignored: the person already
+        # typed the word, and what they needed was never the flag but the
+        # sentence. See `firstrun.what_a_force_flag_is_for`.
+        named = (plant if plant not in (None, FROM_SHAPE, *_SHIPPED_ACTIONS)
+                 else _an_example_plant())
+        for line in firstrun.what_a_force_flag_is_for(
+                named, plant if plant in _SHIPPED_ACTIONS else action):
+            typer.echo(line)
     if plant == FROM_SHAPE:
         raise typer.Exit(_plant_from_a_shape(
             action if action not in _SHIPPED_ACTIONS else None,
