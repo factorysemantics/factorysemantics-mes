@@ -207,9 +207,9 @@ def main() -> int:
     finally:
         # Taken down with the word he actually typed on 2026-10-15. The plant
         # is up and answering here, so the flag is the only thing under test.
+        say(f"== the word he typed: fsmes demo {PLANT} stop --force ==")
         last = run([fsmes, "demo", PLANT, "stop", "--force"], cwd=work, env=environment)
 
-    say(f"== the word he typed: fsmes demo {PLANT} stop --force ==")
     guessed = (last.stdout or "") + (last.stderr or "")
     if last.returncode != 0:
         fail(f"`fsmes demo {PLANT} stop --force` exited {last.returncode}; the flag is "
