@@ -485,12 +485,6 @@ def readme(scene: dict, facts: dict) -> str:
         "Everything else is the plant's own screens, read live, and every figure on them is the"
         " plant's own.",
     ]
-    # A scene's own footnotes. Some things on screen need a sentence that is
-    # nobody's fault and cannot go in a caption: the clip has forty-five
-    # seconds and the folder does not.
-    if scene.get("notes"):
-        lines += ["", "## Worth knowing", ""]
-        lines += [f"- {note}" for note in scene["notes"]]
     if scene.get("allow_writes"):
         lines += [
             "",
@@ -499,6 +493,12 @@ def readme(scene: dict, facts: dict) -> str:
             " afterwards. The recording refuses to run at all unless the plant is at a loopback"
             " address.",
         ]
+    # A scene's own footnotes, after everything about how the take was made:
+    # some things on screen need a sentence that is nobody's fault and cannot
+    # go in a caption. The clip has forty-five seconds; the folder does not.
+    if scene.get("notes"):
+        lines += ["", "## Worth knowing", ""]
+        lines += [f"- {note}" for note in scene["notes"]]
     lines += [
         "",
         "## The files",
