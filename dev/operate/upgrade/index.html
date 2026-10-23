@@ -1953,6 +1953,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Checking the upgrade landed">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#when-fsmes-version-still-prints-the-old-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When fsmes --version still prints the old version
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -4697,6 +4714,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Checking the upgrade landed">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#when-fsmes-version-still-prints-the-old-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When fsmes --version still prints the old version
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -5216,6 +5250,24 @@ password replaced.</p>
 <p>Then open the dashboard and look at a shift from before the upgrade. History
 that was there before and is not there now is the thing to catch, and it is
 caught by looking, not by a command.</p>
+<h3 id="when-fsmes-version-still-prints-the-old-version">When <code>fsmes --version</code> still prints the old version<a class="headerlink" href="#when-fsmes-version-still-prints-the-old-version" title="Permanent link">&para;</a></h3>
+<p>The upgrade worked and you are typing a different copy of it. A PC can hold
+more than one Python, and <code>pipx</code> keeps its own: <code>py -m pip install --upgrade</code>
+upgrades the copy <code>py</code> owns, and leaves the <code>fsmes</code> on your PATH — which may
+be pipx's — exactly where it was.</p>
+<p><strong>How to tell.</strong> <code>py -m fsmes --version</code> is the copy <code>py</code> owns;
+<code>fsmes --version</code> is the one on PATH. If they disagree, that is the whole
+story. <code>where fsmes</code> on Windows (<code>which fsmes</code> elsewhere) says which one the
+bare command is.</p>
+<p><strong>The rule: upgrade the one that owns the command you type.</strong> If <code>where fsmes</code>
+points into a <code>pipx</code> folder, <code>pipx upgrade factorysemantics-mes</code>; otherwise
+<code>py -m pip install --upgrade factorysemantics-mes</code>. Either way,
+<code>py -m fsmes …</code> always runs the copy <code>py</code> has, so it is the way to be sure
+which version you are running.</p>
+<p><code>py -m fsmes doctor</code> puts both facts in one file: the version, how it was
+installed (pipx, pip or uv), where the <code>fsmes</code> on your PATH is, and the Python
+that is running the copy you invoked — <a href="../doctor/">one file to paste when something is
+wrong</a>.</p>
 <h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../backup/">Backup and restore</a></li>

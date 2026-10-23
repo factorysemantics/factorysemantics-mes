@@ -4436,6 +4436,20 @@ changing nothing permanently: <code>$env:PATH += ";C:\...\Scripts"</code>.</p>
 <p><strong>Or do not touch PATH.</strong> <code>py -m fsmes demo bottling</code> works the same. Every
 command on this page can be typed that way: <code>py -m fsmes</code> wherever it says
 <code>fsmes</code>.</p>
+<p><strong>If you upgraded and <code>fsmes --version</code> still says the old version</strong>, nothing
+failed — there are two copies and you are typing the other one. <code>pipx</code> keeps
+its own Python, so <code>py -m pip install --upgrade factorysemantics-mes</code> upgrades
+the copy <code>py</code> owns and leaves the <code>fsmes</code> on your PATH alone.</p>
+<ul>
+<li><em>How to tell:</em> <code>py -m fsmes --version</code> is the copy <code>py</code> owns,
+  <code>fsmes --version</code> is the one on PATH, and <code>where fsmes</code> (<code>which fsmes</code> on
+  Linux or macOS) says where that one came from.</li>
+<li><em>The rule:</em> upgrade the one that owns the command you type — <code>pipx upgrade
+  factorysemantics-mes</code> if <code>where fsmes</code> points into a <code>pipx</code> folder,
+  otherwise the <code>py -m pip install --upgrade</code> line above.</li>
+<li><code>py -m fsmes …</code> always runs the copy <code>py</code> has, and <code>py -m fsmes doctor</code>
+  writes both facts into one file.</li>
+</ul>
 <h2 id="2-is-it-still-running">2. Is it still running?<a class="headerlink" href="#2-is-it-still-running" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="n">fsmes</span> <span class="n">demo</span> <span class="n">bottling</span> <span class="n">status</span>
 </code></pre></div>
@@ -4480,6 +4494,10 @@ of it. If you want someone else to look, do not send that log — run</p>
 taken out, plus the version, the ports and which process went. That file is
 the thing to paste into an agent or into an issue:
 <a href="../doctor/">one file to paste when something is wrong</a>.</p>
+<p>If you type <code>fsmes demo bottling stop --force</code> anyway — <code>--force</code> is the flag
+<code>fsmes fleet stop</code> names, so it is the word most people arrive with — the flag
+is taken, a sentence says it was not needed and which command it belongs to,
+and the plant stops.</p>
 <p><strong>On 0.3.0</strong>, <code>stop</code> refuses this state and has no flag of its own: stop the
 pids it named by hand (<code>taskkill /F /PID 7964</code>) and then <code>fsmes demo bottling</code>.</p>
 <p><strong>Starting on top of a silent plant</strong> no longer launches five processes that
