@@ -4068,6 +4068,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../releases/0.4.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0.4.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../releases/0.4.0/" class="md-nav__link">
         
   
@@ -4407,11 +4435,13 @@ machine of your own: what to type on Windows, how to tell whether the plant
 is still running, and what to do when half of it has died.</p>
 <div class="admonition note">
 <p class="admonition-title">Which version this describes</p>
-<p>Four fixes named here — <code>stop</code> recovering a plant that is alive but
-silent, <code>status</code> naming the process that died and its log, a start that
-checks the ports first, and <code>py -m fsmes</code> — first ship in <strong>0.3.1, not
-yet released</strong>. Everything else is true of 0.3.0 too, and where a fix is
-what you need, the old way out is written beside it.</p>
+<p><strong>0.4.1.</strong> Four fixes named here — <code>stop</code> recovering a plant that is
+alive but silent, <code>status</code> naming the process that died and its log, a
+start that checks the ports first, and <code>py -m fsmes</code> — shipped in 0.3.1.
+Two more are 0.4.1's: a <code>stop</code> that waits until the plant's own ports are
+free, so a start in the next breath works, and <code>stop --force</code> answered in
+a sentence instead of refused. Where a fix is what you need, the old way
+out is written beside it.</p>
 </div>
 <h2 id="1-install-it-on-windows">1. Install it on Windows<a class="headerlink" href="#1-install-it-on-windows" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="n">pipx</span> <span class="n">install</span> <span class="n">factorysemantics-mes</span>

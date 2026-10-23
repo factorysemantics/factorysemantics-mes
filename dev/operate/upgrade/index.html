@@ -1745,6 +1745,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#040-to-041" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.4.0 to 0.4.1
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#031-to-040" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4252,6 +4263,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../releases/0.4.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0.4.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../releases/0.4.0/" class="md-nav__link">
         
   
@@ -4504,6 +4543,17 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#040-to-041" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.4.0 to 0.4.1
+      
+    </span>
+  </a>
+  
+</li>
       
         <li class="md-nav__item">
   <a href="#031-to-040" class="md-nav__link">
@@ -4778,6 +4828,30 @@ carries an <strong>Honesty</strong> section for anything that changed what a num
 <em>means</em> — a KPI formula, a state mapping, a counter rule. Read that section
 before upgrading a plant that anyone reads numbers off, because a number that
 changes meaning without anyone noticing is worse than one that breaks.</p>
+<h2 id="040-to-041">0.4.0 to 0.4.1<a class="headerlink" href="#040-to-041" title="Permanent link">&para;</a></h2>
+<p><strong>No migrations.</strong> Nothing in 0.4.1 changes the database schema —
+<code>b6f0c2a71d58</code> is head on both versions — so there is no <code>init-db</code> step, and
+nothing in the CHANGELOG's 0.4.1 section changes what a number means. Upgrade
+in place:</p>
+<div class="highlight"><pre><span></span><code>pipx<span class="w"> </span>upgrade<span class="w"> </span>factorysemantics-mes<span class="w">                 </span><span class="c1"># or py -m pip install --upgrade</span>
+fsmes<span class="w"> </span>--version<span class="w">                                   </span><span class="c1"># 0.4.1</span>
+fsmes<span class="w"> </span>db-status<span class="w"> </span>--pack<span class="w"> </span>packs/yourplant<span class="w">            </span><span class="c1"># should agree already</span>
+</code></pre></div>
+<p>Take the backup anyway if the plant holds anything you would miss
+(<code>fsmes backup --out /mnt/nas/fsmes</code>). Coming from 0.3.1 or earlier, do the
+section below first — it is the one with the migration in it.</p>
+<p><strong>If <code>fsmes --version</code> still says 0.4.0</strong>, nothing failed and the upgrade is
+not the problem: you are typing a different copy of it.
+<a href="#when-fsmes-version-still-prints-the-old-version">When <code>fsmes --version</code> still prints the old version</a>
+is how to tell which Python owns the command you type, and which one to
+upgrade. It is the thing 0.4.1 added words for, and on Windows it is the
+likeliest reason an upgrade looks as though it did nothing.</p>
+<p>On Windows two things are better after this upgrade and need nothing turned
+on: <code>fsmes demo &lt;plant&gt; stop</code> now waits until the plant's own ports are free,
+so a start in the next breath works instead of refusing a port nothing holds,
+and <code>fsmes demo &lt;plant&gt; stop --force</code> answers in a sentence rather than
+<code>No such option: --force</code>. A stop there is about a second slower for it. On
+Linux nothing changes.</p>
 <h2 id="031-to-040">0.3.1 to 0.4.0<a class="headerlink" href="#031-to-040" title="Permanent link">&para;</a></h2>
 <p><strong>One migration, <code>b6f0c2a71d58</code></strong> — 0.3.1's head was <code>d4e8a1c93b70</code>. It adds
 two tables, <code>plant_leases</code> and <code>counter_baselines</code>, and changes no column of
