@@ -30,9 +30,9 @@ Two things on screen are this file's and not the product's, and the README of
 every folder it writes says so:
 
   1. the caption bar along the bottom — the `say` lines, burnt in
-  2. the badge in the top-right corner, which names the version the plant
-     itself reports and says in as many words that the plant is simulated and
-     the software is pre-alpha
+  2. the badge at the right-hand end of that bar, which names the version the
+     plant itself reports and says in as many words that the plant is simulated
+     and the software is pre-alpha
 
 It also hides the floating Assistant and Design buttons, which are the
 product's and sit exactly where the caption bar goes.
@@ -436,7 +436,8 @@ def readme(scene: dict, facts: dict) -> str:
         "## What is this recording's and not the product's",
         "",
         "- the caption bar along the bottom: the scene file's `say` lines, burnt in",
-        f"- the badge in the top-right corner: `{facts['badge']}`",
+        f"- the badge at the right-hand end of that bar: `{facts['badge']}`,"
+        " in every frame of the GIF, which the recording checks before it writes this page",
         "- the product's floating Assistant and Design buttons are hidden, because they sit where"
         " the caption bar goes",
         "",
