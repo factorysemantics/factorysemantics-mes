@@ -189,8 +189,44 @@ def test_the_folder_says_which_plant_and_which_version_it_was_filmed_from(runner
     assert "35.2 s" in page and "7.5 MB" in page
     assert "the first sentence" in page and "the second sentence" in page
     assert "caption bar" in page and "badge" in page, "the two things on screen that are not the product's"
-    assert "Nothing was started, stopped or written to" in page
     assert "mpv --loop" in page
+
+
+def test_the_folder_says_the_plant_was_this_takes_own_and_what_was_written_to_it(runner):
+    """A take that started a plant and wrote to it says both, on the page beside the GIF.
+
+    This script used to promise, on every page it wrote, that nothing had been
+    started, stopped or written to. That is still true of most scenes and is no
+    longer true of this one: it builds its own plant, runs the line fast, and
+    an operator takes a hold under review on camera. A page that still carried
+    the old sentence would be the recording lying about itself, which is the
+    one thing the badge and the script file exist to prevent.
+    """
+    scene = runner.load_scene(SCENE)
+    page = runner.readme(scene, {
+        "said": ["the first sentence"],
+        "plant": "bottling",
+        "version": "0.4.1",
+        "badge": "pre-alpha · simulated plant · v0.4.1",
+        "base": "http://127.0.0.1:8010",
+        "commit": "e63138fc",
+        "scene_file": "scripts/scenes/02-spc-on-the-line.toml",
+        "command": "python scripts/record-scene.py scripts/scenes/02-spc-on-the-line.toml",
+        "when": "2026-10-23 15:40 CDT",
+        "gif_seconds": 35.2,
+        "gif_bytes": 7_900_000,
+        "gif_setting": "10 fps, 1100 wide",
+    })
+
+    assert "Nothing was started, stopped or written to" not in page, (
+        "this scene starts a plant and writes to it; the old promise would be a lie"
+    )
+    assert scene["plant"]["pack"] in page, "the page names the pack the plant was built from"
+    assert "20x" in page, "and the speed the line was replayed at"
+    assert "stopped and deleted" in page, "and that the plant was taken away afterwards"
+    assert "under review" in page and "loopback" in page, (
+        "and what was written, and the rule that says where it could be written"
+    )
 
 
 def test_a_gif_over_the_weight_github_will_animate_is_not_published(runner):

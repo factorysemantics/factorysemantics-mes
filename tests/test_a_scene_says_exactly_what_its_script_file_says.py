@@ -150,18 +150,86 @@ def test_the_script_file_is_a_record_of_the_take_and_not_a_copy_of_the_scene(run
 
 
 def test_the_scene_filmed_is_the_spc_story_the_handoff_asked_for(runner, played):
-    """The words, in order: the chart, the rule, withheld capability, the hold, what is next."""
+    """Something happens, in this order: in control, a reading trips a rule, a hold, an operator.
+
+    The first take of this scene opened on a chart that was already out of
+    control, which is a tour of a screen rather than a story. The words have to
+    carry the event: the chart is in control *first*, the rule fires *after*
+    that, capability goes away *because* of it, and a person does something
+    about it at the end.
+    """
     scene, stage = played
     script = " ".join(stage.said).lower()
 
     assert stage.said == runner.script_lines(scene)
     assert "fill weight" in script
-    assert "out of control" in script
+    assert "the chart is in control" in script, "the clip opens on a chart that is in control"
+    assert "out of control" in script, "and it goes out of control while the camera is on it"
+    assert script.index("the chart is in control") < script.index("out of control"), (
+        "in control first, then the event - the other way round is the flat take this one replaces"
+    )
+    assert "rule" not in script.split("out of control")[0], (
+        "no rule is named before the chart draws one: which rule catches the reading is "
+        "the chart's answer, said on screen in the hold, and not the scene's to predict"
+    )
     assert "withheld" in script, "capability is withheld on an unstable process, and the overlay says why"
     assert "hold" in script
-    assert "review" in script and "decide" in script, "what the operator does next"
-    assert stage.marks == ["the-chart", "the-reading", "the-hold"]
+    assert "under review" in script, "what the operator does, and does for real"
+    assert stage.marks == [
+        "the-chart-in-control",
+        "the-reading-that-tripped-it",
+        "the-hold-under-review",
+    ], "the three stills the series asks this clip for"
     assert len(stage.visited) == 2, "the chart page and the quality page"
+
+
+def test_the_scene_brings_up_its_own_plant_and_films_only_that_one(runner):
+    """The plant is this take's to write to because this take made it.
+
+    A scene that writes must be filming a scratch plant on this box: the lab
+    fleet and the public demo are up on this machine, and a hold taken under
+    review on one of those would be somebody else's record with a decision in
+    it that nobody made.
+    """
+    scene = runner.load_scene(SCENE)
+
+    assert scene["allow_writes"] is True, "the operator's click is a write"
+    assert runner.on_loopback(scene["base"]), "and so this take films a plant on this box"
+
+    plant = scene["plant"]
+    assert plant["pack"], "built from a pack rather than pointed at a plant somebody started"
+    assert plant["speed"] > 1, "the line is replayed faster than it ran, or no rule trips in a take"
+    assert plant["roll_when_chart"] == "FG-BOTTLE/fill_weight"
+    assert plant["roll_when_in_control"] is True
+    assert plant["roll_when_beyond_sigma"] >= 2.0, (
+        "the camera rolls on the reading that fires no rule by itself, so the rule fires on camera"
+    )
+
+    ports = runner.ports_of_pack(runner.REPO / plant["pack"])
+    assert ports, "the pack says which ports it wants, and the runner reads them from it"
+    for port in ports:
+        assert port not in runner.PORTS_THAT_BELONG_TO_SOMETHING_ELSE, (
+            f"port {port} is somebody else's"
+        )
+
+
+def test_the_only_wait_the_clip_pays_for_is_the_event(runner, played):
+    """Waiting for the chart to fill happens off camera; waiting for the rule does not.
+
+    The clip has forty-five seconds. Holding on an unchanging chart for the
+    ninety seconds it takes a cold plant to reach the event would be the whole
+    clip, so that wait is the `[plant] roll_when_*` keys and happens before the
+    camera rolls. The wait for the rule itself is in the scene, because that
+    one is the thing the clip was made to show.
+    """
+    scene, stage = played
+
+    assert scene["plant"]["roll_when_chart"], "the long wait is off camera"
+    filmed = [step for step in stage.waited if step.get("text") == "out of control"]
+    assert len(filmed) == 1, "and the event is waited for on camera, once"
+    assert filmed[0]["timeout"] > runner.WAIT_TIMEOUT_SECONDS, (
+        "with longer than the usual patience, because a replay is not a stopwatch"
+    )
 
 
 def test_a_scene_waits_for_the_state_it_is_about_to_film(runner, played):
