@@ -1,0 +1,132 @@
+# SPC on the line — topic 2 of the MES fundamentals series.
+#
+#   python scripts/record-scene.py scripts/scenes/02-spc-on-the-line.toml
+#   python scripts/record-scene.py scripts/scenes/02-spc-on-the-line.toml --base http://<a plant>:8110
+#
+# The story: a chart filling from the filler's own readings, a point outside
+# the limits, the rule that caught it named, the hold it raised waiting on the
+# quality page, and the two moves the operator has. Capability is withheld on
+# camera because the process is unstable, and one line says why — that moment
+# is the point of the scene, not an accident of the plant it was filmed on.
+#
+# It wants a bottling plant that has been running about an hour, with fill
+# weight out of control: a fresh plant has a chart with nothing in it and the
+# `wait_for` steps below will time out rather than film an empty one.
+#
+# `base` is the plant `fsmes demo bottling` starts, so the command above
+# re-makes this from scratch for anybody. The takes in ~/Work/gifs were filmed
+# against the lab's bottling plant with --base; each folder's README says which
+# plant and which version it was.
+
+name = "spc-on-the-line"
+title = "SPC on the line"
+out = "~/Work/gifs/mes-fundamentals/02-spc-on-the-line"
+base = "http://127.0.0.1:8010"
+badge = "pre-alpha · simulated plant · v{version}"
+budget_seconds = 45
+gif_skip_seconds = 2.5
+width = 1280
+height = 720
+
+# ---------------------------------------------------------------- the chart
+
+[[step]]
+do = "goto"
+url = "/dashboard/spc?spec=FG-BOTTLE%7Cfill_weight"
+settle = 3.0
+
+[[step]]
+do = "wait_for"
+selector = "#verdict"
+text = "out of control"
+
+[[step]]
+do = "say"
+line = "Fill weight on the bottling line. Two hundred readings from the filler."
+hold = 4.5
+
+[[step]]
+do = "mark"
+name = "the-chart"
+
+[[step]]
+do = "say"
+line = "The chart is out of control. Four rules have fired."
+hold = 4.0
+
+# Cp, Cpk and Pp all read "withheld" on an unstable process. The scene waits
+# for that word before claiming it, so the line is never said over a number.
+[[step]]
+do = "wait_for"
+selector = "#f-cp"
+text = "withheld"
+
+[[step]]
+do = "say"
+line = "Capability is withheld while the process is unstable — a number here would be a lie."
+hold = 5.0
+
+# --------------------------------------------------------------- the reading
+
+[[step]]
+do = "click"
+selector = "#open-point"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#point-panel').dataset.point !== ''"
+
+# Scrolled so the panel's own rows clear the caption bar: the order and the
+# machine are the two the line claims, and a line over a covered row is the
+# recording saying something the picture does not.
+[[step]]
+do = "say"
+line = "Any flagged point opens: the reading, the time, the order, the machine."
+hold = 4.5
+scroll_to = "#point-panel"
+scroll_block = "start"
+scroll_offset = 240
+
+[[step]]
+do = "mark"
+name = "the-reading"
+
+[[step]]
+do = "say"
+line = "The chart raised a hold on it. Nobody typed that in."
+hold = 4.0
+
+# ------------------------------------------------------------------ the hold
+
+[[step]]
+do = "goto"
+url = "/dashboard/quality?material=FG-BOTTLE&characteristic=fill_weight&n_q=SPC+rule"
+settle = 2.5
+
+[[step]]
+do = "wait_for"
+selector = "#n-count"
+text = "still open matching"
+
+# The line names no count and no characteristic on purpose. The first take of
+# this scene said "four holds on this characteristic"; by the next take the
+# plant had raised a fifth, and the filter matches every SPC-raised hold on the
+# material, fill_height among them. A caption the live page can contradict is
+# the recording inventing production. What every row here does say, always, is
+# the rule, the readings and the order.
+[[step]]
+do = "say"
+line = "Each hold names the rule that fired, the readings, and the order."
+hold = 4.5
+scroll_to = "#ncs"
+scroll_block = "start"
+scroll_offset = 250
+
+[[step]]
+do = "mark"
+name = "the-hold"
+
+[[step]]
+do = "say"
+line = "The operator takes it under review, or decides. On the record."
+hold = 4.5
