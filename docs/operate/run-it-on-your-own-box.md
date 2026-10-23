@@ -6,11 +6,13 @@ is still running, and what to do when half of it has died.
 
 !!! note "Which version this describes"
 
-    Four fixes named here — `stop` recovering a plant that is alive but
-    silent, `status` naming the process that died and its log, a start that
-    checks the ports first, and `py -m fsmes` — first ship in **0.3.1, not
-    yet released**. Everything else is true of 0.3.0 too, and where a fix is
-    what you need, the old way out is written beside it.
+    **0.4.1.** Four fixes named here — `stop` recovering a plant that is
+    alive but silent, `status` naming the process that died and its log, a
+    start that checks the ports first, and `py -m fsmes` — shipped in 0.3.1.
+    Two more are 0.4.1's: a `stop` that waits until the plant's own ports are
+    free, so a start in the next breath works, and `stop --force` answered in
+    a sentence instead of refused. Where a fix is what you need, the old way
+    out is written beside it.
 
 ## 1. Install it on Windows
 

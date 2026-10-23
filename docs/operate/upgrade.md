@@ -10,6 +10,37 @@ carries an **Honesty** section for anything that changed what a number
 before upgrading a plant that anyone reads numbers off, because a number that
 changes meaning without anyone noticing is worse than one that breaks.
 
+## 0.4.0 to 0.4.1
+
+**No migrations.** Nothing in 0.4.1 changes the database schema —
+`b6f0c2a71d58` is head on both versions — so there is no `init-db` step, and
+nothing in the CHANGELOG's 0.4.1 section changes what a number means. Upgrade
+in place:
+
+```bash
+pipx upgrade factorysemantics-mes                 # or py -m pip install --upgrade
+fsmes --version                                   # 0.4.1
+fsmes db-status --pack packs/yourplant            # should agree already
+```
+
+Take the backup anyway if the plant holds anything you would miss
+(`fsmes backup --out /mnt/nas/fsmes`). Coming from 0.3.1 or earlier, do the
+section below first — it is the one with the migration in it.
+
+**If `fsmes --version` still says 0.4.0**, nothing failed and the upgrade is
+not the problem: you are typing a different copy of it.
+[When `fsmes --version` still prints the old version](#when-fsmes-version-still-prints-the-old-version)
+is how to tell which Python owns the command you type, and which one to
+upgrade. It is the thing 0.4.1 added words for, and on Windows it is the
+likeliest reason an upgrade looks as though it did nothing.
+
+On Windows two things are better after this upgrade and need nothing turned
+on: `fsmes demo <plant> stop` now waits until the plant's own ports are free,
+so a start in the next breath works instead of refusing a port nothing holds,
+and `fsmes demo <plant> stop --force` answers in a sentence rather than
+`No such option: --force`. A stop there is about a second slower for it. On
+Linux nothing changes.
+
 ## 0.3.1 to 0.4.0
 
 **One migration, `b6f0c2a71d58`** — 0.3.1's head was `d4e8a1c93b70`. It adds
