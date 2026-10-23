@@ -319,7 +319,7 @@ class BrowserStage:
     def _at(self) -> float:
         return round(time.monotonic() - self.started, 2)
 
-    def _note(self, what: str, **rest: object) -> None:
+    def note(self, what: str, **rest: object) -> None:
         mark = {"at": self._at(), "what": what, **rest}
         self.marks.append(mark)
         print(f"{mark['at']:7.2f}  {what}", flush=True)
@@ -328,28 +328,28 @@ class BrowserStage:
         # The caption carries itself across the navigation in sessionStorage,
         # drawn before the new page's first paint; nothing to put back here.
         self.page.goto(url, wait_until="load")
-        self._note(f"goto {url}")
+        self.note(f"goto {url}")
         self.page.wait_for_timeout(int(settle * 1000))
 
     def click(self, selector: str) -> None:
         self.page.click(selector)
-        self._note(f"click {selector}")
+        self.note(f"click {selector}")
         self.page.wait_for_timeout(int(SMALL_STEP_SECONDS * 1000))
 
     def wait_for(self, step: dict, timeout: float) -> None:
         waited = time.monotonic()
         self.page.wait_for_function(wait_expression(step), timeout=timeout * 1000)
-        self._note(f"waited {time.monotonic() - waited:.1f}s for {describe_wait(step)}")
+        self.note(f"waited {time.monotonic() - waited:.1f}s for {describe_wait(step)}")
 
     def say(self, line: str, hold: float) -> None:
         self.caption = line
         self.page.evaluate("text => window.__sceneSay(text)", line)
         self.said.append(line)
-        self._note(f"say: {line}")
+        self.note(f"say: {line}")
         self.page.wait_for_timeout(int(hold * 1000))
 
     def hold(self, seconds: float) -> None:
-        self._note(f"hold {seconds}s")
+        self.note(f"hold {seconds}s")
         self.page.wait_for_timeout(int(seconds * 1000))
 
     def mark(self, name: str) -> None:
@@ -357,7 +357,7 @@ class BrowserStage:
         stills.mkdir(parents=True, exist_ok=True)
         shot = stills / f"{len(list(stills.glob('*.png'))) + 1:02d}-{name.replace(' ', '-')}.png"
         self.page.screenshot(path=str(shot))
-        self._note(f"mark: {name}", still=shot.name)
+        self.note(f"mark: {name}", still=shot.name)
 
     def scroll_to(self, selector: str, block: str, offset: int) -> None:
         self.page.evaluate(
@@ -574,7 +574,7 @@ def commit_of_repo() -> str:
     return done.stdout.strip() or "unknown"
 
 
-def record(scene: dict, args: argparse.Namespace, out: Path) -> dict:
+def record(scene: dict, out: Path) -> dict:
     # Imported here and not at the top: --plan, and every test, works without a browser installed.
     from playwright.sync_api import sync_playwright
 
@@ -623,7 +623,7 @@ def record(scene: dict, args: argparse.Namespace, out: Path) -> dict:
             for step in scene["step"]
         ]
         play(scene_with_base, stage)
-        stage._note("end")
+        stage.note("end")
 
         video = Path(page.video.path())
         context.close()
@@ -686,7 +686,7 @@ def main() -> None:
         if not shutil.which(tool):
             raise SystemExit(f"no `{tool}` on PATH; it makes the mp4 and the GIF")
 
-    made = record(scene, args, out)
+    made = record(scene, out)
 
     print("\n== making the mp4 and the GIF", flush=True)
     mp4 = out / f"{scene['name']}.mp4"
