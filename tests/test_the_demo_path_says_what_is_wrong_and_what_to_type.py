@@ -277,3 +277,95 @@ def test_the_half_dead_state_is_made_and_recovered_on_both_runners():
     assert "recover_a_half_dead_plant.py" in job
     assert "windows-latest" in job and "ubuntu-latest" in job, (
         "both runners, or the half that matters is the one that is missing")
+
+
+# ------------------------------------------------- what `--force` is answered with
+
+
+def test_the_sentence_the_force_flag_gets_on_a_stop_sends_it_to_the_right_command():
+    said = firstrun.what_a_force_flag_is_for("bottling", "stop")[0]
+    assert "stop needs no --force here" in said
+    assert "`fsmes demo bottling stop` stops a plant that is not answering by itself" in said
+    assert "--force is an option of `fsmes fleet stop`" in said
+
+
+def test_the_sentence_on_a_start_says_the_flag_is_not_this_commands_at_all():
+    said = firstrun.what_a_force_flag_is_for("bottling", "start")[0]
+    assert "--force is not an option of `fsmes demo`" in said
+    assert "`fsmes fleet stop`" in said
+
+
+def _runner():
+    from typer.testing import CliRunner
+
+    return CliRunner()
+
+
+def _as_read(output: str) -> str:
+    """The output as a person reads it: rich's colour taken out, wrapping undone.
+
+    `FORCE_COLOR` is set on GitHub's runners, so rich paints and wraps there
+    and not on a laptop; an assertion that does not do this passes here and
+    fails on all four CI legs (2026-10-12).
+    """
+    import re
+
+    return " ".join(re.sub(r"\x1b\[[0-9;]*m", "", output).split())
+
+
+def test_a_stop_typed_with_force_answers_in_a_sentence_and_stops_the_plant(
+        tmp_path, monkeypatch):
+    """`fsmes demo bottling stop --force`, exactly as he typed it on 2026-10-15.
+
+    What it printed then was typer's `No such option: --force` and nothing
+    was stopped. The flag is hidden rather than removed from the parser:
+    taking a word a person has already guessed costs nothing, and refusing it
+    reads as a broken install.
+    """
+    from fsmes import cli
+
+    sent: list[tuple[str, ...]] = []
+    a_pack(tmp_path)
+    standalone.write_fleet(tmp_path)
+    monkeypatch.setattr(standalone, "_fsmes",
+                        lambda where, *args, echo=print: sent.append(args) or 0)
+    monkeypatch.setattr(standalone.firstrun, "look", lambda *a, **k: a_half_dead_plant())
+
+    result = _runner().invoke(
+        cli.app, ["demo", "bottling", "stop", "--force", "--home", str(tmp_path)])
+
+    said = _as_read(result.output)
+    assert result.exit_code == 0, result.output
+    assert "stop needs no --force here" in said
+    assert "--force is an option of `fsmes fleet stop`" in said
+    assert "No such option" not in said
+    assert sent == [("fleet", "stop", "bottling", "--root", str(tmp_path), "--force")], (
+        "the sentence is not the whole job: the plant he asked about has to go down")
+    assert "bottling was not answering" in said, (
+        "and the stop's own account of what it found still has to be printed")
+
+
+def test_the_same_flag_on_a_start_is_answered_and_the_plant_still_starts(monkeypatch):
+    """`fsmes demo bottling --force`: typer reads the flag the same way, so the
+    answer has to be there too, and the start has to happen anyway."""
+    from fsmes import cli
+
+    asked: list[tuple[str, str]] = []
+    monkeypatch.setattr(cli, "_shipped_plant",
+                        lambda name, action, **kwargs: asked.append((name, action)) or 0)
+
+    result = _runner().invoke(cli.app, ["demo", "bottling", "--force"])
+
+    assert result.exit_code == 0, result.output
+    assert "--force is not an option of `fsmes demo`" in _as_read(result.output)
+    assert asked == [("bottling", "start")]
+
+
+def test_the_force_flag_is_taken_but_never_advertised():
+    """Hidden on purpose. It is not a way to do anything — it is an answer to
+    a word people arrive with — and a flag in the help is a flag people
+    believe they need."""
+    from fsmes import cli
+
+    helped = _as_read(_runner().invoke(cli.app, ["demo", "--help"]).output)
+    assert "--force" not in helped

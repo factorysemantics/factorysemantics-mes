@@ -21,7 +21,10 @@ wheel, then kill the one process everything else needs, the dashboard and API
   plant, not a stopped one;
 * `fsmes demo bottling stop` recovers it with no flag, exits 0, and says what
   it found;
-* `fsmes demo bottling` brings the plant back up afterwards.
+* `fsmes demo bottling` brings the plant back up afterwards;
+* `fsmes demo bottling stop --force` - the flag `fsmes fleet stop` puts in a
+  person's head, and the one he typed on 2026-10-15 - is taken, answered in a
+  sentence that names the command it belongs to, and stops the plant anyway.
 
 And, because the same person's first question was that `fsmes` was not on
 PATH at all: `python -m fsmes --version` answers in the same venv.
@@ -202,10 +205,28 @@ def main() -> int:
     try:
         until("the dashboard answers again", health_says_ok, ceiling=300)
     finally:
-        run([fsmes, "demo", PLANT, "stop"], cwd=work, env=environment)
+        # Taken down with the word he actually typed on 2026-10-15. The plant
+        # is up and answering here, so the flag is the only thing under test.
+        last = run([fsmes, "demo", PLANT, "stop", "--force"], cwd=work, env=environment)
+
+    say(f"== the word he typed: fsmes demo {PLANT} stop --force ==")
+    guessed = (last.stdout or "") + (last.stderr or "")
+    if last.returncode != 0:
+        fail(f"`fsmes demo {PLANT} stop --force` exited {last.returncode}; the flag is "
+             "taken and answered, never refused - refusing it is what cost him "
+             "2026-10-13 and again 2026-10-15")
+    if "No such option" in guessed:
+        fail(f"typer refused the flag `fsmes fleet stop` had put in his head: {guessed!r}")
+    if "stop needs no --force here" not in guessed:
+        fail("the flag was swallowed and nothing said why it was not needed; the "
+             f"sentence is the whole reason for accepting it: {guessed!r}")
+    for where, what in ((API, "the dashboard"), (OPC, "the OPC server")):
+        the_port_is_back(where, what)
+    say("  the flag was answered in a sentence and the plant still went down")
 
     say(f"\nA half-dead {PLANT} on {sys.platform} was described, recovered and started "
-        "again, with no flag and nothing killed by hand.")
+        "again, with no flag and nothing killed by hand - and the flag he guessed was "
+        "answered in words instead of refused.")
     return 0
 
 

@@ -158,6 +158,33 @@ def what_stop_leaves(seen: Look) -> list[str]:
     return [f"  `fsmes demo {seen.name}` starts it again."]
 
 
+def what_a_force_flag_is_for(name: str, action: str) -> list[str]:
+    """The answer to `--force` typed on the demo path, which has no such flag.
+
+    `fsmes fleet stop` names `--force` when it refuses a plant that is not
+    answering, so that is the word a person has in their head - and on
+    2026-10-15 the first Windows user typed it where he was standing,
+    `fsmes demo bottling stop --force`, and got typer's bare `No such option:
+    --force`. Twice: the same wrong guess had already cost him the evening of
+    2026-10-13, back when the flag was the only way out.
+
+    It is not the way out any more. Since `standalone.stop` the demo path
+    passes `--force` to the fleet by itself, so on this command the flag is
+    unnecessary rather than missing. The flag is therefore accepted and
+    hidden - a hidden option a person has already guessed costs nothing to
+    take, and refusing it reads as a broken install - and these are the words
+    that were missing. Nothing about the gate changes: `--force` gives up
+    liveness, never ownership, and `fsmes fleet stop` keeps asking for it.
+    """
+    if action == "stop":
+        return [f"  stop needs no --force here: `fsmes demo {name} stop` stops a plant "
+                f"that is not answering by itself, and --force is an option of "
+                f"`fsmes fleet stop`. Carrying on without it."]
+    return [f"  --force is not an option of `fsmes demo`: it belongs to `fsmes fleet "
+            f"stop`, and `fsmes demo {name} stop` needs no flag to stop a plant that "
+            f"is not answering. Carrying on without it."]
+
+
 # ----------------------------------------------------------------- before a start
 
 
