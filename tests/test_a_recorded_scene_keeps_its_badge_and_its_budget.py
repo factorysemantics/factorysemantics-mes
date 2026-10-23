@@ -61,11 +61,13 @@ def test_every_scene_in_the_series_plans_a_clip_of_forty_five_seconds_or_less(ru
     assert scenes, "no scene files at all"
     for path in scenes:
         scene = runner.load_scene(path)
-        planned = runner.gif_seconds(scene)
+        # The whole take, not the loop: the GIF skips the head of it, but the
+        # mp4 is what `mpv --loop` plays and what the budget is about.
+        planned = runner.planned_seconds(scene)
         assert scene["budget_seconds"] <= THE_LONGEST_A_CLIP_MAY_BE, path.name
         assert planned <= scene["budget_seconds"], f"{path.name}: {planned}s planned, {scene['budget_seconds']}s budget"
     print(f"{len(scenes)} scene file(s), all inside the budget: "
-          + ", ".join(f"{path.stem} {runner.gif_seconds(runner.load_scene(path))}s" for path in scenes))
+          + ", ".join(f"{path.stem} {runner.planned_seconds(runner.load_scene(path))}s" for path in scenes))
 
 
 def test_the_published_loop_skips_the_seconds_before_the_first_sentence(runner):

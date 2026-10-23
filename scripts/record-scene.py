@@ -1035,8 +1035,9 @@ def main() -> None:
     print(f"== {scene['title']} — {len(scene['step'])} steps, "
           f"{planned_seconds(scene):.1f} s filmed, {gif_seconds(scene):.1f} s in the GIF "
           f"against a {budget:.0f} s budget", flush=True)
-    if gif_seconds(scene) > budget:
-        raise SystemExit(f"the scene is planned at {gif_seconds(scene):.1f} s, over its own {budget:.0f} s budget")
+    if planned_seconds(scene) > budget:
+        raise SystemExit(f"the scene is planned at {planned_seconds(scene):.1f} s of film, "
+                         f"over its own {budget:.0f} s budget")
 
     if args.plan:
         for number, step in enumerate(scene["step"], start=1):
@@ -1134,8 +1135,14 @@ def main() -> None:
 
     if not ok:
         raise SystemExit("the badge is not in every frame of the GIF; the take cannot be published")
-    if length > budget + 0.5:
-        raise SystemExit(f"the GIF runs {length:.1f} s, over the scene's own {budget:.0f} s budget")
+    # The whole take and not the loop. The GIF drops the head of the take, but
+    # `mpv --loop` plays the mp4, and the mp4 is the one a person sits through:
+    # a take whose GIF came in at 44 s and whose mp4 ran 46.5 s is over budget,
+    # and the first version of this check called it fine.
+    whole = round(length + float(scene["gif_skip_seconds"]), 1)
+    if whole > budget + 0.5:
+        raise SystemExit(f"the take runs {whole:.1f} s, over the scene's own {budget:.0f} s budget "
+                         f"— the GIF is {length:.1f} s of it, and the mp4 is the whole of it")
     if not math.isclose(length, gif_seconds(scene), abs_tol=max(4.0, gif_seconds(scene) * 0.25)):
         print(f"  note   the take ran {length:.1f} s against a plan of {gif_seconds(scene):.1f} s"
               " — a `wait_for` waited, or the plant was slow")

@@ -13,8 +13,17 @@ title = "SPC on the line"
 out = "~/Work/gifs/mes-fundamentals/02-spc-on-the-line"
 base = "http://127.0.0.1:8010"
 badge = "pre-alpha · simulated plant · v{version}"
+# Forty-five seconds of mp4 — the whole take, which is what `mpv --loop`
+# plays and what a person sits through. The GIF is that less the head it
+# skips. The scripted part of this scene is about twenty-nine seconds; the
+# rest of the budget is the one wait that is filmed, below, which is why that
+# wait has a cap on it.
 budget_seconds = 45
-gif_skip_seconds = 2.5
+# The head the published loop drops: the page arriving, before the first
+# sentence is on it. It cannot be longer than that first settle, or the loop
+# would open after the caption it is meant to open on. It is not a saving:
+# the mp4 still carries those seconds, and the mp4 is what the budget is on.
+gif_skip_seconds = 2.0
 width = 1280
 height = 720
 
@@ -63,7 +72,7 @@ roll_when_timeout_seconds = 300
 [[step]]
 do = "goto"
 url = "/dashboard/spc?spec=FG-BOTTLE%7Cfill_weight"
-settle = 3.0
+settle = 2.0
 
 [[step]]
 do = "wait_for"
@@ -79,7 +88,7 @@ text = "in control"
 [[step]]
 do = "say"
 line = "Fill weight on the bottling line. The chart is in control."
-hold = 4.5
+hold = 3.5
 scroll_to = "#chart"
 scroll_block = "start"
 scroll_offset = 215
@@ -91,13 +100,15 @@ name = "the-chart-in-control"
 # --- the reading that trips it, while the camera is on the chart
 
 # The one wait that is filmed, and the only one that should be: this is the
-# event. It is a few seconds at the speed above, and the take is measured and
-# refused if the plant made it a long one.
+# event. The SPC page polls about every ten seconds, so this is usually two or
+# three seconds and occasionally a whole poll cycle; thirteen is one cycle and
+# a little, and past that the reading did not land and the take should fail
+# where a person can see it rather than quietly run long.
 [[step]]
 do = "wait_for"
 selector = "#verdict"
 text = "out of control"
-timeout = 120
+timeout = 13
 
 # The same framing again, not because the reader scrolled but because the
 # verdict above the chart just grew by a line and pushed it down. The rules
@@ -107,7 +118,7 @@ timeout = 120
 [[step]]
 do = "say"
 line = "A reading drops, and the chart calls it: out of control."
-hold = 5.0
+hold = 4.0
 scroll_to = "#chart"
 scroll_block = "start"
 scroll_offset = 215
@@ -127,7 +138,7 @@ text = "withheld"
 [[step]]
 do = "say"
 line = "Capability is withheld now — a number on an unstable process would be a lie."
-hold = 5.0
+hold = 4.5
 scroll_to = "#verdict"
 scroll_block = "start"
 scroll_offset = 320
@@ -137,7 +148,7 @@ scroll_offset = 320
 [[step]]
 do = "goto"
 url = "/dashboard/quality?material=FG-BOTTLE&characteristic=fill_weight&n_q=SPC+rule"
-settle = 2.5
+settle = 2.0
 
 # "SPC rule" and not the name of one rule. Which rule catches this reading is
 # the chart's business and not the scene's: the drop is scripted into the
@@ -153,8 +164,8 @@ text = "SPC rule"
 
 [[step]]
 do = "say"
-line = "The chart raised the hold itself, and named the rule and the readings."
-hold = 5.0
+line = "The chart raised the hold itself, and named the rule."
+hold = 4.0
 scroll_to = "#ncs"
 scroll_block = "start"
 scroll_offset = 250
@@ -171,7 +182,7 @@ text = "under review"
 [[step]]
 do = "say"
 line = "The operator takes it under review. On the record."
-hold = 4.5
+hold = 3.5
 
 [[step]]
 do = "mark"

@@ -227,8 +227,13 @@ def test_the_only_wait_the_clip_pays_for_is_the_event(runner, played):
     assert scene["plant"]["roll_when_chart"], "the long wait is off camera"
     filmed = [step for step in stage.waited if step.get("text") == "out of control"]
     assert len(filmed) == 1, "and the event is waited for on camera, once"
-    assert filmed[0]["timeout"] > runner.WAIT_TIMEOUT_SECONDS, (
-        "with longer than the usual patience, because a replay is not a stopwatch"
+    assert filmed[0]["timeout"] < runner.WAIT_TIMEOUT_SECONDS, (
+        "with less than the usual patience, not more. This wait is filmed, so every "
+        "second of it is spent out of the clip's forty-five. The first cut of this "
+        "scene gave it two minutes on the reasoning that a replay is not a stopwatch, "
+        "and the take that used twelve of them came out at 46.5 s of mp4 — over budget, "
+        "and nothing on screen for the last of those twelve. A wait this one cannot "
+        "afford should stop the take, not lengthen it."
     )
 
 
