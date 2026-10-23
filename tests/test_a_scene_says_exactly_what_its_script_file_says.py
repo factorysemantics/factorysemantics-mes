@@ -19,6 +19,7 @@ line up, and that does not need a picture.
 from __future__ import annotations
 
 import importlib.util
+import re
 from pathlib import Path
 
 import pytest
@@ -168,9 +169,14 @@ def test_the_scene_filmed_is_the_spc_story_the_handoff_asked_for(runner, played)
     assert script.index("the chart is in control") < script.index("out of control"), (
         "in control first, then the event - the other way round is the flat take this one replaces"
     )
-    assert "rule" not in script.split("out of control")[0], (
-        "no rule is named before the chart draws one: which rule catches the reading is "
-        "the chart's answer, said on screen in the hold, and not the scene's to predict"
+    assert not re.search(r"rule\s+\d", script), (
+        "and no rule is named by number anywhere in the overlay. One drop trips more than "
+        "one of them - the individuals chart catches the reading, the moving range catches "
+        "the gap before it, usually a reading apart - and this MES keeps one hold per "
+        "excursion, headed by whichever rule reached it first. So the number on the chart "
+        "and the number on the hold are often different numbers about the same drop. The "
+        "plant names them on screen, where they are explained; a caption that names one "
+        "asks a viewer to match two that were never a pair"
     )
     assert "withheld" in script, "capability is withheld on an unstable process, and the overlay says why"
     assert "hold" in script

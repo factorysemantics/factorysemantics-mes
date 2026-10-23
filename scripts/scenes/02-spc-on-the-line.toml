@@ -34,6 +34,12 @@ height = 720
 # public demo answer on this box too and somebody is reading them.
 allow_writes = true
 
+# A footnote for whoever opens the folder. The rule numbers on screen are the
+# first thing a reader of this clip will trip over.
+notes = [
+  "The chart names one rule and the hold often names another. One drop trips both the individuals chart and the moving range, usually a reading apart, and this MES keeps one hold for one excursion — headed by whichever rule reached it first, with the rest joined to it. Two numbers, one drop.",
+]
+
 [plant]
 # The plant this take films is built fresh from the same pack the lab's
 # bottling plant uses, in a temporary home, on the ports that pack names
@@ -162,9 +168,18 @@ do = "wait_for"
 selector = "#ncs"
 text = "SPC rule"
 
+# The overlay does not say which rule this hold is for, and the reason is not
+# shyness. One drop trips more than one rule: the individuals chart catches the
+# reading, and the moving range catches the gap between it and the one before —
+# often a reading earlier. The MES keeps one hold per excursion and heads it
+# with whichever rule caught it first, so the number on the hold is frequently
+# not the number the chart showed a moment ago. Both are true and they are the
+# same drop, but a caption that says "the rule" invites a viewer to match two
+# numbers that were never meant to match. What matters, and what the screen
+# proves with its own timestamp, is that nobody typed this hold.
 [[step]]
 do = "say"
-line = "The chart raised the hold itself, and named the rule."
+line = "The MES raised the hold itself, the moment the drop landed."
 hold = 4.0
 scroll_to = "#ncs"
 scroll_block = "start"

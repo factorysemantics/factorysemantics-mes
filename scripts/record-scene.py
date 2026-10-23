@@ -155,6 +155,7 @@ def load_scene(path: Path) -> dict:
         scene.setdefault(key, value)
     scene["out"] = scene.get("out") or f"recordings/{scene['name']}"
     scene["title"] = scene.get("title") or scene["name"]
+    scene["notes"] = list(scene.get("notes") or [])
 
     for number, step in enumerate(steps, start=1):
         where = f"{path}: step {number}"
@@ -484,6 +485,12 @@ def readme(scene: dict, facts: dict) -> str:
         "Everything else is the plant's own screens, read live, and every figure on them is the"
         " plant's own.",
     ]
+    # A scene's own footnotes. Some things on screen need a sentence that is
+    # nobody's fault and cannot go in a caption: the clip has forty-five
+    # seconds and the folder does not.
+    if scene.get("notes"):
+        lines += ["", "## Worth knowing", ""]
+        lines += [f"- {note}" for note in scene["notes"]]
     if scene.get("allow_writes"):
         lines += [
             "",
