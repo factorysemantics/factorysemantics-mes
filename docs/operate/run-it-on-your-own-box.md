@@ -45,6 +45,20 @@ changing nothing permanently: `$env:PATH += ";C:\...\Scripts"`.
 command on this page can be typed that way: `py -m fsmes` wherever it says
 `fsmes`.
 
+**If you upgraded and `fsmes --version` still says the old version**, nothing
+failed — there are two copies and you are typing the other one. `pipx` keeps
+its own Python, so `py -m pip install --upgrade factorysemantics-mes` upgrades
+the copy `py` owns and leaves the `fsmes` on your PATH alone.
+
+- *How to tell:* `py -m fsmes --version` is the copy `py` owns,
+  `fsmes --version` is the one on PATH, and `where fsmes` (`which fsmes` on
+  Linux or macOS) says where that one came from.
+- *The rule:* upgrade the one that owns the command you type — `pipx upgrade
+  factorysemantics-mes` if `where fsmes` points into a `pipx` folder,
+  otherwise the `py -m pip install --upgrade` line above.
+- `py -m fsmes …` always runs the copy `py` has, and `py -m fsmes doctor`
+  writes both facts into one file.
+
 ## 2. Is it still running?
 
 ```powershell
@@ -104,6 +118,11 @@ which writes one file with the same lines in it and every value of yours
 taken out, plus the version, the ports and which process went. That file is
 the thing to paste into an agent or into an issue:
 [one file to paste when something is wrong](doctor.md).
+
+If you type `fsmes demo bottling stop --force` anyway — `--force` is the flag
+`fsmes fleet stop` names, so it is the word most people arrive with — the flag
+is taken, a sentence says it was not needed and which command it belongs to,
+and the plant stops.
 
 **On 0.3.0**, `stop` refuses this state and has no flag of its own: stop the
 pids it named by hand (`taskkill /F /PID 7964`) and then `fsmes demo bottling`.

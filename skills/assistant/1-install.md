@@ -66,7 +66,7 @@ plant and not a plant anybody else can reach.
 
 ## What the output means
 
-Four things actually go wrong. Each is identified by text the computer printed,
+Five things actually go wrong. Each is identified by text the computer printed,
 so ask for the paste before you diagnose.
 
 **When none of the four matches, do not invent a cause: ask for the doctor
@@ -89,12 +89,9 @@ above, which has usually scrolled away. Three ways out, cheapest first:
 
 1. `py -m fsmes demo bottling` — the same program, found through Python
    instead of through PATH. Every command on these pages can be typed that
-   way: `py -m fsmes` wherever a page says `fsmes`.
-
-   **On 0.3.0 this one does not work yet.** It prints `No module named
-   fsmes.__main__; 'fsmes' is a package and cannot be directly executed`.
-   That is not a broken install — it is the release not carrying the entry
-   point, which 0.3.1 adds. Say so and go to way 2 or 3.
+   way: `py -m fsmes` wherever a page says `fsmes`. **On 0.3.0 it prints `No
+   module named fsmes.__main__`** — not a broken install, just the release
+   before the entry point; say so and go to way 2 or 3.
 2. For this window only: `$env:PATH += ";C:\...\Scripts"` with the folder from
    the warning. If the warning has scrolled away,
    `py -m pip show -f factorysemantics-mes` names it.
@@ -105,6 +102,17 @@ above, which has usually scrolled away. Three ways out, cheapest first:
 To settle *is it installed at all*, ask for
 `py -m pip show factorysemantics-mes`. That answers on every release, with
 PATH broken or not, and prints the version — which you want anyway.
+
+### The version did not change — two Pythons, and they disagree
+
+They upgraded, `fsmes --version` still prints the old one, and nothing failed:
+`pipx` keeps its own Python, so `py -m pip install --upgrade` upgrades the copy
+`py` owns and leaves the `fsmes` on PATH alone. Ask for `py -m fsmes --version`
+and `fsmes --version` side by side, and for `where fsmes` (`which fsmes` on
+Linux or macOS). The rule: upgrade the one that owns the command they type —
+`pipx upgrade factorysemantics-mes` if `where fsmes` points into a `pipx`
+folder, else `py -m pip install --upgrade factorysemantics-mes`. Typed with the
+`py -m fsmes` prefix, every command runs the copy `py` has.
 
 ### `still alive` — the plant is running and cannot be talked to
 
@@ -133,15 +141,8 @@ fsmes demo bottling
 ```
 
 `stop` ends the survivors, clears the record, and says what it found. It needs
-no flag.
-
-**On 0.3.0 it needs one and does not have one.** There, `stop` refuses this
-state outright — see `did not answer` below — and the way out is to end the
-process ids `status` named, by hand: `taskkill /F /PID 7964` for each, in
-PowerShell (Task Manager's *Details* tab, *End task*, does the same thing by
-clicking), then `fsmes demo bottling`. On Linux, `kill 7964`. Ask for
-`fsmes --version` — or `py -m pip show factorysemantics-mes` if `fsmes` is
-still not found — before you tell them which of the two they are on.
+no flag — and if they typed `--force` anyway, because `fsmes fleet stop` names
+it, the flag is taken, answered in a sentence and the plant stops.
 
 ### `did not answer` — 0.3.0 refusing to act on a silent plant
 
@@ -152,8 +153,13 @@ file names 4 process(es) that are still alive (7964, 3940, 5128, 2216), so this 
 is running and cannot be talked to.
 ```
 
-That is 0.3.0. Take the `taskkill` route above. (On 0.3.1 and later, `stop`
-handles it and this message does not appear for the demo.)
+That is 0.3.0, where `stop` refuses this state and has no flag of its own. End
+the process ids `status` named by hand — `taskkill /F /PID 7964` for each in
+PowerShell (Task Manager's *Details* tab, *End task*, is the same thing), then
+`fsmes demo bottling`. On Linux, `kill 7964`. Ask for `fsmes --version` — or
+`py -m pip show factorysemantics-mes` if `fsmes` is not found — before you say
+which of the two they are on. On 0.3.1 and later this message does not appear
+for the demo.
 
 ### Nothing happens, or it stopped by itself
 
@@ -161,10 +167,8 @@ Nothing restarts this plant. It goes down when the PC sleeps, restarts or
 shuts down, or when they run `fsmes demo bottling stop`. Antivirus stopping a
 background process is possible; nobody has confirmed one doing it here. The
 fix is always the same: `fsmes demo bottling` again. It is the same database
-and the same plant — nothing is lost.
-
-Closing the PowerShell window used to take it down too; that was fixed on
-2026-10-12, so on an older build, expect it.
+and the same plant — nothing is lost. Closing the PowerShell window used to
+take it down too; that was fixed on 2026-10-12, so on an older build expect it.
 
 ## Where things are, when they ask
 
@@ -177,11 +181,9 @@ the generated shift — is under one directory:
 
 Nothing under the installed package is written to. Uninstalling leaves their
 data; deleting that one directory removes it. `FSMES_HOME` moves the whole lot
-somewhere else.
-
-The demo plant is on port `8010` for its dashboard and `4841` for its
-simulated OPC server. `fsmes demo machining` is a second plant beside it, on
-`8020`.
+somewhere else. The demo plant is on `8010` for its dashboard and `4841` for
+its simulated OPC server; `fsmes demo machining` is a second plant beside it,
+on `8020`.
 
 ## Done check
 
@@ -195,5 +197,4 @@ and for them to confirm the dashboard drew in their browser. Both, not one.
 Then `2-your-plant.md`.
 
 *This page scripts `docs/operate/run-it-on-your-own-box.md` in the project's
-repository, which is the long version and says which release each fix first
-ships in.*
+repository — the long version, which says which release each fix ships in.*
