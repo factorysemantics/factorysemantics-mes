@@ -4140,6 +4140,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../releases/0.4.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0.4.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../releases/0.4.0/" class="md-nav__link">
         
   
@@ -4852,6 +4880,29 @@ one PostgreSQL with <code>lease_seconds = 4</code> and the line replayed at 6x: 
 <code>floor</code> role 1.19, and production booked across both failovers equalled the
 counters' own movement exactly, per machine. Your numbers will differ; the
 shape will not.</p>
+<p>Or watch it cost something. One plant as two nodes side by side, each on its
+own address, and a real <code>docker kill</code> on the one holding the machines:</p>
+<p><img alt="One bottling plant running as two nodes side by side, each on its own address; a real docker kill on node a, which is reading the machines; node b taking the machines over seven seconds later with the counts carried across; node a started again and answering, as a standby" src="../../assets/kill-a-node.gif" /></p>
+<p>Node a held the machines and was killed; node b was reading them 6.6
+seconds later; node a answered again 1.2 seconds after <code>docker start</code>,
+holding nothing. Two things in it are staged and nothing else is: the
+yellow line is the dashboard's own header line, enlarged so it can be read
+at this size, and the grey "no answer" panel is drawn by the recorder over
+a page that is really greying itself and saying "reconnecting". The seconds
+are the ones measured on the machine it was recorded on, and they are
+printed by the script that records it: <code>bash scripts/record-kill-a-node.sh</code>
+from a checkout makes the whole thing again, so the picture can be of the
+version you are running rather than of the day it was first made. (<a href="../../assets/kill-a-node.mp4">The
+same minute as an mp4</a>, if a loop is
+distracting.)</p>
+<p>One thing in it is worth reading twice. For the few seconds between the kill
+and the takeover the machine cards go idle and the line reads <code>0/6 running</code>,
+and then they are all running again. That is this being a <em>simulated</em> plant:
+the floor that moves those machines is itself one of the jobs held by a lease,
+so it stops while its lease moves, exactly as the reader does. On a real plant
+the machines are machines and do not pause — what pauses is the MES reading
+them, and the counters are absolute, so the units made in the gap are booked
+when the new holder catches up rather than lost.</p>
 <p>A node that comes back comes back as a standby. It does not take a role the
 other node is holding.</p>
 <h2 id="what-this-does-not-do">What this does not do<a class="headerlink" href="#what-this-does-not-do" title="Permanent link">&para;</a></h2>

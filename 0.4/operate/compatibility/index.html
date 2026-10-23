@@ -4024,6 +4024,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../releases/0.4.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0.4.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../releases/0.4.0/" class="md-nav__link">
         
   
@@ -4396,8 +4424,8 @@ date.</strong> A row with no date is a row nobody can age.</p>
 <tr>
 <td>Windows (plant PCs)</td>
 <td>tested continuously</td>
-<td>2026-10-12</td>
-<td>CI runs <code>ruff</code> and the whole suite on <code>windows-latest</code>, Python 3.12 and 3.13, on every pull request — and, since <a href="https://github.com/factorysemantics/factorysemantics-mes/pull/163">#163</a> on 2026-10-12, the <code>wheel-plant</code> job (<code>.github/scripts/plant_from_wheel.py</code>) installs the built wheel on <code>windows-latest</code> in a directory holding none of this repository's files, starts the bottling plant and asks it whether sign-in works, the specifications are there, the OPC port answers, the floor is watching and a lot has been counted. That job is why three Windows-only bugs are fixed — a detach flag ignored, a signal that does not exist on Windows, a console script looked for in <code>bin</code> — none of which the green suite could see, because the suite never starts a plant. <code>tzdata</code> is a Windows-only dependency so <code>zoneinfo</code> can resolve a plant's zone. <strong>No plant PC in a real plant has run it</strong>: the only Windows this has started on is GitHub's runner, with no domain policy and no antivirus</td>
+<td>2026-10-22</td>
+<td>CI runs <code>ruff</code> and the whole suite on <code>windows-latest</code>, Python 3.12 and 3.13, on every pull request — and, since <a href="https://github.com/factorysemantics/factorysemantics-mes/pull/163">#163</a> on 2026-10-12, the <code>wheel-plant</code> job (<code>.github/scripts/plant_from_wheel.py</code>) installs the built wheel on <code>windows-latest</code> in a directory holding none of this repository's files, starts the bottling plant and asks it whether sign-in works, the specifications are there, the OPC port answers, the floor is watching and a lot has been counted. Since 2026-10-22 it also stops the plant and starts it again with nothing in between, which is how a fourth Windows-only fault was found: a listening socket there outlives the process that owned it by about two seconds — every Windows cell measured that and every Linux cell measured zero — so a start inside those two seconds refused on a port that nothing was holding. That job is why four Windows-only bugs are fixed — a detach flag ignored, a signal that does not exist on Windows, a console script looked for in <code>bin</code>, and a stop that came back before its ports did — none of which the green suite could see, because the suite never starts a plant. <code>tzdata</code> is a Windows-only dependency so <code>zoneinfo</code> can resolve a plant's zone. <strong>No plant PC in a real plant has run it</strong>: the only Windows this has started on is GitHub's runner, with no domain policy and no antivirus</td>
 </tr>
 <tr>
 <td>Python</td>

@@ -1745,6 +1745,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#040-to-041" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.4.0 to 0.4.1
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#031-to-040" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1952,6 +1963,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Checking the upgrade landed">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#when-fsmes-version-still-prints-the-old-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When fsmes --version still prints the old version
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -4235,6 +4263,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../releases/0.4.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0.4.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../releases/0.4.0/" class="md-nav__link">
         
   
@@ -4489,6 +4545,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#040-to-041" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.4.0 to 0.4.1
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#031-to-040" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4697,6 +4764,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Checking the upgrade landed">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#when-fsmes-version-still-prints-the-old-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When fsmes --version still prints the old version
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -4744,6 +4828,30 @@ carries an <strong>Honesty</strong> section for anything that changed what a num
 <em>means</em> — a KPI formula, a state mapping, a counter rule. Read that section
 before upgrading a plant that anyone reads numbers off, because a number that
 changes meaning without anyone noticing is worse than one that breaks.</p>
+<h2 id="040-to-041">0.4.0 to 0.4.1<a class="headerlink" href="#040-to-041" title="Permanent link">&para;</a></h2>
+<p><strong>No migrations.</strong> Nothing in 0.4.1 changes the database schema —
+<code>b6f0c2a71d58</code> is head on both versions — so there is no <code>init-db</code> step, and
+nothing in the CHANGELOG's 0.4.1 section changes what a number means. Upgrade
+in place:</p>
+<div class="highlight"><pre><span></span><code>pipx<span class="w"> </span>upgrade<span class="w"> </span>factorysemantics-mes<span class="w">                 </span><span class="c1"># or py -m pip install --upgrade</span>
+fsmes<span class="w"> </span>--version<span class="w">                                   </span><span class="c1"># 0.4.1</span>
+fsmes<span class="w"> </span>db-status<span class="w"> </span>--pack<span class="w"> </span>packs/yourplant<span class="w">            </span><span class="c1"># should agree already</span>
+</code></pre></div>
+<p>Take the backup anyway if the plant holds anything you would miss
+(<code>fsmes backup --out /mnt/nas/fsmes</code>). Coming from 0.3.1 or earlier, do the
+section below first — it is the one with the migration in it.</p>
+<p><strong>If <code>fsmes --version</code> still says 0.4.0</strong>, nothing failed and the upgrade is
+not the problem: you are typing a different copy of it.
+<a href="#when-fsmes-version-still-prints-the-old-version">When <code>fsmes --version</code> still prints the old version</a>
+is how to tell which Python owns the command you type, and which one to
+upgrade. It is the thing 0.4.1 added words for, and on Windows it is the
+likeliest reason an upgrade looks as though it did nothing.</p>
+<p>On Windows two things are better after this upgrade and need nothing turned
+on: <code>fsmes demo &lt;plant&gt; stop</code> now waits until the plant's own ports are free,
+so a start in the next breath works instead of refusing a port nothing holds,
+and <code>fsmes demo &lt;plant&gt; stop --force</code> answers in a sentence rather than
+<code>No such option: --force</code>. A stop there is about a second slower for it. On
+Linux nothing changes.</p>
 <h2 id="031-to-040">0.3.1 to 0.4.0<a class="headerlink" href="#031-to-040" title="Permanent link">&para;</a></h2>
 <p><strong>One migration, <code>b6f0c2a71d58</code></strong> — 0.3.1's head was <code>d4e8a1c93b70</code>. It adds
 two tables, <code>plant_leases</code> and <code>counter_baselines</code>, and changes no column of
@@ -5216,6 +5324,24 @@ password replaced.</p>
 <p>Then open the dashboard and look at a shift from before the upgrade. History
 that was there before and is not there now is the thing to catch, and it is
 caught by looking, not by a command.</p>
+<h3 id="when-fsmes-version-still-prints-the-old-version">When <code>fsmes --version</code> still prints the old version<a class="headerlink" href="#when-fsmes-version-still-prints-the-old-version" title="Permanent link">&para;</a></h3>
+<p>The upgrade worked and you are typing a different copy of it. A PC can hold
+more than one Python, and <code>pipx</code> keeps its own: <code>py -m pip install --upgrade</code>
+upgrades the copy <code>py</code> owns, and leaves the <code>fsmes</code> on your PATH — which may
+be pipx's — exactly where it was.</p>
+<p><strong>How to tell.</strong> <code>py -m fsmes --version</code> is the copy <code>py</code> owns;
+<code>fsmes --version</code> is the one on PATH. If they disagree, that is the whole
+story. <code>where fsmes</code> on Windows (<code>which fsmes</code> elsewhere) says which one the
+bare command is.</p>
+<p><strong>The rule: upgrade the one that owns the command you type.</strong> If <code>where fsmes</code>
+points into a <code>pipx</code> folder, <code>pipx upgrade factorysemantics-mes</code>; otherwise
+<code>py -m pip install --upgrade factorysemantics-mes</code>. Either way,
+<code>py -m fsmes …</code> always runs the copy <code>py</code> has, so it is the way to be sure
+which version you are running.</p>
+<p><code>py -m fsmes doctor</code> puts both facts in one file: the version, how it was
+installed (pipx, pip or uv), where the <code>fsmes</code> on your PATH is, and the Python
+that is running the copy you invoked — <a href="../doctor/">one file to paste when something is
+wrong</a>.</p>
 <h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../backup/">Backup and restore</a></li>
