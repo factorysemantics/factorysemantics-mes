@@ -210,6 +210,18 @@ def test_the_scene_brings_up_its_own_plant_and_films_only_that_one(runner):
     assert plant["roll_when_beyond_sigma"] >= 2.0, (
         "the camera rolls on the reading that fires no rule by itself, so the rule fires on camera"
     )
+    assert plant["roll_when_readings"] >= 25, (
+        "and not on the first reading that merely looks that far out. With a dozen readings the "
+        "limits are an estimate from a dozen moving ranges and an ordinary wobble reads as two "
+        "and a half sigma; a take that rolled on reading eighteen filmed a wobble, waited the "
+        "whole of its patience for a rule that was never coming, and stopped with nothing"
+    )
+    assert plant["roll_when_below_centre"] is True, (
+        "and the reading goes down, because the caption says a reading drops. A spike upward "
+        "trips a rule just as well and would make the overlay a lie about its own picture"
+    )
+    said = " ".join(runner.script_lines(scene)).lower()
+    assert "drops" in said, "which is the sentence that condition exists to keep true"
 
     ports = runner.ports_of_pack(runner.REPO / plant["pack"])
     assert ports, "the pack says which ports it wants, and the runner reads them from it"

@@ -68,9 +68,22 @@ speed = 20
 # there. So the camera opens on a chart that is genuinely in control with the
 # trouble already visible at the bottom of it, and the rule fires while the
 # camera is on the chart instead of before it arrived.
+#
+# Two readings' worth of hard-won detail. The chart must have drawn at least
+# twenty-five readings first: before that the limits are estimated from a
+# handful of moving ranges and an ordinary wobble reads as two and a half
+# sigma. A take that rolled on reading eighteen filmed exactly that, held on a
+# chart that was never going to trip anything, and stopped. The pack's drop
+# arrives around reading thirty, by which time the limits have settled and a
+# reading that far out is the step and not the noise.
+#
+# And the reading must be *below* centre. The caption says a reading drops; a
+# spike upward would fire a rule just as well and make the caption a lie.
 roll_when_chart = "FG-BOTTLE/fill_weight"
 roll_when_in_control = true
 roll_when_beyond_sigma = 2.0
+roll_when_readings = 25
+roll_when_below_centre = true
 roll_when_timeout_seconds = 300
 
 # --- the chart, in control

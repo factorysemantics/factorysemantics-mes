@@ -475,10 +475,12 @@ def readme(scene: dict, facts: dict) -> str:
         if plant.get("roll_when_chart"):
             lines += [
                 f"- **when the camera started**: it waited, off camera, for"
-                f" `{plant['roll_when_chart']}` to be in control with its newest reading"
-                f" {plant['roll_when_beyond_sigma']:.0f} sigma or more from centre — the reading that"
-                " fires no rule on its own. The rule then fires on camera. The waiting is cut from the"
-                " clip; nothing between the event and what follows it is.",
+                f" `{plant['roll_when_chart']}` to have drawn at least"
+                f" {plant.get('roll_when_readings', 0)} readings and be in control, with its newest"
+                f" reading {plant['roll_when_beyond_sigma']:.0f} sigma or more"
+                f"{' below' if plant.get('roll_when_below_centre') else ' from'} centre — the reading"
+                " that fires no rule on its own. The rule then fires on camera. The waiting is cut"
+                " from the clip; nothing between the event and what follows it is.",
             ]
     lines += [
         "",
@@ -831,6 +833,8 @@ def wait_for_the_shot(base: str, spec: dict, user: str, password: str) -> dict:
     url = f"{base}/quality/spc/{urllib.parse.quote(material)}/{urllib.parse.quote(characteristic)}"
     want_sigma = float(spec["roll_when_beyond_sigma"])
     want_in_control = bool(spec["roll_when_in_control"])
+    want_readings = int(spec.get("roll_when_readings") or 0)
+    want_below = bool(spec.get("roll_when_below_centre"))
     deadline = time.monotonic() + float(spec["roll_when_timeout_seconds"])
     started = time.monotonic()
     last = ""
@@ -849,6 +853,16 @@ def wait_for_the_shot(base: str, spec: dict, user: str, password: str) -> dict:
         out = abs(centre - newest) / sigma if (newest is not None and centre is not None and sigma) else 0.0
         in_control = chart.get("stable")
         enough = centre is not None
+        drawn = int(chart.get("n") or 0)
+        # Two things the sigma on its own does not say, and both have cost a
+        # take. A chart with a dozen readings estimates its limits from a dozen
+        # numbers, so an ordinary wobble reads as two and a half sigma: one take
+        # rolled on reading eighteen, filmed a wobble, waited the whole of its
+        # patience for a rule that was never coming, and stopped. And a reading
+        # that far out *above* centre is not the event this scene narrates —
+        # the caption says a reading drops, and it has to be a drop.
+        settled = drawn >= want_readings
+        the_right_way = (newest < centre) if (want_below and newest is not None and centre is not None) else True
 
         said = (f"  {time.monotonic() - started:5.0f}s  {chart.get('n') or 0:3d} readings, "
                 f"{'in control' if in_control else 'out of control' if enough else 'not enough to say'}"
@@ -857,7 +871,7 @@ def wait_for_the_shot(base: str, spec: dict, user: str, password: str) -> dict:
             print(said, flush=True)
             last = said
 
-        if enough and (in_control or not want_in_control) and out >= want_sigma:
+        if enough and settled and the_right_way and (in_control or not want_in_control) and out >= want_sigma:
             print(f"  rolling: {chart.get('n')} readings, the chart in control, "
                   f"the newest reading {out:.1f} sigma from centre", flush=True)
             return chart
@@ -865,7 +879,9 @@ def wait_for_the_shot(base: str, spec: dict, user: str, password: str) -> dict:
 
     raise SystemExit(
         f"the chart never reached the state this scene opens on within "
-        f"{float(spec['roll_when_timeout_seconds']):.0f}s. Nothing was filmed. The replay this pack "
+        f"{float(spec['roll_when_timeout_seconds']):.0f}s — at least {want_readings} readings, "
+        f"{'in control, ' if want_in_control else ''}the newest {want_sigma:.0f} sigma or more "
+        f"{'below' if want_below else 'from'} centre. Nothing was filmed. The replay this pack "
         "describes may have moved on, or the speed may be wrong for it."
     )
 
