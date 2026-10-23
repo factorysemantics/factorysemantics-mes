@@ -10,6 +10,19 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ## [Unreleased]
 
+## [0.4.1] — 2026-10-23
+
+### Added
+
+- **A recording of a node being killed, on the README and the redundancy
+  page.** Two nodes of the bottling plant side by side, `docker kill` on the
+  one holding the `reader` lease, and the other one reading the machines a few
+  seconds later. `bash scripts/record-kill-a-node.sh` makes it again from a
+  checkout, so the picture can be of the version people install rather than of
+  whatever the box looked like the day it was first made. A developer tool: it
+  needs Docker, `ffmpeg` and a Python with Playwright, it is not in the wheel,
+  it is not in CI, and it is not asked to run on Windows.
+
 ### Fixed
 
 - **`fsmes demo <plant> stop --force` answers in words instead of refusing.**
@@ -30,7 +43,6 @@ goes under Honesty with a migration line, so plant people can find it.
   assistant folder's install page now say how to tell (`py -m fsmes --version`
   against `fsmes --version`; `where fsmes`, or `which`) and the rule: upgrade
   the one that owns the command you type.
-
 - **On Windows, stopping a plant and starting it again in the next breath
   works.** `fsmes demo <plant> stop` no longer comes back while the plant's
   ports are still closing. A listening socket there outlives the process that
@@ -45,17 +57,6 @@ goes under Honesty with a migration line, so plant people can find it.
   closing rather than claiming it is done, and a start that meets a plant's own
   closing socket now says to wait a moment rather than to go and stop a
   program that is not there.
-
-### Added
-
-- **A recording of a node being killed, on the README and the redundancy
-  page.** Two nodes of the bottling plant side by side, `docker kill` on the
-  one holding the `reader` lease, and the other one reading the machines a few
-  seconds later. `bash scripts/record-kill-a-node.sh` makes it again from a
-  checkout, so the picture can be of the version people install rather than of
-  whatever the box looked like the day it was first made. A developer tool: it
-  needs Docker, `ffmpeg` and a Python with Playwright, it is not in the wheel,
-  it is not in CI, and it is not asked to run on Windows.
 
 ## [0.4.0] — 2026-10-16
 
@@ -5109,7 +5110,8 @@ number in it comes from a simulated plant.
   MES was not watching. Unlabelled downtime is reported as unlabelled. These
   are the house rules and they are tested.
 
-[Unreleased]: https://github.com/factorysemantics/factorysemantics-mes/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/factorysemantics/factorysemantics-mes/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/factorysemantics/factorysemantics-mes/releases/tag/v0.4.1
 [0.4.0]: https://github.com/factorysemantics/factorysemantics-mes/releases/tag/v0.4.0
 [0.3.1]: https://github.com/factorysemantics/factorysemantics-mes/releases/tag/v0.3.1
 [0.3.0]: https://github.com/factorysemantics/factorysemantics-mes/releases/tag/v0.3.0
