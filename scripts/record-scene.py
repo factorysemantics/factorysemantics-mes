@@ -83,8 +83,9 @@ BADGE_SAMPLE_SIZE = 10  # the square sampled, px
 BADGE_TOLERANCE = 32
 
 # What the GIF may weigh and how it is made smaller until it does. GitHub
-# renders an image up to 10 MB and refuses to animate one over it; LinkedIn is
-# stricter still about length, which is what `budget_seconds` is for.
+# renders an image up to 10 MB and refuses to animate one over it. How long a
+# clip may run is a judgement rather than a limit, and it is the scene file's
+# own `budget_seconds`.
 GIF_LIMIT_BYTES = 10 * 1024 * 1024
 GIF_SETTINGS = ((10, 1100), (8, 1100), (8, 1000), (6, 1000), (6, 900), (5, 800))
 
