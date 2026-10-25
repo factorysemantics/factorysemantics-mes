@@ -1278,7 +1278,9 @@ function loaded(promise) {
 
 function onTab(name) {
   clearBanner();
-  loaded((LOADERS[name] || LOADERS[firstTab()])());
+  // The tab name comes from the address bar: only this page's own loaders
+  // answer it, never a name Object.prototype happens to have.
+  loaded((Object.hasOwn(LOADERS, name) ? LOADERS[name] : LOADERS[firstTab()])());
 }
 
 /* Two gates on this page, not one.

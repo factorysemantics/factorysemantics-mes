@@ -24,7 +24,6 @@ goes under Honesty with a migration line, so plant people can find it.
   data changes. SQLite plants were never affected. A
   test now runs the shipped migrations on PostgreSQL and fails if the database
   would refuse any value the code can write.
-
 - **The AI tab's header dot says "live" now, not "connecting…" forever.**
   The page never told the dot anything, so it kept the words it was born
   with. Every screen now sets the dot through one shared `FS.live`; the AI

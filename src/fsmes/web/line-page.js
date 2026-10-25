@@ -122,7 +122,10 @@ const LOADERS = { overview: refreshOverview, timeline: loadTimeline, analysis: (
 
 function onTab(name) {
   clearInterval(timer);
-  const run = () => (LOADERS[name] || LOADERS.overview)().then(() => FS.live(true)).catch(fail);
+  // The tab name comes from the address bar: only this page's own loaders
+  // answer it, never a name Object.prototype happens to have.
+  const load = Object.hasOwn(LOADERS, name) ? LOADERS[name] : LOADERS.overview;
+  const run = () => load().then(() => FS.live(true)).catch(fail);
   run();
   if (name === "overview") timer = setInterval(run, REFRESH_MS);
 }
