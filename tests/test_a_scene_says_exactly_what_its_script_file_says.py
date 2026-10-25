@@ -85,7 +85,7 @@ class StageOnPaper:
         self.marks.append(name)
         self._run_for(self.clock.SMALL_STEP_SECONDS)
 
-    def scroll_to(self, selector: str, block: str, offset: int) -> None:
+    def scroll_to(self, selector: str, block: str, offset: int, text: str | None = None) -> None:
         self._run_for(self.clock.SCROLL_SECONDS)
 
 
