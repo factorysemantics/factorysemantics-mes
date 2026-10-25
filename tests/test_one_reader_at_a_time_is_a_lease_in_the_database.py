@@ -418,9 +418,13 @@ def test_the_migration_is_the_only_head(tmp_path):
 
     from fsmes import schema as schema_mod
 
-    heads = ScriptDirectory.from_config(
-        schema_mod.alembic_config(f"sqlite:///{tmp_path / 'heads.db'}")).get_heads()
-    assert list(heads) == [REVISION], heads
+    script = ScriptDirectory.from_config(
+        schema_mod.alembic_config(f"sqlite:///{tmp_path / 'heads.db'}"))
+    heads = script.get_heads()
+    assert len(heads) == 1, heads
+    # Later revisions may sit on top of this one; it must be on the one line.
+    chain = {rev.revision for rev in script.walk_revisions(base="base", head=heads[0])}
+    assert REVISION in chain, heads
 
 
 def test_the_migration_backfills_no_baseline_it_cannot_know(tmp_path):
