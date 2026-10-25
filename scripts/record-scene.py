@@ -32,8 +32,9 @@ Two things a scene may say to get out of that, and only together:
   * `[plant]` — bring up a plant of this take's own from a pack, on the ports
     that pack names, in a temporary home, and stop it and delete it when the
     take ends. `[plant] roll_when_*` holds the camera, off camera, until the
-    plant reaches the state the scene opens on: a wait inside a scene is
-    filmed, and a clip has forty-five seconds.
+    plant reaches the state the scene opens on — a chart in a given state, or
+    `[[plant.roll_when_order]]`, orders that have finished or drawn on a lot —
+    because a wait inside a scene is filmed, and a clip has forty-five seconds.
   * `allow_writes` — let the page write. Some stories *are* writes: a hold is
     taken under review by somebody deciding to, and a clip of quality work
     with nothing written in it is a tour. This is honoured only when `base` is
@@ -240,7 +241,8 @@ def play(scene: dict, stage) -> None:
     """
     for step in scene["step"]:
         if step.get("scroll_to"):
-            stage.scroll_to(step["scroll_to"], step.get("scroll_block", "center"), int(step.get("scroll_offset", 0)))
+            stage.scroll_to(step["scroll_to"], step.get("scroll_block", "center"), int(step.get("scroll_offset", 0)),
+                            step.get("scroll_text"))
         verb = step["do"]
         if verb == "goto":
             stage.goto(step["url"], float(step["settle"]))
@@ -383,15 +385,36 @@ class BrowserStage:
         self.page.screenshot(path=str(shot))
         self.note(f"mark: {name}", still=shot.name)
 
-    def scroll_to(self, selector: str, block: str, offset: int) -> None:
+    def scroll_to(self, selector: str, block: str, offset: int, text: str | None = None) -> None:
+        # `text` picks, among everything the selector matches, the first whose
+        # words contain it: the row about the cap lot in a list of a hundred
+        # issues, which sits inside a box that scrolls on its own. That row is
+        # put at the top of its box, and then the page is scrolled to put the
+        # row `offset` pixels from the top of the window — as near as the page
+        # can, since a row near the foot of a short page cannot be lifted past
+        # the page's end. (The plain nudge below would push such a row down,
+        # under the caption bar, which is where the first takes left it.)
         self.page.evaluate(
-            """([selector, block, offset]) => {
-                 const node = document.querySelector(selector);
-                 if (!node) throw new Error('nothing to scroll to: ' + selector);
-                 node.scrollIntoView({ block, behavior: 'instant' });
-                 if (offset) window.scrollBy(0, -offset);
+            """([selector, block, offset, text]) => {
+                 const nodes = [...document.querySelectorAll(selector)];
+                 const node = text
+                   ? nodes.find((n) => (n.innerText || '').includes(text))
+                   : nodes[0];
+                 if (!node) throw new Error('nothing to scroll to: ' + selector + (text ? ' saying ' + text : ''));
+                 if (!text) {
+                   node.scrollIntoView({ block, behavior: 'instant' });
+                   if (offset) window.scrollBy(0, -offset);
+                   return;
+                 }
+                 for (let box = node.parentElement; box && box !== document.body; box = box.parentElement) {
+                   if (/(auto|scroll)/.test(getComputedStyle(box).overflowY) && box.scrollHeight > box.clientHeight) {
+                     box.scrollTop += node.getBoundingClientRect().top - box.getBoundingClientRect().top;
+                     break;
+                   }
+                 }
+                 window.scrollBy(0, node.getBoundingClientRect().top - offset);
                }""",
-            [selector, block, offset],
+            [selector, block, offset, text],
         )
         self.page.wait_for_timeout(int(SCROLL_SECONDS * 1000))
 
@@ -481,6 +504,17 @@ def readme(scene: dict, facts: dict) -> str:
                 f"{' below' if plant.get('roll_when_below_centre') else ' from'} centre — the reading"
                 " that fires no rule on its own. The rule then fires on camera. The waiting is cut"
                 " from the clip; nothing between the event and what follows it is.",
+            ]
+        for wanted in plant.get("roll_when_order") or []:
+            asked = []
+            if wanted.get("completed"):
+                asked.append("finished and made its lot")
+            if wanted.get("consumed"):
+                asked.append(f"drawn on `{wanted['consumed']}`")
+            lines += [
+                f"- **when the camera started**: it waited, off camera, until order `{wanted['code']}` had"
+                f" {' and '.join(asked)}, as the plant's own genealogy reported it. The waiting is cut"
+                " from the clip.",
             ]
     lines += [
         "",
@@ -642,6 +676,19 @@ def plant_defaults(spec: dict) -> dict:
     spec.setdefault("roll_when_timeout_seconds", 300.0)
     if spec["roll_when_chart"] and "/" not in str(spec["roll_when_chart"]):
         raise SystemExit("[plant]: `roll_when_chart` is `MATERIAL/characteristic`, e.g. FG-BOTTLE/fill_weight")
+    orders = spec.setdefault("roll_when_order", [])
+    if not isinstance(orders, list):
+        raise SystemExit("[plant]: `roll_when_order` is a list of tables — `[[plant.roll_when_order]]`")
+    for wanted in orders:
+        if not wanted.get("code"):
+            raise SystemExit("[plant]: every `roll_when_order` needs the `code` of the order it waits on")
+        if not (wanted.get("completed") or wanted.get("consumed")):
+            # An order with no condition is already "ready" the moment the plant
+            # is up, and the take would roll on an order with nothing in it.
+            raise SystemExit(
+                f"[plant]: `roll_when_order` {wanted['code']} waits for nothing — "
+                "say `completed = true`, `consumed = \"LOT-…\"`, or both"
+            )
     return spec
 
 
@@ -886,6 +933,75 @@ def wait_for_the_shot(base: str, spec: dict, user: str, password: str) -> dict:
     )
 
 
+def order_is_ready(order: dict | None, genealogy: dict | None, wanted: dict) -> bool:
+    """Whether one order is in the state a `[[plant.roll_when_order]]` asks for.
+
+    `completed` means finished *and* with a lot to show for it: an order that
+    completes with nothing good made produces no lot, and the scene is about the
+    lot. `consumed` means that lot code is among the lots the order's own
+    genealogy says went in. Both are read from the plant; nothing is assumed
+    from the pack.
+    """
+    if not order or not genealogy:
+        return False
+    finished = order.get("status") in ("completed", "closed") and bool(genealogy.get("produced"))
+    if wanted.get("completed") and not finished:
+        return False
+    lot = wanted.get("consumed")
+    return not lot or lot in {c.get("lot") for c in genealogy.get("consumed") or []}
+
+
+def wait_for_the_orders(base: str, spec: dict, user: str, password: str) -> None:
+    """Hold the camera until every order the scene films is in the state it films.
+
+    The chart's wait, for a scene about orders: a cold plant takes a minute or
+    more to finish its first order, and a minute of an order filling up is a
+    minute of a forty-five-second clip. The take rolls once each order named
+    has finished (if asked) and drawn on the lot named (if asked). Nothing
+    here writes; it asks the same two questions the orders page asks.
+    """
+    reader = a_signed_in_reader(base, user, password)
+    wanted = spec["roll_when_order"]
+    deadline = time.monotonic() + float(spec["roll_when_timeout_seconds"])
+    started = time.monotonic()
+    last = ""
+
+    def read(path: str) -> dict | None:
+        try:
+            with reader.open(f"{base}{path}", timeout=10) as answer:
+                return json.load(answer)
+        except (OSError, urllib.error.URLError, ValueError):
+            return None
+
+    while time.monotonic() < deadline:
+        states = []
+        for one in wanted:
+            code = urllib.parse.quote(one["code"])
+            order, genealogy = read(f"/workorders/{code}"), read(f"/execution/genealogy/{code}")
+            states.append((one, order, genealogy, order_is_ready(order, genealogy, one)))
+        said = f"  {time.monotonic() - started:5.0f}s  " + "; ".join(
+            f"{one['code']} {(order or {}).get('status', 'unknown')}, "
+            f"{len((genealogy or {}).get('consumed') or [])} issue(s), "
+            f"{len((genealogy or {}).get('produced') or [])} lot(s) made"
+            for one, order, genealogy, _ in states
+        )
+        if said != last:
+            print(said, flush=True)
+            last = said
+        if all(ready for *_, ready in states):
+            print("  rolling: " + "; ".join(
+                f"{one['code']}" + (" completed" if one.get("completed") else "")
+                + (f", drew on {one['consumed']}" if one.get("consumed") else "")
+                for one in wanted), flush=True)
+            return
+        time.sleep(POLL_SECONDS)
+
+    raise SystemExit(
+        f"the orders never reached the state this scene opens on within "
+        f"{float(spec['roll_when_timeout_seconds']):.0f}s. Nothing was filmed. Last seen:\n{last}"
+    )
+
+
 # --------------------------------------------------------- what may be written
 
 
@@ -1094,6 +1210,10 @@ def main() -> None:
                 )
             scratch = start_a_scratch_plant(plant_spec)
             wait_for_the_plant(scene["base"].rstrip("/"))
+            if plant_spec["roll_when_order"]:
+                print("== waiting for the orders to reach the state this scene opens on", flush=True)
+                wait_for_the_orders(scene["base"].rstrip("/"), plant_spec,
+                                    scene["user"], scene["password"])
             if plant_spec["roll_when_chart"]:
                 print("== waiting for the chart to reach the state this scene opens on", flush=True)
                 wait_for_the_shot(scene["base"].rstrip("/"), plant_spec,

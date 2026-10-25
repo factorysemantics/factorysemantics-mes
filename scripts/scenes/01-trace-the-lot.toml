@@ -1,0 +1,168 @@
+# Trace the lot: the two questions a recall asks — what is in it, and where did it go.
+#
+# The first question has a screen: an order's Genealogy box lists every lot that
+# went in, at the station it went in, and the lot that came out. The second has
+# a screen too, the trace page — but it answers in serialised units, and the
+# bottling line makes none: it books bottles by the lot, as a real bottling line
+# does. So the trace page's honest answer to "where did this cap lot go" is
+# "nothing serialised carries it", and this clip shows that answer and says why,
+# rather than recording serials the line never made so the page has something
+# to list. The forward answer this line does have is on the orders: the next
+# order, running now, has drawn on the same cap lot, and the clip closes there.
+#
+# Nothing in this take writes. The orders, the issues and the finished lot are
+# the scratch plant's own, made by its simulated floor before the camera rolls.
+
+name = "trace-the-lot"
+title = "Trace the lot"
+out = "~/Work/gifs/mes-fundamentals/01-trace-the-lot"
+base = "http://127.0.0.1:8010"
+badge = "pre-alpha · simulated plant · v{version}"
+budget_seconds = 45
+# The head the loop drops: the orders page arriving, before the first sentence.
+# It may not be longer than that first settle.
+gif_skip_seconds = 2.0
+width = 1280
+height = 720
+
+notes = [
+  "The finished lot is usually more than the order asked for — 5,000-odd bottles on an order of 4,000. That is the product's rule and not a slip: a line that keeps running past its quantity is making real bottles against a real order, so this MES books them and says how far over it ran, and the order is finished by the simulated shift supervisor, who looks every so often. At the replay speed of this take the line runs on for a while before he does.",
+  "The trace page answers where a lot went in serialised units — bottles, cases, pallets with serial numbers. The bottling pack records lots and orders, not serials, so the page finds none. That is the honest state of this pack, and the clip says so instead of recording serials the line never made.",
+]
+
+[plant]
+# Built fresh from the pack the lab's bottling plant uses, in a temporary home,
+# on the pack's own ports (8010 and 4841), and stopped and deleted after. The
+# lab plant is not touched, read, or pointed at.
+pack = "labs/multiplant/bottling"
+
+# One wall second is sixty line seconds. Nothing in this story is a chart, so
+# nothing here is sensitive to the speed the way the SPC scene is; faster only
+# means the first order is finished sooner. At 60x the pack's first order
+# (WO-ACME-4711, 4,000 bottles) is completed by the floor a little over a
+# minute after the plant answers.
+speed = 60
+roll_when_timeout_seconds = 300
+
+# The camera rolls once the first order has finished with its lot made and the
+# cap lot among what went in, and the next order has started drawing on that
+# same cap lot. Both are asked of the plant, not assumed from the pack: the
+# floor issues components at random from the bill of materials, so which lots
+# an order has drawn on at a given second is the plant's to say.
+[[plant.roll_when_order]]
+code = "WO-ACME-4711"
+completed = true
+consumed = "LOT-CAP-001"
+
+[[plant.roll_when_order]]
+code = "WO-ACME-4712"
+consumed = "LOT-CAP-001"
+
+# --- what is in it
+
+[[step]]
+do = "goto"
+url = "/dashboard/orders?q=WO-ACME-4711"
+settle = 2.0
+
+[[step]]
+do = "wait_for"
+selector = "#produced"
+text = "WO-ACME-4711-FG"
+
+[[step]]
+do = "say"
+line = "A recall asks two questions. First: what is in this?"
+hold = 3.5
+
+# The Genealogy box is at the foot of the order's detail; put its heading just
+# under the header that stays on screen, with the last steps of the route above
+# it so the order is still recognisably this order.
+[[step]]
+do = "say"
+line = "The order's genealogy: every lot that went in, and the station it went in at."
+hold = 4.5
+scroll_to = "[data-assist=\"order-genealogy\"]"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "wait_for"
+selector = "#consumed"
+text = "LOT-CAP-001"
+
+# The list of issues scrolls inside its own box — a hundred-odd rows on a
+# finished order — so the cap lot's row is brought into view rather than hoped
+# for: with `scroll_text` the row goes to the top of that box, and the page
+# puts it 300 px down the screen (or as near as the page's end allows), beside
+# the finished lot and clear of the caption bar along the bottom.
+[[step]]
+do = "say"
+line = "The cap lot went in at the filler. And out came one finished lot, named for its order."
+hold = 4.5
+scroll_to = "#consumed li"
+scroll_text = "LOT-CAP-001"
+scroll_offset = 300
+
+[[step]]
+do = "mark"
+name = "the-genealogy-box"
+
+# --- where did it go
+
+[[step]]
+do = "goto"
+url = "/dashboard/trace?lot=LOT-CAP-001"
+settle = 2.0
+
+# Whatever the page answers, it names the lot in its verdict; the scene waits
+# for the answer and not for the box.
+[[step]]
+do = "wait_for"
+selector = "#l-verdict"
+text = "carries LOT-CAP-001"
+
+[[step]]
+do = "say"
+line = "Second: where did it go? Ask the trace page."
+hold = 4.0
+
+[[step]]
+do = "say"
+line = "No serialised unit carries it. This line books bottles by the lot, not one by one."
+hold = 5.0
+
+[[step]]
+do = "mark"
+name = "the-where-used-answer"
+
+# --- the forward answer this line has
+
+[[step]]
+do = "goto"
+url = "/dashboard/orders?q=WO-ACME-4712"
+settle = 2.0
+
+[[step]]
+do = "wait_for"
+selector = "#consumed"
+text = "LOT-CAP-001"
+
+[[step]]
+do = "say"
+line = "The answer is on the orders: the next one, running now, draws on the same cap lot."
+hold = 2.5
+scroll_to = "[data-assist=\"order-genealogy\"]"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "hold"
+seconds = 2.5
+scroll_to = "#consumed li"
+scroll_text = "LOT-CAP-001"
+scroll_offset = 300
+
+[[step]]
+do = "mark"
+name = "the-next-order-on-the-same-lot"
