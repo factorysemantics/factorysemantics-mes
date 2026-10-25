@@ -33,7 +33,7 @@ Two things a scene may say to get out of that, and only together:
     that pack names, in a temporary home, and stop it and delete it when the
     take ends. `[plant] roll_when_*` holds the camera, off camera, until the
     plant reaches the state the scene opens on — a chart in a given state, or
-    `[[plant.roll_when_order]]`, orders that have finished or drawn on a lot —
+    `[[plant.roll_when_order]]`, orders that have finished, drawn on a lot, or booked a count —
     because a wait inside a scene is filmed, and a clip has forty-five seconds.
   * `allow_writes` — let the page write. Some stories *are* writes: a hold is
     taken under review by somebody deciding to, and a clip of quality work
@@ -511,23 +511,35 @@ def readme(scene: dict, facts: dict) -> str:
                 asked.append("finished and made its lot")
             if wanted.get("consumed"):
                 asked.append(f"drawn on `{wanted['consumed']}`")
+            if wanted.get("booked"):
+                asked.append(f"booked {float(wanted['booked']):,.0f}, short of its quantity")
+            source = ("the plant's own genealogy" if wanted.get("completed") or wanted.get("consumed")
+                      else "the plant's own order screen")
             lines += [
                 f"- **when the camera started**: it waited, off camera, until order `{wanted['code']}` had"
-                f" {' and '.join(asked)}, as the plant's own genealogy reported it. The waiting is cut"
+                f" {' and '.join(asked)}, as {source} reported it. The waiting is cut"
                 " from the clip.",
             ]
+        for key, value in sorted((plant.get("env") or {}).items()):
+            lines += [f"- **the simulated floor was told** `{key}={value}` — see *Worth knowing* below"]
     lines += [
         "",
         "Everything else is the plant's own screens, read live, and every figure on them is the"
         " plant's own.",
     ]
     if scene.get("allow_writes"):
+        # What was written is the scene's to say: the first scene to write
+        # took a hold under review, and every page this script wrote said so,
+        # including the pages of scenes that wrote something else.
+        written = scene.get("what_is_written") or (
+            "which is how the operator takes the hold under review:"
+            " that click is a real `POST` to a real plant, and the hold really is under review"
+            " afterwards."
+        )
         lines += [
             "",
-            "This scene is allowed to write, which is how the operator takes the hold under review:"
-            " that click is a real `POST` to a real plant, and the hold really is under review"
-            " afterwards. The recording refuses to run at all unless the plant is at a loopback"
-            " address.",
+            f"This scene is allowed to write, {written} The recording refuses to run at all unless"
+            " the plant is at a loopback address.",
         ]
     # A scene's own footnotes, after everything about how the take was made:
     # some things on screen need a sentence that is nobody's fault and cannot
@@ -659,6 +671,10 @@ PORTS_THAT_BELONG_TO_SOMETHING_ELSE = {
     5434: "the public demo's second PostgreSQL",
 }
 
+#: What a scene's `[plant] env` may set: the switches of `fsmes run-operations`,
+#: the simulated floor, and nothing of the MES's own.
+SCENE_ENV_PREFIX = "MES_OPS_"
+
 #: How long to wait for a plant that has just been started to answer /health.
 PLANT_UP_SECONDS = 60.0
 #: How often to ask the plant a question while waiting for it.
@@ -674,6 +690,7 @@ def plant_defaults(spec: dict) -> dict:
     spec.setdefault("roll_when_in_control", True)
     spec.setdefault("roll_when_beyond_sigma", 0.0)
     spec.setdefault("roll_when_timeout_seconds", 300.0)
+    spec.setdefault("env", {})
     if spec["roll_when_chart"] and "/" not in str(spec["roll_when_chart"]):
         raise SystemExit("[plant]: `roll_when_chart` is `MATERIAL/characteristic`, e.g. FG-BOTTLE/fill_weight")
     orders = spec.setdefault("roll_when_order", [])
@@ -682,13 +699,31 @@ def plant_defaults(spec: dict) -> dict:
     for wanted in orders:
         if not wanted.get("code"):
             raise SystemExit("[plant]: every `roll_when_order` needs the `code` of the order it waits on")
-        if not (wanted.get("completed") or wanted.get("consumed")):
+        if not (wanted.get("completed") or wanted.get("consumed") or wanted.get("booked")):
             # An order with no condition is already "ready" the moment the plant
             # is up, and the take would roll on an order with nothing in it.
             raise SystemExit(
                 f"[plant]: `roll_when_order` {wanted['code']} waits for nothing — "
-                "say `completed = true`, `consumed = \"LOT-…\"`, or both"
+                "say `completed = true`, `consumed = \"LOT-…\"`, `booked = <count>`, or more than one"
             )
+    if spec["roll_when_chart"] and spec["roll_when_order"]:
+        raise SystemExit("[plant]: a take rolls on a chart or on an order, not on both")
+    if not isinstance(spec["env"], dict):
+        raise SystemExit("[plant]: `env` is a table of NAME = \"value\"")
+    for key, value in spec["env"].items():
+        # The simulated floor's own switches and nothing else. A scene may
+        # change what the simulated people on the floor do — that the shift
+        # supervisor leaves finishing an order to the person on camera, say —
+        # and must not reach into the MES itself: a take of a product
+        # configured differently from the one anybody installs is not a take
+        # of the product.
+        if not str(key).startswith(SCENE_ENV_PREFIX):
+            raise SystemExit(
+                f"[plant]: `env` may set only the simulated floor's switches ({SCENE_ENV_PREFIX}*), "
+                f"not {key}"
+            )
+        if not isinstance(value, str):
+            raise SystemExit(f"[plant]: `env` values are strings, as an environment's are — {key} is not")
     return spec
 
 
@@ -815,7 +850,13 @@ def start_a_scratch_plant(spec: dict) -> ScratchPlant:
         f'packs = ["pack"]\n\n[environment]\ndata_dir = "{(home / "data").as_posix()}"\n',
         encoding="utf-8",
     )
-    env = {**os.environ, "FSMES_PLANT_REGISTRY": str(home / "fleet.toml")}
+    # The scene's own floor switches ride in the environment the plant's
+    # processes inherit, which is how `fsmes lab` hands an experiment's
+    # `finish_orders = false` to the same floor.
+    env = {**os.environ, **spec.get("env", {}), "FSMES_PLANT_REGISTRY": str(home / "fleet.toml")}
+    if spec.get("env"):
+        print("  the simulated floor is told: "
+              + ", ".join(f"{key}={value}" for key, value in sorted(spec["env"].items())), flush=True)
     plant = ScratchPlant(name, home, env, ports)
 
     line = home / "pack" / "line.json"
@@ -939,10 +980,21 @@ def order_is_ready(order: dict | None, genealogy: dict | None, wanted: dict) -> 
     `completed` means finished *and* with a lot to show for it: an order that
     completes with nothing good made produces no lot, and the scene is about the
     lot. `consumed` means that lot code is among the lots the order's own
-    genealogy says went in. Both are read from the plant; nothing is assumed
-    from the pack.
+    genealogy says went in. `booked` means the order is still open and has
+    booked at least that many good — short of its quantity, so a scene about
+    the count reaching the number rolls before it does. All are read from the
+    plant; nothing is assumed from the pack.
     """
-    if not order or not genealogy:
+    if not order:
+        return False
+    if wanted.get("booked") and not (
+        order.get("status") in ("released", "running")
+        and float(order.get("good_qty") or 0) >= float(wanted["booked"])
+    ):
+        return False
+    if not (wanted.get("completed") or wanted.get("consumed")):
+        return True
+    if not genealogy:
         return False
     finished = order.get("status") in ("completed", "closed") and bool(genealogy.get("produced"))
     if wanted.get("completed") and not finished:
@@ -983,6 +1035,8 @@ def wait_for_the_orders(base: str, spec: dict, user: str, password: str) -> None
             f"{one['code']} {(order or {}).get('status', 'unknown')}, "
             f"{len((genealogy or {}).get('consumed') or [])} issue(s), "
             f"{len((genealogy or {}).get('produced') or [])} lot(s) made"
+            + (f", about {float((order or {}).get('good_qty') or 0) // 100 * 100:,.0f} booked"
+               if one.get("booked") else "")
             for one, order, genealogy, _ in states
         )
         if said != last:
@@ -992,6 +1046,7 @@ def wait_for_the_orders(base: str, spec: dict, user: str, password: str) -> None
             print("  rolling: " + "; ".join(
                 f"{one['code']}" + (" completed" if one.get("completed") else "")
                 + (f", drew on {one['consumed']}" if one.get("consumed") else "")
+                + (f", booked {float(one['booked']):,.0f} or more" if one.get("booked") else "")
                 for one in wanted), flush=True)
             return
         time.sleep(POLL_SECONDS)

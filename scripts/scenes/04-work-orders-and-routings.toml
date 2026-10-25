@@ -1,0 +1,149 @@
+# Work orders and routings: an order is released, the line counts against its
+# route, and a person — not the count — finishes the step.
+#
+# The rule this clip is about is decision 0029: a machine counting to the
+# ordered quantity does not finish the step it counted against. Somebody does.
+# So the event is a number arriving at the quantity and nothing happening, and
+# then a person doing the one thing the number did not.
+
+name = "work-orders-and-routings"
+title = "Work orders and routings"
+out = "~/Work/gifs/mes-fundamentals/04-work-orders-and-routings"
+base = "http://127.0.0.1:8010"
+badge = "pre-alpha · simulated plant · v{version}"
+budget_seconds = 45
+gif_skip_seconds = 2.0
+width = 1280
+height = 720
+
+# Releasing an order and finishing a step are writes, and they are the story.
+# Honoured only against the scratch plant below, at a loopback address.
+allow_writes = true
+what_is_written = "which is how the order is released and the step finished: both clicks are real `POST`s to a real plant, made with the product's own buttons, and that plant's audit trail names the person signed in as having made them."
+
+# What whoever opens the folder should know before they trust the clip.
+notes = [
+  "The simulated floor was told `MES_OPS_FINISH_ORDERS=false`. The bottling plant's simulated shift supervisor otherwise finishes every running step within about twenty seconds of the line making its number, and then releases the next order himself: he would have finished, off camera or a second before the click, the very step this clip is about a person finishing. The switch belongs to the simulated floor (it is the one `fsmes lab` uses for its over-run experiment); the MES itself is configured as anybody installs it.",
+  "The camera waits, off camera, until WO-ACME-4711 has booked 3,400 of its 4,000, so the count reaches the number while the camera is on it. The line runs at twenty times wall clock.",
+  "The line runs all six stations at once, so the route does not walk from step to step: every step of a running order is counting. What moves an order on is a person finishing a step, and the clip shows the first one, Load, and not the other five.",
+  "The orders page opens with its New-order form already showing, for anybody allowed to create an order — the gate that shows a person the controls they may use also un-hides that form. The take closes it with the form's own Cancel in the first two seconds, which the GIF skips and the mp4 keeps. That is a bug in the page, reported, not fixed in this take.",
+  "WO-ACME-4712 is released and then waits for a reason the overlay gives: nothing has been counted against it, because the loader is still booking to WO-ACME-4711. The MES does not sequence the line; an order a machine counts against is the one it is open on.",
+]
+
+[plant]
+pack = "labs/multiplant/bottling"
+speed = 20
+
+env = { MES_OPS_FINISH_ORDERS = "false" }
+
+roll_when_timeout_seconds = 300
+
+# Short of the 4,000 ordered, so the count reaches the number on camera.
+[[plant.roll_when_order]]
+code = "WO-ACME-4711"
+booked = 3400
+
+[[step]]
+do = "goto"
+url = "/dashboard/orders"
+settle = 1.6
+
+# The orders page opens with its New-order form showing: the gate that shows a
+# person the controls they may use also takes `hidden` off that form. Closed
+# with the form's own Cancel, inside the head the GIF skips; a product bug,
+# reported, not fixed here.
+[[step]]
+do = "click"
+selector = "#no-cancel"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#new-order-form').classList.contains('hidden')"
+
+[[step]]
+do = "click"
+selector = "#order-list tbody tr:has-text(\"WO-ACME-4712\")"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#detail-code').innerText === 'WO-ACME-4712' && document.querySelector('#d-status').innerText === 'planned' && document.querySelectorAll('#ops tbody tr').length === 6"
+
+[[step]]
+do = "say"
+line = "WO-ACME-4712 is planned. Its route is copied from the routing: six steps, six machines."
+hold = 4.5
+# The route under the sticky header and above the caption bar: the table's
+# head at the top of what is left of the screen, its six rows below it.
+scroll_to = "#ops"
+scroll_block = "start"
+scroll_offset = 210
+
+[[step]]
+do = "mark"
+name = "the-route-before-release"
+
+[[step]]
+do = "click"
+selector = "#order-actions button:has-text(\"Release\")"
+
+[[step]]
+do = "wait_for"
+selector = "#d-status"
+text = "released"
+
+[[step]]
+do = "say"
+line = "Released. Nothing counts against it yet: the line is still on WO-ACME-4711."
+hold = 4.5
+
+[[step]]
+do = "click"
+selector = "#order-list tbody tr:has-text(\"WO-ACME-4711\")"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#detail-code').innerText === 'WO-ACME-4711' && document.querySelector('#d-status').innerText === 'running'"
+
+[[step]]
+do = "say"
+line = "On WO-ACME-4711, each station books what it counts to its own step."
+hold = 4.0
+scroll_to = "#ops"
+scroll_block = "start"
+scroll_offset = 210
+
+[[step]]
+do = "wait_for"
+js = "Number((document.querySelector('#d-good').innerText || '').replace(/[^0-9.]/g, '')) >= Number((document.querySelector('#d-qty').innerText || '').replace(/[^0-9.]/g, ''))"
+timeout = 13
+
+[[step]]
+do = "say"
+line = "Palletise reaches the 4,000 ordered. Every step is still running."
+hold = 4.0
+
+[[step]]
+do = "mark"
+name = "the-count-at-the-ordered-quantity"
+
+[[step]]
+do = "say"
+line = "A machine reaching the number does not finish a step. A person does."
+hold = 4.0
+
+[[step]]
+do = "click"
+selector = "#ops tbody tr:has-text(\"Load\") button:has-text(\"Finish step\")"
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#ops tbody tr')].some(r => r.innerText.includes('Load') && r.innerText.toLowerCase().includes('done'))"
+
+[[step]]
+do = "say"
+line = "The operator finishes Load. The loader's next count books to WO-ACME-4712."
+hold = 4.0
+
+[[step]]
+do = "mark"
+name = "the-step-finished-by-a-person"
