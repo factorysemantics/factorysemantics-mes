@@ -1263,9 +1263,22 @@ const LOADERS = {
   settings: loadSettings,
 };
 
+/* The header's dot says what this page's own reads said, like every other
+   screen's: live once a tab's list came back, reconnecting… when one failed.
+   Until 2026-10-25 this page never told the dot anything, and the AI tab said
+   "connecting…" for as long as it was open. Only the reads drive it - a
+   question the model could not answer is the model's failure, not the
+   plant's connection, and it has the banner. */
+function loaded(promise) {
+  return promise.then(() => FS.live(true), (err) => {
+    FS.live(false);
+    fail(err);
+  });
+}
+
 function onTab(name) {
   clearBanner();
-  (LOADERS[name] || LOADERS[firstTab()])().catch(fail);
+  loaded((LOADERS[name] || LOADERS[firstTab()])());
 }
 
 /* Two gates on this page, not one.
@@ -1300,7 +1313,9 @@ function firstTab() {
   $("#ai-main").classList.toggle("hidden", !allowed);
   $("#denied-who").textContent = who ? `${who.code} (${who.role})` : "nobody";
   $("#denied-mine").classList.toggle("hidden", !allowed);
-  if (!allowed) return;
+  /* Somebody who may open no tab here still asked the plant who they are,
+     and the answer is the read this page made. */
+  if (!allowed) { FS.live(who !== null); return; }
   /* The tabs and the panels somebody may not open are removed rather than
      disabled: a tab that is there and answers 403 is a screen telling somebody
      to try, and a panel left in the document is a panel a script can still
@@ -1315,7 +1330,7 @@ function firstTab() {
   if (whole) {
     $("#conv-q").addEventListener("input", drawConversations);
     $("#conv-since").addEventListener("change",
-      () => loadConversations().catch(fail));
+      () => loaded(loadConversations()));
     $("#trace-save").addEventListener("click", () => saveTraceDays().catch(fail));
     $("#explore-send").addEventListener("click", () => sendExplore());
     $("#explore-new").addEventListener("click", newExploration);
