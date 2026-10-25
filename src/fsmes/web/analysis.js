@@ -237,13 +237,6 @@ function renderTag(data) {
 
 /* ---------- load ---------- */
 async function load() {
-  // The shared header has a live dot; this screen finally drives it.
-  const flip = (ok) => {
-    const dot = document.getElementById("live-dot");
-    const text = document.getElementById("live-text");
-    if (dot) dot.className = "dot" + (ok ? "" : " bad");
-    if (text) text.textContent = ok ? "live" : "reconnecting…";
-  };
   const q = query();
   const banner = $("#banner");
   banner.classList.add("hidden");
@@ -307,7 +300,7 @@ async function load() {
   picker.replaceChildren(...codes.map((code) => new Option(code, code, false, code === state.machine)));
   if (state.machine) renderTag(await api(`/analysis/tag/${encodeURIComponent(state.machine)}${q}`));
   else empty($("#tag"), "No machines on this line.");
-  flip(true);
+  FS.live(true);
 }
 
 /* The shift picker. Only the shifts the plant really has are offered: a
@@ -392,7 +385,7 @@ async function boot() {
 }
 
 function fail(error) {
-  flip(false);
+  FS.live(false);
   const banner = $("#banner");
   banner.textContent = error.message;
   banner.classList.remove("hidden");

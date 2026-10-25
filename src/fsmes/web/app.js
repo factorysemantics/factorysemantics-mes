@@ -223,14 +223,12 @@ async function refresh() {
   try {
     [summary, alarms, orderPage] = await Promise.all([
       api(summaryQuery()), api("/equipment/alarms"), api(orderQuery())]);
-    $("#live-dot").className = "dot ok";
-    $("#live-text").textContent = "live";
+    FS.live(true);
     render();
     loadLines();
   } catch (error) {
     if (error.message === "signed out") return;
-    $("#live-dot").className = "dot bad";
-    $("#live-text").textContent = "connection lost";
+    FS.live(false, "connection lost");
   }
 }
 

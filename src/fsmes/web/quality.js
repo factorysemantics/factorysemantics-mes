@@ -89,11 +89,6 @@ async function api(path, options = {}) {
   return data;
 }
 
-function live(ok) {
-  $("#live-dot").className = "dot" + (ok ? "" : " bad");
-  $("#live-text").textContent = ok ? "live" : "reconnecting…";
-}
-
 function toast(message, kind = "good") {
   const node = $("#toast");
   node.textContent = message;
@@ -695,9 +690,9 @@ async function refresh() {
       filters: { ...filters },
     };
     showInstruction();
-    live(true);
+    FS.live(true);
   } catch (err) {
-    live(false);
+    FS.live(false);
   }
 }
 

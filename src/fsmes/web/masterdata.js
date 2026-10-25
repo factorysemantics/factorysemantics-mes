@@ -22,13 +22,8 @@ const filters = { eqQ: "", eqLevel: "", eqOffset: 0, matQ: "", matType: "", matO
                   specQ: "", specMaterial: "", specOffset: 0, pQ: "", pRole: "", pOffset: 0 };
 const has = (text, q) => !q || text.toLowerCase().includes(q.toLowerCase());
 
-function live(ok) {
-  $("#live-dot").className = "dot" + (ok ? " ok" : " bad");
-  $("#live-text").textContent = ok ? "live" : "reconnecting…";
-}
-
 function fail(error) {
-  live(false);
+  FS.live(false);
   const banner = $("#banner");
   banner.textContent = error.message;
   banner.classList.remove("hidden");
@@ -338,7 +333,7 @@ const LOADERS = {
 
 function onTab(name) {
   clearInterval(timer);
-  const run = () => (LOADERS[name] || loadEquipment)().then(() => live(true)).catch(fail);
+  const run = () => (LOADERS[name] || loadEquipment)().then(() => FS.live(true)).catch(fail);
   run();
   timer = setInterval(run, 20000);
 }

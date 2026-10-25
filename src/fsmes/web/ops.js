@@ -30,11 +30,6 @@ async function api(path) {
   return data;
 }
 
-function live(ok) {
-  $("#live-dot").className = "dot" + (ok ? "" : " bad");
-  $("#live-text").textContent = ok ? "live" : "reconnecting…";
-}
-
 function renderPlant(plant) {
   const box = $("#plant-facts");
   box.textContent = "";
@@ -272,8 +267,8 @@ async function refresh() {
     renderComponents(out.components);
     window.__fsmesPageData = out;
     await Promise.all([loadLog(), loadActivity(), loadErp(), loadRetention()]);
-    live(true);
-  } catch (err) { live(false); }
+    FS.live(true);
+  } catch (err) { FS.live(false); }
 }
 
 $("#log-level").addEventListener("change", loadLog);
@@ -309,7 +304,7 @@ function applyQueryFilters() {
   $("#denied-who").textContent = `${me.name} (${me.role})`;
   $("#denied").classList.toggle("hidden", allowed);
   $("#ops-main").classList.toggle("hidden", !allowed);
-  if (!allowed) { live(true); return; }
+  if (!allowed) { FS.live(true); return; }
   await refresh();
   setInterval(refresh, 6000);
 })();

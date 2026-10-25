@@ -51,11 +51,6 @@ async function api(path, options = {}) {
    `[screens] toast_ms` is now the single number behind it. */
 const toast = (message, kind = "good") => window.FS.toast(message, kind);
 
-function live(ok) {
-  $("#live-dot").className = "dot" + (ok ? "" : " bad");
-  $("#live-text").textContent = ok ? "live" : "reconnecting…";
-}
-
 /* ---------- people ---------- */
 
 function renderUsers(users) {
@@ -362,9 +357,9 @@ async function refresh() {
     roleSelect.replaceChildren(new Option("Any role", ""), ...roles.map((r) => new Option(r.name, r.code)));
     if ([...roleSelect.options].some((o) => o.value === keep)) roleSelect.value = keep;
     renderRoutings();
-    live(true);
+    FS.live(true);
   } catch (err) {
-    live(false);
+    FS.live(false);
   }
 }
 
@@ -376,7 +371,7 @@ async function refresh() {
   $("#denied-who").textContent = `${me.name} (${me.role})`;
   $("#denied").classList.toggle("hidden", allowed);
   $("#admin-main").classList.toggle("hidden", !allowed);
-  if (!allowed) { live(true); return; }
+  if (!allowed) { FS.live(true); return; }
 
   const [caps, mats, equip] = await Promise.all([
     api("/admin/capabilities"), api("/masterdata/materials"), api("/masterdata/equipment"),

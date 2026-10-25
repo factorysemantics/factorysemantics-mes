@@ -23,11 +23,6 @@ function fatal(message) {
   $("#fatal").classList.remove("hidden");
 }
 
-function setLive(ok, text) {
-  $("#live-dot").className = `dot ${ok ? "ok" : "bad"}`;
-  $("#live-text").textContent = text;
-}
-
 /* --------------------------------------------------------------- the chrome */
 
 const STATES = ["running", "idle", "down", "setup", "unknown"];
@@ -202,9 +197,9 @@ async function main() {
       scene.applyStates(lastStations);
       renderStations(lastStations, names);
       renderReadout(flow, lastStations);
-      setLive(feed.connected, DEMO ? "recorded" : "live");
+      window.FS.live(feed.connected, DEMO ? "recorded" : "live");
     } else if (!feed.connected) {
-      setLive(false, "connection lost");
+      window.FS.live(false, "connection lost");
     }
   }
 
@@ -214,7 +209,7 @@ async function main() {
     window.__line = { scene, flow, feed, layout };
   }
 
-  setLive(true, DEMO ? "recorded" : "live");
+  window.FS.live(true, DEMO ? "recorded" : "live");
   requestAnimationFrame(frame);
 }
 
