@@ -13,10 +13,12 @@ PostgreSQL run - has always had VARCHAR here.
 
 The drift cost a real plant its Maintenance screen. Revision d7b4e92a1c58
 (2026-10-09) added `assigned` to `MaintenanceStatus` and wrote, in a comment,
-that nothing needed altering because the column was a VARCHAR. On a PostgreSQL
-plant created before that day and upgraded since, it was not:
+that nothing needed altering because the column was a VARCHAR. On every
+PostgreSQL plant whose schema came from the migrations - created before that
+day and upgraded, or created after it from nothing - it was not:
 `maintenance_orders.status` was the native type `maintenancestatus` holding
-`{due, in_progress, done, skipped}`. Every query that named `assigned`
+`{due, in_progress, done, skipped}`. The suite's PostgreSQL run never saw it
+because it builds its schema with `create_all`. Every query that named `assigned`
 failed with `invalid input value for enum maintenancestatus: "assigned"`, so
 `/maintenance/due`, `/shift` and `/roster` answered 500 and the screen sat at
 "reconnecting..." for good.

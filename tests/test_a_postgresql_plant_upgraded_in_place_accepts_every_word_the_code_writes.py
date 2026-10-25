@@ -5,8 +5,8 @@ domain model, so it never sees what the migrations made - and the migrations
 are the only way a real plant ever gets its schema. Early ones created nine
 status and kind columns as native PostgreSQL enums; the code declares them as
 plain text (`domain.common.str_enum`). When `assigned` joined
-`MaintenanceStatus` on 2026-10-09, every PostgreSQL plant older than that day
-refused the word, and the lab's Maintenance screen answered 500 for a fortnight
+`MaintenanceStatus` on 2026-10-09, every PostgreSQL plant built by the
+migrations - old and upgraded, or new - refused the word, and the lab's Maintenance screen answered 500 for a fortnight
 while every test here was green.
 
 So these tests run the shipped chain itself, into a schema of their own inside
