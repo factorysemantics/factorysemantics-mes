@@ -25,6 +25,18 @@ goes under Honesty with a migration line, so plant people can find it.
   test now runs the shipped migrations on PostgreSQL and fails if the database
   would refuse any value the code can write.
 
+- **The AI tab's header dot says "live" now, not "connecting…" forever.**
+  The page never told the dot anything, so it kept the words it was born
+  with. Every screen now sets the dot through one shared `FS.live`; the AI
+  tab sets it when a tab's list comes back, and "reconnecting…" when one
+  fails. Six other screens (Orders, Station, Quality, Ops, Admin,
+  Instructions) and Analysis said "live" with a grey dot; it is green now
+  like the rest.
+- **The orders page opens with the New-order form closed.** The permission
+  check that hides what a person may not use also *showed* everything they
+  may use, the closed form included. It now only takes away what it hid
+  itself.
+
 ## [0.4.1] — 2026-10-23
 
 ### Added
