@@ -93,16 +93,15 @@ text = "LOT-CAP-001"
 
 # The list of issues scrolls inside its own box — a hundred-odd rows on a
 # finished order — so the cap lot's row is brought into view rather than hoped
-# for: "start" puts it at the top of that box, and the offset puts the box
-# 300 px down the screen, so the row sits beside the finished lot and well
-# clear of the caption bar along the bottom.
+# for: with `scroll_text` the row goes to the top of that box, and the page
+# puts it 300 px down the screen (or as near as the page's end allows), beside
+# the finished lot and clear of the caption bar along the bottom.
 [[step]]
 do = "say"
 line = "The cap lot went in at the filler. And out came one finished lot, named for its order."
 hold = 4.5
 scroll_to = "#consumed li"
 scroll_text = "LOT-CAP-001"
-scroll_block = "start"
 scroll_offset = 300
 
 [[step]]
@@ -162,7 +161,6 @@ do = "hold"
 seconds = 2.5
 scroll_to = "#consumed li"
 scroll_text = "LOT-CAP-001"
-scroll_block = "start"
 scroll_offset = 300
 
 [[step]]

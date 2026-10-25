@@ -388,9 +388,12 @@ class BrowserStage:
     def scroll_to(self, selector: str, block: str, offset: int, text: str | None = None) -> None:
         # `text` picks, among everything the selector matches, the first whose
         # words contain it: the row about the cap lot in a list of a hundred
-        # issues, which sits inside a box that scrolls on its own. scrollIntoView
-        # scrolls that box as well as the page, so the row the caption is about
-        # is the row on screen.
+        # issues, which sits inside a box that scrolls on its own. That row is
+        # put at the top of its box, and then the page is scrolled to put the
+        # row `offset` pixels from the top of the window — as near as the page
+        # can, since a row near the foot of a short page cannot be lifted past
+        # the page's end. (The plain nudge below would push such a row down,
+        # under the caption bar, which is where the first takes left it.)
         self.page.evaluate(
             """([selector, block, offset, text]) => {
                  const nodes = [...document.querySelectorAll(selector)];
@@ -398,8 +401,18 @@ class BrowserStage:
                    ? nodes.find((n) => (n.innerText || '').includes(text))
                    : nodes[0];
                  if (!node) throw new Error('nothing to scroll to: ' + selector + (text ? ' saying ' + text : ''));
-                 node.scrollIntoView({ block, behavior: 'instant' });
-                 if (offset) window.scrollBy(0, -offset);
+                 if (!text) {
+                   node.scrollIntoView({ block, behavior: 'instant' });
+                   if (offset) window.scrollBy(0, -offset);
+                   return;
+                 }
+                 for (let box = node.parentElement; box && box !== document.body; box = box.parentElement) {
+                   if (/(auto|scroll)/.test(getComputedStyle(box).overflowY) && box.scrollHeight > box.clientHeight) {
+                     box.scrollTop += node.getBoundingClientRect().top - box.getBoundingClientRect().top;
+                     break;
+                   }
+                 }
+                 window.scrollBy(0, node.getBoundingClientRect().top - offset);
                }""",
             [selector, block, offset, text],
         )
