@@ -126,10 +126,11 @@ def upgrade() -> None:
     op.create_index("ix_maintenance_orders_assigned_to", "maintenance_orders",
                     ["assigned_to"])
 
-    # `assigned` joins the statuses a maintenance order can hold. Nothing to
-    # alter: the column is a VARCHAR (`native_enum=False`), which is exactly
-    # why - a native PostgreSQL enum would need an ALTER TYPE here and a plant
-    # mid-transaction could not have it.
+    # `assigned` joins the statuses a maintenance order can hold. This said
+    # "nothing to alter: the column is a VARCHAR", which is true of the code
+    # and of SQLite but was not true on PostgreSQL: f7d1a58e2c94 had made the
+    # column a native enum without `assigned`. Revision 2c6e817b9faf
+    # converts it (and eight like it) to VARCHAR, as this always assumed.
 
 
 def downgrade() -> None:
