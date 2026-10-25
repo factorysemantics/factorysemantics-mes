@@ -13,11 +13,6 @@ const { $, el, api, fmt } = window.FS;
 const REFRESH_MS = 5000;
 const under = new URL(location).searchParams.get("under") || "";
 
-function live(ok) {
-  $("#live-dot").className = "dot" + (ok ? " ok" : " bad");
-  $("#live-text").textContent = ok ? "live" : "reconnecting…";
-}
-
 function node(n, alarms) {
   const li = el("li");
   const row = el("div", "node");
@@ -123,9 +118,9 @@ async function refresh() {
       list.append(li);
     }
     window.__fsmesPageData = { under: under || null, scope: label, machines: codes.size, alarms: inAlarm };
-    live(true);
+    FS.live(true);
   } catch (err) {
-    live(false);
+    FS.live(false);
     const banner = $("#banner");
     banner.textContent = err.message;
     banner.classList.remove("hidden");

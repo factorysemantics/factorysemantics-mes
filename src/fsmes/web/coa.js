@@ -8,13 +8,8 @@ const { $, el, api, fmt, toast } = window.FS;
 
 let currentOrder = null;
 
-function live(ok) {
-  $("#live-dot").className = "dot" + (ok ? " ok" : " bad");
-  $("#live-text").textContent = ok ? "live" : "reconnecting…";
-}
-
 function fail(error) {
-  live(false);
+  FS.live(false);
   const banner = $("#banner");
   banner.textContent = error.message;
   banner.classList.remove("hidden");
@@ -113,5 +108,5 @@ async function loadList() {
   $("#list-material").addEventListener("change", () => { listOffset = 0; loadList().catch(fail); });
   const wanted = new URL(location).searchParams.get("order");
   if (wanted) { $("#q").value = wanted; await open(wanted).catch(fail); }
-  await loadList().then(() => live(true)).catch(fail);
+  await loadList().then(() => FS.live(true)).catch(fail);
 })().catch(fail);

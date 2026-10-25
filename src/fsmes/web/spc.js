@@ -69,13 +69,8 @@ let openSample = null;
    first time a reader switched characteristic. */
 let openLot = null;
 
-function live(ok) {
-  $("#live-dot").className = "dot" + (ok ? " ok" : " bad");
-  $("#live-text").textContent = ok ? "live" : "reconnecting…";
-}
-
 function fail(error) {
-  live(false);
+  FS.live(false);
   const banner = $("#banner");
   banner.textContent = error.message;
   banner.classList.remove("hidden");
@@ -1783,9 +1778,9 @@ async function openLotPanel(countId) {
     $("#point-body").hidden = true;
     $("#point-body").replaceChildren();
     $("#point-idle").hidden = false;
-    load().then(() => live(true)).catch(fail);
+    load().then(() => FS.live(true)).catch(fail);
   });
-  const run = () => load().then(() => live(true)).catch(fail);
+  const run = () => load().then(() => FS.live(true)).catch(fail);
   await run();
   timer = setInterval(run, REFRESH_MS);
 })().catch(fail);

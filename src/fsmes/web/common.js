@@ -279,11 +279,40 @@
   };
 
   /* Hide everything marked data-needs-cap that this person cannot use.
-     Capabilities, never role names - the ladder is dead. */
+     Capabilities, never role names - the ladder is dead.
+
+     The gate decides whether a control is *available*, never whether it is
+     *open*. It takes away only the `hidden` it put there itself: a popover
+     that starts closed (the orders page's New-order form) stays closed for
+     the person who may use it, until they press the button that opens it.
+     Until 2026-10-25 the gate turned `hidden` off every element it allowed,
+     and the orders page opened with the form already showing. */
   FS.applyCapGates = function applyCapGates(root = document) {
     root.querySelectorAll("[data-needs-cap]").forEach((node) => {
-      node.classList.toggle("hidden", !FS.can(node.dataset.needsCap));
+      if (!FS.can(node.dataset.needsCap)) {
+        if (!node.classList.contains("hidden")) {
+          node.classList.add("hidden");
+          node.dataset.capHidden = "1";
+        }
+      } else if (node.dataset.capHidden) {
+        delete node.dataset.capHidden;
+        node.classList.remove("hidden");
+      }
     });
+  };
+
+  /* The header's live dot, for every screen. buildHeader writes
+     "connecting…" once; after that it says what the page's own calls said:
+     `FS.live(true)` when a load came back, `FS.live(false)` when one failed.
+     No screen polls for the dot's sake - it reports the calls the page
+     already makes, and on a one-shot page it means the one read came back.
+     `text` is for the two screens with a word of their own (the floor's
+     "connection lost", the 3D line's "recorded"). */
+  FS.live = function live(ok, text) {
+    const dot = document.getElementById("live-dot");
+    const words = document.getElementById("live-text");
+    if (dot) dot.className = "dot" + (ok ? " ok" : " bad");
+    if (words) words.textContent = text || (ok ? "live" : "reconnecting…");
   };
 
   /* ---------- toast ---------- */

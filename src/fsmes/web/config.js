@@ -31,13 +31,8 @@ const FOCUS = new URLSearchParams(window.location.search).get("setting");
 /* The header's live dot belongs to every screen, and a screen that never
    sets it says "connecting…" for as long as it is open. This page asks the
    server once, so the dot means exactly that: the list below came back. */
-function live(ok) {
-  $("#live-dot").className = "dot" + (ok ? " ok" : " bad");
-  $("#live-text").textContent = ok ? "live" : "reconnecting…";
-}
-
 function fail(error) {
-  live(false);
+  FS.live(false);
   const banner = $("#banner");
   banner.textContent = error.message;
   banner.classList.remove("hidden");
@@ -350,5 +345,5 @@ function redraw() {
   FS.applyCapGates();
   $("#c-q").addEventListener("input", redraw);
   draw(await api(`/dashboard/config/${encodeURIComponent(DOMAIN)}/sections`));
-  live(true);
+  FS.live(true);
 })().catch(fail);

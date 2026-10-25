@@ -14,13 +14,8 @@ const ROW_PAGE = 100;
 let data = null;
 let rowOffset = 0;
 
-function live(ok) {
-  $("#live-dot").className = "dot" + (ok ? " ok" : " bad");
-  $("#live-text").textContent = ok ? "live" : "reconnecting…";
-}
-
 function fail(error) {
-  live(false);
+  FS.live(false);
   const banner = $("#banner");
   banner.textContent = error.message;
   banner.classList.remove("hidden");
@@ -125,7 +120,7 @@ async function refresh() {
     renderHealth(data.machines);
     renderRows();
     window.__fsmesPageData = data;
-    live(true);
+    FS.live(true);
   } catch (err) {
     fail(err);
   }

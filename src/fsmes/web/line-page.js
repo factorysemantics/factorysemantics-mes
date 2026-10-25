@@ -12,13 +12,8 @@ let lineCode = new URL(location).searchParams.get("line");
 let lines = [];
 let timer = null;
 
-function live(ok) {
-  $("#live-dot").className = "dot" + (ok ? " ok" : " bad");
-  $("#live-text").textContent = ok ? "live" : "reconnecting…";
-}
-
 function fail(error) {
-  live(false);
+  FS.live(false);
   const banner = $("#banner");
   banner.textContent = error.message;
   banner.classList.remove("hidden");
@@ -127,7 +122,7 @@ const LOADERS = { overview: refreshOverview, timeline: loadTimeline, analysis: (
 
 function onTab(name) {
   clearInterval(timer);
-  const run = () => (LOADERS[name] || LOADERS.overview)().then(() => live(true)).catch(fail);
+  const run = () => (LOADERS[name] || LOADERS.overview)().then(() => FS.live(true)).catch(fail);
   run();
   if (name === "overview") timer = setInterval(run, REFRESH_MS);
 }

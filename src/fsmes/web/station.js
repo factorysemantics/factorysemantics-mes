@@ -28,11 +28,6 @@ let qMaterial = null;      // the material those specs belong to
 // no orders in it (house rule: unknown is not zero).
 let anyOpenOrder = null;
 
-function live(ok) {
-  $("#live-dot").className = "dot" + (ok ? "" : " bad");
-  $("#live-text").textContent = ok ? "live" : "reconnecting…";
-}
-
 /* ---------- drawing only what changed ----------
 
    This screen re-reads the plant every few seconds and then stays open for
@@ -752,9 +747,9 @@ async function refresh() {
     await renderQuality();
     await renderMaintenance();
     window.__fsmesPageData = { machine, state: current, queue, anyOpenOrder };
-    live(true);
+    FS.live(true);
   } catch (err) {
-    live(false);
+    FS.live(false);
   }
 }
 

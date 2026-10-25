@@ -11,13 +11,8 @@ const { $, el, api, fmt, toast, kit } = window.FS;
 const REFRESH_MS = 15000;
 let timer = null;
 
-function live(ok) {
-  $("#live-dot").className = "dot" + (ok ? " ok" : " bad");
-  $("#live-text").textContent = ok ? "live" : "reconnecting…";
-}
-
 function fail(error) {
-  live(false);
+  FS.live(false);
   const banner = $("#banner");
   banner.textContent = error.message;
   banner.classList.remove("hidden");
@@ -190,7 +185,7 @@ const LOADERS = { board: loadBoard, promises: loadPromises, calendar: loadCalend
 
 function onTab(name) {
   clearInterval(timer);
-  const run = () => (LOADERS[name] || loadBoard)().then(() => live(true)).catch(fail);
+  const run = () => (LOADERS[name] || loadBoard)().then(() => FS.live(true)).catch(fail);
   run();
   timer = setInterval(run, REFRESH_MS);
 }

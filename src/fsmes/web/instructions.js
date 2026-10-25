@@ -39,11 +39,6 @@ function toast(message, kind = "good") {
   node._t = setTimeout(() => node.classList.add("hidden"), 4000);
 }
 
-function live(ok) {
-  $("#live-dot").className = "dot" + (ok ? "" : " bad");
-  $("#live-text").textContent = ok ? "live" : "reconnecting…";
-}
-
 /* A deliberately small Markdown subset: paragraphs, numbered and bulleted
    lists, bold, and the Purpose line. Everything the house style produces and
    nothing else - a parser that handles more is a parser with more to go
@@ -284,8 +279,8 @@ async function refresh() {
     catalogue = await api("/documents");
     if (!selected && catalogue.length) selected = catalogue[0].code;
     renderCatalogue();
-    live(true);
-  } catch (err) { live(false); }
+    FS.live(true);
+  } catch (err) { FS.live(false); }
 }
 
 (async function boot() {

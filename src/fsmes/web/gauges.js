@@ -13,13 +13,8 @@ const REFRESH_MS = 15000;
 let register = null;
 let selected = null;
 
-function live(ok) {
-  $("#live-dot").className = "dot" + (ok ? " ok" : " bad");
-  $("#live-text").textContent = ok ? "live" : "reconnecting…";
-}
-
 function fail(error) {
-  live(false);
+  FS.live(false);
   const banner = $("#banner");
   banner.textContent = error.message;
   banner.classList.remove("hidden");
@@ -155,7 +150,7 @@ function wire() {
   FS.applyCapGates();
   wire();
   for (const id of ["g-q", "g-state"]) $(`#${id}`).addEventListener("input", () => { gaugeOffset = 0; if (register) drawRegister(); });
-  const run = () => loadRegister().then(() => live(true)).catch(fail);
+  const run = () => loadRegister().then(() => FS.live(true)).catch(fail);
   await run();
   setInterval(run, REFRESH_MS);
 })().catch(fail);

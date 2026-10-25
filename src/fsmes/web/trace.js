@@ -10,13 +10,8 @@ const { $, el, api, fmt, toast } = window.FS;
 
 let current = { kind: null, code: null };
 
-function live(ok) {
-  $("#live-dot").className = "dot" + (ok ? " ok" : " bad");
-  $("#live-text").textContent = ok ? "live" : "reconnecting…";
-}
-
 function fail(error) {
-  live(false);
+  FS.live(false);
   const banner = $("#banner");
   banner.textContent = error.message;
   banner.classList.remove("hidden");
@@ -148,7 +143,7 @@ async function lookup(code) {
       if (!/404/.test(err.message) && !/not found|no unit/i.test(err.message)) throw err;
       await showLot(code);
     }
-    live(true);
+    FS.live(true);
   } catch (err) { fail(err); }
 }
 
@@ -194,7 +189,7 @@ function wire() {
   wire();
   const url = new URL(location);
   const serial = url.searchParams.get("serial"), lot = url.searchParams.get("lot");
-  if (serial) { $("#q").value = serial; await showSerial(serial).then(() => live(true)).catch(fail); }
-  else if (lot) { $("#q").value = lot; await showLot(lot).then(() => live(true)).catch(fail); }
-  else live(true);
+  if (serial) { $("#q").value = serial; await showSerial(serial).then(() => FS.live(true)).catch(fail); }
+  else if (lot) { $("#q").value = lot; await showLot(lot).then(() => FS.live(true)).catch(fail); }
+  else FS.live(true);
 })().catch(fail);

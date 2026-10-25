@@ -19,13 +19,8 @@ let machines = [];
 let completing = null;
 let timer = null;
 
-function live(ok) {
-  $("#live-dot").className = "dot" + (ok ? " ok" : " bad");
-  $("#live-text").textContent = ok ? "live" : "reconnecting…";
-}
-
 function fail(error) {
-  live(false);
+  FS.live(false);
   const banner = $("#banner");
   banner.textContent = error.message;
   banner.classList.remove("hidden");
@@ -832,7 +827,7 @@ const LOADERS = { due: loadDueTab, work: loadWork, plans: loadPlans, history: lo
 
 function onTab(name) {
   clearInterval(timer);
-  const run = () => (LOADERS[name] || loadDue)().then(() => live(true)).catch(fail);
+  const run = () => (LOADERS[name] || loadDue)().then(() => FS.live(true)).catch(fail);
   run();
   timer = setInterval(run, REFRESH_MS);
 }

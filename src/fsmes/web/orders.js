@@ -26,11 +26,6 @@ let dueBefore = "";
 let typing = null;
 const pageSize = 50;
 
-function live(ok) {
-  $("#live-dot").className = "dot" + (ok ? "" : " bad");
-  $("#live-text").textContent = ok ? "live" : "reconnecting…";
-}
-
 /* Yield is good / (good + scrap). Unknown when nothing has been booked -
    a step that has not run is not a step that failed. */
 function yieldOf(good, scrap) {
@@ -588,9 +583,9 @@ async function refresh() {
       filters: { filterStatus, filterText, filterMaterial, dueAfter, dueBefore, offset },
     };
     if (selected) await loadDetail();
-    live(true);
+    FS.live(true);
   } catch (err) {
-    live(false);
+    FS.live(false);
   }
 }
 

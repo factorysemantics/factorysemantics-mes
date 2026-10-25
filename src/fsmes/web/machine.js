@@ -27,13 +27,8 @@ let timelineData = null;
 let openStop = null;
 let stopVocabulary = null;
 
-function live(ok) {
-  $("#live-dot").className = "dot" + (ok ? " ok" : " bad");
-  $("#live-text").textContent = ok ? "live" : "reconnecting…";
-}
-
 function fail(error) {
-  live(false);
+  FS.live(false);
   const banner = $("#banner");
   banner.textContent = error.message;
   banner.classList.remove("hidden");
@@ -191,7 +186,7 @@ async function refreshNow() {
     renderTags(snap);
     renderAlarmHistory(back);
     window.__fsmesPageData = { head: h, tags: snap, alarms: back };
-    live(true);
+    FS.live(true);
   } catch (err) {
     fail(err);
   }

@@ -11,13 +11,8 @@ const REFRESH_MS = 5000;
 let setpoints = [];   // writable tags from the fabric
 let timer = null;
 
-function live(ok) {
-  $("#live-dot").className = "dot" + (ok ? " ok" : " bad");
-  $("#live-text").textContent = ok ? "live" : "reconnecting…";
-}
-
 function fail(error) {
-  live(false);
+  FS.live(false);
   const banner = $("#banner");
   banner.textContent = error.message;
   banner.classList.remove("hidden");
@@ -139,7 +134,7 @@ function wire() {
   wire();
   for (const id of ["q-status", "q-machine"]) $(`#${id}`).addEventListener("change", () => { queueOffset = 0; loadQueue().catch(fail); });
   await loadSetpoints().catch(fail);
-  const run = () => loadQueue().then(() => live(true)).catch(fail);
+  const run = () => loadQueue().then(() => FS.live(true)).catch(fail);
   await run();
   timer = setInterval(run, REFRESH_MS);
 })().catch(fail);

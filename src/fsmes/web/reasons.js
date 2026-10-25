@@ -22,13 +22,8 @@ const PAGE = 25;
 let rows = [];
 let offset = 0;
 
-function live(ok) {
-  $("#live-dot").className = "dot" + (ok ? " ok" : " bad");
-  $("#live-text").textContent = ok ? "live" : "reconnecting…";
-}
-
 function fail(error) {
-  live(false);
+  FS.live(false);
   const banner = $("#banner");
   banner.textContent = error.message;
   banner.classList.remove("hidden");
@@ -283,7 +278,7 @@ async function retireIt(row) {
   for (const id of ["v-q", "v-status"]) {
     $(`#${id}`).addEventListener("input", () => { offset = 0; draw(); });
   }
-  const run = () => load().then(() => live(true)).catch(fail);
+  const run = () => load().then(() => FS.live(true)).catch(fail);
   await run();
   setInterval(run, REFRESH_MS);
 })().catch(fail);
