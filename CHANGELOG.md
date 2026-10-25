@@ -10,6 +10,21 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The Maintenance screen loads again on a PostgreSQL plant.** Early
+  migrations had made nine status and kind columns native PostgreSQL enums;
+  when `assigned` became a maintenance status (0.3.0), no migration added it,
+  so every PostgreSQL plant whose schema came from `fsmes init-db` - new or
+  upgraded - refused the word, and
+  `/maintenance/due`, `/shift` and `/roster` answered 500 - the screen said
+  "reconnecting..." for good and the dispatcher could not assign work. A new
+  migration turns those columns into plain text, as the code always declared
+  them; run `fsmes init-db` (or `fsmes plant migrate`) after upgrading. No
+  data changes. SQLite plants were never affected. A
+  test now runs the shipped migrations on PostgreSQL and fails if the database
+  would refuse any value the code can write.
+
 ## [0.4.1] — 2026-10-23
 
 ### Added
