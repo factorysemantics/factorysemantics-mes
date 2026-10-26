@@ -2206,7 +2206,7 @@ def take(scene: dict, args, out: Path, final: Path, name: str, course, module, l
         at = ", ".join(f"{index} ({index / fps:.1f}s)" for index in missing[:8])
         print(f"  badge  MISSING from {len(missing)} of {len(colours)} GIF frames: {at}"
               f"{' …' if len(missing) > 8 else ''}; from {len(missing_on_film)} of {len(film)} mp4 frames")
-    print(f"  watch  mpv --loop {mp4}")
+    print(f"  watch  mpv --loop {final / mp4.name}")
 
     if not ok:
         raise SystemExit("the badge is not in every frame of the GIF and the mp4; the take cannot be published")
