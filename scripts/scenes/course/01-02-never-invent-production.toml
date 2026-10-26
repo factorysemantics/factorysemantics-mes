@@ -26,7 +26,8 @@ notes = [
   "The plant was started a few minutes before the camera rolled, from the bottling pack, at twenty times wall clock. The MES's OEE windows are wall clock, so an eight-hour window reaches back hours before this plant existed: that is the `before_first_sample` the hook shows, and it is true of any plant on its first morning.",
   "The camera waited, off camera, until the MES had watched FILL01 for 85% of the last fifteen minutes, so that the fifteen-minute figures are above the bottling pack's floor (`[oee] coverage_floor = 0.8`) when the lesson shows them, and the eight-hour and shift figures are below it.",
   "The fifteen-minute analysis view says it is showing a little less than a quarter of an hour: the line has not been watched for fifteen minutes yet, and the page says so rather than counting the rest as downtime.",
-  "Per-interval rows of the ledger are printed by `fsmes oee explain` and by no screen; the machine page shows the ledger's seconds by cause and names the command. The lesson shows that command's output as a terminal card, run against this take's plant as it was filmed.",
+  "Per-interval rows of the ledger are printed by `fsmes oee explain` and by no screen; the machine page shows the ledger's seconds by cause and names the command. The lesson shows that command's output as a terminal card, run against this take's plant as it was filmed. It asks for the last half hour, not fifteen minutes: by the time the card is shown the plant is a little over fifteen minutes old, so a fifteen-minute window would be watched end to end and have no not-observed row to show.",
+  "The shift rollup is the plant's current shift by its own clock, so this scene films only when that shift is well under way: in a shift younger than about half an hour this young plant has watched most of it, nothing is withheld, and the recorder stops at that step and films nothing. The first attempt at this take, at 18:04, stopped there for exactly that reason.",
   "The header's navigation wraps to two rows at 1280 px wide. It is filmed as the product draws it.",
 ]
 
@@ -220,13 +221,13 @@ line = "And the footnote names the command that prints every row of it."
 do = "slide"
 name = "oee-explain"
 title = "Every second, and the rule that put it there"
-command = ["oee", "explain", "FILL01", "15m"]
+command = ["oee", "explain", "FILL01", "30m"]
 stop_after = "interval(s)"
 hold = 1.5
 
 [[step]]
 do = "say"
-line = "fsmes oee explain: every interval of the window, its disposition, and the rule behind it."
+line = "fsmes oee explain, over the last half hour: every interval of the window, its disposition, and the rule behind it."
 
 [[step]]
 do = "say"
@@ -244,7 +245,7 @@ line = "A plant engineer who disagrees with the figure can point at the interval
 do = "slide"
 name = "oee-explain-totals"
 title = "The seconds add up to the window"
-command = ["oee", "explain", "FILL01", "15m"]
+command = ["oee", "explain", "FILL01", "30m"]
 start_at = "interval(s)"
 stop_after = "availability"
 hold = 1.5
@@ -275,7 +276,7 @@ scroll_offset = 260
 
 [[step]]
 do = "say"
-line = "Now the shift rollup: the whole day shift, most of it before this plant existed."
+line = "Now the shift rollup: the current shift, most of it before this plant existed."
 
 [[step]]
 do = "say"

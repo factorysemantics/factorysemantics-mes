@@ -129,6 +129,20 @@ def test_every_terminal_card_in_the_lesson_runs_only_oee_explain(runner):
     assert all(step["command"][:2] == ["oee", "explain"] for step in cards)
 
 
+def test_the_ledger_card_asks_for_a_window_older_than_the_plant_can_be_when_it_is_shown(runner):
+    # The camera rolls at 85% of fifteen minutes watched, so the plant is about
+    # thirteen minutes old; the card comes a few minutes later. A fifteen-minute
+    # window was watched end to end by then (take one's first attempt showed it)
+    # and the caption about its not-observed top row would have been false.
+    scene = runner.load_scene(SCENE)
+    cards = [step for step in scene["step"] if step.get("command")]
+    rolls_at = scene["plant"]["roll_when_watched"]["hours"] * 60
+
+    for card in cards:
+        minutes = int(card["command"][3].removesuffix("m"))
+        assert minutes >= 2 * rolls_at, card["name"]
+
+
 def test_no_caption_calls_the_stale_tag_or_a_young_plant_a_disconnection(runner):
     scene = runner.load_scene(SCENE)
     said = " ".join(runner.script_lines(scene)).lower()
