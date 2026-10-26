@@ -29,7 +29,9 @@ def register(mcp, call, write, identify) -> dict:
     def where_used(plant: str, lot: str) -> dict:
         """Every package carrying a lot - the recall question, answered as
         pallets and cases a warehouse can actually pull rather than a list of
-        ten thousand bottle serials."""
+        ten thousand bottle serials - and every order that drew on the lot,
+        with the station, quantity, time and the lots that order made, for a
+        line that books by the lot rather than by the unit."""
         return {"plant": plant, **call(plant, "GET", f"/trace/where-used/{lot}")}
 
     @mcp.tool()

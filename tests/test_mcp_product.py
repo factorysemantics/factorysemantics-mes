@@ -851,3 +851,23 @@ def test_there_is_still_no_tool_that_approves_a_document(wired):
     names = {tool.name for tool in asyncio.run(mcp_server.mcp.list_tools())}
     assert {"revise_document", "create_document", "draft_instruction"} <= names
     assert not [n for n in names if "approve" in n or "withdraw" in n]
+
+
+def test_the_where_used_tool_names_the_orders_that_drew_on_a_lot_no_unit_carries(wired, session):
+    """A line that books by the lot: the agent asked where a lot went gets
+    the orders that drew on it and the lots they made, as the page does."""
+    from fsmes.services import execution, workorders
+
+    order = workorders.create(session, code="WO-MCP-LOT", material_code="FG-COLA", quantity=10)
+    workorders.release(session, "WO-MCP-LOT")
+    execution.consume(session, order_code="WO-MCP-LOT", lot_code="LOT-SUGAR-001", quantity=5, seq=10)
+    execution.create_lot(session, code="WO-MCP-LOT-FG", material_code="FG-COLA", quantity=10,
+                         produced_by_order=order)
+    session.flush()
+
+    found = mcp_server.where_used("testplant", "LOT-SUGAR-001")
+
+    assert found["units_affected"] == 0 and found["orders_total"] == 1
+    assert found["orders"][0]["order"] == "WO-MCP-LOT"
+    assert found["orders"][0]["stations"][0]["station"] == "MIX01"
+    assert [m["lot"] for m in found["orders"][0]["lots_made"]] == ["WO-MCP-LOT-FG"]

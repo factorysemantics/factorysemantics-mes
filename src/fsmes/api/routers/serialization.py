@@ -114,10 +114,12 @@ def trace(serial: str, db: DbDep) -> dict:
 
 @router.get("/where-used/{lot_code}")
 def where_used(lot_code: str, db: DbDep) -> dict:
-    """Every package carrying a lot.
+    """Every package carrying a lot, and every order that drew on it.
 
     The recall question, answered as packages rather than units: a warehouse
     holds pallets, and a list of ten thousand bottle serials is not an
-    instruction anybody can act on.
+    instruction anybody can act on. A line that books by the lot has no
+    packages to name, so `orders` lists the orders that consumed the lot -
+    where, how much, when - and the lots each of them made.
     """
     return serialization.where_used(db, lot_code)
