@@ -10,6 +10,17 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ## [Unreleased]
 
+### Added
+
+- **The trace page answers "where did this lot go" on a line that books by
+  the lot.** Asked about a lot, Quality › Trace now lists the orders that
+  drew on it - the station it went in at, how much, when, the order's
+  status - and the lots each of those orders made, above the serialised
+  packages it listed before. A bottling line that serialises nothing used
+  to get "nothing serialised carries LOT-CAP-001" and an empty table.
+  `GET /trace/where-used/{lot}` and the MCP `where_used` tool carry the same
+  list as `orders`, with `orders_total`.
+
 ## [0.4.2] — 2026-10-26
 
 ### Fixed
