@@ -99,8 +99,10 @@ def test_the_patch_that_is_sampled_is_inside_the_badge_and_not_the_page_beside_i
     left, top = x * width, y * height
     assert left + w * width <= width - runner.BADGE_RIGHT, "sampling past the badge's right edge"
     assert left >= width - runner.BADGE_RIGHT - 200, "sampling away off to the left of any badge"
-    assert top >= height - runner.BADGE_BOTTOM - runner.BADGE_HEIGHT
-    assert top + h * height <= height - runner.BADGE_BOTTOM
+    # The badge sits at the top right, out of the avatar's corner at the bottom right.
+    assert top >= runner.BADGE_TOP
+    assert top + h * height <= runner.BADGE_TOP + runner.BADGE_HEIGHT
+    assert top + h * height < height - runner.AVATAR_HEIGHT, "sampling inside the avatar's corner"
     # Scaled down to the GIF's width, the patch is still several pixels across.
     assert w * 900 >= 4 and h * 500 >= 4
 
@@ -145,7 +147,7 @@ def test_the_frame_sampler_reads_a_real_film_and_can_tell_the_two_apart(runner, 
     film = tmp_path / f"{'with' if with_badge else 'without'}.gif"
     red, green, blue = runner.BADGE_BACKGROUND
     box = (
-        f",drawbox=x={width - runner.BADGE_RIGHT - 300}:y={height - runner.BADGE_BOTTOM - runner.BADGE_HEIGHT}"
+        f",drawbox=x={width - runner.BADGE_RIGHT - 300}:y={runner.BADGE_TOP}"
         f":w=300:h={runner.BADGE_HEIGHT}:color=0x{red:02x}{green:02x}{blue:02x}@1:t=fill"
         if with_badge
         else ""

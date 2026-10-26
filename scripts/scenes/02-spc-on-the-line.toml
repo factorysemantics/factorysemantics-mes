@@ -10,7 +10,13 @@
 
 name = "spc-on-the-line"
 title = "SPC on the line"
-out = "~/Work/gifs/mes-fundamentals/02-spc-on-the-line"
+# This take is the teaser of lesson 2.1 of the class, *SPC: the chart notices before people do*
+# (scripts/course/course.toml): it films into that lesson's folder in the
+# course tree, and the lesson itself, the five-minute one, is filmed later from
+# a scene of its own. Every step of this take is the lesson's hook.
+lesson = "2.1"
+take_is = "teaser"
+part = "hook"
 base = "http://127.0.0.1:8010"
 badge = "pre-alpha · simulated plant · v{version}"
 # Forty-five seconds of mp4 — the whole take, which is what `mpv --loop`

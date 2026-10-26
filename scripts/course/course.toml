@@ -1,0 +1,166 @@
+# The class: five modules, eighteen lessons, in the order they are taught.
+#
+# `scripts/record-scene.py --course` turns this file, and the lesson folders
+# already filmed, into `course.json` and the README at the top of the tree
+# (`out` below). Nobody edits course.json by hand. A lesson's scene names its
+# lesson with `lesson = "2.1"`; the folder it films into is
+# `<out>/NN-<module slug>/NN-<lesson slug>/`, numbered by the order here.
+#
+# A slug never changes once a lesson is published: studio, the dashboard and
+# the website find a lesson by it. The titles and lines come from the
+# accepted syllabus (2026-10-26); `outcomes` are the "you now know" lines and
+# are written when a lesson is written, not before — an empty list says not
+# yet, not none.
+
+[course]
+slug = "fsmes-class"
+title = "FactorySemantics MES — the class"
+voice = "Brian"
+status_line = "pre-alpha · simulated plant"
+out = "~/Work/gifs/course"
+
+# ------------------------------------------------------------------ module 1
+[[module]]
+order = 1
+slug = "what-an-mes-is-for"
+title = "What an MES is for"
+
+[[module.lesson]]
+order = 1
+slug = "the-plant-between-erp-and-machines"
+title = "The plant between the ERP and the machines"
+one_line = "What an MES records that neither the ERP nor the machines can."
+
+[[module.lesson]]
+order = 2
+slug = "never-invent-production"
+title = "Never invent production"
+one_line = "The MES counts what the machine counted, and says unknown when it did not see."
+outcomes = [
+  "Say what coverage means on any FactorySemantics screen.",
+  "Explain why a figure reads 'unknown' and why that is not a bug.",
+  "Find the coverage number on the shift rollup.",
+]
+knows_before = ["1.1"]
+
+[[module.lesson]]
+order = 3
+slug = "a-work-orders-day"
+title = "A work order's day"
+one_line = "Release, routing, station to station, finish."
+scene = "scripts/scenes/04-work-orders-and-routings.toml"
+
+# ------------------------------------------------------------------ module 2
+[[module]]
+order = 2
+slug = "quality-on-the-line"
+title = "Quality on the line"
+
+[[module.lesson]]
+order = 1
+slug = "spc-the-chart-notices-first"
+title = "SPC: the chart notices before people do"
+one_line = "A reading drops, the rule fires, and the hold raises itself."
+scene = "scripts/scenes/02-spc-on-the-line.toml"
+
+[[module.lesson]]
+order = 2
+slug = "holds-nonconformances-and-who-decides"
+title = "Holds, nonconformances and who decides"
+one_line = "Review, severity, disposition; the severity list is the plant's own."
+
+[[module.lesson]]
+order = 3
+slug = "capability-and-when-it-is-withheld"
+title = "Capability, and why the number is sometimes withheld"
+one_line = "Cp and Cpk, honestly."
+
+[[module.lesson]]
+order = 4
+slug = "trace-the-lot"
+title = "Trace the lot"
+one_line = "From a finished unit back to the material and the machine, and forward to where a bad lot went."
+
+# ------------------------------------------------------------------ module 3
+[[module]]
+order = 3
+slug = "the-machines"
+title = "The machines"
+
+[[module.lesson]]
+order = 1
+slug = "reading-a-machine-over-opc-ua"
+title = "Reading a machine over OPC UA, read-only"
+one_line = "Browse, verify, and values landing as events."
+
+[[module.lesson]]
+order = 2
+slug = "losing-sight-of-a-machine"
+title = "Losing sight of a machine"
+one_line = "What the MES shows when the connection drops, and what it refuses to guess."
+
+[[module.lesson]]
+order = 3
+slug = "downtime-and-reason-codes"
+title = "Downtime and reason codes"
+one_line = "The station screen offers the plant's own reasons, and someone approves the list."
+
+[[module.lesson]]
+order = 4
+slug = "oee-and-its-three-losses"
+title = "OEE and its three losses"
+one_line = "Availability, performance, quality, and the one that reads no figure."
+
+# ------------------------------------------------------------------ module 4
+[[module]]
+order = 4
+slug = "the-shift-and-the-business"
+title = "The shift and the business"
+
+[[module.lesson]]
+order = 1
+slug = "from-floor-data-to-a-shift-rollup"
+title = "From floor data to a shift rollup"
+one_line = "The shift picker, and what coverage means for every number on the page."
+
+[[module.lesson]]
+order = 2
+slug = "the-erp-handoff"
+title = "The ERP handoff"
+one_line = "Confirmations going back; the file exchange and the live connector are two different things."
+
+[[module.lesson]]
+order = 3
+slug = "digital-work-instructions"
+title = "Digital work instructions"
+one_line = "The approved revision is in force; a draft is not an instruction until someone signs it."
+
+[[module.lesson]]
+order = 4
+slug = "one-plant-on-two-boxes"
+title = "One plant on two boxes"
+one_line = "Pull the plug on one copy, and nothing is counted twice."
+
+# ------------------------------------------------------------------ module 5
+[[module]]
+order = 5
+slug = "asking-the-plant"
+title = "Asking the plant"
+
+[[module.lesson]]
+order = 1
+slug = "the-chat-on-the-ai-tab"
+title = "The chat on the AI tab"
+one_line = "Ask a plain question about a chart, and see what it records about who asked."
+
+[[module.lesson]]
+order = 2
+slug = "the-mcp-tool-interface"
+title = "The MCP tool interface"
+one_line = "A client connects and asks in plain words; the plant's tools answer, and it never faces the internet."
+
+[[module.lesson]]
+order = 3
+slug = "running-it-on-your-own-box"
+title = "Running it on your own box"
+one_line = "Install it, run the demo, ask the doctor, on Windows and Linux."
