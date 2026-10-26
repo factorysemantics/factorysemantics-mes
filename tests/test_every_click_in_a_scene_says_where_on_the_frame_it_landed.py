@@ -4,7 +4,8 @@ Whoever lays a click effect over a clip needs to know where to put it, and a
 mark that says only `click #no-cancel` at 1.73 s does not say. The runner knows:
 the viewport is the video's frame, and the element it clicks has a box. These
 tests film a tiny scene — buttons near the top, one below the fold that has to
-be scrolled to, and a link that leaves the page — against a stand-in for a
+be scrolled to, one sitting under a fixed header when the click is sent, and a
+link that leaves the page — against a stand-in for a
 plant served from this test, and read marks.json's content back. The page
 reports, by a plain GET, the `clientX`/`clientY` of every click it really
 received, so the `x`, `y` in the marks are checked against where the click
@@ -37,6 +38,8 @@ BUTTONS = (
     + "<button id='near' style='position:absolute;left:100px;top:80px;width:120px;height:40px'>near</button>"
     + "<button id='right' style='position:absolute;left:1100px;top:300px;width:61px;height:31px'>right</button>"
     + "<button id='far' style='position:absolute;left:600px;top:1800px;width:200px;height:60px'>far</button>"
+    + "<button id='covered' style='position:absolute;left:300px;top:1400px;width:100px;height:30px'>covered</button>"
+    + "<header style='position:fixed;left:0;right:0;top:0;height:60px;background:#222;z-index:5'>header</header>"
     + "<a id='away' href='/dashboard/other' style='position:absolute;left:400px;top:2100px'>away</a>"
     + "<div style='height:2600px'></div>"
 )
@@ -66,6 +69,15 @@ selector = "#right"
 [[step]]
 do = "click"
 selector = "#far"
+
+# Put the button under the fixed header, as a sticky header covers a button on
+# the orders page: Playwright scrolls again before it clicks, so a point
+# measured before the click would be a point on the header.
+[[step]]
+do = "click"
+selector = "#covered"
+scroll_to = "#covered"
+scroll_block = "start"
 
 [[step]]
 do = "click"
@@ -161,14 +173,14 @@ def test_every_click_mark_carries_the_pixel_of_the_frame_it_landed_on(runner, pl
         assert key in written, f"{key} is read by studio and stays"
 
     clicked = [mark for mark in written["marks"] if mark["what"].startswith("click")]
-    assert len(clicked) == 5, f"five clicks in the scene, {len(clicked)} marked"
+    assert len(clicked) == 6, f"six clicks in the scene, {len(clicked)} marked"
     for mark in clicked:
         assert isinstance(mark["x"], int) and isinstance(mark["y"], int), mark
         assert 0 <= mark["x"] < 1280 and 0 <= mark["y"] < 720, f"outside the frame: {mark}"
         assert isinstance(mark["at"], float), "the time is measured as it always was"
 
     # Where the page itself says each click landed, in the order they were sent.
-    assert len(clicks) == 5, f"the page heard {len(clicks)} clicks"
+    assert len(clicks) == 6, f"the page heard {len(clicks)} clicks"
     for mark, (x, y) in zip(clicked, clicks, strict=True):
         assert abs(mark["x"] - x) <= 1 and abs(mark["y"] - y) <= 1, (
             f"{mark['what']}: marked at {mark['x']},{mark['y']}, landed at {x},{y}"
@@ -179,13 +191,9 @@ def test_every_click_mark_carries_the_pixel_of_the_frame_it_landed_on(runner, pl
     # The two that did not need scrolling sit exactly where the page put them.
     assert (clicked[0]["x"], clicked[0]["y"]) == (160, 100)
     assert (clicked[1]["x"], clicked[1]["y"]) == (1130, 315)
-
-
-def test_a_click_point_is_the_middle_of_the_box_in_whole_pixels_rounded_down(runner):
-    assert runner.click_point({"x": 100, "y": 80, "width": 120, "height": 40}) == (160, 100)
-    assert runner.click_point({"x": 1100, "y": 300, "width": 61, "height": 31}) == (1130, 315), (
-        "rounded down, as the browser reports the click to the page"
-    )
+    # And the one the header covered was clicked below the header, where the button had moved to.
+    assert clicked[3]["what"] == "click #covered"
+    assert clicked[3]["x"] == 350 and clicked[3]["y"] > 60, clicked[3]
 
 
 def test_a_file_that_is_not_a_gif_is_not_measured_as_one(runner, tmp_path):

@@ -341,8 +341,10 @@ def overlay_script(badge: str) -> str:
 class BrowserStage:
     """The page being filmed, and the clock every mark is measured against."""
 
-    def __init__(self, page, out: Path, started: float) -> None:
+    def __init__(self, page, out: Path, started: float, presses: list | None = None) -> None:
         self.page = page
+        #: (x, y) of every press the page reported, in order; see `listen_for_presses`.
+        self.presses: list[tuple[int, int]] = presses if presses is not None else []
         self.out = out
         self.started = started
         self.marks: list[dict] = []
@@ -366,27 +368,25 @@ class BrowserStage:
 
     def click(self, selector: str) -> None:
         # Where the click lands, on the frame, for whoever lays a click effect
-        # over the clip. The viewport is the video's frame (`record_video_size`
-        # is the viewport), so a point in the page's viewport is a pixel of the
-        # mp4. Playwright scrolls the element into view and clicks the middle
-        # of its box; doing the scroll first and measuring after it is reading
-        # that same point, not guessing it. The mark's `at` is still the moment
-        # the click returned, as it always was — studio has aligned to it.
-        target = self.page.locator(selector).first
-        x = y = None
-        try:
-            target.scroll_into_view_if_needed(timeout=WAIT_TIMEOUT_SECONDS * 1000)
-            box = target.bounding_box()
-            if box:
-                x, y = click_point(box)
-        except Exception:  # a mark that cannot be measured says so; the click itself decides the take
-            pass
-        target.click()
-        if x is None:
-            self.note(f"click {selector} (where it landed could not be measured)", x=None, y=None)
-        else:
-            self.note(f"click {selector}", x=x, y=y)
+        # over the clip. It is not predicted from the element's box: Playwright
+        # scrolls again when something sits over the element — the sticky
+        # header over the Release button, in scene 04 — and a point measured
+        # before that is a point on the header. The page says where it was
+        # pressed (`listen_for_presses`), in the viewport's pixels, which are
+        # the mp4's: `record_video_size` is the viewport. The mark's `at` is
+        # still the moment the click returned, as it always was.
+        heard = len(self.presses)
+        self.page.click(selector)
+        self.note(f"click {selector}", x=None, y=None)
+        mark = self.marks[-1]
+        # The page's report arrives while Playwright is waiting on anything,
+        # and this short wait was here before the report was.
         self.page.wait_for_timeout(int(SMALL_STEP_SECONDS * 1000))
+        if len(self.presses) > heard:
+            mark["x"], mark["y"] = self.presses[heard]
+        else:
+            mark["what"] += " (where it landed was not heard from the page, so it is not given)"
+        print(f"         at {mark['x']},{mark['y']}", flush=True)
 
     def wait_for(self, step: dict, timeout: float) -> None:
         waited = time.monotonic()
@@ -445,13 +445,25 @@ class BrowserStage:
         self.page.wait_for_timeout(int(SCROLL_SECONDS * 1000))
 
 
-def click_point(box: dict) -> tuple[int, int]:
-    """The middle of an element's box, in whole pixels — where Playwright clicks it.
+#: The name the page calls to say where it was pressed.
+PRESS_BINDING = "__scenePressedAt"
 
-    Rounded down, as Chromium does when it hands the page the click: a button
-    whose middle is at 1130.5 hears a click at 1130.
+
+def listen_for_presses(context, presses: list) -> None:
+    """Have every page of the take say where each press landed, into `presses`.
+
+    A press is listened for rather than a click, and in the capture phase,
+    because a button that takes itself away on the press (or a page that
+    navigates on it) still reports the press. The point is `clientX`/`clientY`,
+    rounded down: a pixel of the viewport, which is a pixel of the frame.
     """
-    return math.floor(box["x"] + box["width"] / 2), math.floor(box["y"] + box["height"] / 2)
+    context.expose_binding(PRESS_BINDING, lambda _source, x, y: presses.append((int(x), int(y))))
+    context.add_init_script(
+        "addEventListener('pointerdown', (e) => { try { window."
+        + PRESS_BINDING
+        + "(Math.floor(e.clientX), Math.floor(e.clientY)); } catch (err) { /* a mark is not worth a take */ } },"
+        " true);"
+    )
 
 
 def wait_expression(step: dict) -> str:
@@ -1230,6 +1242,8 @@ def record(scene: dict, out: Path) -> dict:
                 "set `user` and `password` in the scene, or MES_SCENE_PASSWORD"
             )
         context.add_init_script(overlay_script(badge))
+        presses: list[tuple[int, int]] = []
+        listen_for_presses(context, presses)
 
         page = context.new_page()
         # A scene films a plant that is not this script's to change. Anything
@@ -1239,7 +1253,7 @@ def record(scene: dict, out: Path) -> dict:
             if request.method not in ("GET", "HEAD") else None
         ))
 
-        stage = BrowserStage(page, out, time.monotonic())
+        stage = BrowserStage(page, out, time.monotonic(), presses)
         page.goto(f"{base}/dashboard", wait_until="load")
 
         scene_with_base = dict(scene)
