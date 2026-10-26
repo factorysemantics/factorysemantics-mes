@@ -16,7 +16,8 @@ thing is once the page has gone still — which is not the press point when the
 page moves after the press (the orders page does, when it draws the order a
 row opened). So `x`, `y` is that settled place, `press` keeps the press, and
 `moved` says when the two differ. One button here scrolls the page 140 px
-after it is pressed; one takes itself away; one link leaves the page.
+after it is pressed; one is drawn again, lower, in a new node; one takes itself away; one link
+leaves the page.
 
 No plant and no ffmpeg are needed: `record()` films with Chromium alone, and
 the GIF whose size marks.json reports is written by hand here, because the GIF
@@ -50,6 +51,9 @@ BUTTONS = (
     + " onclick='setTimeout(() => window.scrollBy(0, 140), 80)'>jumps</button>"
     + "<button id='vanish' style='position:absolute;left:800px;top:400px;width:60px;height:20px'"
     + " onclick='this.remove()'>vanish</button>"
+    + "<button id='redrawn' style='position:absolute;left:900px;top:600px;width:100px;height:30px'"
+    + " onclick='setTimeout(() => { this.outerHTML = this.outerHTML.replace(\"top:600px\", \"top:700px\"); }, 60)'"
+    + ">redrawn</button>"
     + "<header style='position:fixed;left:0;right:0;top:0;height:60px;background:#222;z-index:5'>header</header>"
     + "<a id='away' href='/dashboard/other' style='position:absolute;left:400px;top:2100px'>away</a>"
     + "<div style='height:2600px'></div>"
@@ -86,6 +90,12 @@ selector = "#jumps"
 [[step]]
 do = "click"
 selector = "#vanish"
+
+# A page that draws the clicked thing again, 100 px lower, as the orders page
+# draws its list and its buttons again: the node pressed is not the node shown.
+[[step]]
+do = "click"
+selector = "#redrawn"
 
 [[step]]
 do = "click"
@@ -195,7 +205,7 @@ def test_every_click_mark_carries_the_pixel_of_the_frame_it_landed_on(runner, pl
 
     clicked = {mark["what"].removeprefix("click "): mark
                for mark in written["marks"] if mark["what"].startswith("click")}
-    order = ["#near", "#right", "#jumps", "#vanish", "#far", "#covered", "#away", "#there"]
+    order = ["#near", "#right", "#jumps", "#vanish", "#redrawn", "#far", "#covered", "#away", "#there"]
     assert list(clicked) == order, f"{len(clicked)} clicks marked of the {len(order)} in the scene"
     for mark in clicked.values():
         assert isinstance(mark["x"], int) and isinstance(mark["y"], int), mark
@@ -213,7 +223,7 @@ def test_every_click_mark_carries_the_pixel_of_the_frame_it_landed_on(runner, pl
         assert abs(press["x"] - x) <= 1 and abs(press["y"] - y) <= 1, (
             f"{name}: press marked at {press}, landed at {x},{y}"
         )
-        if name != "#jumps":
+        if name not in ("#jumps", "#redrawn"):
             assert abs(mark["x"] - x) <= 1 and abs(mark["y"] - y) <= 1, (
                 f"{name}: marked at {mark['x']},{mark['y']}, landed at {x},{y}"
             )
@@ -233,6 +243,11 @@ def test_every_click_mark_carries_the_pixel_of_the_frame_it_landed_on(runner, pl
     assert (jumps["x"], jumps["y"]) == (550, 380), jumps
     assert jumps["moved"] is True
     assert "settled" not in jumps, "it went still, so its place was measured, not given up on"
+
+    # The button drawn again in a new node, 100 px lower: measured where the new one is.
+    redrawn = clicked["#redrawn"]
+    assert (redrawn["x"], redrawn["y"]) == (redrawn["press"]["x"], redrawn["press"]["y"] + 100), redrawn
+    assert redrawn["moved"] is True and "settled" not in redrawn, redrawn
 
     # A button that takes itself away, and a link that leaves the page: the press is all there is.
     for name in ("#vanish", "#away"):

@@ -392,7 +392,7 @@ class BrowserStage:
         self.note(f"click {selector}", x=None, y=None)
         mark = self.marks[-1]
         begun = time.monotonic()
-        settled = settled_centre(clicked)
+        settled = settled_centre(self.page, clicked, selector)
         # The page's report arrives while Playwright is waiting on anything,
         # and this short wait was here before the report was.
         rest = SMALL_STEP_SECONDS - (time.monotonic() - begun)
@@ -468,6 +468,8 @@ class BrowserStage:
 #: still moving after the cap is reported as still moving, at its last place.
 STILL_FOR_SECONDS = 0.15
 STILL_WITHIN_SECONDS = 2.0
+#: How long a clicked element that left the page is looked for, drawn again, before it is called gone.
+REDRAWN_WITHIN_SECONDS = 0.3
 #: A settled point further than this from the press, in either direction, means
 #: the page moved between the press and the frames after it.
 MOVED_PIXELS = 4
@@ -476,19 +478,19 @@ SETTLE_SCRIPT = """
 (el, [stillFor, within]) => new Promise((resolve) => {
   const begun = performance.now();
   const look = () => {
-    if (!el.isConnected) return null;
+    if (!el.isConnected) return { gone: 'detached' };
     const box = el.getBoundingClientRect();
-    if (box.width === 0 && box.height === 0) return null;
+    if (box.width === 0 && box.height === 0) return { gone: 'not shown' };
     return {
       x: Math.floor(box.left + box.width / 2),
       y: Math.floor(box.top + box.height / 2),
       key: [scrollX, scrollY, box.left, box.top, box.width, box.height].join(','),
     };
   };
-  let last = look(), since = performance.now(), frames = 0;
+  let last = null, since = performance.now(), frames = 0;
   const tick = () => {
     const now = look();
-    if (!now) return resolve({ gone: true });
+    if (now.gone) return resolve(now);
     if (!last || now.key !== last.key) { last = now; since = performance.now(); frames = 0; }
     else frames += 1;
     const t = performance.now();
@@ -501,20 +503,42 @@ SETTLE_SCRIPT = """
 """
 
 
-def settled_centre(handle) -> dict:
-    """Where `handle`'s centre sits, in viewport pixels, once the page is still.
+def settled_centre(page, handle, selector: str) -> dict:
+    """Where the clicked element's centre sits, in viewport pixels, once the page is still.
 
     Still means the window's scroll and the element's box have not changed for
-    `STILL_FOR_SECONDS` and at least two animation frames. Returns `{"x", "y",
-    "still"}`, or `{"gone": True}` when the element is no longer on the page,
-    is not shown, or the page it was on has been left.
+    `STILL_FOR_SECONDS` and at least two animation frames. A page that answers
+    a click by drawing its list or its buttons again replaces the very node
+    that was clicked (the orders page does both), so when the node leaves the
+    page the selector is asked again, for the one drawn in its place, for as
+    long as `STILL_WITHIN_SECONDS` allows. Returns `{"x", "y", "still"}`, or
+    `{"gone": <why>}` when nothing the selector names is on the page any more,
+    it is not shown, or the page it was on has been left.
     """
-    if handle is None:
-        return {"gone": True}
-    try:
-        return handle.evaluate(SETTLE_SCRIPT, [STILL_FOR_SECONDS * 1000, STILL_WITHIN_SECONDS * 1000])
-    except Exception:  # the page navigated away, or the node was collected
-        return {"gone": True}
+    begun = time.monotonic()
+    gone = "element gone"
+    while True:
+        left = STILL_WITHIN_SECONDS - (time.monotonic() - begun)
+        if handle is not None and left > 0:
+            try:
+                seen = handle.evaluate(SETTLE_SCRIPT, [STILL_FOR_SECONDS * 1000, left * 1000])
+            except Exception:  # the page navigated away, or the node was collected
+                seen = {"gone": "detached"}
+            if seen.get("gone") != "detached":
+                return seen if "gone" not in seen else {"gone": f"element {seen['gone']}"}
+        if time.monotonic() - begun >= STILL_WITHIN_SECONDS:
+            return {"gone": gone}
+        # The node was taken away, or not found yet: look for the one drawn in its place.
+        try:
+            handle = page.query_selector(selector)
+        except Exception:  # a navigation in flight
+            handle = None
+        if handle is None:
+            # Nothing there now. A page drawing its list again may have
+            # cleared it and not yet filled it; give that a moment.
+            if time.monotonic() - begun >= REDRAWN_WITHIN_SECONDS:
+                return {"gone": gone}
+            page.wait_for_timeout(30)
 
 
 def click_position(press: tuple[int, int] | None, settled: dict) -> dict:
@@ -529,7 +553,7 @@ def click_position(press: tuple[int, int] | None, settled: dict) -> dict:
     keys: dict = {"press": {"x": press[0], "y": press[1]} if press else None}
     if settled.get("gone"):
         keys["x"], keys["y"] = press if press else (None, None)
-        keys["settled"] = "element gone"
+        keys["settled"] = settled["gone"] if isinstance(settled["gone"], str) else "element gone"
         return keys
     keys["x"], keys["y"] = int(settled["x"]), int(settled["y"])
     if not settled.get("still"):
