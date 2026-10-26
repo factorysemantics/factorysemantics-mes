@@ -16,7 +16,9 @@ through them, burns the overlay into the picture, and writes, into one folder:
   * `README.md`, naming the plant, its version, the commit this script came
     from, and which two things on screen are this file's rather than the
     product's
-  * `marks.json`, the seconds each mark landed at and the planned timings
+  * `marks.json`, the seconds each mark landed at and the planned timings, the
+    size of the frame and of the GIF, and for every click the pixel on the
+    frame it landed on, so an effect laid over the clip can be put there
 
 It is the generalisation of `scripts/record-kill-a-node.py`, which films one
 story and brings up its own two-node plant to film it.
@@ -103,11 +105,16 @@ BADGE_SAMPLE_SIZE = 10  # the square sampled, px
 BADGE_TOLERANCE = 32
 
 # What the GIF may weigh and how it is made smaller until it does. GitHub
-# renders an image up to 10 MB and refuses to animate one over it. How long a
-# clip may run is a judgement rather than a limit, and it is the scene file's
-# own `budget_seconds`.
-GIF_LIMIT_BYTES = 10 * 1024 * 1024
-GIF_SETTINGS = ((10, 1100), (8, 1100), (8, 1000), (6, 1000), (6, 900), (5, 800))
+# renders an image up to 10 MB and refuses to animate one over it, and that is
+# ten million bytes, not ten mebibytes: two clips of this series came in a hair
+# over 10,000,000 under the old 10 * 1024 * 1024 and would have been refused
+# by anything that counts in decimal. How long a clip may run is a judgement
+# rather than a limit, and it is the scene file's own `budget_seconds`.
+GIF_LIMIT_BYTES = 10_000_000
+# Width comes down a notch before the frame rate does: a caption a little
+# smaller reads the same, and a click effect laid over the clip lands on fewer
+# frames as the rate drops.
+GIF_SETTINGS = ((10, 1100), (10, 1000), (8, 1000), (6, 1000), (6, 900), (5, 800))
 
 DEFAULTS = {
     "base": "http://127.0.0.1:8010",
@@ -334,8 +341,10 @@ def overlay_script(badge: str) -> str:
 class BrowserStage:
     """The page being filmed, and the clock every mark is measured against."""
 
-    def __init__(self, page, out: Path, started: float) -> None:
+    def __init__(self, page, out: Path, started: float, presses: list | None = None) -> None:
         self.page = page
+        #: (x, y) of every press the page reported, in order; see `listen_for_presses`.
+        self.presses: list[tuple[int, int]] = presses if presses is not None else []
         self.out = out
         self.started = started
         self.marks: list[dict] = []
@@ -358,9 +367,26 @@ class BrowserStage:
         self.page.wait_for_timeout(int(settle * 1000))
 
     def click(self, selector: str) -> None:
+        # Where the click lands, on the frame, for whoever lays a click effect
+        # over the clip. It is not predicted from the element's box: Playwright
+        # scrolls again when something sits over the element — the sticky
+        # header over the Release button, in scene 04 — and a point measured
+        # before that is a point on the header. The page says where it was
+        # pressed (`listen_for_presses`), in the viewport's pixels, which are
+        # the mp4's: `record_video_size` is the viewport. The mark's `at` is
+        # still the moment the click returned, as it always was.
+        heard = len(self.presses)
         self.page.click(selector)
-        self.note(f"click {selector}")
+        self.note(f"click {selector}", x=None, y=None)
+        mark = self.marks[-1]
+        # The page's report arrives while Playwright is waiting on anything,
+        # and this short wait was here before the report was.
         self.page.wait_for_timeout(int(SMALL_STEP_SECONDS * 1000))
+        if len(self.presses) > heard:
+            mark["x"], mark["y"] = self.presses[heard]
+        else:
+            mark["what"] += " (where it landed was not heard from the page, so it is not given)"
+        print(f"         at {mark['x']},{mark['y']}", flush=True)
 
     def wait_for(self, step: dict, timeout: float) -> None:
         waited = time.monotonic()
@@ -417,6 +443,27 @@ class BrowserStage:
             [selector, block, offset, text],
         )
         self.page.wait_for_timeout(int(SCROLL_SECONDS * 1000))
+
+
+#: The name the page calls to say where it was pressed.
+PRESS_BINDING = "__scenePressedAt"
+
+
+def listen_for_presses(context, presses: list) -> None:
+    """Have every page of the take say where each press landed, into `presses`.
+
+    A press is listened for rather than a click, and in the capture phase,
+    because a button that takes itself away on the press (or a page that
+    navigates on it) still reports the press. The point is `clientX`/`clientY`,
+    rounded down: a pixel of the viewport, which is a pixel of the frame.
+    """
+    context.expose_binding(PRESS_BINDING, lambda _source, x, y: presses.append((int(x), int(y))))
+    context.add_init_script(
+        "addEventListener('pointerdown', (e) => { try { window."
+        + PRESS_BINDING
+        + "(Math.floor(e.clientX), Math.floor(e.clientY)); } catch (err) { /* a mark is not worth a take */ } },"
+        " true);"
+    )
 
 
 def wait_expression(step: dict) -> str:
@@ -555,7 +602,8 @@ def readme(scene: dict, facts: dict) -> str:
         f"- `{scene['name']}.mp4` — the same take, full length and full rate",
         f"- `{scene['name']}.script.txt` — the overlay lines in order, for whoever narrates",
         "- `stills/` — one screenshot per `mark`",
-        "- `marks.json` — the seconds every step landed at",
+        "- `marks.json` — the seconds every step landed at; the frame's size and the GIF's; and, on every"
+        " click, `x` and `y`, the pixel of the mp4's frame the click landed on",
         "",
     ]
     return "\n".join(lines)
@@ -585,10 +633,40 @@ def make_gif(raw: Path, gif: Path, skip: float) -> tuple[str, int, int]:
              "[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=bayer:bayer_scale=3",
              str(gif)])
         size = gif.stat().st_size
-        print(f"   {fps} fps at {width} wide: {size / 1024 / 1024:.1f} MB", flush=True)
+        print(f"   {fps} fps at {width} wide: {size:,} bytes", flush=True)
         if size <= GIF_LIMIT_BYTES:
             return f"{fps} fps, {width} wide", size, fps
-    raise SystemExit(f"no setting brought the GIF under {GIF_LIMIT_BYTES // 1024 // 1024} MB; the take is too long")
+    raise SystemExit(f"no setting brought the GIF under {GIF_LIMIT_BYTES:,} bytes; the take is too long")
+
+
+def gif_size(gif: Path) -> dict:
+    """The width and height a GIF says it is, read from its own header.
+
+    Bytes 6 to 9 of every GIF are its logical screen width and height, little
+    endian. Read here rather than asked of ffprobe, so the size in marks.json is
+    the size of the file beside it and nothing else has to be installed.
+    """
+    head = gif.read_bytes()[:10]
+    if len(head) < 10 or head[:3] != b"GIF":
+        raise SystemExit(f"{gif} is not a GIF")
+    return {"width": int.from_bytes(head[6:8], "little"), "height": int.from_bytes(head[8:10], "little")}
+
+
+def marks_document(scene: dict, made: dict, gif: Path, gif_seconds_taken: float) -> dict:
+    """What marks.json says: when each step landed, and where on the frame.
+
+    The four keys it has always had stay as they were, because studio reads
+    them. `frame` is the mp4's size, which is the viewport's; `gif` is the
+    published loop's, so a point placed on the mp4 can be scaled onto the GIF.
+    """
+    return {
+        "frame": {"width": int(scene["width"]), "height": int(scene["height"])},
+        "gif": gif_size(gif),
+        "planned_seconds": planned_seconds(scene),
+        "took_seconds": made["took"],
+        "gif_seconds": round(gif_seconds_taken, 2),
+        "marks": made["marks"],
+    }
 
 
 def badge_box(width: int, height: int) -> tuple[float, float, float, float]:
@@ -1164,6 +1242,8 @@ def record(scene: dict, out: Path) -> dict:
                 "set `user` and `password` in the scene, or MES_SCENE_PASSWORD"
             )
         context.add_init_script(overlay_script(badge))
+        presses: list[tuple[int, int]] = []
+        listen_for_presses(context, presses)
 
         page = context.new_page()
         # A scene films a plant that is not this script's to change. Anything
@@ -1173,7 +1253,7 @@ def record(scene: dict, out: Path) -> dict:
             if request.method not in ("GET", "HEAD") else None
         ))
 
-        stage = BrowserStage(page, out, time.monotonic())
+        stage = BrowserStage(page, out, time.monotonic(), presses)
         page.goto(f"{base}/dashboard", wait_until="load")
 
         scene_with_base = dict(scene)
@@ -1293,12 +1373,8 @@ def main() -> None:
     length = len(colours) / fps
 
     script = write_script_file(out, scene["name"], made["said"])
-    (out / "marks.json").write_text(json.dumps({
-        "planned_seconds": planned_seconds(scene),
-        "took_seconds": made["took"],
-        "gif_seconds": round(length, 2),
-        "marks": made["marks"],
-    }, indent=1), encoding="utf-8")
+    (out / "marks.json").write_text(json.dumps(marks_document(scene, made, gif, length), indent=1),
+                                    encoding="utf-8")
     (out / "README.md").write_text(readme(scene, {
         "said": made["said"],
         "plant": made["plant"],

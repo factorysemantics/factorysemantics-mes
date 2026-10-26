@@ -37,8 +37,8 @@ SCENE = SCENES / "02-spc-on-the-line.toml"
 
 #: What Scott asked for, and the longest any scene in the series may be.
 THE_LONGEST_A_CLIP_MAY_BE = 45.0
-#: What GitHub will animate rather than show as a still.
-THE_HEAVIEST_A_GIF_MAY_BE = 10 * 1024 * 1024
+#: What GitHub will animate rather than show as a still: ten million bytes, decimal.
+THE_HEAVIEST_A_GIF_MAY_BE = 10_000_000
 
 needs_ffmpeg = pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="no ffmpeg on this machine")
 

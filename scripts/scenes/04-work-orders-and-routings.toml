@@ -48,14 +48,10 @@ do = "goto"
 url = "/dashboard/orders"
 settle = 1.6
 
-# The orders page opens with its New-order form showing: the gate that shows a
-# person the controls they may use also takes `hidden` off that form. Closed
-# with the form's own Cancel, inside the head the GIF skips; a product bug,
-# reported, not fixed here.
-[[step]]
-do = "click"
-selector = "#no-cancel"
-
+# The orders page opens with its New-order form closed (#201). The first takes
+# had to close it with the form's own Cancel, inside the head the GIF skips;
+# since #201 the Cancel button is not on screen to click, so the scene only
+# waits for the form to be closed, as it always did after that click.
 [[step]]
 do = "wait_for"
 js = "document.querySelector('#new-order-form').classList.contains('hidden')"
