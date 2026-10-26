@@ -1,0 +1,348 @@
+# Lesson 1.2 of the class, *Never invent production*: the MES counts what it
+# watched, says how much of the window that was, and says unknown when it was
+# too little.
+#
+# Everything on screen is a scratch bottling plant that started a few minutes
+# before the camera rolls, which is the honest way to film this rule: a young
+# plant has watched almost nothing of an eight-hour window, and every screen
+# says so rather than drawing it as downtime. The words are the docs' own —
+# docs/operate/coverage.md and docs/operate/opc-disconnections.md — and no
+# disconnection is filmed, because this plant has none to show.
+
+name = "never-invent-production"
+title = "Never invent production"
+lesson = "1.2"
+take_is = "lesson"
+part = "hook"
+base = "http://127.0.0.1:8010"
+badge = "pre-alpha · simulated plant · v{version}"
+# Five minutes at most, as the syllabus says a lesson runs.
+budget_seconds = 360
+gif_skip_seconds = 2.0
+width = 1280
+height = 720
+
+notes = [
+  "The plant was started a few minutes before the camera rolled, from the bottling pack, at twenty times wall clock. The MES's OEE windows are wall clock, so an eight-hour window reaches back hours before this plant existed: that is the `before_first_sample` the hook shows, and it is true of any plant on its first morning.",
+  "The camera waited, off camera, until the MES had watched FILL01 for 85% of the last fifteen minutes, so that the fifteen-minute figures are above the bottling pack's floor (`[oee] coverage_floor = 0.8`) when the lesson shows them, and the eight-hour and shift figures are below it.",
+  "The fifteen-minute analysis view says it is showing a little less than a quarter of an hour: the line has not been watched for fifteen minutes yet, and the page says so rather than counting the rest as downtime.",
+  "Per-interval rows of the ledger are printed by `fsmes oee explain` and by no screen; the machine page shows the ledger's seconds by cause and names the command. The lesson shows that command's output as a terminal card, run against this take's plant as it was filmed.",
+  "The header's navigation wraps to two rows at 1280 px wide. It is filmed as the product draws it.",
+]
+
+honesty = [
+  "the plant is a few minutes old when the camera rolls, so most of every long window is before its first sample",
+]
+
+[plant]
+pack = "labs/multiplant/bottling"
+speed = 20
+roll_when_timeout_seconds = 1500
+roll_when_watched = { equipment = "FILL01", hours = 0.25, at_least = 0.85 }
+
+# ----------------------------------------------------------------- the hook
+
+[[step]]
+do = "goto"
+url = "/dashboard/machine/FILL01?hours=8"
+settle = 2.5
+
+[[step]]
+do = "click"
+selector = "[data-tab=oee]"
+
+[[step]]
+do = "wait_for"
+selector = "#oee-ledger"
+text = "before first sample"
+scroll_to = "#oee-window"
+scroll_block = "start"
+scroll_offset = 30
+
+[[step]]
+do = "say"
+line = "The filler's OEE over the last eight hours."
+
+[[step]]
+do = "say"
+line = "No figure. The MES has watched a few percent of the window, and says so."
+
+[[step]]
+do = "mark"
+name = "hook"
+
+[[step]]
+do = "say"
+line = "The rest is before first sample: before this MES ever heard from the machine."
+
+[[step]]
+do = "say"
+line = "That time is not downtime. Nobody was watching."
+
+[[step]]
+do = "say"
+line = "This lesson is about that one rule: never invent production."
+
+# ----------------------------------------------------------------- the idea
+
+[[step]]
+part = "idea"
+do = "slide"
+name = "denominator"
+title = "Every OEE figure has a denominator"
+lines = [
+  "Availability: run time ÷ the time this MES watched",
+  "Coverage: how much of the window that was",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Ask most systems what they divide by, and the answer is the window: the shift, the last eight hours."
+
+[[step]]
+do = "say"
+line = "That is only true if somebody watched the whole window. On a real plant, nobody did."
+
+[[step]]
+do = "say"
+line = "So this MES states two numbers, always, side by side: availability, and coverage."
+
+[[step]]
+do = "say"
+line = "Ninety-two percent over forty watched minutes of a shift is not the same claim as ninety-two percent over the shift."
+
+[[step]]
+do = "slide"
+name = "ledger"
+title = "The ledger"
+lines = [
+  "Every second of the window, in exactly one row",
+  "observed: running, stopped and labelled, stopped and not",
+  "not observed: nobody was watching",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Coverage falls out of a ledger. Every second of the window sits in one row, and no second in two."
+
+[[step]]
+do = "say"
+line = "Nothing is inferred and nothing is filled in. A stretch with no record stays not observed."
+
+[[step]]
+do = "slide"
+name = "causes"
+title = "Where the unwatched time went"
+lines = [
+  "before first sample",
+  "disconnected",
+  "after last sample",
+  "no state recorded",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Every not-observed stretch carries its cause, and the cause is only what the MES wrote down."
+
+[[step]]
+do = "say"
+line = "A gap is never read as a stop, and never as the last state heard."
+
+# ------------------------------------------------------------ on the screen
+
+[[step]]
+part = "screen"
+do = "goto"
+url = "/dashboard/analysis?hours=0.25"
+settle = 3
+
+[[step]]
+do = "wait_for"
+selector = "#oee"
+text = "watched"
+scroll_to = "#oee"
+scroll_block = "start"
+scroll_offset = 260
+
+[[step]]
+do = "say"
+line = "The line's analysis page, last fifteen minutes. The MES has watched most of that."
+
+[[step]]
+do = "say"
+line = "Every station's figure has its coverage printed under it: watched, and a percent."
+
+[[step]]
+do = "mark"
+name = "analysis-watched"
+
+[[step]]
+do = "say"
+line = "Above this plant's floor, the figures are shown, with what they were measured over beside them."
+
+[[step]]
+do = "goto"
+url = "/dashboard/machine/FILL01?hours=0.25"
+settle = 2.5
+
+[[step]]
+do = "click"
+selector = "[data-tab=oee]"
+
+[[step]]
+do = "wait_for"
+selector = "#oee-bars"
+text = "availability"
+scroll_to = "#oee-window"
+scroll_block = "start"
+scroll_offset = 30
+
+[[step]]
+do = "say"
+line = "The filler, the same fifteen minutes: availability, performance, quality and OEE."
+
+[[step]]
+do = "say"
+line = "The header says how much of the window was watched. The ledger under the bars says where the rest went, by cause."
+
+[[step]]
+do = "mark"
+name = "machine-watched"
+
+[[step]]
+do = "say"
+line = "And the footnote names the command that prints every row of it."
+
+[[step]]
+do = "slide"
+name = "oee-explain"
+title = "Every second, and the rule that put it there"
+command = ["oee", "explain", "FILL01", "15m"]
+stop_after = "interval(s)"
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "fsmes oee explain: every interval of the window, its disposition, and the rule behind it."
+
+[[step]]
+do = "say"
+line = "The top row is before first sample: the minutes before this plant started. Not observed. Not downtime."
+
+[[step]]
+do = "mark"
+name = "ledger-not-observed"
+
+[[step]]
+do = "say"
+line = "A plant engineer who disagrees with the figure can point at the interval, and argue with the rule."
+
+[[step]]
+do = "slide"
+name = "oee-explain-totals"
+title = "The seconds add up to the window"
+command = ["oee", "explain", "FILL01", "15m"]
+start_at = "interval(s)"
+stop_after = "availability"
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "The totals tile the window exactly. Coverage is the observed seconds over the window's seconds."
+
+[[step]]
+do = "say"
+line = "An OEE window whose seconds do not add up is a bug, not a rounding difference."
+
+# -------------------------------------------------------------- it refuses
+
+[[step]]
+part = "refuses"
+do = "goto"
+url = "/dashboard/analysis?shift=current"
+settle = 3
+
+[[step]]
+do = "wait_for"
+selector = "#oee"
+text = "below this plant's floor"
+scroll_to = "#oee"
+scroll_block = "start"
+scroll_offset = 260
+
+[[step]]
+do = "say"
+line = "Now the shift rollup: the whole day shift, most of it before this plant existed."
+
+[[step]]
+do = "say"
+line = "Below this plant's floor, all four figures are withheld together. Not a short bar. Unknown."
+
+[[step]]
+do = "mark"
+name = "withheld"
+
+[[step]]
+do = "say"
+line = "A shorter bar would read as a worse machine, and what actually happened is that nobody watched it."
+
+[[step]]
+do = "goto"
+url = "/dashboard/machine/FILL01?hours=8"
+settle = 2.5
+
+[[step]]
+do = "click"
+selector = "[data-tab=oee]"
+
+[[step]]
+do = "wait_for"
+selector = "#oee-facts"
+text = "good"
+scroll_to = "#oee-window"
+scroll_block = "start"
+scroll_offset = 30
+
+[[step]]
+do = "say"
+line = "The filler over eight hours again: no availability, no OEE."
+
+[[step]]
+do = "say"
+line = "But the good count, the scrap and the run time are still on the page. What is withheld is the figure, never the evidence."
+
+[[step]]
+do = "mark"
+name = "evidence-stays"
+
+[[step]]
+do = "say"
+line = "The floor is the plant's own setting, in its pack. With none, nothing is withheld and coverage is printed beside every figure."
+
+[[step]]
+do = "say"
+line = "A number you can trust has to be able to say when it cannot."
+
+# ------------------------------------------------------------ you now know
+
+[[step]]
+part = "know"
+do = "slide"
+name = "you-now-know"
+title = "You now know how to"
+lines = [
+  "Say what coverage means on any FactorySemantics screen.",
+  "Explain why a figure reads 'unknown' and why that is not a bug.",
+  "Find the coverage number on the shift rollup.",
+]
+
+[[step]]
+do = "mark"
+name = "you-now-know"
+
+[[step]]
+do = "hold"
+seconds = 3

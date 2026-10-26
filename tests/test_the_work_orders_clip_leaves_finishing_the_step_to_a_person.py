@@ -259,7 +259,7 @@ def test_the_camera_rolls_on_an_open_order_that_has_booked_the_count(runner, ord
         ('env = { MES_OPS_FINISH_ORDERS = false }', "values are strings"),
         ('env = "MES_OPS_FINISH_ORDERS=false"', "is a table"),
         ('roll_when_chart = "FG-BOTTLE/fill_weight"\n[[plant.roll_when_order]]\ncode = "WO-1"\nbooked = 1',
-         "not on both"),
+         "not on more than one"),
     ],
 )
 def test_a_scene_may_change_the_simulated_floor_and_nothing_of_the_mes(runner, tmp_path, plant, complaint):

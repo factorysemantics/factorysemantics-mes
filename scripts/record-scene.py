@@ -48,7 +48,9 @@ Two things a scene may say to get out of that, and only together:
     take ends. `[plant] roll_when_*` holds the camera, off camera, until the
     plant reaches the state the scene opens on — a chart in a given state, or
     `[[plant.roll_when_order]]`, orders that have finished, drawn on a lot, or booked a count —
-    because a wait inside a scene is filmed, and a clip has forty-five seconds.
+    or `[plant.roll_when_watched]`, a machine the MES has watched for enough of a
+    window that its OEE is no longer withheld — because a wait inside a scene is
+    filmed, and a clip has forty-five seconds.
   * `allow_writes` — let the page write. Some stories *are* writes: a hold is
     taken under review by somebody deciding to, and a clip of quality work
     with nothing written in it is a tour. This is honoured only when `base` is
@@ -164,6 +166,16 @@ HOLD_FLOOR_SECONDS = 2.5
 SLIDE_BACKGROUND = "#123a5a"
 SLIDE_PATH = "/__scene/slide/"
 
+# A terminal card: a `slide` with a `command` is the output of one `fsmes`
+# command, run against the take's own scratch plant at the moment it is filmed,
+# painted in monospace on dark. Only commands that read are allowed: a card is
+# filmed, and a command that wrote would change the plant the rest of the take
+# is a recording of. The list is short on purpose and grows by review.
+TERMINAL_BACKGROUND = "#101418"
+READ_ONLY_COMMANDS = (("oee", "explain"),)
+#: How long a terminal card's command may take before the take is called off.
+COMMAND_TIMEOUT_SECONDS = 60.0
+
 # What the GIF may weigh and how it is made smaller until it does. GitHub
 # renders an image up to 10 MB and refuses to animate one over it, and that is
 # ten million bytes, not ten mebibytes: two clips of this series came in a hair
@@ -262,6 +274,8 @@ def load_scene(path: Path) -> dict:
             if not step.get("name") or not step.get("title"):
                 raise SystemExit(f"{where}: a `slide` needs a `name` (it names the card's file) and a `title`")
             step["lines"] = [str(line) for line in step.get("lines") or []]
+            if step.get("command") is not None:
+                check_command_card(step, where, scene)
             step.setdefault("hold", hold_for_words(" ".join([step["title"], *step["lines"]])))
         if verb == "hold":
             step.setdefault("seconds", HOLD_SECONDS)
@@ -289,6 +303,65 @@ def load_scene(path: Path) -> dict:
 
     scene["step"] = steps
     return scene
+
+
+def check_command_card(step: dict, where: str, scene: dict) -> None:
+    """Refuse a terminal card this script would have to guess at, or one that could write.
+
+    The command is words after `fsmes`, as a list; it must begin with one of
+    READ_ONLY_COMMANDS; it runs against the take's own scratch plant, so the
+    scene needs a `[plant]`; and its hold is stated, because how many words a
+    command prints is not known until it runs.
+    """
+    command = step["command"]
+    if not isinstance(command, list) or not command or not all(isinstance(word, str) for word in command):
+        raise SystemExit(f"{where}: a slide's `command` is the words after `fsmes`, as a list of strings")
+    if not any(tuple(command[:len(allowed)]) == allowed for allowed in READ_ONLY_COMMANDS):
+        raise SystemExit(
+            f"{where}: `fsmes {' '.join(command)}` is not a command a card may run — only "
+            + ", ".join(f"`fsmes {' '.join(allowed)}`" for allowed in READ_ONLY_COMMANDS)
+            + ", which read and write nothing"
+        )
+    if not scene.get("plant"):
+        raise SystemExit(f"{where}: a terminal card runs its command against the take's own plant, "
+                         "and this scene has no `[plant]`")
+    if step.get("hold") is None:
+        raise SystemExit(f"{where}: a terminal card needs a `hold` — what the command prints is not known "
+                         "until it runs, so its words cannot time it")
+    if step["lines"]:
+        raise SystemExit(f"{where}: a terminal card shows its command's output, not `lines`")
+    for key in ("start_at", "stop_after"):
+        if step.get(key) is not None and not isinstance(step[key], str):
+            raise SystemExit(f"{where}: `{key}` is a piece of a line of the output, as a string")
+
+
+def trim_output(output: str, start_at: str | None, stop_after: str | None) -> tuple[list[str], int, int]:
+    """The lines of a command's output a card shows, and which of how many they are.
+
+    From the first line containing `start_at` (the first line when not given)
+    to the first line after it containing `stop_after`, both included (the
+    last line when not given). Returns the lines, the number of the first one
+    shown, and how many lines the output had — so the card can say it was cut
+    and where, rather than passing a part off as the whole. A piece that is
+    not in the output fails the take: the card would be showing something
+    other than what the scene was written for.
+    """
+    lines = output.rstrip("\n").splitlines()
+    while lines and not lines[0].strip():
+        lines.pop(0)
+    first = 0
+    if start_at is not None:
+        found = [number for number, line in enumerate(lines) if start_at in line]
+        if not found:
+            raise SystemExit(f"the command's output has no line containing {start_at!r}:\n" + "\n".join(lines))
+        first = found[0]
+    last = len(lines) - 1
+    if stop_after is not None:
+        found = [number for number, line in enumerate(lines) if number >= first and stop_after in line]
+        if not found:
+            raise SystemExit(f"the command's output has no line containing {stop_after!r}:\n" + "\n".join(lines))
+        last = found[0]
+    return lines[first:last + 1], first + 1, len(lines)
 
 
 def hold_for_words(line: str) -> float:
@@ -359,6 +432,9 @@ def play(scene: dict, stage) -> None:
             stage.hold(float(step["seconds"]))
         elif verb == "mark":
             stage.mark(step["name"])
+        elif verb == "slide" and step.get("command") is not None:
+            stage.terminal(step["name"], step["title"], step["command"], step.get("start_at"),
+                           step.get("stop_after"), float(step["hold"]))
         elif verb == "slide":
             stage.slide(step["name"], step["title"], step["lines"], float(step["hold"]))
 
@@ -449,8 +525,11 @@ class BrowserStage:
     """The page being filmed, and the clock every mark is measured against."""
 
     def __init__(self, page, out: Path, started: float, presses: list | None = None,
-                 base: str = "", slides: dict | None = None, render=None) -> None:
+                 base: str = "", slides: dict | None = None, render=None, run_fsmes=None) -> None:
         self.page = page
+        #: Runs `fsmes <words>` against the take's own plant and returns what it
+        #: printed; a terminal card's command goes through it. None without a plant.
+        self.run_fsmes = run_fsmes
         #: Where a slide is served from: the plant's own origin, so the caption
         #: carries across in sessionStorage and the overlay draws on the card.
         self.base = base
@@ -581,6 +660,34 @@ class BrowserStage:
         self.check_corner()
         self.page.wait_for_timeout(int(hold * 1000))
 
+    def terminal(self, name: str, title: str, command: list[str], start_at: str | None,
+                 stop_after: str | None, hold: float) -> None:
+        """Put a terminal card on screen: one read-only `fsmes` command's output, run now.
+
+        It is run against the take's own plant as the card is filmed, so what
+        it prints is that plant at that moment and nothing typed in by hand.
+        Its whole output is kept beside the card's picture, as text, so that
+        a card cut short can be read in full.
+        """
+        if self.run_fsmes is None:
+            raise SystemExit(f"the terminal card {name!r} needs the take's own plant to run its command on")
+        output = self.run_fsmes(command)
+        shown, first, total = trim_output(output, start_at, stop_after)
+        number = len(self.slides) + 1
+        card = terminal_html(title, command, shown, first, total)
+        self.slides[str(number)] = card
+        stem = f"slides/{number:02d}-{name.replace(' ', '-')}"
+        (self.out / "slides").mkdir(parents=True, exist_ok=True)
+        (self.out / f"{stem}.txt").write_text(f"$ fsmes {' '.join(command)}\n{output}", encoding="utf-8")
+        if self.render is not None:
+            self.render(card, self.out / f"{stem}.png")
+        self.page.goto(f"{self.base}{SLIDE_PATH}{number}", wait_until="load")
+        self.note(f"slide: {title}", "slide", image=f"{stem}.png", title=title,
+                  command=f"fsmes {' '.join(command)}", output=f"{stem}.txt",
+                  lines_shown=[first, first + len(shown) - 1], lines_of=total)
+        self.check_corner()
+        self.page.wait_for_timeout(int(hold * 1000))
+
     def mark(self, name: str) -> None:
         stills = self.out / "stills"
         stills.mkdir(parents=True, exist_ok=True)
@@ -686,6 +793,36 @@ def slide_html(title: str, lines: list[str]) -> str:
         "li{font-size:32px;line-height:1.35;font-weight:500;margin:0 0 14px}"
         "</style></head><body><div id='fs-slide'><div id='fs-slide-body'>"
         f"<h1>{html.escape(title)}</h1><ul>{items}</ul></div></div></body></html>"
+    )
+
+
+def terminal_html(title: str, command: list[str], lines: list[str], first: int, total: int) -> str:
+    """A terminal card: a title, the command as typed, and the lines it printed, in monospace.
+
+    The writing sits in the same kind of box as a slide's, wider because
+    terminal lines are long, and the corner check holds it out of the avatar's
+    corner the same way. A card that shows part of the output says which part,
+    of how many lines, on the card itself.
+    """
+    font = "system-ui,-apple-system,Segoe UI,sans-serif"
+    mono = "ui-monospace,SFMono-Regular,Menlo,Consolas,'DejaVu Sans Mono',monospace"
+    cut = "" if first == 1 and len(lines) == total else (
+        f"<p id='fs-term-cut'>lines {first} to {first + len(lines) - 1} of the {total} it printed</p>")
+    return (
+        "<!doctype html><html><head><meta charset='utf-8'>"
+        f"<title>{html.escape(title)}</title><style>"
+        f"html,body{{margin:0;height:100%;background:{TERMINAL_BACKGROUND};color:#e6e6e6;font-family:{font}}}"
+        f"#fs-slide{{position:fixed;inset:0;background:{TERMINAL_BACKGROUND}}}"
+        f"#fs-slide-body{{position:absolute;left:40px;top:28px;right:40px;"
+        f"bottom:{CAPTION_HEIGHT + 16}px;overflow:hidden}}"
+        "h1{font-size:30px;line-height:1.2;font-weight:700;margin:0 0 10px;color:#fff}"
+        f"#fs-term-command{{font-family:{mono};font-size:17px;color:#7fd17f;margin:0 0 8px}}"
+        f"pre{{font-family:{mono};font-size:13.5px;line-height:1.3;margin:0;white-space:pre}}"
+        "#fs-term-cut{font-size:15px;color:#9aa4ad;margin:8px 0 0}"
+        "</style></head><body><div id='fs-slide'><div id='fs-slide-body'>"
+        f"<h1>{html.escape(title)}</h1>"
+        f"<p id='fs-term-command'>$ fsmes {html.escape(' '.join(command))}</p>"
+        f"<pre>{html.escape(chr(10).join(lines))}</pre>{cut}</div></div></body></html>"
     )
 
 
@@ -934,6 +1071,20 @@ def readme(scene: dict, facts: dict) -> str:
                 f" {' and '.join(asked)}, as {source} reported it. The waiting is cut"
                 " from the clip.",
             ]
+        if plant.get("roll_when_watched"):
+            watched = plant["roll_when_watched"]
+            lines += [
+                f"- **when the camera started**: it waited, off camera, until the MES had watched"
+                f" `{watched['equipment']}` for at least {watched['at_least']:.0%} of the last"
+                f" {watched['hours']:g} h, as the machine's own OEE reported its coverage. The waiting is"
+                " cut from the clip.",
+            ]
+        if any(step.get("command") for step in scene["step"]):
+            lines += [
+                "- **the terminal cards** are the output of the `fsmes` command each one names, run"
+                " against this take's own plant at the moment the card was filmed; each card's whole"
+                " output is beside its picture in `slides/`, as text",
+            ]
         for key, value in sorted((plant.get("env") or {}).items()):
             lines += [f"- **the simulated floor was told** `{key}={value}` — see *Worth knowing* below"]
     lines += [
@@ -991,6 +1142,14 @@ def run(command: list[str]) -> None:
 
 def make_mp4(raw: Path, mp4: Path) -> None:
     run(["ffmpeg", "-nostdin", "-loglevel", "error", "-y", "-i", str(raw),
+         "-vf", "fps=20", "-c:v", "libx264", "-crf", "26", "-pix_fmt", "yuv420p",
+         "-movflags", "+faststart", str(mp4)])
+
+
+def make_teaser_mp4(raw: Path, mp4: Path, skip: float, length: float | None) -> None:
+    """A lesson's teaser as an mp4: the same cut as its GIF, at the take's full size and rate."""
+    cut = ["-t", f"{length:.2f}"] if length is not None else []
+    run(["ffmpeg", "-nostdin", "-loglevel", "error", "-y", "-ss", str(skip), *cut, "-i", str(raw),
          "-vf", "fps=20", "-c:v", "libx264", "-crf", "26", "-pix_fmt", "yuv420p",
          "-movflags", "+faststart", str(mp4)])
 
@@ -1486,8 +1645,24 @@ def plant_defaults(spec: dict) -> dict:
                 f"[plant]: `roll_when_order` {wanted['code']} waits for nothing — "
                 "say `completed = true`, `consumed = \"LOT-…\"`, `booked = <count>`, or more than one"
             )
-    if spec["roll_when_chart"] and spec["roll_when_order"]:
-        raise SystemExit("[plant]: a take rolls on a chart or on an order, not on both")
+    watched = spec.setdefault("roll_when_watched", None)
+    if watched is not None:
+        if not isinstance(watched, dict) or not watched.get("equipment"):
+            raise SystemExit("[plant]: `roll_when_watched` is a table with the `equipment` it watches, "
+                             "e.g. { equipment = \"FILL01\", hours = 0.25, at_least = 0.8 }")
+        try:
+            hours, share = float(watched.get("hours", 0)), float(watched.get("at_least", 0))
+        except (TypeError, ValueError):
+            raise SystemExit("[plant]: `roll_when_watched` `hours` and `at_least` are numbers") from None
+        if hours <= 0:
+            raise SystemExit("[plant]: `roll_when_watched` needs the `hours` of the window it asks about")
+        if not 0 < share <= 1:
+            # A share of nothing is true the moment the plant is up; over one, never.
+            raise SystemExit("[plant]: `roll_when_watched` `at_least` is a share of the window, above 0 and at most 1")
+        watched["hours"], watched["at_least"] = hours, share
+    if sum(1 for wanted in (spec["roll_when_chart"], spec["roll_when_order"], watched) if wanted) > 1:
+        raise SystemExit("[plant]: a take rolls on one thing — a chart, an order, or a machine watched — "
+                         "not on more than one")
     if not isinstance(spec["env"], dict):
         raise SystemExit("[plant]: `env` is a table of NAME = \"value\"")
     for key, value in spec["env"].items():
@@ -1578,6 +1753,37 @@ class ScratchPlant:
             [sys.executable, "-m", "fsmes", *words],
             cwd=str(REPO), env=self.env, capture_output=True, text=True, encoding="utf-8", check=False,
         )
+
+    def run_fsmes(self, words: list[str]) -> str:
+        """Run one read-only `fsmes` command against this plant's own database, and return its output.
+
+        `fsmes oee explain` and its like read the database the environment
+        names, as they do on a plant PC. That environment is the plant's own,
+        compiled from its pack the way `fsmes fleet start` compiles it, so the
+        command sees this plant's floor and coverage settings and nothing of
+        any other plant on the box.
+        """
+        from fsmes import plant as plants
+        from fsmes.pack import fleet as plant_fleet
+
+        before = os.environ.get(plants.REGISTRY_ENV)
+        os.environ[plants.REGISTRY_ENV] = self.env["FSMES_PLANT_REGISTRY"]
+        try:
+            configs = plant_fleet.load(REPO)
+            env = plants.plant_env(self.name, configs[self.name], REPO)
+        finally:
+            if before is None:
+                os.environ.pop(plants.REGISTRY_ENV, None)
+            else:
+                os.environ[plants.REGISTRY_ENV] = before
+        env["PYTHONIOENCODING"] = "utf-8"
+        done = subprocess.run(
+            [sys.executable, "-m", "fsmes", *words], cwd=str(REPO), env=env, capture_output=True,
+            text=True, encoding="utf-8", check=False, timeout=COMMAND_TIMEOUT_SECONDS,
+        )
+        if done.returncode != 0:
+            raise SystemExit(f"`fsmes {' '.join(words)}` failed on the scratch plant:\n{done.stdout}\n{done.stderr}")
+        return done.stdout
 
     def start(self, speed: float) -> None:
         done = self._fsmes("fleet", "start", self.name, "--speed", str(speed), root=True)
@@ -1837,6 +2043,48 @@ def wait_for_the_orders(base: str, spec: dict, user: str, password: str) -> None
     )
 
 
+def wait_for_the_watching(base: str, spec: dict, user: str, password: str) -> dict:
+    """Hold the camera until the MES has watched a machine for enough of a window.
+
+    A plant that has just started has watched nothing before it started, and
+    says so: every window reaching back past its first sample is mostly
+    `before_first_sample`, and on a plant whose pack sets a coverage floor its
+    OEE is withheld. A lesson that shows both — the figure withheld, then the
+    figure with what it was watched beside it — rolls once the window it shows
+    the figure for is watched enough to be reported. Nothing here writes; it
+    asks the machine's OEE the same question the machine page asks, and reads
+    the MES's own `coverage`.
+    """
+    wanted = spec["roll_when_watched"]
+    code = urllib.parse.quote(str(wanted["equipment"]))
+    reader = a_signed_in_reader(base, user, password)
+    deadline = time.monotonic() + float(spec["roll_when_timeout_seconds"])
+    started = time.monotonic()
+    last = None
+    seen = None
+    while time.monotonic() < deadline:
+        try:
+            with reader.open(f"{base}/equipment/{code}/oee?hours={wanted['hours']:g}", timeout=10) as answer:
+                seen = json.load(answer)
+        except (OSError, urllib.error.URLError, ValueError):
+            seen = None
+        coverage = (seen or {}).get("coverage")
+        shown = "unknown" if coverage is None else f"{float(coverage):.0%}"
+        if shown != last:
+            print(f"  {time.monotonic() - started:5.0f}s  {wanted['equipment']} watched {shown} of the last "
+                  f"{wanted['hours']:g} h", flush=True)
+            last = shown
+        if coverage is not None and float(coverage) >= wanted["at_least"]:
+            print(f"  rolling: {wanted['equipment']} watched {float(coverage):.1%} of the last "
+                  f"{wanted['hours']:g} h, at least {wanted['at_least']:.0%}", flush=True)
+            return seen
+        time.sleep(POLL_SECONDS * 5)
+    raise SystemExit(
+        f"{wanted['equipment']} was not watched for {wanted['at_least']:.0%} of the last {wanted['hours']:g} h "
+        f"within {float(spec['roll_when_timeout_seconds']):.0f}s. Nothing was filmed. Last seen: {last}"
+    )
+
+
 # --------------------------------------------------------- what may be written
 
 
@@ -1912,8 +2160,12 @@ def commit_of_repo() -> str:
     return done.stdout.strip() or "unknown"
 
 
-def record(scene: dict, out: Path) -> dict:
-    """Film the scene into `out`: the raw video, the stills, the slides. Returns what was made."""
+def record(scene: dict, out: Path, run_fsmes=None) -> dict:
+    """Film the scene into `out`: the raw video, the stills, the slides. Returns what was made.
+
+    `run_fsmes` is the take's own plant's, for terminal cards; None when the
+    scene films a plant somebody else started.
+    """
     # Imported here and not at the top: --plan, and every test, works without a browser installed.
     from playwright.sync_api import sync_playwright
 
@@ -1965,7 +2217,8 @@ def record(scene: dict, out: Path) -> dict:
         ))
 
         stage = BrowserStage(page, out, time.monotonic(), presses, base=base, slides=slides,
-                             render=lambda card, path: render_slide(browser, card, path, width, height))
+                             render=lambda card, path: render_slide(browser, card, path, width, height),
+                             run_fsmes=run_fsmes)
         page.goto(f"{base}/dashboard", wait_until="load")
 
         scene_with_base = dict(scene)
@@ -2127,8 +2380,12 @@ def take(scene: dict, args, out: Path, final: Path, name: str, course, module, l
                 print("== waiting for the chart to reach the state this scene opens on", flush=True)
                 wait_for_the_shot(scene["base"].rstrip("/"), plant_spec,
                                   scene["user"], scene["password"])
+            if plant_spec["roll_when_watched"]:
+                print("== waiting for the MES to have watched the machine this scene opens on", flush=True)
+                wait_for_the_watching(scene["base"].rstrip("/"), plant_spec,
+                                      scene["user"], scene["password"])
 
-        made = record(scene, out)
+        made = record(scene, out, scratch.run_fsmes if scratch is not None else None)
     finally:
         if scratch is not None:
             print("\n== taking the scratch plant away", flush=True)
@@ -2142,6 +2399,12 @@ def take(scene: dict, args, out: Path, final: Path, name: str, course, module, l
     # A lesson's GIF is its teaser: the hook, cut where the next part begins.
     cut = teaser_length(made["marks"], skip) if lesson and not teaser_only else None
     setting, gif_bytes, fps = make_gif(made["video"], gif, skip, cut)
+    # And the same teaser as a video, for whoever posts it where a GIF will not
+    # play: cut from the same take at the same two seconds, so the two agree.
+    teaser_mp4 = None
+    if lesson and not teaser_only:
+        teaser_mp4 = out / f"{name}.teaser.mp4"
+        make_teaser_mp4(made["video"], teaser_mp4, skip, cut)
 
     box = badge_box(int(scene["width"]), int(scene["height"]))
     colours = frame_colours(gif, box)
@@ -2163,6 +2426,7 @@ def take(scene: dict, args, out: Path, final: Path, name: str, course, module, l
     if lesson:
         files = {"video": None if teaser_only else mp4.name, "teaser": gif.name,
                  **({"teaser_video": mp4.name} if teaser_only else {}),
+                 **({"teaser_video": teaser_mp4.name} if teaser_mp4 is not None else {}),
                  "script": script.name, "marks": "marks.json",
                  "stills": made["stills"], "slides": made["slides"]}
         write_json_atomically(out / "lesson.json", lesson_document(course, module, lesson, scene, {
@@ -2197,6 +2461,8 @@ def take(scene: dict, args, out: Path, final: Path, name: str, course, module, l
     print("\n== what this take came to", flush=True)
     print(f"  gif   {gif.name} ({gif_bytes / 1024 / 1024:.1f} MB, {length:.1f} s, {setting})")
     print(f"  mp4   {mp4.name} ({mp4.stat().st_size / 1024 / 1024:.1f} MB, {whole_seconds:.1f} s)")
+    if teaser_mp4 is not None:
+        print(f"  teaser {teaser_mp4.name} ({teaser_mp4.stat().st_size / 1024 / 1024:.1f} MB)")
     print(f"  script {script.name} ({len(made['said'])} lines)")
     if ok:
         print(f"  badge  '{made['badge']}' in {len(colours)} of {len(colours)} GIF frames and"
