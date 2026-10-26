@@ -10,6 +10,8 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ## [Unreleased]
 
+## [0.4.2] — 2026-10-26
+
 ### Fixed
 
 - **The Maintenance screen loads again on a PostgreSQL plant.** Early
@@ -5136,7 +5138,8 @@ number in it comes from a simulated plant.
   MES was not watching. Unlabelled downtime is reported as unlabelled. These
   are the house rules and they are tested.
 
-[Unreleased]: https://github.com/factorysemantics/factorysemantics-mes/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/factorysemantics/factorysemantics-mes/compare/v0.4.2...HEAD
+[0.4.2]: https://github.com/factorysemantics/factorysemantics-mes/releases/tag/v0.4.2
 [0.4.1]: https://github.com/factorysemantics/factorysemantics-mes/releases/tag/v0.4.1
 [0.4.0]: https://github.com/factorysemantics/factorysemantics-mes/releases/tag/v0.4.0
 [0.3.1]: https://github.com/factorysemantics/factorysemantics-mes/releases/tag/v0.3.1

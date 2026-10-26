@@ -10,6 +10,45 @@ carries an **Honesty** section for anything that changed what a number
 before upgrading a plant that anyone reads numbers off, because a number that
 changes meaning without anyone noticing is worse than one that breaks.
 
+## 0.4.1 to 0.4.2
+
+**One migration, `2c6e817b9faf`** — 0.4.1's head was `b6f0c2a71d58`. It
+matters only on PostgreSQL, and there it is the fix: early migrations made
+nine status and kind columns native PostgreSQL enums, `maintenance_orders.status`
+among them, and since 0.3.0 that column refused the word `assigned`, so the
+Maintenance screen never loaded. The migration turns the nine columns into
+plain text, as the code always declared them. No row changes; every stored
+word is kept. On SQLite it does nothing at all.
+
+```bash
+pg_dump -Fc -d yourplantdb -f before-0.4.2.dump  # first, always (on SQLite: fsmes backup)
+pipx upgrade factorysemantics-mes                 # or py -m pip install --upgrade
+fsmes --version                                   # 0.4.2
+fsmes db-status --pack packs/yourplant            # behind: b6f0c2a71d58, head 2c6e817b9faf
+fsmes init-db   --pack packs/yourplant            # b6f0c2a71d58 -> 2c6e817b9faf
+fsmes db-status --pack packs/yourplant            # should now agree; it exits non-zero if not
+```
+
+For a plant in a fleet, `--plant yourplant` instead of `--pack`.
+
+**A running plant may stay up while `init-db` runs.** The tables it touches
+are small (maintenance orders and plans, gauges, calibrations, documents,
+calendar rows, serial units); each is rewritten under a brief lock that waits
+for transactions in flight and holds writers back for a moment. The screen
+loads on the next refresh, with no restart. `fsmes plant <name> migrate` is
+the other way to do it, and it refuses a running plant: stop it first.
+
+**Tried, and how far.** On 2026-10-25 on the maintainer's lab bottling
+plant, a populated PostgreSQL plant with 0.4.0's schema: one `init-db`, no restart, and
+the Maintenance screen filled. On 2026-10-26 a schema made by the 0.4.1 wheel
+on an empty PostgreSQL 18.6, served by 0.4.2: `/maintenance/due` answered 500
+before `init-db` and 200 after, from the same running API. Nobody has done it
+on a plant outside this project.
+
+Coming from 0.4.0 or earlier, read the sections below too — what they say
+about numbers still applies — but one run of `init-db` applies every
+migration between.
+
 ## 0.4.0 to 0.4.1
 
 **No migrations.** Nothing in 0.4.1 changes the database schema —
@@ -359,8 +398,9 @@ with what it printed.
 It also does not prove anything about a **PostgreSQL** plant's upgrade: the
 gate's database is SQLite. The migrations themselves run against an empty
 PostgreSQL 16.15 in the `postgres` cell on every pull request, which is a
-different claim — the schema builds there; nobody has upgraded a populated
-PostgreSQL plant.
+different claim — the schema builds there. The one populated PostgreSQL
+upgrade on record is the maintainer's lab plant to 0.4.2, in
+[0.4.1 to 0.4.2](#041-to-042).
 
 ## Before anything
 
