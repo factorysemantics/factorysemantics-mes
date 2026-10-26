@@ -1745,6 +1745,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#041-to-042" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.4.1 to 0.4.2
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#040-to-041" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4263,6 +4274,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../releases/0.4.2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0.4.2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../releases/0.4.1/" class="md-nav__link">
         
   
@@ -4543,6 +4582,17 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#041-to-042" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.4.1 to 0.4.2
+      
+    </span>
+  </a>
+  
+</li>
       
         <li class="md-nav__item">
   <a href="#040-to-041" class="md-nav__link">
@@ -4828,6 +4878,37 @@ carries an <strong>Honesty</strong> section for anything that changed what a num
 <em>means</em> — a KPI formula, a state mapping, a counter rule. Read that section
 before upgrading a plant that anyone reads numbers off, because a number that
 changes meaning without anyone noticing is worse than one that breaks.</p>
+<h2 id="041-to-042">0.4.1 to 0.4.2<a class="headerlink" href="#041-to-042" title="Permanent link">&para;</a></h2>
+<p><strong>One migration, <code>2c6e817b9faf</code></strong> — 0.4.1's head was <code>b6f0c2a71d58</code>. It
+matters only on PostgreSQL, and there it is the fix: early migrations made
+nine status and kind columns native PostgreSQL enums, <code>maintenance_orders.status</code>
+among them, and since 0.3.0 that column refused the word <code>assigned</code>, so the
+Maintenance screen never loaded. The migration turns the nine columns into
+plain text, as the code always declared them. No row changes; every stored
+word is kept. On SQLite it does nothing at all.</p>
+<div class="highlight"><pre><span></span><code>pg_dump<span class="w"> </span>-Fc<span class="w"> </span>-d<span class="w"> </span>yourplantdb<span class="w"> </span>-f<span class="w"> </span>before-0.4.2.dump<span class="w">  </span><span class="c1"># first, always (on SQLite: fsmes backup)</span>
+pipx<span class="w"> </span>upgrade<span class="w"> </span>factorysemantics-mes<span class="w">                 </span><span class="c1"># or py -m pip install --upgrade</span>
+fsmes<span class="w"> </span>--version<span class="w">                                   </span><span class="c1"># 0.4.2</span>
+fsmes<span class="w"> </span>db-status<span class="w"> </span>--pack<span class="w"> </span>packs/yourplant<span class="w">            </span><span class="c1"># behind: b6f0c2a71d58, head 2c6e817b9faf</span>
+fsmes<span class="w"> </span>init-db<span class="w">   </span>--pack<span class="w"> </span>packs/yourplant<span class="w">            </span><span class="c1"># b6f0c2a71d58 -&gt; 2c6e817b9faf</span>
+fsmes<span class="w"> </span>db-status<span class="w"> </span>--pack<span class="w"> </span>packs/yourplant<span class="w">            </span><span class="c1"># should now agree; it exits non-zero if not</span>
+</code></pre></div>
+<p>For a plant in a fleet, <code>--plant yourplant</code> instead of <code>--pack</code>.</p>
+<p><strong>A running plant may stay up while <code>init-db</code> runs.</strong> The tables it touches
+are small (maintenance orders and plans, gauges, calibrations, documents,
+calendar rows, serial units); each is rewritten under a brief lock that waits
+for transactions in flight and holds writers back for a moment. The screen
+loads on the next refresh, with no restart. <code>fsmes plant &lt;name&gt; migrate</code> is
+the other way to do it, and it refuses a running plant: stop it first.</p>
+<p><strong>Tried, and how far.</strong> On 2026-10-25 on the maintainer's lab bottling
+plant, a populated PostgreSQL plant with 0.4.0's schema: one <code>init-db</code>, no restart, and
+the Maintenance screen filled. On 2026-10-26 a schema made by the 0.4.1 wheel
+on an empty PostgreSQL 18.6, served by 0.4.2: <code>/maintenance/due</code> answered 500
+before <code>init-db</code> and 200 after, from the same running API. Nobody has done it
+on a plant outside this project.</p>
+<p>Coming from 0.4.0 or earlier, read the sections below too — what they say
+about numbers still applies — but one run of <code>init-db</code> applies every
+migration between.</p>
 <h2 id="040-to-041">0.4.0 to 0.4.1<a class="headerlink" href="#040-to-041" title="Permanent link">&para;</a></h2>
 <p><strong>No migrations.</strong> Nothing in 0.4.1 changes the database schema —
 <code>b6f0c2a71d58</code> is head on both versions — so there is no <code>init-db</code> step, and
@@ -5195,8 +5276,9 @@ with what it printed.</p>
 <p>It also does not prove anything about a <strong>PostgreSQL</strong> plant's upgrade: the
 gate's database is SQLite. The migrations themselves run against an empty
 PostgreSQL 16.15 in the <code>postgres</code> cell on every pull request, which is a
-different claim — the schema builds there; nobody has upgraded a populated
-PostgreSQL plant.</p>
+different claim — the schema builds there. The one populated PostgreSQL
+upgrade on record is the maintainer's lab plant to 0.4.2, in
+<a href="#041-to-042">0.4.1 to 0.4.2</a>.</p>
 <h2 id="before-anything">Before anything<a class="headerlink" href="#before-anything" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>backup<span class="w"> </span>--out<span class="w"> </span>/mnt/nas/fsmes
 </code></pre></div>
