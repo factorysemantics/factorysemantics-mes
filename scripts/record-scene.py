@@ -2,6 +2,7 @@
 
     python scripts/record-scene.py scripts/scenes/02-spc-on-the-line.toml
     python scripts/record-scene.py <scene.toml> --base http://127.0.0.1:8110 --out /tmp/take
+    python scripts/record-scene.py --course      # course.json and the tree's README only
 
 A scene file is a list of steps — `goto`, `click`, `wait_for`, `say`, `hold`,
 `mark`, `slide` — against a plant that is already running. This file drives a browser
@@ -292,7 +293,8 @@ def load_scene(path: Path) -> dict:
 
 def hold_for_words(line: str) -> float:
     """How long a caption stays up so the narrator can read it: from its words alone."""
-    words = len(line.split())
+    # A dash or a lone symbol is not a word Brian says.
+    words = sum(1 for token in line.split() if any(ch.isalnum() for ch in token))
     return max(HOLD_FLOOR_SECONDS, round(words / WORDS_PER_SECOND + HOLD_PADDING_SECONDS, 1))
 
 
