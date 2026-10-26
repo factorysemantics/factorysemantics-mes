@@ -116,6 +116,7 @@
 - [Agents — Explanation — evals](https://docs.factorysemantics.com/0.4/agents/evals/)
 - [Agents — Explanation — does the assistant do what people ask](https://docs.factorysemantics.com/0.4/ai/ASSIST-EVAL/)
 - [Releases](https://docs.factorysemantics.com/0.4/releases/)
+- [Releases — 0.4.2](https://docs.factorysemantics.com/0.4/releases/0.4.2/)
 - [Releases — 0.4.1](https://docs.factorysemantics.com/0.4/releases/0.4.1/)
 - [Releases — 0.4.0](https://docs.factorysemantics.com/0.4/releases/0.4.0/)
 - [Releases — 0.3.1](https://docs.factorysemantics.com/0.4/releases/0.3.1/)
