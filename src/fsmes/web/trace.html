@@ -33,7 +33,8 @@
       </form>
     </div>
     <p class="muted small">A serial answers what is inside it and what went into it. A lot answers where it
-      went - as packages a warehouse can pull, not a list of ten thousand bottles.</p>
+      went - in packages a warehouse can pull, or in the orders that drew on it and the lots they made,
+      whichever the line records.</p>
   </section>
 
   <p id="banner" class="banner hidden"></p>
@@ -86,8 +87,19 @@
         <div class="object-facts">
           <span>Material <strong id="l-material">—</strong></span>
           <span>Units carrying it <strong id="l-units">—</strong></span>
+          <span>Orders that drew on it <strong id="l-orders-total">—</strong></span>
           <span>Packages to hold <strong id="l-packages">—</strong></span>
         </div>
+      </div>
+      <div class="panel" data-assist="trace-lot-orders">
+        <h2>Orders that drew on it <span id="l-orders-count" class="muted"></span></h2>
+        <div class="table-wrap"><table id="l-orders">
+          <thead><tr><th>Order</th><th>Status</th><th>Went in at</th><th class="num">Drawn</th><th>When</th><th>Lots it made</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
+      <div class="panel">
+        <h2>Serialised packages carrying it <span id="l-packages-count" class="muted"></span></h2>
         <div class="table-wrap"><table id="l-table">
           <thead><tr><th>Package</th><th>Material</th><th>Status</th><th class="num">Units inside carrying the lot</th></tr></thead>
           <tbody></tbody>

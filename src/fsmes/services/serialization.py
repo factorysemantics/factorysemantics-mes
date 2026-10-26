@@ -27,6 +27,7 @@ from sqlalchemy.orm import Session
 
 from fsmes.domain import (
     CheckResult,
+    Equipment,
     LotConsumption,
     Material,
     MaterialLot,
@@ -37,6 +38,8 @@ from fsmes.domain import (
     UnitComponent,
     UnitInspection,
     UnitStatus,
+    WorkOrder,
+    WorkOrderOperation,
 )
 from fsmes.services import Conflict, Invalid, NotFound, audit, masterdata, workorders
 
@@ -521,6 +524,79 @@ def trace_back(session: Session, serial: str) -> dict:
     }
 
 
+def _orders_that_drew_on(session: Session, lot: MaterialLot, material_codes: dict[int, str]) -> list[dict]:
+    """Each order that consumed this lot, where it went in, how much, when,
+    and the lots that order made.
+
+    The forward answer on a line that books by the lot rather than by the
+    bottle. One grouped read of the issues, then one read each for the
+    orders, their operations, the stations and the lots they made - never a
+    read per order, so a lot drawn on by a thousand orders is the same five
+    statements as a lot drawn on by one.
+
+    A station the issue did not record is `None`, not a guess: an issue
+    booked against the order without an operation says the lot reached the
+    order and no more.
+    """
+    rows = session.execute(
+        select(LotConsumption.work_order_id, LotConsumption.operation_id, LotConsumption.equipment_id,
+               func.sum(LotConsumption.quantity), func.count(), func.min(LotConsumption.ts),
+               func.max(LotConsumption.ts))
+        .where(LotConsumption.lot_id == lot.id)
+        .group_by(LotConsumption.work_order_id, LotConsumption.operation_id, LotConsumption.equipment_id)).all()
+    if not rows:
+        return []
+    order_ids = sorted({r[0] for r in rows})
+    operation_ids = sorted({r[1] for r in rows if r[1] is not None})
+
+    orders: dict[int, tuple] = {}
+    for chunk in _chunks(order_ids):
+        for oid, code, material_id, status in session.execute(
+                select(WorkOrder.id, WorkOrder.code, WorkOrder.material_id, WorkOrder.status)
+                .where(WorkOrder.id.in_(chunk))):
+            orders[oid] = (code, material_id, getattr(status, "value", status))
+    operations: dict[int, tuple] = {}
+    for chunk in _chunks(operation_ids):
+        for op_id, seq, name, equipment_id in session.execute(
+                select(WorkOrderOperation.id, WorkOrderOperation.seq, WorkOrderOperation.name,
+                       WorkOrderOperation.equipment_id).where(WorkOrderOperation.id.in_(chunk))):
+            operations[op_id] = (seq, name, equipment_id)
+    equipment_ids = sorted({r[2] for r in rows if r[2] is not None}
+                           | {op[2] for op in operations.values() if op[2] is not None})
+    equipment: dict[int, str] = {}
+    for chunk in _chunks(equipment_ids):
+        equipment.update(session.execute(select(Equipment.id, Equipment.code).where(Equipment.id.in_(chunk))).all())
+    made: dict[int, list[tuple]] = defaultdict(list)
+    for chunk in _chunks(order_ids):
+        for oid, code, material_id, quantity in session.execute(
+                select(MaterialLot.produced_by_order_id, MaterialLot.code, MaterialLot.material_id,
+                       MaterialLot.original_quantity)
+                .where(MaterialLot.produced_by_order_id.in_(chunk)).order_by(MaterialLot.code)):
+            made[oid].append((code, material_id, quantity))
+
+    out: dict[int, dict] = {}
+    for oid, op_id, equipment_id, quantity, issues, first, last in rows:
+        code, material_id, status = orders[oid]
+        entry = out.setdefault(oid, {
+            "id": oid, "order": code, "material": material_codes.get(material_id), "status": status,
+            "quantity": 0.0, "issues": 0, "first_drawn": first, "last_drawn": last, "stations": [],
+            "lots_made": [{"lot": c, "material": material_codes.get(m), "quantity": q}
+                          for c, m, q in made.get(oid, [])],
+        })
+        entry["quantity"] += quantity or 0.0
+        entry["issues"] += issues
+        entry["first_drawn"] = min(entry["first_drawn"], first)
+        entry["last_drawn"] = max(entry["last_drawn"], last)
+        seq, name, op_equipment = operations.get(op_id, (None, None, None))
+        station = equipment.get(equipment_id if equipment_id is not None else op_equipment)
+        entry["stations"].append({"station": station, "operation": name, "seq": seq,
+                                  "quantity": quantity or 0.0, "issues": issues})
+    for entry in out.values():
+        entry["stations"].sort(key=lambda s: (s["seq"] is None, s["seq"] or 0, s["station"] or ""))
+        entry["lots_made_total"] = len(entry["lots_made"])
+    return sorted(out.values(), key=lambda o: (o["first_drawn"], o["order"]))
+
+
 def where_used(session: Session, lot_code: str) -> dict:
     """Every unit carrying this lot, and the outermost package holding each.
 
@@ -533,6 +609,11 @@ def where_used(session: Session, lot_code: str) -> dict:
     found; the walk up to the pallets is a grouped query per level, so
     three million pieces resolve to their seventeen hundred pallets without
     three million objects in memory.
+
+    A line that books by the lot and serialises nothing - most lines - has
+    no units to name, so the answer also lists the orders that drew on the
+    lot and the lots each of them made (`orders`). Packages or orders,
+    whichever the line records; both when it records both.
     """
     lot = session.scalar(select(MaterialLot).where(MaterialLot.code == lot_code))
     if lot is None:
@@ -542,7 +623,9 @@ def where_used(session: Session, lot_code: str) -> dict:
     # {parent_id or None: count} from the explicit records and from the
     # orders that consumed the lot, without double-counting a unit in both.
     explicit_ids = list(session.scalars(select(UnitComponent.unit_id).where(UnitComponent.lot_id == lot.id)))
-    order_ids = list(session.scalars(select(LotConsumption.work_order_id).where(LotConsumption.lot_id == lot.id)))
+    material_codes = masterdata.material_codes(session)
+    drawn = _orders_that_drew_on(session, lot, material_codes)
+    order_ids = [o["id"] for o in drawn]
     counts: Counter = Counter()
     loose: Counter = Counter()      # units with no container at all, by unit id -> 1
     seen_units = 0
@@ -587,7 +670,6 @@ def where_used(session: Session, lot_code: str) -> dict:
         tops[unit_id] += n
 
     packages = []
-    material_codes = masterdata.material_codes(session)
     for chunk in _chunks(list(tops)):
         for uid, serial, material_id, status in session.execute(
                 select(SerialUnit.id, SerialUnit.serial, SerialUnit.material_id, SerialUnit.status)
@@ -596,9 +678,18 @@ def where_used(session: Session, lot_code: str) -> dict:
                              "status": getattr(status, "value", status), "units": tops[uid]})
     packages.sort(key=lambda p: p["package"])
     units_affected = seen_units
+    orders = [{k: v for k, v in o.items() if k != "id"} for o in drawn]
+    lots_made = sum(len(o["lots_made"]) for o in orders)
+    by_order = (f"; {len(orders)} order(s) drew on it and made {lots_made} lot(s)" if orders else "")
     return {
         "lot": lot.code,
         "material": lot.material.code,
+        "unit": lot.material.unit,
+        # The answer a line that books by the lot can give: the orders that
+        # drew on it, where, and what each one made. Every line that issues
+        # lots to orders has this, serialised or not.
+        "orders_total": len(orders),
+        "orders": orders,
         "units_affected": units_affected,
         "loose_units": loose.get(None, 0),
         "basis": "unit" if explicit_ids and not order_ids else "order" if order_ids and not explicit_ids
@@ -609,7 +700,7 @@ def where_used(session: Session, lot_code: str) -> dict:
             f"{units_affected} unit(s) in {len(packages)} package(s) carry {lot.code}"
             + (f", {loose[None]} of them not packed" if loose.get(None) else "")
             if units_affected else f"nothing serialised carries {lot.code}"
-        ),
+        ) + by_order,
     }
 
 

@@ -4,7 +4,9 @@
    what is inside it (the packing tree), what went into it (the lots, and
    where they entered), and lets a supervisor hold it - with everything
    inside, because holding a pallet without holding the cases on it holds
-   nothing. A lot shows where it went, as the packages a warehouse can pull. */
+   nothing. A lot shows where it went: the orders that drew on it and the
+   lots they made - the answer every line that issues lots has - and, where
+   the line serialises, the packages a warehouse can pull. */
 
 const { $, el, api, fmt, toast } = window.FS;
 
@@ -111,6 +113,54 @@ async function showSerial(serial) {
 
 /* ---------- a lot ---------- */
 
+/* The orders that drew on the lot: where it went in, how much, when, and
+   what each order made. A station the issue did not record is said to be
+   unrecorded, not left blank and not guessed. */
+function amount(q, unit) {
+  return `${Number(q).toLocaleString(undefined, { maximumFractionDigits: 3 })}${unit ? " " + unit : ""}`;
+}
+
+function orderLink(code) {
+  const a = el("a", "obj", code);
+  a.href = `/dashboard/orders?q=${encodeURIComponent(code)}`;
+  return a;
+}
+
+function showOrders(w) {
+  const orders = w.orders || [];
+  $("#l-orders-count").textContent = `— ${orders.length} order(s)`;
+  const body = $("#l-orders tbody");
+  body.replaceChildren();
+  if (!orders.length) {
+    const tr = el("tr"); const td = el("td", "muted", "No order has drawn on this lot."); td.colSpan = 6;
+    tr.append(td); body.append(tr);
+  }
+  for (const o of orders) {
+    const tr = el("tr");
+    const code = el("td"); code.append(orderLink(o.order)); tr.append(code);
+    tr.append(el("td", null, o.status || ""));
+    const at = el("td");
+    o.stations.forEach((s, i) => {
+      if (i) at.append(", ");
+      if (s.station) at.append(FS.link("machine", s.station)); else at.append(el("span", "muted", "station not recorded"));
+      if (s.operation) at.append(el("span", "muted small", ` ${s.operation}`));
+    });
+    tr.append(at);
+    tr.append(el("td", "num", amount(o.quantity, w.unit)));
+    tr.append(el("td", "small", o.first_drawn === o.last_drawn ? fmt.stamp(o.first_drawn)
+      : `${fmt.stamp(o.first_drawn)} – ${fmt.stamp(o.last_drawn)}`));
+    const made = el("td");
+    if (!o.lots_made.length) made.append(el("span", "muted", o.status === "completed" || o.status === "closed"
+      ? "none recorded" : "none yet"));
+    o.lots_made.forEach((m, i) => {
+      if (i) made.append(", ");
+      made.append(FS.link("lot", m.lot), el("span", "muted small", ` ${m.material || ""} · ${amount(m.quantity)}`));
+    });
+    tr.append(made);
+    body.append(tr);
+  }
+}
+
 async function showLot(lot) {
   const w = await api(`/trace/where-used/${encodeURIComponent(lot)}`);
   remember("lot", w.lot);
@@ -121,8 +171,17 @@ async function showLot(lot) {
   $("#l-material").textContent = w.material;
   $("#l-units").textContent = w.units_affected;
   $("#l-packages").textContent = w.packages_to_hold.length;
+  $("#l-orders-total").textContent = w.orders_total;
+  showOrders(w);
+  $("#l-packages-count").textContent = `— ${w.packages_to_hold.length} package(s)`;
   const body = $("#l-table tbody");
   body.replaceChildren();
+  if (!w.packages_to_hold.length) {
+    const tr = el("tr"); const td = el("td", "muted", w.units_affected
+      ? "Every unit carrying it is loose - none is packed."
+      : "No serialised unit carries this lot. A line that books by the lot answers in the orders above.");
+    td.colSpan = 4; tr.append(td); body.append(tr);
+  }
   for (const p of w.packages_to_hold) {
     const tr = el("tr");
     const pk = el("td"); pk.append(FS.link("serial", p.package)); tr.append(pk);
