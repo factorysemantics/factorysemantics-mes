@@ -42,6 +42,7 @@ outcomes = [
   "Find the coverage number on the shift rollup.",
 ]
 knows_before = ["1.1"]
+scene = "scripts/scenes/course/01-02-never-invent-production.toml"
 
 [[module.lesson]]
 order = 3
