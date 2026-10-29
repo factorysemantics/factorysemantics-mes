@@ -369,6 +369,66 @@ def run_opc_agent() -> None:
     asyncio.run(agent.run_all(settings))
 
 
+@app.command()
+def run_satisfactory(
+    folder: Path | None = typer.Argument(
+        None, help="Where the poller writes its day files (default: MES_SATISFACTORY_FEED_DIR)."),
+    once: bool = typer.Option(False, help="Apply every poll in the folder, say what it found, and stop."),
+) -> None:
+    """Read a Satisfactory game's poll files into this MES (read only).
+
+    The files are what a poller writes from the Ficsit Remote Monitoring mod,
+    one JSON line per endpoint per poll. Buildings become machines; a tripped
+    fuse is down, a paused game or a gap in the polls is not observed.
+    """
+    from fsmes.db import session_scope
+    from fsmes.integrations.satisfactory import reader
+
+    settings = get_settings()
+    setup_logging(settings.log_level, settings.log_dir, "satisfactory")
+    source = folder or (Path(settings.satisfactory_feed_dir).expanduser()
+                        if settings.satisfactory_feed_dir else None)
+    if source is None:
+        typer.echo("No folder given and MES_SATISFACTORY_FEED_DIR is not set.", err=True)
+        raise typer.Exit(2)
+    source = source.expanduser()
+    kwargs = {"poll_seconds": settings.satisfactory_poll_seconds,
+              "gap_polls": settings.satisfactory_gap_polls,
+              "area": settings.satisfactory_area}
+    if once:
+        done = reader.replay(source, session_scope, **kwargs)
+        r = done.report
+        typer.echo(f"{r.polls} polls applied, {r.skipped} skipped; {r.state_changes} state changes; "
+                   f"{r.units_booked} units booked; {r.paused_polls} paused polls; {r.gaps} gaps; "
+                   f"{r.buildings_created} buildings made.")
+        return
+    reader.run(source, session_scope, **kwargs)
+
+
+@app.command()
+def satisfactory_pack(
+    source: Path = typer.Argument(..., help="One day's poll file (.jsonl or .jsonl.gz), or a folder of them."),
+    out: Path = typer.Argument(..., help="The pack's masterdata folder to write."),
+    enterprise: str = typer.Option(..., help="The enterprise above the site, as CODE or CODE:Name."),
+    site: str = typer.Option(..., help="The site, as CODE or CODE:Name."),
+    area: str = typer.Option(..., help="The area the work centres hang under, as CODE or CODE:Name."),
+) -> None:
+    """Write a Satisfactory plant pack's master data from the game's polls.
+
+    The three levels above the work centres are the plant's own, so they are
+    named here; give the same area to `satisfactory_area` in the pack's
+    inbound table so a building placed later lands beside the rest.
+    """
+    from fsmes.integrations.satisfactory import pack
+
+    def level(given: str) -> tuple[str, str]:
+        code, _, name = given.partition(":")
+        return code.strip(), (name.strip() or code.strip())
+
+    counts = pack.write(source, out, (level(enterprise), level(site), level(area)))
+    typer.echo(", ".join(f"{n} {name}" for name, n in counts.items()) + f" -> {out}")
+
+
 @app.command("run-log-sink", hidden=True)
 def run_log_sink(path: str, max_bytes: int = 0) -> None:
     """Write a plant's console log, with a ceiling on it.

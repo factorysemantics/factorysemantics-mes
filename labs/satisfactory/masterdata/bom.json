@@ -1,0 +1,86 @@
+[
+  {
+    "parent": "ROTOR",
+    "component": "IRON-ROD",
+    "quantity": 5.0,
+    "operation_seq": 10
+  },
+  {
+    "parent": "ROTOR",
+    "component": "SCREWS",
+    "quantity": 25.0,
+    "operation_seq": 10
+  },
+  {
+    "parent": "REINFORCED-IRON-PLATE",
+    "component": "IRON-PLATE",
+    "quantity": 6.0,
+    "operation_seq": 10
+  },
+  {
+    "parent": "REINFORCED-IRON-PLATE",
+    "component": "SCREWS",
+    "quantity": 12.0,
+    "operation_seq": 10
+  },
+  {
+    "parent": "IRON-PLATE",
+    "component": "IRON-INGOT",
+    "quantity": 1.5,
+    "operation_seq": 10
+  },
+  {
+    "parent": "IRON-ROD",
+    "component": "IRON-INGOT",
+    "quantity": 1.0,
+    "operation_seq": 10
+  },
+  {
+    "parent": "SCREWS",
+    "component": "IRON-ROD",
+    "quantity": 0.25,
+    "operation_seq": 10
+  },
+  {
+    "parent": "WIRE",
+    "component": "COPPER-INGOT",
+    "quantity": 0.5,
+    "operation_seq": 10
+  },
+  {
+    "parent": "BIOMASS",
+    "component": "LEAVES",
+    "quantity": 2.0,
+    "operation_seq": 10
+  },
+  {
+    "parent": "CONCRETE",
+    "component": "LIMESTONE",
+    "quantity": 3.0,
+    "operation_seq": 10
+  },
+  {
+    "parent": "SOLID-BIOFUEL",
+    "component": "BIOMASS",
+    "quantity": 2.0,
+    "operation_seq": 10
+  },
+  {
+    "parent": "CABLE",
+    "component": "WIRE",
+    "quantity": 2.0,
+    "operation_seq": 10
+  },
+  {
+    "parent": "IRON-INGOT",
+    "component": "IRON-ORE",
+    "quantity": 1.0,
+    "operation_seq": 10
+  },
+  {
+    "parent": "COPPER-INGOT",
+    "component": "COPPER-ORE",
+    "quantity": 1.0,
+    "operation_seq": 10
+  }
+]

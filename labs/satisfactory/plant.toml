@@ -1,0 +1,58 @@
+# A Satisfactory game factory, read as a plant.
+#
+#     FSMES_PLANT_REGISTRY=labs/satisfactory/fleet.toml fsmes plant satisfactory init
+#     FSMES_PLANT_REGISTRY=labs/satisfactory/fleet.toml fsmes plant satisfactory run
+#
+# Nothing here simulates. The buildings are the ones in a running game; a
+# poller outside this product asks the Ficsit Remote Monitoring mod about them
+# once a minute and writes a file a day, and `fsmes run-satisfactory` reads
+# those files - read only - into this plant. See README.md beside this file.
+
+[pack]
+format   = 1
+requires = ">=0.3"
+
+[plant]
+name        = "satisfactory"
+label       = "A Satisfactory save, read through Ficsit Remote Monitoring"
+timezone    = "America/Chicago"
+profile     = "laptop"
+enterprise  = "FICSIT"
+site        = "SAVE"
+# Drawn on every screen. Quality is 100% on this plant and the sentence says
+# why, so nobody reads it as a plant with a perfect scrap record.
+source_note = "A game factory read through the Ficsit Remote Monitoring mod; simulated by the game, not by us. Quality is always 100%: the game has no scrap."
+
+[serve]
+api_host = "127.0.0.1"
+# The standing plant's port. A scratch copy is served elsewhere with
+# `fsmes run-api --port`.
+api_port = 8130
+simulate = false
+
+[files]
+# Generated from one day's polls, then committed:
+#
+#     fsmes satisfactory-pack ~/Work/box/data/frm/2026-10-28.jsonl.gz labs/satisfactory/masterdata \
+#         --enterprise "FICSIT:FICSIT (a Satisfactory save)" --site "SAVE:The save" \
+#         --area FACTORY:Factory
+#
+# A building placed since is made by the reader on first sight.
+masterdata = "masterdata"
+
+[inbound]
+# The poller's folder. Absolute and outside the repo: it belongs to the
+# poller, and this plant only reads it.
+satisfactory_feed         = "~/Work/box/data/frm"
+satisfactory_poll_seconds = 60
+# A building placed after the master data was written is filed here.
+satisfactory_area         = "FACTORY"
+
+[oee]
+# A window the MES saw less than 80% of reports no figure - a game is closed
+# more than it is open, and a figure over the ten minutes it was open is not
+# the evening's.
+coverage_floor = 0.8
+
+[erp]
+mode = "off"

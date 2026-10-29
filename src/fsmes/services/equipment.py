@@ -25,8 +25,16 @@ def set_state(
     reason: str | None = None,
     reason_code: str | None = None,
     actor: str = "system",
+    at: datetime | None = None,
 ) -> EquipmentState:
     """Close the open state interval and start a new one. No-op if unchanged.
+
+    `at` is when the machine changed, for a reader whose source says so
+    itself - a feed polled once a minute, read some seconds after the poll,
+    or a file of polls read after the fact. Left out, it is now, which is
+    what every live reader has always meant. An interval never ends before
+    it began: a moment earlier than the open interval's start is clamped to
+    it rather than written as a negative stretch.
 
     `reason_code` is the plant's own vocabulary; `reason` is the sentence that
     goes with it. Both are stored, never one instead of the other, so every
@@ -39,8 +47,9 @@ def set_state(
     )
     if current is not None and current.state is state:
         return current
-    now = utcnow()
+    now = at or utcnow()
     if current is not None:
+        now = max(now, current.started_at)
         current.ended_at = now
     new = EquipmentState(equipment_id=equipment.id, state=state, reason=reason,
                          reason_code=reason_code, started_at=now)

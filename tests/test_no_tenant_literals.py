@@ -141,6 +141,13 @@ NOT_TENANT["RT-BOTTLE"] = (
     "the routing of the demo plant's own reference line (src/fsmes/seed_kepsim.py), "
     "same reason as FG-BOTTLE, the material it makes.")
 
+NOT_TENANT["satisfactory"] = (
+    "the name of an integration the product ships (src/fsmes/integrations/"
+    "satisfactory/, `fsmes run-satisfactory`), after the game it reads, the way "
+    "`opc` names the OPC agent. The lab plant that reads a game is named after its "
+    "source, which is why the word lands in the list; the plant's own codes "
+    "(its enterprise, site and area) are in its pack and nowhere under src/.")
+
 for _shift in ("DAY", "NIGHT"):
     NOT_TENANT[_shift] = (
         "a shift code. Product vocabulary that every plant gets - the two patterns "

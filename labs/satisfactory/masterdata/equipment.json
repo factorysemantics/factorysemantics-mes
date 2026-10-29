@@ -1,0 +1,184 @@
+[
+  {
+    "code": "FICSIT",
+    "name": "FICSIT (a Satisfactory save)",
+    "level": "enterprise"
+  },
+  {
+    "code": "SAVE",
+    "name": "The save",
+    "level": "site",
+    "parent": "FICSIT"
+  },
+  {
+    "code": "FACTORY",
+    "name": "Factory",
+    "level": "area",
+    "parent": "SAVE"
+  },
+  {
+    "code": "ASSEMBLERS",
+    "name": "Assemblers",
+    "level": "work_center",
+    "parent": "FACTORY"
+  },
+  {
+    "code": "CONSTRUCTORS",
+    "name": "Constructors",
+    "level": "work_center",
+    "parent": "FACTORY"
+  },
+  {
+    "code": "SMELTERS",
+    "name": "Smelters",
+    "level": "work_center",
+    "parent": "FACTORY"
+  },
+  {
+    "code": "ASSEMBLERMK1-2146637682",
+    "name": "Assembler · Rotor",
+    "level": "work_unit",
+    "parent": "ASSEMBLERS",
+    "ideal_cycle_seconds": 15.0
+  },
+  {
+    "code": "ASSEMBLERMK1-2146642006",
+    "name": "Assembler · Reinforced Iron Plate",
+    "level": "work_unit",
+    "parent": "ASSEMBLERS",
+    "ideal_cycle_seconds": 12.0
+  },
+  {
+    "code": "CONSTRUCTORMK1-2146444957",
+    "name": "Constructor · Iron Plate",
+    "level": "work_unit",
+    "parent": "CONSTRUCTORS",
+    "ideal_cycle_seconds": 3.0
+  },
+  {
+    "code": "CONSTRUCTORMK1-2146445928",
+    "name": "Constructor · Iron Plate",
+    "level": "work_unit",
+    "parent": "CONSTRUCTORS",
+    "ideal_cycle_seconds": 3.0
+  },
+  {
+    "code": "CONSTRUCTORMK1-2146446789",
+    "name": "Constructor · Iron Plate",
+    "level": "work_unit",
+    "parent": "CONSTRUCTORS",
+    "ideal_cycle_seconds": 3.0
+  },
+  {
+    "code": "CONSTRUCTORMK1-2146676960",
+    "name": "Constructor · Iron Rod",
+    "level": "work_unit",
+    "parent": "CONSTRUCTORS",
+    "ideal_cycle_seconds": 4.0
+  },
+  {
+    "code": "CONSTRUCTORMK1-2146677430",
+    "name": "Constructor · Iron Rod",
+    "level": "work_unit",
+    "parent": "CONSTRUCTORS",
+    "ideal_cycle_seconds": 4.0
+  },
+  {
+    "code": "CONSTRUCTORMK1-2146849837",
+    "name": "Constructor · Screws",
+    "level": "work_unit",
+    "parent": "CONSTRUCTORS",
+    "ideal_cycle_seconds": 1.5
+  },
+  {
+    "code": "CONSTRUCTORMK1-2147074232",
+    "name": "Constructor · Iron Rod",
+    "level": "work_unit",
+    "parent": "CONSTRUCTORS",
+    "ideal_cycle_seconds": 4.0
+  },
+  {
+    "code": "CONSTRUCTORMK1-2147220667",
+    "name": "Constructor · Wire",
+    "level": "work_unit",
+    "parent": "CONSTRUCTORS",
+    "ideal_cycle_seconds": 2.0
+  },
+  {
+    "code": "CONSTRUCTORMK1-2147253752",
+    "name": "Constructor · Biomass (Leaves)",
+    "level": "work_unit",
+    "parent": "CONSTRUCTORS",
+    "ideal_cycle_seconds": 1.0
+  },
+  {
+    "code": "CONSTRUCTORMK1-2147264615",
+    "name": "Constructor · Concrete",
+    "level": "work_unit",
+    "parent": "CONSTRUCTORS",
+    "ideal_cycle_seconds": 4.0
+  },
+  {
+    "code": "CONSTRUCTORMK1-2147291145",
+    "name": "Constructor · Solid Biofuel",
+    "level": "work_unit",
+    "parent": "CONSTRUCTORS",
+    "ideal_cycle_seconds": 1.0
+  },
+  {
+    "code": "CONSTRUCTORMK1-2147466534",
+    "name": "Constructor · Cable",
+    "level": "work_unit",
+    "parent": "CONSTRUCTORS",
+    "ideal_cycle_seconds": 2.0
+  },
+  {
+    "code": "SMELTERMK1-2147111895",
+    "name": "Smelter · Iron Ingot",
+    "level": "work_unit",
+    "parent": "SMELTERS",
+    "ideal_cycle_seconds": 2.0
+  },
+  {
+    "code": "SMELTERMK1-2147117917",
+    "name": "Smelter · Iron Ingot",
+    "level": "work_unit",
+    "parent": "SMELTERS",
+    "ideal_cycle_seconds": 2.0
+  },
+  {
+    "code": "SMELTERMK1-2147118228",
+    "name": "Smelter · Iron Ingot",
+    "level": "work_unit",
+    "parent": "SMELTERS",
+    "ideal_cycle_seconds": 2.0
+  },
+  {
+    "code": "SMELTERMK1-2147241295",
+    "name": "Smelter · Copper Ingot",
+    "level": "work_unit",
+    "parent": "SMELTERS",
+    "ideal_cycle_seconds": 2.0
+  },
+  {
+    "code": "SMELTERMK1-2147260492",
+    "name": "Smelter · Iron Ingot",
+    "level": "work_unit",
+    "parent": "SMELTERS",
+    "ideal_cycle_seconds": 2.0
+  },
+  {
+    "code": "SMELTERMK1-2147261042",
+    "name": "Smelter · Iron Ingot",
+    "level": "work_unit",
+    "parent": "SMELTERS",
+    "ideal_cycle_seconds": 2.0
+  },
+  {
+    "code": "SMELTERMK1-2147263026",
+    "name": "Smelter · Iron Ingot",
+    "level": "work_unit",
+    "parent": "SMELTERS",
+    "ideal_cycle_seconds": 2.0
+  }
+]

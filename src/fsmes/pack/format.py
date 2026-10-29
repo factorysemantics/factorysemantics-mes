@@ -132,6 +132,10 @@ SCHEMA: tuple[Section, ...] = (
         Key("name", "str", "The plant's code. One namespace topic segment, so it "
             "never has to be cleaned up downstream.", identity.NAME_SETTING),
         Key("label", "str", "What a person calls this plant, in full."),
+        Key("source_note", "str", "One sentence on where this plant's data comes "
+            "from, drawn on every screen - for a plant that is not what it looks "
+            "like, such as a game factory read through a mod. Leave it out on a "
+            "real plant.", "MES_SOURCE_NOTE"),
         Key("timezone", "str", "The IANA zone this plant works in (Europe/Berlin). "
             "Every wall-clock boundary the MES draws is drawn here.",
             identity.ZONE_SETTING),
@@ -296,6 +300,20 @@ SCHEMA: tuple[Section, ...] = (
             "already has.", "MES_INBOUND_SQL_FILE"),
         Key("mqtt_mode", "str", "off or mqtt - whether this plant listens to a broker.",
             "MES_INBOUND_MQTT_MODE"),
+        Key("satisfactory_feed", "str",
+            "The folder of Satisfactory poll files (one `YYYY-MM-DD.jsonl` or "
+            "`.jsonl.gz` a day, from the Ficsit Remote Monitoring mod) this plant "
+            "reads its machines from, read only. Absolute, `~` allowed: the "
+            "poller's folder belongs to the poller, not to the pack. Named, "
+            "`fsmes run-satisfactory` is one of this plant's processes.",
+            "MES_SATISFACTORY_FEED_DIR"),
+        Key("satisfactory_poll_seconds", "float",
+            "How often that poller asks the game, in seconds. 60 unless it says "
+            "otherwise.", "MES_SATISFACTORY_POLL_SECONDS"),
+        Key("satisfactory_area", "str",
+            "The area, by its code in this pack's master data, that a building "
+            "placed after the pack was written is filed under, in its kind's "
+            "work centre.", "MES_SATISFACTORY_AREA"),
     )),
     Section("oee", "What this plant asks of a KPI before it will report one.", (
         Key("min_observed_seconds", "float",

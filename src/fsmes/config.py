@@ -196,6 +196,24 @@ class Settings(BaseSettings):
     # tell you how to make, and names no product.
     inbound_sql_file: Path = Path("config/inbound_sql.json")
 
+    # --- A game factory as a plant (fsmes run-satisfactory) -----------------
+    # The folder of poll files a Ficsit Remote Monitoring poller writes, one
+    # `YYYY-MM-DD.jsonl[.gz]` per day. Read only; empty means this plant has
+    # no such feed and the reader is not started. `~` is allowed.
+    # One sentence about where this plant's data comes from, drawn on every
+    # screen when set. Empty on a plant that is what it looks like.
+    source_note: str = ""
+    satisfactory_feed_dir: str = ""
+    # How often the poller asks the game. Each poll vouches for this long
+    # after it; a gap longer than `satisfactory_gap_polls` of these is time
+    # nobody could see, never downtime.
+    satisfactory_poll_seconds: float = 60.0
+    satisfactory_gap_polls: float = 2.5
+    # The area (an equipment code from the plant's own master data) that a
+    # building placed after the pack was written gets its work centre under.
+    # Empty, or not in the plant, and the new work centre stands on its own.
+    satisfactory_area: str = ""
+
     # --- Inbound over MQTT (fsmes inbound subscribe) -----------------------
     # The other half of the unified namespace: this MES listening to the
     # broker it already publishes to. Tag values (a gateway's counter, state

@@ -712,6 +712,23 @@ def simulates(cfg: dict) -> bool:
     return bool(cfg.get("simulate", True))
 
 
+def feeds(cfg: dict) -> list[Process]:
+    """The readers of an outside feed this plant's pack names, if any.
+
+    A plant that simulates nothing can still have machines that move: a game
+    factory polled once a minute is one. Its reader is a process of the plant
+    like the OPC agent is, started after the API is listening and stopped with
+    it, and it is here because the pack named the folder - never because of
+    the plant's name.
+    """
+    env = cfg.get("env") or {}
+    if str(env.get("MES_SATISFACTORY_FEED_DIR") or "").strip():
+        return [Process(("run-satisfactory",),
+                        "the reader that turns the game's poll files into the MES",
+                        "satisfactory.jsonl")]
+    return []
+
+
 
 @dataclass(frozen=True)
 class Process:
@@ -757,7 +774,7 @@ def processes(cfg: dict) -> list[Process]:
     api = Process(("run-api",), "the dashboard and the API", "api.jsonl")
     floor = Process(("run-operations",), "the simulated floor", "operations.jsonl")
     if not simulates(cfg):
-        return [api]
+        return [api, *feeds(cfg)]
     if redundant(cfg):
         # The OPC server is the machine layer, and the machine layer is not a
         # node: there is one of it, shared, like the database. A simulated one
@@ -1348,6 +1365,8 @@ def run(name: str, cfg: dict, root: Path, speed: float | None = None, echo=print
     if simulates(cfg):
         children.append(subprocess.Popen([*mes, "run-opc-agent"], cwd=root, env=env))
     children.append(subprocess.Popen([*mes, "run-api"], cwd=root, env=env))
+    for feed in feeds(cfg):
+        children.append(subprocess.Popen([*mes, *feed.args], cwd=root, env=env))
     if simulates(cfg):
         children.append(subprocess.Popen([*mes, "run-operations"], cwd=root, env=env))
         if cfg.get("post_boot"):
@@ -1355,7 +1374,9 @@ def run(name: str, cfg: dict, root: Path, speed: float | None = None, echo=print
     said = f"{name} running -> {dashboard_url(cfg)}"
     if node:
         said += f" (node {node})"
-    if not simulates(cfg):
+    if not simulates(cfg) and feeds(cfg):
+        said += f" (reading {env.get('MES_SATISFACTORY_FEED_DIR')}; nothing simulates)"
+    elif not simulates(cfg):
         said += " (serving; nothing simulates)"
     elif redundant(cfg):
         said += f" (reading {env.get('MES_OPC_ENDPOINT', 'the endpoint this plant was given')})"

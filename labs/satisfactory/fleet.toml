@@ -1,0 +1,8 @@
+# The Satisfactory plant's own fleet file, apart from the lab fleet.
+#
+#     FSMES_PLANT_REGISTRY=labs/satisfactory/fleet.toml fsmes plant satisfactory init
+#     FSMES_PLANT_REGISTRY=labs/satisfactory/fleet.toml fsmes plant satisfactory run
+packs = ["."]
+
+[environment]
+data_dir = "labs/satisfactory/.data"
