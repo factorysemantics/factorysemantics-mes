@@ -60,6 +60,7 @@ labs/**/certs/
 labs/multiplant/.data/
 labs/megafactory/.data/
 labs/cutlery/.data/
+labs/satisfactory/.data/
 
 # Docs site: generated reference pages and the built site
 docs/reference/
