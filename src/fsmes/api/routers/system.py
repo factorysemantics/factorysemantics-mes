@@ -12,6 +12,7 @@ from fsmes import identity
 from fsmes import shadow as shadow_mode
 from fsmes.api import deps
 from fsmes.api.deps import DbDep, ReadDbDep, UserDep, require
+from fsmes.config import get_settings
 from fsmes.db import utcnow
 from fsmes.domain import (
     AuditLog,
@@ -137,6 +138,11 @@ def health(db: ReadDbDep) -> dict:
             # endpoint everything already asks is the one place that reaches
             # all of them.
             "replay": line_clock.summary(),
+            # What this plant's machines are, in the pack's own sentence, when
+            # it is not what a reader would assume - a game factory read
+            # through a mod, not a plant. None on every plant that does not
+            # say. Every screen draws it as a bar.
+            "source": get_settings().source_note or None,
             # How much of this plant the MES can currently see. A statement
             # about this deployment's own reach, not a number the plant
             # produced, which is what keeps it on the public side of the line

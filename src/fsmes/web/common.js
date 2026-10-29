@@ -1125,10 +1125,40 @@
       .catch(() => null);  // a bar that could not load must not break a screen
   };
 
+  /* ---------- where this plant's data comes from ----------
+     A plant whose pack says, in one sentence, what its machines are - a game
+     factory read through a mod, say - says it on every screen, under the
+     other two bars. Same chrome and the same absence of a dismiss button: a
+     number on any page is read with the sentence that says what made it.
+     Drawn from `/health`'s `source`, which a plant without the sentence
+     leaves out, and so gets no bar. */
+
+  FS.sourceBar = function sourceBar() {
+    return fetch("/health")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((state) => {
+        if (!state || !state.source) return null;
+        const bar = FS.el("div", "replay-bar source-bar");
+        bar.id = "source-bar";
+        bar.setAttribute("role", "note");
+        bar.append(FS.el("strong", null, "About this plant"), FS.el("span", null, state.source));
+        const above = ["shadow-bar", "replay-bar"]
+          .map((id) => document.getElementById(id)).filter(Boolean);
+        const last = above[above.length - 1];
+        const top = above.reduce((sum, el) => sum + el.offsetHeight, 0);
+        if (last) last.insertAdjacentElement("afterend", bar);
+        else document.body.insertBefore(bar, document.body.firstChild);
+        bar.style.top = `${top}px`;
+        document.documentElement.style.setProperty("--shadow-top", `${top + bar.offsetHeight}px`);
+        return state.source;
+      })
+      .catch(() => null);  // a bar that could not load must not break a screen
+  };
+
   const header = document.querySelector("header[data-nav]");
   if (header) buildHeader(header);
-  // In order: the replay bar measures the shadow bar to sit under it.
-  FS.shadowBar().then(() => FS.replayBar());
+  // In order: each bar measures the ones above it to sit under them.
+  FS.shadowBar().then(() => FS.replayBar()).then(() => FS.sourceBar());
 
   /* The numbers this plant's own screens are drawn with, fetched once per page
      and shared - the window list, the default window, the working week a new
