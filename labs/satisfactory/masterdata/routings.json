@@ -1,0 +1,146 @@
+[
+  {
+    "code": "RT-BIOMASS-LEAVES",
+    "name": "Biomass (Leaves)",
+    "material": "BIOMASS",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Biomass (Leaves)",
+        "equipment": "CONSTRUCTORMK1-2147253752"
+      }
+    ]
+  },
+  {
+    "code": "RT-CABLE",
+    "name": "Cable",
+    "material": "CABLE",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Cable",
+        "equipment": "CONSTRUCTORMK1-2147466534"
+      }
+    ]
+  },
+  {
+    "code": "RT-CONCRETE",
+    "name": "Concrete",
+    "material": "CONCRETE",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Concrete",
+        "equipment": "CONSTRUCTORMK1-2147264615"
+      }
+    ]
+  },
+  {
+    "code": "RT-COPPER-INGOT",
+    "name": "Copper Ingot",
+    "material": "COPPER-INGOT",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Copper Ingot",
+        "equipment": "SMELTERMK1-2147241295"
+      }
+    ]
+  },
+  {
+    "code": "RT-IRON-INGOT",
+    "name": "Iron Ingot",
+    "material": "IRON-INGOT",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Iron Ingot",
+        "equipment": "SMELTERMK1-2147111895"
+      }
+    ]
+  },
+  {
+    "code": "RT-IRON-PLATE",
+    "name": "Iron Plate",
+    "material": "IRON-PLATE",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Iron Plate",
+        "equipment": "CONSTRUCTORMK1-2146444957"
+      }
+    ]
+  },
+  {
+    "code": "RT-IRON-ROD",
+    "name": "Iron Rod",
+    "material": "IRON-ROD",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Iron Rod",
+        "equipment": "CONSTRUCTORMK1-2146676960"
+      }
+    ]
+  },
+  {
+    "code": "RT-REINFORCED-IRON-PLATE",
+    "name": "Reinforced Iron Plate",
+    "material": "REINFORCED-IRON-PLATE",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Reinforced Iron Plate",
+        "equipment": "ASSEMBLERMK1-2146642006"
+      }
+    ]
+  },
+  {
+    "code": "RT-ROTOR",
+    "name": "Rotor",
+    "material": "ROTOR",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Rotor",
+        "equipment": "ASSEMBLERMK1-2146637682"
+      }
+    ]
+  },
+  {
+    "code": "RT-SCREWS",
+    "name": "Screws",
+    "material": "SCREWS",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Screws",
+        "equipment": "CONSTRUCTORMK1-2146849837"
+      }
+    ]
+  },
+  {
+    "code": "RT-SOLID-BIOFUEL",
+    "name": "Solid Biofuel",
+    "material": "SOLID-BIOFUEL",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Solid Biofuel",
+        "equipment": "CONSTRUCTORMK1-2147291145"
+      }
+    ]
+  },
+  {
+    "code": "RT-WIRE",
+    "name": "Wire",
+    "material": "WIRE",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Wire",
+        "equipment": "CONSTRUCTORMK1-2147220667"
+      }
+    ]
+  }
+]

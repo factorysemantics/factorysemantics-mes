@@ -1,0 +1,32 @@
+[
+  {
+    "code": "fuse",
+    "name": "Fuse tripped",
+    "description": "the building's power circuit tripped its fuse: more power asked for than made"
+  },
+  {
+    "code": "no_power",
+    "name": "Not on a power circuit",
+    "description": "the building has a recipe but no power line, so it cannot run"
+  },
+  {
+    "code": "paused",
+    "name": "Switched off in the game",
+    "description": "the player paused this building"
+  },
+  {
+    "code": "no_recipe",
+    "name": "No recipe set",
+    "description": "the building was placed but not told what to make"
+  },
+  {
+    "code": "starved",
+    "name": "Starved",
+    "description": "an input holds less than one cycle needs"
+  },
+  {
+    "code": "blocked",
+    "name": "Blocked",
+    "description": "the output is too full to take another cycle"
+  }
+]

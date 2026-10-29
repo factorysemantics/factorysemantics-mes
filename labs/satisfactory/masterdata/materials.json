@@ -1,0 +1,98 @@
+[
+  {
+    "code": "BIOMASS",
+    "name": "Biomass",
+    "unit": "ea",
+    "type": "intermediate"
+  },
+  {
+    "code": "CABLE",
+    "name": "Cable",
+    "unit": "ea",
+    "type": "finished"
+  },
+  {
+    "code": "CONCRETE",
+    "name": "Concrete",
+    "unit": "ea",
+    "type": "finished"
+  },
+  {
+    "code": "COPPER-INGOT",
+    "name": "Copper Ingot",
+    "unit": "ea",
+    "type": "intermediate"
+  },
+  {
+    "code": "COPPER-ORE",
+    "name": "Copper Ore",
+    "unit": "ea",
+    "type": "raw"
+  },
+  {
+    "code": "IRON-INGOT",
+    "name": "Iron Ingot",
+    "unit": "ea",
+    "type": "intermediate"
+  },
+  {
+    "code": "IRON-ORE",
+    "name": "Iron Ore",
+    "unit": "ea",
+    "type": "raw"
+  },
+  {
+    "code": "IRON-PLATE",
+    "name": "Iron Plate",
+    "unit": "ea",
+    "type": "intermediate"
+  },
+  {
+    "code": "IRON-ROD",
+    "name": "Iron Rod",
+    "unit": "ea",
+    "type": "intermediate"
+  },
+  {
+    "code": "LEAVES",
+    "name": "Leaves",
+    "unit": "ea",
+    "type": "raw"
+  },
+  {
+    "code": "LIMESTONE",
+    "name": "Limestone",
+    "unit": "ea",
+    "type": "raw"
+  },
+  {
+    "code": "REINFORCED-IRON-PLATE",
+    "name": "Reinforced Iron Plate",
+    "unit": "ea",
+    "type": "finished"
+  },
+  {
+    "code": "ROTOR",
+    "name": "Rotor",
+    "unit": "ea",
+    "type": "finished"
+  },
+  {
+    "code": "SCREWS",
+    "name": "Screws",
+    "unit": "ea",
+    "type": "intermediate"
+  },
+  {
+    "code": "SOLID-BIOFUEL",
+    "name": "Solid Biofuel",
+    "unit": "ea",
+    "type": "finished"
+  },
+  {
+    "code": "WIRE",
+    "name": "Wire",
+    "unit": "ea",
+    "type": "intermediate"
+  }
+]
