@@ -472,6 +472,29 @@ def withhold(coverage: float | None, the_floor: float | None) -> str | None:
     return None
 
 
+#: Said in place of the figures for a machine the MES first saw inside the
+#: window and has not yet watched up to the floor: not a machine nobody
+#: watched, a machine that was not there to watch. The floor is the same one;
+#: only the sentence differs, so a building placed two minutes before the
+#: window closed does not read like a fault.
+TOO_NEW = (
+    "too new to rate: first seen at {first_seen:%Y-%m-%d %H:%M} UTC, inside this "
+    "window, and watched {coverage:.1%} of it - under this plant's floor of "
+    "{floor:.0%}, because it was not there for the rest"
+)
+
+
+def too_new(first_seen: datetime | None, window_start: datetime,
+            withheld: str | None) -> datetime | None:
+    """When a machine whose figures the floor withholds was first seen, if
+    that was inside the window; None otherwise. Such a machine is *too new to
+    rate*: listed after the rated ones and counted apart from them, with the
+    floor left exactly where it is."""
+    if not withheld or first_seen is None or first_seen <= window_start:
+        return None
+    return first_seen
+
+
 # --------------------------------------------------------- reading the window
 
 

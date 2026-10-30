@@ -231,6 +231,10 @@ def register(mcp, call) -> dict:
         of 0% and an OEE of "we were not watching" are different facts and only
         one is actionable. `unknown_seconds` is time nobody watched: not a
         state, not downtime, reported beside the states rather than inside them.
+        A withheld station with `too_new` true was first seen (`first_seen`)
+        inside the window - placed or commissioned minutes ago - and is too new
+        to rate, not unwatched; such stations come last, and
+        `stations_too_new` counts them within `stations_withheld`.
 
         `performance` is absent where the counted work will not fit inside the
         run time; the arithmetic stays on `performance_ratio` with

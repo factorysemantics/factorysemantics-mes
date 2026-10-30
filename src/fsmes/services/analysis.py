@@ -341,6 +341,7 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float | None
     asked_start, asked_end = _asked_window(hours, the_shift)
     ledgers = coverage.totals_many(db, ids, asked_start, asked_end)
     the_floor = coverage.floor()
+    seen = equipment_service.first_seen(db, ids)
     # How many seconds of the line one second of this MES's clock is worth.
     # 1.0 everywhere but a replay running faster than real time, where the
     # counts are the line's and every duration below is the wall's.
@@ -387,6 +388,13 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float | None
         coverage_note = coverage.withhold(cover, the_floor)
         if coverage_note:
             availability = performance = quality = overall = None
+        # Withheld because it was not there for most of the window, not
+        # because nobody watched it: placed in the game minutes ago, or
+        # commissioned on the floor. Said as that, and listed after the rest.
+        placed = coverage.too_new(seen.get(unit.id), asked_start, coverage_note)
+        if placed is not None:
+            coverage_note = coverage.TOO_NEW.format(
+                first_seen=placed, coverage=cover or 0.0, floor=the_floor)
 
         # Losses, in the units their fix is measured in.
         #
@@ -434,6 +442,8 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float | None
                 "coverage": _round(cover),
                 "coverage_floor": the_floor,
                 "coverage_note": coverage_note or (None if the_floor else coverage.NO_FLOOR),
+                "too_new": placed is not None,
+                "first_seen": seen.get(unit.id),
                 "ledger": account.as_json(),
                 "seconds_by_state": {k: round(v, 1) for k, v in seconds.items()},
                 "good_qty": good,
@@ -456,6 +466,8 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float | None
             }
         )
 
+    # The ones too new to rate go under the rest, not among them.
+    stations.sort(key=lambda s: s["too_new"])
     produced = sum(s["good_qty"] for s in stations)
     scrapped = sum(s["scrap_qty"] for s in stations)
     rated = [s["oee"] for s in stations if s["oee"] is not None]
@@ -480,6 +492,9 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float | None
         "coverage": _round(_line_coverage(ledgers.values())),
         "coverage_floor": the_floor,
         "stations_withheld": sum(1 for s in stations if s["coverage_note"] and the_floor),
+        # Of those, how many were first seen inside the window: too new to
+        # rate, rather than unwatched. Counted inside `stations_withheld`.
+        "stations_too_new": sum(1 for s in stations if s["too_new"]),
         # And how many have no figure for the other reason: their counts will
         # not fit inside their run time, so there is a disagreement to name
         # rather than a performance to print. Stated on the rollup because

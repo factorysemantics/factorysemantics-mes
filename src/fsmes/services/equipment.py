@@ -498,6 +498,12 @@ def oee_many(session: Session, machines: list[Equipment],
         coverage_note = coverage.withhold(cover, the_floor)
         if coverage_note:
             availability = performance = quality = overall = None
+        # First seen inside the window and under the floor: too new to rate,
+        # said as that (see `coverage.too_new`).
+        placed = coverage.too_new(seen.get(m.id), asked, coverage_note)
+        if placed is not None:
+            coverage_note = coverage.TOO_NEW.format(
+                first_seen=placed, coverage=cover or 0.0, floor=the_floor)
         out[m.code] = {
             "equipment": m.code,
             "window_hours": round(window_seconds / 3600, 4),  # effective, after clamping
@@ -516,6 +522,8 @@ def oee_many(session: Session, machines: list[Equipment],
             "coverage": round(cover, 4) if cover is not None else None,
             "coverage_floor": the_floor,
             "coverage_note": coverage_note or (None if the_floor else coverage.NO_FLOOR),
+            "too_new": placed is not None,
+            "first_seen": seen.get(m.id),
             "ledger": account.as_json(),
             "availability": round(availability, 4) if availability is not None else None,
             "performance": round(performance, 4) if performance is not None else None,
