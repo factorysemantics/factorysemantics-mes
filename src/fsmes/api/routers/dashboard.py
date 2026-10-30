@@ -145,7 +145,7 @@ def _machines(db: Session, line: str | None) -> list[Equipment]:
         return masterdata.work_units_under(db, centre)
     return list(db.scalars(
         select(Equipment)
-        .where(Equipment.level == EquipmentLevel.WORK_UNIT)
+        .where(masterdata.on_the_floor())
         .order_by(Equipment.code)))
 
 

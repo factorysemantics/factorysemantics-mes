@@ -7,7 +7,7 @@ from sqlalchemy import and_, case, func, literal, or_, select
 from sqlalchemy.orm import Session
 
 from fsmes.db import utcnow
-from fsmes.domain import Equipment, EquipmentLevel, EquipmentState, EquipmentStateName, ProductionLog
+from fsmes.domain import Equipment, EquipmentState, EquipmentStateName, ProductionLog
 from fsmes.services import audit, calendar, coverage, line_clock, masterdata, outbox
 from fsmes.services import connection as connection_service
 from fsmes.services import oee as oee_rules
@@ -556,6 +556,7 @@ def oee(session: Session, *, equipment_code: str, hours: float | None = None) ->
 
 
 def work_units(session: Session) -> list[Equipment]:
-    """Every machine, in code order."""
+    """Every machine on the floor, in code order. A retired one is left out;
+    its history is still there."""
     return list(session.scalars(
-        select(Equipment).where(Equipment.level == EquipmentLevel.WORK_UNIT).order_by(Equipment.code)))
+        select(Equipment).where(masterdata.on_the_floor()).order_by(Equipment.code)))

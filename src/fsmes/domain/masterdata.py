@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import enum
+from datetime import datetime
 
 from sqlalchemy import ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -47,6 +48,14 @@ class Equipment(Base):
     # time against a cost center, and the ERP owns what they are worth. An
     # MES that computes money will disagree with Finance, and Finance wins.
     cost_center: Mapped[str | None] = mapped_column(String(40), index=True)
+    # Taken off the floor: when, and the sentence why. A retired machine keeps
+    # every row of its history - states, production, connections - and drops
+    # out of the lists that mean "the machines this plant has now": the
+    # Floor, `watching`, `work_units`. Null is on the floor. Clearing both
+    # puts it back. First written by the Satisfactory reader, for the
+    # buildings of a save that is no longer the one being played.
+    retired_at: Mapped[datetime | None]
+    retired_reason: Mapped[str | None] = mapped_column(String(200))
 
     parent: Mapped[Equipment | None] = relationship(remote_side=[id], backref="children")
 

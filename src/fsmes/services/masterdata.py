@@ -56,9 +56,43 @@ def descendants(session: Session, root: Equipment) -> list[Equipment]:
 
 def work_units_under(session: Session, root: Equipment) -> list[Equipment]:
     """The machines beneath a line — through cells, groups, whatever a site
-    put in between."""
+    put in between. Machines on the floor only: a retired one keeps its
+    history but is not one of the line's machines any more."""
     return [eq for eq in descendants(session, root)
-            if eq.level == EquipmentLevel.WORK_UNIT]
+            if eq.level == EquipmentLevel.WORK_UNIT and eq.retired_at is None]
+
+
+def on_the_floor():
+    """The predicate for "a machine this plant has now": a work unit that
+    has not been retired. Every list of the plant's machines uses it, so the
+    Floor, `watching` and the machine count cannot disagree."""
+    return (Equipment.level == EquipmentLevel.WORK_UNIT) & Equipment.retired_at.is_(None)
+
+
+def retire_equipment(session: Session, code: str, *, reason: str, at, actor: str) -> bool:
+    """Take a machine off the floor, keeping every row of its history.
+    Audited. False, and nothing written, when it was already retired."""
+    machine = get_equipment(session, code)
+    if machine.retired_at is not None:
+        return False
+    machine.retired_at, machine.retired_reason = at, reason[:200]
+    audit.record(session, actor=actor, action="equipment.retired", entity_type="equipment",
+                 entity_id=code, before=None, after={"retired_at": at.isoformat(),
+                                                     "reason": machine.retired_reason})
+    return True
+
+
+def return_equipment(session: Session, code: str, *, reason: str, actor: str) -> bool:
+    """Put a retired machine back on the floor. Audited. False, and nothing
+    written, when it was on the floor already."""
+    machine = get_equipment(session, code)
+    if machine.retired_at is None:
+        return False
+    before = {"retired_at": machine.retired_at.isoformat(), "reason": machine.retired_reason}
+    machine.retired_at = machine.retired_reason = None
+    audit.record(session, actor=actor, action="equipment.returned", entity_type="equipment",
+                 entity_id=code, before=before, after={"reason": reason})
+    return True
 
 
 def pick_machine(session: Session, operation) -> int:
