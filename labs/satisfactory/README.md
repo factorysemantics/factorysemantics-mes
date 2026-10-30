@@ -49,9 +49,11 @@ The session answer names the save being played (`getSessionInfo.SessionName`).
 | The polls say | The MES does |
 |---|---|
 | a building list under the same save as the last one | nothing more: a building missing from it is unseen, "no longer in the game's building list" (torn down, or out of the mod's reach) |
+| a building left out of **5** unpaused lists of the same save in a row (`satisfactory_torn_down_polls`) | it is **retired** "torn down": off the floor and out of the coverage count, its history kept. One list leaving it out is not enough; the mod has been seen to drop a building for a poll. A paused poll does not count |
 | a building list under a **different** save | every building of the game's not in the list is **retired**: off the floor and out of the "watching" count, with the reason "not in save <name>", its history kept |
-| a retired building in the list again (that save loaded again) | it comes back on the floor |
-| no session answer in this poll (about one poll in ten; the poller sometimes writes it a second late) | the last save named still holds: a change is a change only when a name is present and different |
+| a retired building in the list again (that save loaded again, or a torn-down one rebuilt with the same ID) | it comes back on the floor |
+| a session or power answer a second or two after its poll's building list (the poller sometimes writes one late) | it is read with that poll: an answer within 5 seconds of a poll that has a building list, for an endpoint the poll has not answered yet, belongs to it. A poll that is only a late answer, with no building list of its own, is still skipped as "no building list" |
+| no session answer in this poll | the last save named still holds: a change is a change only when a name is present and different |
 
 The bar at the top of every page, and `/health`'s `source`, start with the
 save: "save fsmes · A game factory read through ...".
@@ -108,6 +110,76 @@ The mod's `PowerProduction` reads 0 on every circuit so far, so nothing
 treats it as the circuit's output; it is kept as a reading because it is
 what the feed said. Its generators carry no `ProductionRate`;
 `RegulatedDemandProd` is the figure that moves with the load.
+
+## The last time you played
+
+Shift analysis opens on **the last time you played** on this plant: the
+latest stretch of polls with no pause and no gap in it, named with its times
+("last played 04:41–05:23 today", on the plant's clock, start rounded down
+and end up to the minute). The hours choices stay in the same picker, and an
+address that asks for `hours=` keeps them. Every panel - OEE, Energy, Parts
+mix - windows on it the same way, and the API takes it as `shift=last_play`.
+
+The reader writes one plant reading per watched poll, `FEED.Stretch`: 0 for
+the first poll of a stretch (the reader started, or the poll before was a
+pause or a gap ago), 1 for a poll that continues it. Nothing is booked across
+a gap or a pause, so the time between polls of one stretch is exactly the
+time production could be booked in: the feed watched 100 % of its own
+window. A plant no game feeds has no such reading and no such choice.
+
+Coverage on the window keeps its rule (the 80 % floor is unchanged): a
+building placed in the last minutes of the stretch was not watched before it
+existed, so a line where the player was building can read below 100 %.
+
+## Parts mix
+
+A Satisfactory factory is not asked for 500 plates by Friday; it is asked for
+a steady mix. The **rate order** says it: a name and, per item, a target rate
+in units a minute. It has no quantity and no due date, and never closes. The
+shares follow from the rates. A plant holds one or none.
+
+Shift analysis has a **Parts mix** panel under Energy, over the same window:
+one row per item in the order or made in the window, with target /min, actual
+/min, target share, actual share and gap /min, shortest first, and the
+game's own figure beside it.
+
+- **actual /min** is the good units the MES booked for the item (the same
+  bookings OEE counts, each put to the item its building was making) over
+  the minutes the feed was watched in the window.
+- **target share** is the item's rate over the order's total; **actual
+  share** is its actual over the actual of the order's items (with no order,
+  of every item made).
+- An item made but not in the order says **no target**, never 0. A plant with
+  no order shows no target columns. A plant with no order and no parts
+  readings has no panel at all.
+- **game made /min** is the check, not a second answer: the game's own
+  production statistics (`getProdStats`), averaged over the window's polls,
+  kept as plant readings `PARTS.<item>.MadePerMin`, `.MaxPerMin` and
+  `.ConsumedPerMin`. It counts every building of the save; the MES books only
+  running intervals it saw both ends of, so the two differ when a building
+  starts or stops mid-window. Items the game made that no building books
+  (ore from miners) are named under the table.
+
+Each machine's OEE tab has one parts line: the item it makes, its rate over
+the window, the plant's rate for the item, and the order's target. The AI
+tab reads the same figures from `oee_breakdown`'s `parts_mix` block. The rate
+order never feeds OEE.
+
+**Setting the rate order.** `masterdata/rate_orders.json` ships an example -
+the design page's "60 iron parts a minute, mix 40/40/20", read as 24 Iron
+Plate, 24 Screws and 12 Iron Rod a minute. Edit it to what you want the
+factory to make; item names are the game's (`Iron Plate`, as the panel shows
+them). The pack seeds it only when the plant has no rate order, so a plant's
+own order is never overwritten. To change it on a running plant, as an admin:
+
+    curl -X PUT http://127.0.0.1:8130/rate-order -H 'Content-Type: application/json' \
+        -H "Authorization: Bearer $TOKEN" \
+        -d '{"code": "MIX", "name": "Iron parts mix", "items": [
+              {"item": "Iron Plate", "per_minute": 40},
+              {"item": "Iron Rod", "per_minute": 20}]}'
+
+`GET /rate-order` reads it (any signed-in role); `DELETE /rate-order` takes
+it away, and the plant has no target again. Every change is audited.
 
 ## The master data
 

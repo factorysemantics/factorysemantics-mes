@@ -310,6 +310,11 @@ SCHEMA: tuple[Section, ...] = (
         Key("satisfactory_poll_seconds", "float",
             "How often that poller asks the game, in seconds. 60 unless it says "
             "otherwise.", "MES_SATISFACTORY_POLL_SECONDS"),
+        Key("satisfactory_torn_down_polls", "int",
+            "How many consecutive unpaused polls of one save a building may be "
+            "missing from before it is retired as torn down. 5 unless it says "
+            "otherwise; it comes back when it is listed again.",
+            "MES_SATISFACTORY_TORN_DOWN_POLLS"),
         Key("satisfactory_area", "str",
             "The area, by its code in this pack's master data, that a building "
             "placed after the pack was written is filed under, in its kind's "

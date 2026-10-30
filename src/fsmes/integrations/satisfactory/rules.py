@@ -141,6 +141,15 @@ def rate_per_minute(building: dict) -> float:
     return max(0.0, _num(products[0].get("CurrentProd"))) if products else 0.0
 
 
+def item(building: dict) -> str | None:
+    """The item the building's rate is counted in: its first product's name,
+    as the game spells it (`production[0].Name`, `Iron Plate`). None for a
+    building with no recipe yet."""
+    products = building.get("production") or []
+    name = products[0].get("Name") if products and isinstance(products[0], dict) else None
+    return name.strip() if isinstance(name, str) and name.strip() else None
+
+
 def max_per_minute(building: dict) -> float:
     products = building.get("production") or []
     return max(0.0, _num(products[0].get("MaxProd"))) if products else 0.0

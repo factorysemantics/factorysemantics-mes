@@ -90,6 +90,29 @@
       <p id="energy-note" class="muted energy-small"></p>
     </section>
 
+    <!-- Parts mix: what was made of each item against the plant's standing
+         rate order. Beside OEE, never in it; the order never feeds OEE. Hidden
+         on a plant with no rate order and no parts readings. -->
+    <section id="mix-panel" class="panel span-2 hidden">
+      <h2>Parts mix <span class="muted">— the whole plant: what it made of each item, against the rate order</span></h2>
+      <p id="mix-facts" class="energy-facts"></p>
+      <div class="table-wrap">
+        <table id="mix-table" class="energy-table mix-table">
+          <thead><tr>
+            <th>Item</th>
+            <th class="num tgt">target /min</th>
+            <th class="num">actual /min</th>
+            <th class="num tgt">target share</th>
+            <th class="num">actual share</th>
+            <th class="num tgt">gap /min</th>
+            <th class="num">game made /min</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p id="mix-note" class="muted energy-small"></p>
+    </section>
+
     <section class="panel span-2">
       <h2>State timeline <span class="muted">— a stop walking down the line</span></h2>
       <div id="timeline" class="chart"></div>

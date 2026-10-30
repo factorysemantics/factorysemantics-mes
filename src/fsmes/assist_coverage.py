@@ -147,6 +147,16 @@ EXCLUDED: dict[str, str] = {
     "POST /design/chat":
         "the design partner, which is how this product is built rather than "
         "how a plant is run. Not a floor action.",
+    # ---- the standing rate order: master data a person sets ----------------
+    "PUT /rate-order":
+        "the plant's rate order is what a person wants the factory to make, "
+        "set from the pack's rate_orders.json or by an admin over the API. "
+        "The assistant reads the parts mix against it (oee_breakdown's "
+        "parts_mix); deciding the target is the player's, not the assistant's.",
+    "DELETE /rate-order":
+        "the other half of setting it: taking the target away is the same "
+        "person's decision, for the same reason.",
+
     # ---- roles: a judgement call, said out loud --------------------------
     "DELETE /admin/roles/{code}":
         "a judgement call, decided against. create_role and update_role exist "

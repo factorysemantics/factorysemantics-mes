@@ -79,10 +79,11 @@ def _fused_at_first_poll() -> list[str]:
 
 def test_the_fixture_is_ten_polls_with_a_gap_and_one_paused_poll():
     polls = feed.read_file(FIXTURE)
-    # Twelve moments: twice the poller wrote the session answer a second
-    # after the rest of its poll, and each reads as a poll with no buildings.
-    assert len(polls) == 12
-    assert sum(1 for p in polls if p.factory is None) == 2
+    # Twelve moments in the file: twice the poller wrote the session answer a
+    # second after the rest of its poll. Each is read with the poll it
+    # belongs to, so there are ten polls and every one has its buildings.
+    assert len(polls) == 10
+    assert sum(1 for p in polls if p.factory is None) == 0
     assert [p.ts for p in polls if p.paused] == [PAUSED]
     assert polls[0].ts == FIRST
     assert len(_fused_at_first_poll()) == 14

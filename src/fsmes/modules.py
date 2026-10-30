@@ -1111,12 +1111,16 @@ REGISTRY: tuple[Module, ...] = (
     Module(
         name="analysis",
         title="Shift analysis",
-        routers=(Mount("fsmes.api.routers.analysis", "/analysis", ("analysis",)),),
+        routers=(Mount("fsmes.api.routers.analysis", "/analysis", ("analysis",)),
+                 # The plant's standing rate order: what the parts mix on
+                 # this page is measured against.
+                 Mount("fsmes.api.routers.rate_orders", "/rate-order", ("rate order",))),
         pages=(Page("/dashboard/analysis", "analysis.html",
                     "Shift analysis: OEE losses, the state timeline, downtime pareto and "
                     "tag trends. Its own page because these are questions you sit down with, "
                     "not things you watch."),),
         tools=("fsmes.mcp.analysis",),
+        tables=("rate_orders", "rate_order_lines"),
         config_sections=(
             ConfigSection(
                 domain="engineering",

@@ -12,6 +12,22 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **Parts mix against a standing rate order on a Satisfactory plant.** A rate
+  order - a name and a target rate per item in units a minute, no quantity,
+  no due date - is set at `PUT /rate-order` or seeded from the pack's
+  `rate_orders.json` (an example ships in `labs/satisfactory`). Shift
+  analysis gains a Parts mix panel under Energy: per item target /min,
+  actual /min (good units booked over the minutes the feed was watched),
+  target and actual share, gap, shortest first, with the game's own
+  `getProdStats` figure beside it as the check; each machine page one parts
+  line; the AI's `oee_breakdown` carries it as `parts_mix`. An item with no
+  target says so. A plant with no order and no parts readings has no panel.
+  The rate order never feeds OEE. The analysis opens on **the last time you
+  played** (`shift=last_play`), named with its times. A building left out of
+  five unpaused lists of the same save is retired "torn down"
+  (`MES_SATISFACTORY_TORN_DOWN_POLLS`) and comes back when listed again; a
+  session answer a second after its poll is read with that poll.
+
 - **Energy beside OEE on a Satisfactory plant.** Shift analysis gains an
   Energy panel - MW drawn against circuit capacity with the peak marked,
   headroom, a tripped fuse named with the demand that blew it, MWh in the

@@ -1120,6 +1120,24 @@ async function loadOee() {
   $("#oee-ledger").replaceChildren(kit.ledgerSummary(oee));
   $("#oee-explain-code").textContent = CODE;
   loadEnergyLine().catch(() => $("#oee-energy").classList.add("hidden"));
+  loadPartsLine().catch(() => $("#oee-parts").classList.add("hidden"));
+}
+
+/* One line of parts mix under the OEE figures, over the same hours: the item
+   this building makes and its rate, against the plant's rate for the item and
+   the rate order's target. Absent for a machine no reader named an item for.
+   No target is said as such, never as zero. */
+async function loadPartsLine() {
+  const line = $("#oee-parts");
+  const data = await api(`/analysis/parts-mix?hours=${hours()}&equipment=${encodeURIComponent(CODE)}`);
+  const m = data && data.machine;
+  if (!m) { line.classList.add("hidden"); return; }
+  const f = (v) => (v === null || v === undefined ? "—" : `${(+v).toFixed(1)} units/min`);
+  line.textContent =
+    `Parts: makes ${m.item} · ${f(m.actual_per_minute)} here over ${fmt.qty(m.observed_minutes)} min watched ` +
+    `(${fmt.qty(m.units)} units) · the plant ${f(m.plant_actual_per_minute)} · ` +
+    (m.target_per_minute === null ? (m.why || "no target") : `rate order ${f(m.target_per_minute)}`);
+  line.classList.remove("hidden");
 }
 
 /* One line of energy under the OEE figures, over the same hours: absent on a

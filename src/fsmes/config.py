@@ -209,6 +209,10 @@ class Settings(BaseSettings):
     # nobody could see, never downtime.
     satisfactory_poll_seconds: float = 60.0
     satisfactory_gap_polls: float = 2.5
+    # A building absent from this many consecutive unpaused polls of the same
+    # save has been torn down, and is retired - history kept - until it is
+    # listed again.
+    satisfactory_torn_down_polls: int = 5
     # The area (an equipment code from the plant's own master data) that a
     # building placed after the pack was written gets its work centre under.
     # Empty, or not in the plant, and the new work centre stands on its own.

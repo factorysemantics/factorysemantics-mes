@@ -4,7 +4,8 @@
 from the Ficsit Remote Monitoring mod (a file a day, one JSON line per
 endpoint per poll). Ten of its polls, 21:03 to 21:15 Chicago time - twelve
 moments, because twice the poller wrote the session answer a second after the
-rest of its poll - with these changes and no others:
+rest of its poll (the reader now reads such a late answer with its poll) - with
+these changes and no others:
 
 * only the `getFactory`, `getPower` and `getSessionInfo` answers are kept;
   the player and production-statistics answers are left out;
@@ -32,7 +33,10 @@ circuit and session answer); no poll was removed or changed.
 `ClassName`, `BaseProd`, `DynamicProdCapacity`, `RegulatedDemandProd`,
 `IsFullSpeed`, `CanStart`, `LoadPercentage`, `PowerProductionPotential`,
 `FuelAmount`, `FuelResource`, `FuelInventory` and `PowerInfo`. The power
-answer is kept whole. No poll was removed or changed. At 05:14 a second
+answer is kept whole, and so is the production-statistics answer
+(`getProdStats`), each row keeping its `Name`, `ClassName`, `CurrentProd`,
+`MaxProd`, `CurrentConsumed` and `MaxConsumed`: the game's own figures the
+parts mix is checked against. No poll was removed or changed. At 05:14 a second
 circuit appears for one poll while the player wires one in.
 
 `ref/getRecipes.json.gz` is the game's recipe list the poller fetched once

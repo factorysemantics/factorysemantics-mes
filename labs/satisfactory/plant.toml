@@ -47,6 +47,9 @@ satisfactory_feed         = "~/Work/box/data/frm"
 satisfactory_poll_seconds = 60
 # A building placed after the master data was written is filed here.
 satisfactory_area         = "FACTORY"
+# A building left out of this many unpaused building lists of the same save
+# in a row is retired "torn down" (default 5).
+# satisfactory_torn_down_polls = 5
 
 [oee]
 # A window the MES saw less than 80% of reports no figure - a game is closed

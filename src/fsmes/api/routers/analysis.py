@@ -60,7 +60,9 @@ _LINE = Query(None, description="Work centre code; omitted means the line with t
 _SHIFT = Query(
     None,
     description="Window by shift instead of hours: `current`, `previous`, "
-                "or `YYYY-MM-DD/CODE` on the plant's own clock. Overrides `hours`.",
+                "or `YYYY-MM-DD/CODE` on the plant's own clock; or `last_play`, the "
+                "last time a game feed was watched without a gap or a pause. "
+                "Overrides `hours`.",
 )
 
 #: The third kind of window: the two ends of a stretch of the past. Both or
@@ -146,6 +148,16 @@ def energy(hours: float | None = _HOURS, shift: str | None = _SHIFT,
     one part cost against its recipe's ideal. `energy` is null on a plant with
     no power readings. The same block rides on `/analysis/oee`."""
     return analysis.energy(db, hours=hours, shift=shift, equipment_code=equipment)
+
+
+@router.get("/parts-mix")
+def parts_mix(hours: float | None = _HOURS, shift: str | None = _SHIFT,
+              equipment: str | None = Query(None, description="One machine's item and rate."),
+              db: Session = Depends(get_read_db)) -> dict:
+    """What the plant made of each item, in units a minute, against its rate
+    order. `parts_mix` is null on a plant with no rate order and no parts
+    readings. The same block rides on `/analysis/oee`."""
+    return analysis.parts_mix(db, hours=hours, shift=shift, equipment_code=equipment)
 
 
 @router.get("/timeline")
