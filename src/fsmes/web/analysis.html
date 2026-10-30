@@ -69,6 +69,27 @@
       </p>
     </section>
 
+    <!-- Energy, beside OEE and never in it. Hidden on a plant with no power
+         readings: absent, not empty. -->
+    <section id="energy-panel" class="panel span-2 hidden">
+      <h2>Energy <span class="muted">— the whole plant, not only this line: what it draws against what its circuits can give</span></h2>
+      <div id="energy-bar" class="energy-bar"></div>
+      <p id="energy-facts" class="energy-facts"></p>
+      <p id="energy-trip" class="energy-trip hidden"></p>
+      <div class="table-wrap">
+        <table id="energy-table" class="energy-table">
+          <thead><tr>
+            <th>Building</th><th class="num">kWh a part</th><th class="num">ideal</th>
+            <th class="num">gap</th><th class="num">MW now</th><th class="num">MWh</th>
+            <th class="num">parts</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p id="energy-generators" class="muted energy-small"></p>
+      <p id="energy-note" class="muted energy-small"></p>
+    </section>
+
     <section class="panel span-2">
       <h2>State timeline <span class="muted">— a stop walking down the line</span></h2>
       <div id="timeline" class="chart"></div>

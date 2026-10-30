@@ -138,6 +138,16 @@ def oee(line: str | None = _LINE, hours: float | None = _HOURS, shift: str | Non
     return analysis.oee_breakdown(db, line_code=line, hours=hours, shift=shift)
 
 
+@router.get("/energy")
+def energy(hours: float | None = _HOURS, shift: str | None = _SHIFT,
+           equipment: str | None = Query(None, description="One machine's energy line."),
+           db: Session = Depends(get_read_db)) -> dict:
+    """What the plant drew against what its circuits can give, and the energy
+    one part cost against its recipe's ideal. `energy` is null on a plant with
+    no power readings. The same block rides on `/analysis/oee`."""
+    return analysis.energy(db, hours=hours, shift=shift, equipment_code=equipment)
+
+
 @router.get("/timeline")
 def timeline(
     db: Session = Depends(get_read_db),

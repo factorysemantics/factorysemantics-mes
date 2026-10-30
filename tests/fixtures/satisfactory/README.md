@@ -24,3 +24,18 @@ tripped fuse; from 21:06 the fuse is reset and the factory runs.
 World" - so the two files together show the player loading another save. Only
 the trimming above was done to it (the same keys kept on each building, power
 circuit and session answer); no poll was removed or changed.
+
+`2026-10-30.jsonl.gz` is the first night with the generator answer
+(`getGenerators`), the whole of it: 43 polls, 09:41 to 10:23 UTC (04:41 to
+05:23 Chicago), save "fsmes". The trimming above, plus: each building keeps
+`RecipeClassName` too, and each generator keeps only its `ID`, `Name`,
+`ClassName`, `BaseProd`, `DynamicProdCapacity`, `RegulatedDemandProd`,
+`IsFullSpeed`, `CanStart`, `LoadPercentage`, `PowerProductionPotential`,
+`FuelAmount`, `FuelResource`, `FuelInventory` and `PowerInfo`. The power
+answer is kept whole. No poll was removed or changed. At 05:14 a second
+circuit appears for one poll while the player wires one in.
+
+`ref/getRecipes.json.gz` is the game's recipe list the poller fetched once
+into its `ref/` folder on 2026-10-29, cut to the twelve recipes any of the
+three files' buildings use, each keeping its `ID`, `Name`, `ClassName`,
+`Products`, `ProducedIn` and `FactoryDuration`.

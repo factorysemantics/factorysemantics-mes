@@ -1119,6 +1119,41 @@ async function loadOee() {
   // not a detail a reader should have to go to another screen for.
   $("#oee-ledger").replaceChildren(kit.ledgerSummary(oee));
   $("#oee-explain-code").textContent = CODE;
+  loadEnergyLine().catch(() => $("#oee-energy").classList.add("hidden"));
+}
+
+/* One line of energy under the OEE figures, over the same hours: absent on a
+   plant with no power readings and on a machine that drew none. A figure the
+   MES cannot make says why ("unknown: ...") instead of a zero. */
+async function loadEnergyLine() {
+  const line = $("#oee-energy");
+  const data = await api(`/analysis/energy?hours=${hours()}&equipment=${encodeURIComponent(CODE)}`);
+  const e = data && data.energy;
+  const b = e && e.buildings.find((x) => x.code === CODE);
+  const g = e && e.generators.find((x) => x.code === CODE);
+  const f = (v, places, unit) => (v === null || v === undefined ? "—" : `${(+v).toFixed(places)} ${unit}`);
+  if (b) {
+    const ideal = b.ideal_kwh_per_unit === null
+      ? (b.ideal_note || "ideal unknown")
+      : `ideal ${f(b.ideal_kwh_per_unit, 2, "kWh")}` +
+        (b.gap_kwh_per_unit === null ? "" : `, gap ${b.gap_kwh_per_unit > 0 ? "+" : ""}${f(b.gap_kwh_per_unit, 2, "kWh")}`);
+    line.textContent =
+      (b.mw_now === null
+        ? `Energy: not in the game's last building list${b.last_read ? ` (last read ${fmt.clock(b.last_read)})` : ""} · `
+        : `Energy: drawing ${f(b.mw_now, 1, "MW")} of ${f(b.mw_full_speed, 1, "MW")} at full speed · `) +
+      `${f(b.mwh, 3, "MWh")} over ${fmt.qty(b.units)} parts · ` +
+      `${f(b.kwh_per_unit, 2, "kWh")} a part (${ideal})`;
+  } else if (g) {
+    line.textContent = g.output_mw === null
+      ? `Energy: not in the game's last generator list · ${f(g.mwh_made, 3, "MWh")} made in the window`
+      : `Energy: making ${f(g.output_mw, 1, "MW")} of ${f(g.capacity_mw, 1, "MW")} · ` +
+      `load ${f(g.load_percent, 0, "%")} · burning ${g.fuel || "unknown fuel"} · ` +
+      `${f(g.mwh_made, 3, "MWh")} made in the window`;
+  } else {
+    line.classList.add("hidden");
+    return;
+  }
+  line.classList.remove("hidden");
 }
 
 /* ---------- maintenance ---------- */

@@ -40,6 +40,23 @@ kept - for "not in save <name>". A retired building that is listed again
 comes back. A poll with no session answer inherits the last name: a change
 is a change only when a name is present and different.
 
+ENERGY IS THE DRAW, INTEGRATED, WHILE THE MES CAN SEE THE BUILDING. Each
+poll writes, as readings in the tag history the OPC agent writes (one row
+per figure, at the poll's moment): every building's draw now and at full
+speed (MW), its energy since its previous poll (MWh: the draw now x the time
+since, the same way production is booked), and - when it changes - the kWh
+one part of its recipe should cost; every circuit's capacity, consumption,
+peak demand, production and battery, and whether its fuse is out; every
+generator's output, capacity, load and fuel. Energy is booked whatever the
+building was doing - a starved building still draws - but never across a
+gap or a pause: the draw at either end says nothing about the time between.
+`energy` says what each figure is made from.
+
+GENERATORS ARE EQUIPMENT TOO, from the generator answer (`getGenerators`):
+made on first sight under a GENERATORS work centre, running while they make
+power, idle and starved with no fuel, down on a tripped fuse. A poll with no
+generator answer - every file before 2026-10-30 - says nothing about them.
+
 RESTARTS DO NOT COUNT TWICE. The last poll applied and the units booked per
 building are counter baselines, written in the poll's own transaction; a
 reader that starts again skips every poll at or before that moment. The
@@ -69,7 +86,8 @@ from fsmes.domain.equipment import (
 )
 from fsmes.domain.execution import ProductionSource
 from fsmes.domain.masterdata import Equipment, EquipmentLevel
-from fsmes.integrations.satisfactory import feed, rules
+from fsmes.domain.timeseries import TagValue
+from fsmes.integrations.satisfactory import energy, feed, rules
 from fsmes.services import audit, connection, counters, execution, masterdata
 from fsmes.services import equipment as equipment_service
 
@@ -84,7 +102,13 @@ FEED_KEY = ("SATISFACTORY-FEED", "PollEpoch")
 #: `("SATISFACTORY-FEED", "Save:<name>")` holding the epoch it was last
 #: applied at - the newest row is the save on the floor.
 SAVE_TAG = "Save:"
+#: Where a generator is filed when the reader has to make it.
+GENERATORS = ("GENERATORS", "Generators")
 
+
+def is_generator(code: str) -> bool:
+    """Every generator's game class starts `Build_Generator`."""
+    return code.startswith("GENERATOR")
 
 
 def work_centre(building: dict) -> tuple[str, str]:
@@ -114,6 +138,8 @@ class Report:
     buildings_created: int = 0
     retired: int = 0
     returned: int = 0
+    readings: int = 0
+    energy_mwh: float = 0.0
     unseen_reasons: dict[str, int] = field(default_factory=dict)
 
 
@@ -131,8 +157,17 @@ class _Building:
 
 class Reader:
     def __init__(self, *, poll_seconds: float = 60.0, gap_polls: float = 2.5,
-                 area: str = "", node: str | None = None) -> None:
+                 area: str = "", node: str | None = None,
+                 recipes: energy.Recipes | None = None) -> None:
         self.poll_seconds = poll_seconds
+        #: The game's recipe list, for the energy a part should cost. Empty,
+        #: and every ideal is unknown.
+        self.recipes = recipes or energy.Recipes()
+        #: MW at full speed per kind of building, as last seen at 100 % clock.
+        self.nominal: dict[str, float] = {}
+        #: The ideal last written per building, so it is written on change.
+        self.ideal_said: dict[str, tuple[float | None, str]] = {}
+        self._ids: dict[str, int] = {}
         #: The area a building's work centre hangs under when the reader has
         #: to make one. The plant's own code, from its pack; empty, or not in
         #: the plant, and the work centre stands on its own.
@@ -209,6 +244,8 @@ class Reader:
     def _buildings(self, session: Session, poll: feed.Poll) -> None:
         tripped = rules.tripped_circuits(poll.power)
         seen: set[str] = set()
+        self.nominal.update(energy.nominal_draws(poll.factory))
+        self._circuits(session, poll)
         for building in poll.factory or []:
             building_id = building.get("ID")
             if not isinstance(building_id, str):
@@ -233,10 +270,19 @@ class Reader:
                 actor=ACTOR, at=poll.ts)
             if interval.id != open_before:
                 self.report.state_changes += 1
+            previous = self.buildings[code].last_ts if code in self.buildings else None
             self._book(session, code, building, poll.ts,
                        running=reading.state is EquipmentStateName.RUNNING)
+            self._draw(session, code, building, poll.ts, previous)
+        if poll.generators is None:
+            # No generator answer in this poll: the generators are neither
+            # seen nor gone.
+            seen |= {code for code in self.buildings if is_generator(code)}
+        else:
+            self._generators(session, poll, tripped, seen)
         if self.save and self.applied_save and self.save != self.applied_save:
-            self._retire_other_save(session, seen, poll.ts)
+            self._retire_other_save(session, seen, poll.ts,
+                                    generators_listed=poll.generators is not None)
         if self.save:
             self.applied_save = self.save
         gone = [code for code, b in self.buildings.items()
@@ -246,7 +292,8 @@ class Reader:
                                 reason="no longer in the game's building list")
         self.unseen = False
 
-    def _retire_other_save(self, session: Session, seen: set[str], moment: datetime) -> None:
+    def _retire_other_save(self, session: Session, seen: set[str], moment: datetime,
+                           generators_listed: bool = True) -> None:
         """Another save is being played: every building this reader has
         written about that is not in its list leaves the floor. The game's
         buildings are the ones whose connection this reader wrote, so one
@@ -256,6 +303,8 @@ class Reader:
             select(Equipment.code).join(EquipmentConnection,
                                         EquipmentConnection.equipment_id == Equipment.id)
             .where(EquipmentConnection.source == SOURCE).distinct()))
+        if not generators_listed:
+            known = {code for code in known if not is_generator(code)}
         for code in sorted(known - seen):
             machine = session.scalar(select(Equipment).where(Equipment.code == code))
             if machine is None or machine.retired_at is not None:
@@ -285,9 +334,107 @@ class Reader:
         state.booked += units
         self.report.units_booked += units
 
-    @staticmethod
-    def _id(session: Session, code: str) -> int:
-        return masterdata.get_equipment(session, code).id
+    def _id(self, session: Session, code: str) -> int:
+        if code not in self._ids:
+            self._ids[code] = masterdata.get_equipment(session, code).id
+        return self._ids[code]
+
+    # ---- power --------------------------------------------------------------
+
+    def _reading(self, session: Session, code: str | None, tag: str, value,
+                 moment: datetime) -> None:
+        """One figure into the tag history, at the poll's moment, as the OPC
+        agent writes one. `code` None is a figure about no machine: a circuit."""
+        if value is None:
+            return
+        numeric = isinstance(value, (int, float)) and not isinstance(value, bool)
+        session.add(TagValue(
+            equipment_id=self._id(session, code) if code else None,
+            tag=f"{code}.{tag}" if code else tag, ts=moment,
+            value_num=float(value) if numeric else None,
+            value_text=None if numeric else str(value)[:120]))
+        self.report.readings += 1
+
+    def _circuits(self, session: Session, poll: feed.Poll) -> None:
+        for circuit in energy.circuits(poll.power):
+            for field_, value in circuit.figures.items():
+                self._reading(session, None, energy.circuit_tag(circuit.group, field_),
+                              value, poll.ts)
+            self._reading(session, None, energy.circuit_tag(circuit.group, energy.TRIPPED),
+                          1.0 if circuit.tripped else 0.0, poll.ts)
+
+    def _energy(self, session: Session, code: str, mw: float | None, moment: datetime,
+                previous: datetime | None) -> None:
+        """The energy of the interval this poll closes, when the MES saw both
+        of its ends."""
+        if previous is None:
+            return
+        booked = energy.mwh(mw, (moment - previous).total_seconds())
+        if booked > 0:
+            self._reading(session, code, energy.ENERGY, booked, moment)
+            self.report.energy_mwh += booked
+
+    def _draw(self, session: Session, code: str, building: dict, moment: datetime,
+              previous: datetime | None) -> None:
+        now, top = energy.draw(building)
+        self._reading(session, code, energy.DRAW, now, moment)
+        self._reading(session, code, energy.DRAW_MAX, top, moment)
+        self._energy(session, code, now, moment, previous)
+        ideal = self.recipes.ideal(building, self.nominal)
+        said = (None if ideal is None or ideal.kwh is None else round(ideal.kwh, 6),
+                "none" if ideal is None else ideal.why)
+        if ideal is not None and self.ideal_said.get(code) != said:
+            # A number when there is one; otherwise the sentence saying why
+            # there is not, so the latest reading is never an older recipe's.
+            self._reading(session, code, energy.IDEAL,
+                          ideal.kwh if ideal.kwh is not None else ideal.why, moment)
+        self.ideal_said[code] = said
+
+    def _generators(self, session: Session, poll: feed.Poll, tripped: set[int],
+                    seen: set[str]) -> None:
+        for row in poll.generators or []:
+            ident = row.get("ID")
+            if not isinstance(ident, str):
+                continue
+            code = rules.code(ident)
+            seen.add(code)
+            self._ensure(session, code, row, parent=GENERATORS)
+            if masterdata.return_equipment(
+                    session, code, actor=ACTOR,
+                    reason=f"in save {self.save}" if self.save else "in the game's generator list"):
+                self.report.returned += 1
+            connection.set_connection(session, equipment_code=code,
+                                      state=ConnectionStateName.CONNECTED, at=poll.ts,
+                                      detected_at=poll.ts, source=SOURCE, actor=ACTOR)
+            gen = energy.generator(row)
+            circuit = rules.circuit_of(row)
+            if (row.get("PowerInfo") or {}).get("FuseTriggered") or (
+                    circuit is not None and circuit in tripped):
+                reading = rules.Reading(EquipmentStateName.DOWN, "fuse")
+            elif gen.running:
+                reading = rules.Reading(EquipmentStateName.RUNNING)
+            elif not gen.fuelled:
+                reading = rules.Reading(EquipmentStateName.IDLE, "starved")
+            else:
+                reading = rules.Reading(EquipmentStateName.IDLE)
+            open_before = session.scalar(
+                select(EquipmentState.id).where(EquipmentState.equipment_id == self._id(session, code),
+                                                EquipmentState.ended_at.is_(None)))
+            interval = equipment_service.set_state(
+                session, equipment_code=code, state=reading.state, reason=reading.reason,
+                reason_code=reading.reason_code, actor=ACTOR, at=poll.ts)
+            if interval.id != open_before:
+                self.report.state_changes += 1
+            state = self.buildings.setdefault(code, _Building())
+            previous, state.last_ts = state.last_ts, poll.ts
+            state.running = reading.state is EquipmentStateName.RUNNING
+            self._reading(session, code, energy.OUTPUT, gen.output_mw, poll.ts)
+            self._reading(session, code, energy.CAPACITY, gen.capacity_mw, poll.ts)
+            self._reading(session, code, energy.LOAD, gen.load_percent, poll.ts)
+            self._reading(session, code, energy.FUEL, gen.fuel, poll.ts)
+            self._reading(session, code, energy.FUEL_ITEMS, gen.fuel_items, poll.ts)
+            # What a generator books is what it made.
+            self._energy(session, code, gen.output_mw, poll.ts, previous)
 
     # ---- not observed -----------------------------------------------------
 
@@ -328,7 +475,8 @@ class Reader:
 
     # ---- master data on first sight ---------------------------------------
 
-    def _ensure(self, session: Session, code: str, building: dict) -> None:
+    def _ensure(self, session: Session, code: str, building: dict,
+                parent: tuple[str, str] | None = None) -> None:
         """The building as equipment: made on first sight, renamed when its
         recipe changes. A pack's master data usually has it already; a
         building placed since the pack was written is made here, under its
@@ -338,9 +486,9 @@ class Reader:
         max_rate = rules.max_per_minute(building)
         cycle = 60.0 / max_rate if max_rate > 0 else None
         if machine is None:
-            parent = self._ensure_parent(session, building)
+            centre = self._ensure_parent(session, parent or work_centre(building))
             masterdata.create_equipment(session, code=code, name=name,
-                                        level=EquipmentLevel.WORK_UNIT, parent_code=parent,
+                                        level=EquipmentLevel.WORK_UNIT, parent_code=centre,
                                         ideal_cycle_seconds=cycle, actor=ACTOR)
             self.report.buildings_created += 1
             return
@@ -353,8 +501,8 @@ class Reader:
                          entity_type="equipment", entity_id=code, before=before,
                          after={"name": name, "ideal_cycle_seconds": machine.ideal_cycle_seconds})
 
-    def _ensure_parent(self, session: Session, building: dict) -> str:
-        code, name = work_centre(building)
+    def _ensure_parent(self, session: Session, centre: tuple[str, str]) -> str:
+        code, name = centre
         if session.scalar(select(Equipment.id).where(Equipment.code == code)) is None:
             area = self.area if self.area and session.scalar(
                 select(Equipment.id).where(Equipment.code == self.area)) is not None else None
@@ -399,7 +547,8 @@ def replay(folder: Path, session_scope: Callable, *, poll_seconds: float = 60.0,
     """Every poll in the folder, applied once, then the feed's end said as
     what it is: if the last poll is older than the gap, nothing after it was
     seen. For tests and for `--once`."""
-    reader = Reader(poll_seconds=poll_seconds, gap_polls=gap_polls, area=area)
+    reader = Reader(poll_seconds=poll_seconds, gap_polls=gap_polls, area=area,
+                    recipes=energy.Recipes.load(Path(folder)))
     with session_scope() as session:
         reader.resume(session)
     for poll in feed.read_all(folder):
@@ -423,7 +572,8 @@ def run(folder: Path, session_scope: Callable, *, poll_seconds: float = 60.0,
     says *not observed*, not *down*.
     """
     folder = Path(folder).expanduser()
-    reader = Reader(poll_seconds=poll_seconds, gap_polls=gap_polls, area=area)
+    reader = Reader(poll_seconds=poll_seconds, gap_polls=gap_polls, area=area,
+                    recipes=energy.Recipes.load(folder))
     follower = feed.Follower(folder)
     with session_scope() as session:
         reader.resume(session)

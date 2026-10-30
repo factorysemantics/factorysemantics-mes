@@ -6,8 +6,9 @@ over), one line per endpoint per poll:
     {"ts": "2026-10-28T20:22:09-05:00", "endpoint": "getFactory", "data": [...]}
 
 All the lines of one poll carry the same `ts`. A poll here is those lines put
-back together: the buildings (`getFactory`), the power circuits (`getPower`)
-and the session (`getSessionInfo`), any of which may be missing - the poller
+back together: the buildings (`getFactory`), the power circuits (`getPower`),
+the generators (`getGenerators`, written by the poller since 2026-10-30) and
+the session (`getSessionInfo`), any of which may be missing - the poller
 asks each endpoint separately, and the session answer is absent from about
 one poll in eight of the first day. A missing answer is missing, never an
 empty one.
@@ -41,6 +42,9 @@ class Poll:
     """The poll's moment, as naive UTC - the MES's one convention."""
     factory: list[dict] | None = None
     power: list[dict] | None = None
+    generators: list[dict] | None = None
+    """None when the poll has no generator answer - every file before
+    2026-10-30 - which says nothing about whether the save has any."""
     session: dict | None = None
     endpoints: set[str] = field(default_factory=set)
 
@@ -89,6 +93,8 @@ def _absorb(poll: Poll, line: dict) -> None:
         poll.factory = data
     elif endpoint == "getPower" and isinstance(data, list):
         poll.power = data
+    elif endpoint == "getGenerators" and isinstance(data, list):
+        poll.generators = data
     elif endpoint == "getSessionInfo" and isinstance(data, dict):
         poll.session = data
 
