@@ -480,7 +480,7 @@ def withhold(coverage: float | None, the_floor: float | None) -> str | None:
 TOO_NEW = (
     "too new to rate: first seen at {first_seen:%Y-%m-%d %H:%M} UTC, inside this "
     "window, and watched {coverage:.1%} of it - under this plant's floor of "
-    "{floor:.0%}, because it was not there for the rest"
+    "{floor:.0%}, because it was not there for the rest; its figures are withheld"
 )
 
 
