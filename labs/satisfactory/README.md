@@ -31,9 +31,30 @@ once and stop: `fsmes run-satisfactory <folder> --once`.
 | an input short of one cycle | idle, `starved` |
 | none of those | idle |
 
-Production is the game's own rate (`CurrentProd`, units a minute) times the
-minutes since the building's previous poll, booked in whole units as
-unassigned production: nobody ordered it.
+| The game's production figures | The MES books |
+|---|---|
+| the building was **running** at its previous poll | its rate now (`CurrentProd`, units a minute) × the minutes since that poll, in whole units, as unassigned production: nobody ordered it |
+| it was anything else at its previous poll (starved, blocked, on a tripped fuse, switched off) | nothing - `CurrentProd` is a rolling figure that keeps reading for minutes after a building stops, and booked production implies run time |
+| a gap or a pause lies between the two polls | nothing - the rate at either end says nothing about the time between |
+
+The game's own `IsProducing` decides *running*: in both evenings' polls,
+every building that said it was producing had a rate above zero, and about
+a third of the readings with a rate above zero came from a building that had
+stopped.
+
+## One save on the floor
+
+The session answer names the save being played (`getSessionInfo.SessionName`).
+
+| The polls say | The MES does |
+|---|---|
+| a building list under the same save as the last one | nothing more: a building missing from it is unseen, "no longer in the game's building list" (torn down, or out of the mod's reach) |
+| a building list under a **different** save | every building of the game's not in the list is **retired**: off the floor and out of the "watching" count, with the reason "not in save <name>", its history kept |
+| a retired building in the list again (that save loaded again) | it comes back on the floor |
+| no session answer in this poll (about one poll in ten; the poller sometimes writes it a second late) | the last save named still holds: a change is a change only when a name is present and different |
+
+The bar at the top of every page, and `/health`'s `source`, start with the
+save: "save fsmes · A game factory read through ...".
 
 ## What the MES does not say
 
@@ -44,7 +65,10 @@ unassigned production: nobody ordered it.
   figure counts the time and the downtime pareto does not list it.
 - **Quality is always 100%.** The game has no scrap, so nothing is ever booked
   as scrap, and every screen says so in the bar at the top.
-- **No energy figure and no parts mix** in this first slice.
+- **No energy figure and no parts mix** yet. A building whose recipe
+  changes is rated at its latest recipe, so units made under an earlier,
+  faster one can make its OEE say "counted work outruns the run time" -
+  correctly: two parts are being counted as one.
 
 ## The master data
 

@@ -485,7 +485,7 @@ def line_here() -> dict:
     try:
         with session_scope() as session:
             count = session.scalar(select(func.count(Equipment.id)).where(
-                Equipment.level == EquipmentLevel.WORK_UNIT))
+                Equipment.level == EquipmentLevel.WORK_UNIT, Equipment.retired_at.is_(None)))
         return {"equipment": int(count or 0), "answered": True}
     except Exception as exc:
         # Same rule as the schema reading above: the driver's words name the

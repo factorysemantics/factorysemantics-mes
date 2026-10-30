@@ -31,6 +31,20 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _source(db: Session) -> str | None:
+    """The pack's sentence about where this plant's data comes from, None
+    when it says nothing. A plant that reads a game's poll files (the pack
+    names a `satisfactory_feed`) puts the save being played in front of it,
+    so the bar says which save the floor is."""
+    settings = get_settings()
+    note = settings.source_note or ""
+    if settings.satisfactory_feed_dir:
+        from fsmes.integrations.satisfactory import reader as satisfactory
+
+        note = satisfactory.source_note(db, note)
+    return note or None
+
+
 def _the_floor(db: Session) -> dict:
     """When somebody on the floor last recorded a check.
 
@@ -142,7 +156,7 @@ def health(db: ReadDbDep) -> dict:
             # it is not what a reader would assume - a game factory read
             # through a mod, not a plant. None on every plant that does not
             # say. Every screen draws it as a bar.
-            "source": get_settings().source_note or None,
+            "source": _source(db),
             # How much of this plant the MES can currently see. A statement
             # about this deployment's own reach, not a number the plant
             # produced, which is what keeps it on the public side of the line

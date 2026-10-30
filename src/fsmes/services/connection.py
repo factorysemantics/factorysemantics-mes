@@ -25,7 +25,6 @@ from fsmes.domain import (
     ConnectionStateName,
     Equipment,
     EquipmentConnection,
-    EquipmentLevel,
     EquipmentState,
 )
 from fsmes.services import audit, masterdata, outbox
@@ -252,12 +251,12 @@ def watching(session: Session) -> dict:
     """
     machines = session.scalar(
         select(func.count()).select_from(Equipment)
-        .where(Equipment.level == EquipmentLevel.WORK_UNIT)) or 0
+        .where(masterdata.on_the_floor())) or 0
     rows = session.execute(
         select(EquipmentConnection.state, func.count())
         .join(Equipment, Equipment.id == EquipmentConnection.equipment_id)
         .where(EquipmentConnection.ended_at.is_(None),
-               Equipment.level == EquipmentLevel.WORK_UNIT)
+               masterdata.on_the_floor())
         .group_by(EquipmentConnection.state)
     ).all()
     counts = {str(getattr(state, "value", state)): int(count) for state, count in rows}
