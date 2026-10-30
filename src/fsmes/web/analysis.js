@@ -353,7 +353,11 @@ function renderEnergy(e) {
     const gap = b.gap_kwh_per_unit;
     tr.appendChild(cell(gap === null ? "—" : `${gap > 0 ? "+" : ""}${kwh(gap)}`,
                         "num" + (gap !== null && gap > 0.005 ? " gap-over" : "")));
-    tr.appendChild(cell(mw(b.mw_now), "num"));
+    const now = cell(mw(b.mw_now), "num");
+    if (b.mw_now === null && b.last_read) {
+      now.title = `not in the game's last building list; last read ${FS.fmt.clock(b.last_read)}`;
+    }
+    tr.appendChild(now);
     tr.appendChild(cell(mwhText(b.mwh), "num"));
     tr.appendChild(cell(num(b.units), "num"));
     body.appendChild(tr);

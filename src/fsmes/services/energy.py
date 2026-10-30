@@ -8,8 +8,11 @@ block: `breakdown` returns None and no screen draws an empty panel.
 
 ONE DEFINITION PER NUMBER:
 
-* **MW now** - a machine's or a circuit's latest reading at or before the
-  window's end.
+* **MW now** - a circuit's reading at the window's last power poll; a
+  machine's at the last poll that answered its list (the buildings' or the
+  generators'). A machine that list left out has none (`null`, with
+  `last_read` saying when it was last listed): the mod lists only part of
+  the factory in any one poll.
 * **MWh** - the sum of the energy readings in the window. The reader books
   one per poll, only when it saw both ends of the interval, so time nobody
   watched holds none.
@@ -181,6 +184,15 @@ def breakdown(db: Session, start: datetime, end: datetime,
     latest = _latest(db, machines, _MACHINE_TAGS, end)
     made = equipment_service.production_sums(db, ids, start, end)
 
+    # "Now" is the last poll that answered the machine's own list - the
+    # buildings' or the generators'. The mod lists only part of the factory
+    # in a poll, so a machine missing from that list has no figure now: its
+    # last one is from an earlier poll and is not drawn as current.
+    last_list = {DRAW: None, OUTPUT: None}
+    for (_, tag), row in latest.items():
+        if tag in last_list and (last_list[tag] is None or row.ts > last_list[tag]):
+            last_list[tag] = row.ts
+
     buildings, generators = [], []
     for machine in machines:
         mwh = float(energy_sum.get(machine.id) or 0.0)
@@ -189,12 +201,22 @@ def breakdown(db: Session, start: datetime, end: datetime,
             row = latest.get((_id, tag))
             return None if row is None else row.value_num
 
+        def now(tag: str, _id: int = machine.id, listed: str = DRAW) -> float | None:
+            row = latest.get((_id, tag))
+            if row is None or row.ts < last_list[listed]:
+                return None
+            return row.value_num
+
+        draw_row = latest.get((machine.id, DRAW)) or latest.get((machine.id, OUTPUT))
+        last_read = draw_row.ts if draw_row is not None else None
+
         if (machine.id, OUTPUT) in latest:
             fuel = latest.get((machine.id, FUEL))
             generators.append({
                 "code": machine.code, "name": machine.name,
-                "output_mw": _r(num(OUTPUT)), "capacity_mw": _r(num(CAPACITY)),
-                "load_percent": _r(num(LOAD), 1),
+                "output_mw": _r(now(OUTPUT, listed=OUTPUT)),
+                "capacity_mw": _r(now(CAPACITY, listed=OUTPUT)),
+                "load_percent": _r(now(LOAD, listed=OUTPUT), 1), "last_read": last_read,
                 "fuel": fuel.value_text if fuel is not None else None,
                 "fuel_items": _r(num(FUEL_ITEMS), 1),
                 "mwh_made": _r(mwh, 4),
@@ -213,7 +235,8 @@ def breakdown(db: Session, start: datetime, end: datetime,
             ideal_note = None
         buildings.append({
             "code": machine.code, "name": machine.name,
-            "mw_now": _r(num(DRAW)), "mw_full_speed": _r(num(DRAW_MAX)),
+            "mw_now": _r(now(DRAW)), "mw_full_speed": _r(num(DRAW_MAX)),
+            "last_read": last_read,
             "mwh": _r(mwh, 4), "units": units,
             "kwh_per_unit": _r(per_part, 2),
             "ideal_kwh_per_unit": _r(ideal, 2),

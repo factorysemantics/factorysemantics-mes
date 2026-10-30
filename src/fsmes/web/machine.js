@@ -1138,12 +1138,15 @@ async function loadEnergyLine() {
       : `ideal ${f(b.ideal_kwh_per_unit, 2, "kWh")}` +
         (b.gap_kwh_per_unit === null ? "" : `, gap ${b.gap_kwh_per_unit > 0 ? "+" : ""}${f(b.gap_kwh_per_unit, 2, "kWh")}`);
     line.textContent =
-      `Energy: drawing ${f(b.mw_now, 1, "MW")} of ${f(b.mw_full_speed, 1, "MW")} at full speed · ` +
+      (b.mw_now === null
+        ? `Energy: not in the game's last building list${b.last_read ? ` (last read ${fmt.clock(b.last_read)})` : ""} · `
+        : `Energy: drawing ${f(b.mw_now, 1, "MW")} of ${f(b.mw_full_speed, 1, "MW")} at full speed · `) +
       `${f(b.mwh, 3, "MWh")} over ${fmt.qty(b.units)} parts · ` +
       `${f(b.kwh_per_unit, 2, "kWh")} a part (${ideal})`;
   } else if (g) {
-    line.textContent =
-      `Energy: making ${f(g.output_mw, 1, "MW")} of ${f(g.capacity_mw, 1, "MW")} · ` +
+    line.textContent = g.output_mw === null
+      ? `Energy: not in the game's last generator list · ${f(g.mwh_made, 3, "MWh")} made in the window`
+      : `Energy: making ${f(g.output_mw, 1, "MW")} of ${f(g.capacity_mw, 1, "MW")} · ` +
       `load ${f(g.load_percent, 0, "%")} · burning ${g.fuel || "unknown fuel"} · ` +
       `${f(g.mwh_made, 3, "MWh")} made in the window`;
   } else {

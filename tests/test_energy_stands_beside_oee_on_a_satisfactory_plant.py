@@ -117,6 +117,23 @@ def test_a_building_fed_half_its_parts_burns_twice_the_ideal_a_part(tmp_path, se
     assert rod["gap_kwh_per_unit"] == 4.44
 
 
+def test_a_building_the_last_poll_did_not_list_has_no_mw_now_and_keeps_its_energy(
+        tmp_path, session, scope):
+    # The mod lists only part of the factory in a poll: building 2 is in the
+    # first six and missing from the last, so its last draw is not "now".
+    polls = [_poll(_minutes(i), [_constructor("1"), _constructor("2")]) for i in range(6)]
+    polls.append(_poll(_minutes(6), [_constructor("1")]))
+    _write(tmp_path, polls, recipes=[IRON_ROD])
+    reader.replay(tmp_path, scope, now=_minutes(6))
+    block = energy_service.breakdown(session, T0, _minutes(6))
+    one, two = _building(block, "CONSTRUCTORMK1-1"), _building(block, "CONSTRUCTORMK1-2")
+    assert one["mw_now"] == 4.0
+    assert two["mw_now"] is None
+    assert two["last_read"] == _minutes(5)
+    # 4 MW for the five minutes it was watched.
+    assert two["mwh"] == pytest.approx(4 * 5 / 60, abs=1e-4)
+
+
 def test_a_recipe_absent_from_the_reference_shows_its_ideal_as_unknown_and_says_why(
         tmp_path, session, scope):
     _write(tmp_path, [_poll(_minutes(i), [_constructor(recipe="Iron Rod")]) for i in range(3)],

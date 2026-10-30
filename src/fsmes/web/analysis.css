@@ -185,3 +185,4 @@ a.link { text-decoration: none; }
 .energy-table .unknown { color: var(--unknown); font-style: italic; }
 .energy-table .name { color: var(--muted); font-size: 11px; display: block; }
 .energy-small { font-size: 12px; margin: 6px 0 0; }
+.energy-table th { text-transform: none; letter-spacing: 0; }
