@@ -1,4 +1,4 @@
-# One evening of a Satisfactory game, trimmed
+# Two evenings of a Satisfactory game, trimmed
 
 `2026-10-28.jsonl.gz` is cut from the poll file a poller wrote on 2026-10-28
 from the Ficsit Remote Monitoring mod (a file a day, one JSON line per
@@ -18,3 +18,9 @@ rest of its poll - with these changes and no others:
 
 The polls before 21:06 have fourteen of the eighteen buildings on a
 tripped fuse; from 21:06 the fuse is reset and the factory runs.
+
+`2026-10-29.jsonl.gz` is the next evening, the whole of it: 203 polls, 22:15 to
+01:37 UTC (17:15 to 20:37 Chicago), in a different save - "fsmes", not "Hello
+World" - so the two files together show the player loading another save. Only
+the trimming above was done to it (the same keys kept on each building, power
+circuit and session answer); no poll was removed or changed.

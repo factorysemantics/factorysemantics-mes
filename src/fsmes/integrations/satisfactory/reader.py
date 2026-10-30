@@ -18,13 +18,27 @@ each closes its state history with the cause rather than writing a state:
 * a building that was in the list is not any more - torn down, or out of
   the mod's reach.
 
-PRODUCTION IS THE GAME'S RATE, INTEGRATED. The mod gives a rate
-(`production[0].CurrentProd`, units a minute), not a counter, so each poll
-books rate x the time since the building's previous poll, as a running sum,
-and only whole units: the fraction waits for the next poll. Nothing is
-booked across a gap or a pause - the rate at either end says nothing about
-the time between. A building with no work order books unassigned production,
-which is what it is: the player makes things; nobody ordered them.
+PRODUCTION IS THE GAME'S RATE, INTEGRATED, WHILE THE BUILDING RUNS. The mod
+gives a rate (`production[0].CurrentProd`, units a minute), not a counter, so
+each poll books rate x the time since the building's previous poll, as a
+running sum, and only whole units: the fraction waits for the next poll.
+Booked production implies run time, so a poll books only when the state the
+MES holds for the interval it closes - the one written at the building's
+previous poll - is *running*. `CurrentProd` is a rolling figure: a building
+that has stopped (starved, blocked, on a tripped fuse) goes on reporting a
+rate for minutes, and the game's own `IsProducing` is what says it stopped.
+Nothing is booked across a gap or a pause - the rate at either end says
+nothing about the time between. A building with no work order books
+unassigned production, which is what it is: the player makes things; nobody
+ordered them.
+
+ONE SAVE ON THE FLOOR. The session answer names the save being played
+(`getSessionInfo.SessionName`). When a building list arrives under a
+different save from the last one applied, every building of this reader's
+that is not in the list is retired - taken off the floor with its history
+kept - for "not in save <name>". A retired building that is listed again
+comes back. A poll with no session answer inherits the last name: a change
+is a change only when a name is present and different.
 
 RESTARTS DO NOT COUNT TWICE. The last poll applied and the units booked per
 building are counter baselines, written in the poll's own transaction; a
@@ -47,7 +61,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from fsmes.db import utcnow
-from fsmes.domain.equipment import ConnectionStateName, EquipmentState
+from fsmes.domain.equipment import (
+    ConnectionStateName,
+    EquipmentConnection,
+    EquipmentState,
+    EquipmentStateName,
+)
 from fsmes.domain.execution import ProductionSource
 from fsmes.domain.masterdata import Equipment, EquipmentLevel
 from fsmes.integrations.satisfactory import feed, rules
@@ -61,6 +80,10 @@ ACTOR = "satisfactory-reader"
 #: The counter-baseline row that holds the last poll applied. Not a machine:
 #: the reader's own place in the files.
 FEED_KEY = ("SATISFACTORY-FEED", "PollEpoch")
+#: The save of the last building list applied, as a counter-baseline row
+#: `("SATISFACTORY-FEED", "Save:<name>")` holding the epoch it was last
+#: applied at - the newest row is the save on the floor.
+SAVE_TAG = "Save:"
 
 
 
@@ -89,6 +112,8 @@ class Report:
     state_changes: int = 0
     units_booked: int = 0
     buildings_created: int = 0
+    retired: int = 0
+    returned: int = 0
     unseen_reasons: dict[str, int] = field(default_factory=dict)
 
 
@@ -99,6 +124,9 @@ class _Building:
     after a gap, a pause or a disappearance: the next poll books nothing."""
     made: float = 0.0
     booked: int = 0
+    running: bool = False
+    """Whether the state written at the building's previous poll was
+    *running*: the interval the next poll closes is run time only then."""
 
 
 class Reader:
@@ -114,6 +142,11 @@ class Reader:
         self.last: datetime | None = None
         self.buildings: dict[str, _Building] = {}
         self.unseen = False
+        #: The save named by the latest session answer, and the save of the
+        #: last building list applied. Different means the player loaded
+        #: another save since.
+        self.save: str | None = None
+        self.applied_save: str | None = None
         self.report = Report()
 
     # ---- resume -----------------------------------------------------------
@@ -127,13 +160,21 @@ class Reader:
         for (code, tag), value in saved.items():
             if tag == "GoodCount":
                 self.buildings[code] = _Building(made=float(value), booked=value)
+        self.applied_save = self.save = saved_save(saved)
         # Nothing carries over the restart: the time since the last poll
         # applied is a gap until the next poll proves otherwise.
 
     # ---- one poll ---------------------------------------------------------
 
     def apply(self, session: Session, poll: feed.Poll) -> None:
+        name = (poll.session or {}).get("SessionName")
+        if isinstance(name, str) and name.strip():
+            self.save = name.strip()
         if self.last is not None and poll.ts <= self.last:
+            # Applied before this reader started; its save was the one on
+            # the floor then.
+            if poll.factory is not None and self.save:
+                self.applied_save = self.save
             self.report.skipped += 1
             return
         if poll.factory is None and not poll.paused:
@@ -160,6 +201,8 @@ class Reader:
         self.last = poll.ts
         baselines = {(code, "GoodCount"): b.booked for code, b in self.buildings.items()}
         baselines[FEED_KEY] = _epoch(poll.ts)
+        if self.applied_save:
+            baselines[(FEED_KEY[0], (SAVE_TAG + self.applied_save)[:80])] = _epoch(poll.ts)
         counters.save(session, baselines, self.node)
         self.report.polls += 1
 
@@ -173,6 +216,10 @@ class Reader:
             code = rules.code(building_id)
             seen.add(code)
             self._ensure(session, code, building)
+            if masterdata.return_equipment(
+                    session, code, actor=ACTOR,
+                    reason=f"in save {self.save}" if self.save else "in the game's building list"):
+                self.report.returned += 1
             connection.set_connection(session, equipment_code=code,
                                       state=ConnectionStateName.CONNECTED, at=poll.ts,
                                       detected_at=poll.ts, source=SOURCE, actor=ACTOR)
@@ -186,7 +233,12 @@ class Reader:
                 actor=ACTOR, at=poll.ts)
             if interval.id != open_before:
                 self.report.state_changes += 1
-            self._book(session, code, building, poll.ts)
+            self._book(session, code, building, poll.ts,
+                       running=reading.state is EquipmentStateName.RUNNING)
+        if self.save and self.applied_save and self.save != self.applied_save:
+            self._retire_other_save(session, seen, poll.ts)
+        if self.save:
+            self.applied_save = self.save
         gone = [code for code, b in self.buildings.items()
                 if code not in seen and b.last_ts is not None]
         for code in gone:
@@ -194,10 +246,33 @@ class Reader:
                                 reason="no longer in the game's building list")
         self.unseen = False
 
-    def _book(self, session: Session, code: str, building: dict, moment: datetime) -> None:
+    def _retire_other_save(self, session: Session, seen: set[str], moment: datetime) -> None:
+        """Another save is being played: every building this reader has
+        written about that is not in its list leaves the floor. The game's
+        buildings are the ones whose connection this reader wrote, so one
+        the reader knew only in an earlier process is found too."""
+        reason = f"not in save {self.save}"
+        known = set(self.buildings) | set(session.scalars(
+            select(Equipment.code).join(EquipmentConnection,
+                                        EquipmentConnection.equipment_id == Equipment.id)
+            .where(EquipmentConnection.source == SOURCE).distinct()))
+        for code in sorted(known - seen):
+            machine = session.scalar(select(Equipment).where(Equipment.code == code))
+            if machine is None or machine.retired_at is not None:
+                continue
+            self._unobserve_one(session, code, at=moment, detected_at=moment, reason=reason)
+            masterdata.retire_equipment(session, code, reason=reason, at=moment, actor=ACTOR)
+            self.report.retired += 1
+
+    def _book(self, session: Session, code: str, building: dict, moment: datetime, *,
+              running: bool) -> None:
         state = self.buildings.setdefault(code, _Building())
         previous, state.last_ts = state.last_ts, moment
-        if previous is None:
+        was_running, state.running = state.running, running
+        if previous is None or not was_running:
+            # Unseen before this poll, or not running since the last one:
+            # whatever rate the game still reports, the MES holds no run time
+            # for this interval and books nothing in it.
             return
         seconds = (moment - previous).total_seconds()
         state.made += rules.rate_per_minute(building) * seconds / 60.0
@@ -287,6 +362,33 @@ class Reader:
                                         level=EquipmentLevel.WORK_CENTER, parent_code=area,
                                         actor=ACTOR)
         return code
+
+
+# ---- the save on the floor ------------------------------------------------
+
+
+def saved_save(saved: dict[tuple[str, str], int]) -> str | None:
+    """The save of the last building list applied, from the counter
+    baselines: the newest `Save:` row. None before any poll named one."""
+    rows = [(value, tag[len(SAVE_TAG):]) for (code, tag), value in saved.items()
+            if code == FEED_KEY[0] and tag.startswith(SAVE_TAG)]
+    return max(rows)[1] if rows else None
+
+
+def source_note(session: Session, note: str) -> str:
+    """The plant's sentence about its source, with the save on the floor in
+    front of it: "save fsmes · A game factory ...". The sentence alone
+    before any poll has named a save."""
+    from fsmes.domain import CounterBaseline
+
+    rows = session.execute(
+        select(CounterBaseline.equipment_code, CounterBaseline.tag, CounterBaseline.value)
+        .where(CounterBaseline.equipment_code == FEED_KEY[0],
+               CounterBaseline.tag.startswith(SAVE_TAG))).all()
+    save = saved_save({(code, tag): int(value) for code, tag, value in rows})
+    if not save:
+        return note
+    return f"save {save} · {note}" if note else f"save {save}"
 
 
 # ---- the process ----------------------------------------------------------
