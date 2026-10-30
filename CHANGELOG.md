@@ -54,6 +54,21 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Honesty
 
+- **A Satisfactory building that ran at full rate all evening gets a figure,
+  and one placed in the last minutes says "too new to rate".** The reader
+  carried the part of a unit made before the game was closed across the gap
+  and booked it in the next stretch, so four full-rate constructors on the
+  2026-10-30 "last played" window read "counts outrun run time" (617
+  concrete in 2,467 s of running at 4 s a unit, which holds 616.75). The
+  fraction now stops at a gap, a pause or a disappearance: a break can lose
+  less than one unit per building and never adds one. A station first seen
+  inside the window and withheld by the coverage floor now reads "placed
+  05:21 — too new to rate", listed after the rated ones, and the line's
+  count says "9 of 15 stations · 6 too new"; `oee_breakdown` and the
+  machine OEE tab carry `too_new`, `first_seen` and `stations_too_new`. The
+  floor is unchanged. *Migration:* replay the poll files into a fresh plant
+  to restate bookings made by an earlier reader.
+
 - **The Satisfactory plant books production only for time it holds as
   running, and shows only the save being played.** The game's `CurrentProd`
   is a rolling figure that goes on reading for minutes after a building
