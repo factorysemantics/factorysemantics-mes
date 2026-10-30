@@ -57,6 +57,12 @@ made on first sight under a GENERATORS work centre, running while they make
 power, idle and starved with no fuel, down on a tripped fuse. A poll with no
 generator answer - every file before 2026-10-30 - says nothing about them.
 
+THE FRACTION DOES NOT CROSS A BREAK. A building's running sum keeps the part
+of a unit not yet booked from one poll to the next, but not across a gap, a
+pause or a disappearance: it is dropped at the first poll after one, so what
+a stretch books was made inside that stretch. A break can lose less than one
+unit per building and never adds one.
+
 RESTARTS DO NOT COUNT TWICE. The last poll applied and the units booked per
 building are counter baselines, written in the poll's own transaction; a
 reader that starts again skips every poll at or before that moment. The
@@ -391,6 +397,14 @@ class Reader:
         state = self.buildings.setdefault(code, _Building())
         previous, state.last_ts = state.last_ts, moment
         was_running, state.running = state.running, running
+        if previous is None:
+            # First sight, or the first poll after a gap, a pause or a
+            # disappearance: the part of a unit made before it stays there.
+            # Carried over, it would be booked inside the next stretch, in an
+            # interval whose run time does not hold it - on 2026-10-30 a
+            # concrete constructor's 0.94 of a unit made at 01:37 was booked
+            # at 09:42 and made 617 units of a window that holds 616.75.
+            state.made = float(state.booked)
         if previous is None or not was_running:
             # Unseen before this poll, or not running since the last one:
             # whatever rate the game still reports, the MES holds no run time

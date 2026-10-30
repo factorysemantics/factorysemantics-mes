@@ -113,9 +113,10 @@ function renderOee(data) {
       }
     }
 
+    const placed = FS.kit.tooNew(s);
     const score = document.createElement("div");
     score.className = "score";
-    score.textContent = pct(s.oee);
+    score.textContent = placed ? "new" : pct(s.oee);
     score.title =
       `A ${pct(s.availability)} · P ${pct(s.performance)} · Q ${pct(s.quality)}\n` +
       `${num(s.good_qty)} good, ${num(s.scrap_qty)} scrap\n` +
@@ -128,10 +129,13 @@ function renderOee(data) {
     // in a tooltip. A waterfall drawn over eleven observed minutes of a shift
     // is not a smaller waterfall, and nothing else on this row says so.
     const watched = document.createElement("div");
-    watched.className = "watched" + (s.coverage_note && s.coverage_floor ? " withheld" : "");
-    watched.textContent = s.coverage_note && s.coverage_floor
-      ? `Watched ${pct(s.coverage)} — below this plant's floor, so the figures are unknown`
-      : `Watched ${pct(s.coverage)}`;
+    watched.className = "watched" + (placed ? " too-new"
+      : s.coverage_note && s.coverage_floor ? " withheld" : "");
+    watched.textContent = placed
+      ? placed
+      : s.coverage_note && s.coverage_floor
+        ? `Watched ${pct(s.coverage)} — below this plant's floor, so the figures are unknown`
+        : `Watched ${pct(s.coverage)}`;
     watched.title = s.coverage_note
       || "How much of this window the MES actually watched. `fsmes oee explain "
          + s.code + "` prints every second of it.";
@@ -492,7 +496,11 @@ async function load() {
   if (oee.stations_counts_outrun) {
     rated.push(`${oee.stations_counts_outrun} counting past its run time`);
   }
-  if (oee.stations_withheld) rated.push(`${oee.stations_withheld} below the coverage floor`);
+  const tooNew = oee.stations_too_new || 0;
+  if (tooNew) rated.push(`${tooNew} too new`);
+  if (oee.stations_withheld - tooNew > 0) {
+    rated.push(`${oee.stations_withheld - tooNew} below the coverage floor`);
+  }
   $("#kpi-constraint").textContent =
     (oee.constraint ? `worst: ${oee.constraint} · ` : "") + rated.join(" · ");
   $("#kpi-good").textContent = num(oee.good_qty);

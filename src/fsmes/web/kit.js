@@ -186,6 +186,18 @@
     return row;
   }
 
+  /* "placed 05:21 — too new to rate": a machine first seen inside the window
+     and under the floor, on the plant's clock. Said instead of a dash and
+     "Watched 2 %", which read as a fault; the floor's own sentence stays the
+     title. Null for every other machine. */
+  function tooNew(oee) {
+    if (!oee || !oee.too_new || !oee.first_seen) return null;
+    const zone = FS.fmt.zone() ? { timeZone: FS.fmt.zone() } : {};
+    const at = utc(oee.first_seen).toLocaleTimeString(
+      undefined, { hour: "2-digit", minute: "2-digit", hour12: false, ...zone });
+    return `placed ${at} — too new to rate`;
+  }
+
   /* The ledger as a short list: where the unwatched time went. Drawn in place
      of the figures when this plant's pack floor withholds them. Every list
      states its total, including this one. */
@@ -219,6 +231,13 @@
     // drawn in their place - not a smaller bar, which would read as a
     // measurement of a machine rather than of how little we saw of it.
     if (oee.coverage_note && oee.coverage_floor) {
+      const placed = tooNew(oee);
+      if (placed) {
+        const said = FS.el("p", "too-new", placed);
+        said.title = oee.coverage_note;
+        host.append(said, coverageRow(oee));
+        return;
+      }
       host.append(coverageRow(oee), ledgerSummary(oee));
       return;
     }
@@ -3125,7 +3144,7 @@
   }
 
   FS.kit = { utc, duration, age, svg, add, empty, timeTicks, timeline, trend, oeeBars,
-             coverageRow, ledgerSummary,
+             coverageRow, ledgerSummary, tooNew,
              /* The chart contract: one entry point, five shapes, six rules —
                 and one way to take a chart off the page with its footer on. */
              chart, draw, export: exportChart };
