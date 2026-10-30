@@ -153,3 +153,35 @@ a.link { text-decoration: none; }
 /* The line/window pickers, moved out of the header - no other screen
    puts controls there, and the shared header has no slot for them. */
 .picks { padding: var(--s2) var(--s4) 0; }
+
+/* ---------- energy ---------- */
+.energy-bar { margin: 4px 0 6px; }
+.energy-bar .bar { height: 26px; overflow: visible; }
+.energy-bar .bar > i { position: absolute; top: 0; bottom: 0; }
+.energy-bar .used { left: 0; background: var(--running); border-radius: 5px 0 0 5px; }
+.energy-bar .over {
+  background: repeating-linear-gradient(45deg, var(--down) 0 6px, transparent 6px 12px);
+  opacity: 0.7;
+}
+.energy-bar .bar > i.peak, .energy-bar .bar > i.cap {
+  top: -5px; bottom: -5px; width: 3px; margin-left: -1px; border-radius: 1px;
+}
+.energy-bar .bar > i.peak { background: var(--idle); }
+.energy-bar .bar > i.cap { background: var(--text); }
+.energy-bar .key { font-size: 12px; color: var(--muted); margin-top: 8px; }
+.energy-bar .key b { display: inline-block; width: 10px; height: 10px; border-radius: 2px;
+  margin: 0 4px 0 12px; vertical-align: -1px; }
+.energy-bar .key b:first-child { margin-left: 0; }
+.energy-bar .scale {
+  display: flex; justify-content: space-between;
+  font-size: 11px; color: var(--muted); margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.energy-facts { font-size: 13px; margin: 6px 0; }
+.energy-facts strong { font-variant-numeric: tabular-nums; }
+.energy-trip { font-size: 13px; color: var(--down); margin: 4px 0 8px; }
+.energy-table td, .energy-table th { padding: 6px 8px; font-size: 13px; }
+.energy-table .gap-over { color: var(--idle); font-weight: 600; }
+.energy-table .unknown { color: var(--unknown); font-style: italic; }
+.energy-table .name { color: var(--muted); font-size: 11px; display: block; }
+.energy-small { font-size: 12px; margin: 6px 0 0; }

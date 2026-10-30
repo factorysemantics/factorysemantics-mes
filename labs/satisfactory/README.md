@@ -65,10 +65,49 @@ save: "save fsmes · A game factory read through ...".
   figure counts the time and the downtime pareto does not list it.
 - **Quality is always 100%.** The game has no scrap, so nothing is ever booked
   as scrap, and every screen says so in the bar at the top.
-- **No energy figure and no parts mix** yet. A building whose recipe
+- **No parts mix** yet. A building whose recipe
   changes is rated at its latest recipe, so units made under an earlier,
   faster one can make its OEE say "counted work outruns the run time" -
   correctly: two parts are being counted as one.
+- **Energy never enters OEE.** It is drawn beside it, in its own panel.
+
+## Energy
+
+Shift analysis has an **Energy** panel under OEE, and each machine's OEE tab
+has one energy line, over the same window. A plant with no power readings
+(every plant that is not a game) has neither.
+
+- **The bar** is what the circuits draw now (MW), against their capacity
+  (MW), with the peak demand marked - what every building would draw at
+  once. Headroom is capacity less peak demand; below zero, the fuse goes
+  the moment everything wants power. A tripped fuse is named with the demand
+  that did it: "fuse tripped: demand 141 MW over capacity 100 MW".
+- **MWh** is each building's draw integrated over the polls, booked only
+  for an interval the MES saw both ends of. A pause or a gap books none, as
+  it books no production and no state. Idle draw counts: a building waiting
+  for input still draws.
+- **kWh a part** is that energy over the parts booked in the same window.
+  **Ideal** is the building's nominal draw (its `MaxPowerConsumed` at 100 %
+  clock, as the feed reports it) over the recipe's `FactoryRate`, from the
+  game's recipe list in `ref/getRecipes.json` beside the day files: a
+  Constructor at 4 MW making 15 a minute is 4 x 1000 / 60 / 15 = 4.44 kWh a
+  part. A recipe that is not in the list has ideal **unknown**, and says so;
+  none is guessed. **Gap** is kWh a part less the ideal, worst first.
+- **Generators** are equipment, under work centre GENERATORS: running or
+  idle, with what they make (MW), what they could make, their load and
+  their fuel as readings.
+
+The readings are tags in the history like any agent's: `<CODE>.PowerMW`,
+`.PowerMaxMW`, `.EnergyMWh`, `.IdealKWhPerUnit`; for a generator
+`.OutputMW`, `.CapacityMW`, `.LoadPercent`, `.Fuel`, `.FuelItems`; and per
+circuit `POWER.CIRCUIT-<n>.CapacityMW`, `.ConsumedMW`, `.PeakDemandMW`,
+`.ProductionMW`, `.BatteryPercent`, `.BatteryCapacityMWh`, `.FuseTripped`.
+The AI tab reads the same figures from `oee_breakdown`'s `energy` block.
+
+The mod's `PowerProduction` reads 0 on every circuit so far, so nothing
+treats it as the circuit's output; it is kept as a reading because it is
+what the feed said. Its generators carry no `ProductionRate`;
+`RegulatedDemandProd` is the figure that moves with the load.
 
 ## The master data
 

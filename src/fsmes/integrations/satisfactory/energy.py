@@ -39,19 +39,22 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-#: Readings on a building or a generator, as `<CODE>.<tag>`.
-DRAW = "PowerMW"
-DRAW_MAX = "PowerMaxMW"
-ENERGY = "EnergyMWh"
-IDEAL = "IdealKWhPerUnit"
-OUTPUT = "OutputMW"
-CAPACITY = "CapacityMW"
-LOAD = "LoadPercent"
-FUEL = "Fuel"
-FUEL_ITEMS = "FuelItems"
+from fsmes.services.energy import (  # noqa: F401 - the names, kept below the readers
+    CAPACITY,
+    CIRCUIT_PREFIX,
+    DRAW,
+    DRAW_MAX,
+    ENERGY,
+    FUEL,
+    FUEL_ITEMS,
+    IDEAL,
+    LOAD,
+    OUTPUT,
+    TRIPPED,
+    kwh_per_unit,
+    trip_sentence,
+)
 
-#: A circuit's readings carry no machine: `POWER.CIRCUIT-<group>.<field>`.
-CIRCUIT_PREFIX = "POWER."
 CIRCUIT_FIELDS = {
     "CapacityMW": "PowerCapacity",
     "ConsumedMW": "PowerConsumed",
@@ -60,7 +63,6 @@ CIRCUIT_FIELDS = {
     "BatteryPercent": "BatteryPercent",
     "BatteryCapacityMWh": "BatteryCapacity",
 }
-TRIPPED = "FuseTripped"
 
 #: Where the poller keeps the game's recipe list, beside its day files.
 RECIPES = ("ref/getRecipes.json", "ref/getRecipes.json.gz")
@@ -93,13 +95,6 @@ def mwh(mw: float | None, seconds: float) -> float:
         return 0.0
     return mw * seconds / 3600.0
 
-
-def kwh_per_unit(mwh_booked: float | None, units: float | None) -> float | None:
-    """kWh a part over a window: MWh booked x 1000 / units booked. None when
-    nothing was made - a figure per part needs a part."""
-    if mwh_booked is None or not units:
-        return None
-    return mwh_booked * 1000.0 / units
 
 
 def nominal_draws(factory: list[dict] | None) -> dict[str, float]:
@@ -208,15 +203,6 @@ class Circuit:
             return None
         cap, peak = self.figures.get("CapacityMW"), self.figures.get("PeakDemandMW")
         return trip_sentence(peak, cap)
-
-
-def trip_sentence(peak: float | None, capacity: float | None) -> str:
-    if peak is None or capacity is None:
-        return "fuse tripped; the feed did not carry the demand"
-    if peak > capacity:
-        return f"fuse tripped: demand {peak:g} MW over capacity {capacity:g} MW"
-    return (f"fuse tripped: demand {peak:g} MW within capacity {capacity:g} MW at this "
-            "poll - the trip came before it and the fuse has not been reset")
 
 
 def circuits(power: list[dict] | None) -> list[Circuit]:

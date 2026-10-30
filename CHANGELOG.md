@@ -12,6 +12,16 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **Energy beside OEE on a Satisfactory plant.** Shift analysis gains an
+  Energy panel - MW drawn against circuit capacity with the peak marked,
+  headroom, a tripped fuse named with the demand that blew it, MWh in the
+  window, and per building kWh a part against the recipe's ideal (unknown
+  when the recipe is not in the game's list) - and each machine page one
+  energy line. Generators are equipment with their output and fuel as
+  readings. The figures ride in `/analysis/oee` as `energy` (so the AI's
+  `oee_breakdown` has them) and alone at `/analysis/energy`. A plant with no
+  power readings has no panel. Energy never enters an OEE figure.
+
 - **The trace page answers "where did this lot go" on a line that books by
   the lot.** Asked about a lot, Quality › Trace now lists the orders that
   drew on it - the station it went in at, how much, when, the order's

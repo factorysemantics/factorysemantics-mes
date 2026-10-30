@@ -89,7 +89,7 @@ def _building(block: dict, code: str) -> dict:
 # ------------------------------------------------------------------ energy per part
 
 
-def test_a_building_drawing_4_mw_for_ten_minutes_at_15_parts_a_minute_shows_4_44_kwh_a_part_and_the_ideal_from_the_recipe(
+def test_4_mw_for_ten_minutes_at_15_parts_a_minute_is_4_44_kwh_a_part_and_the_recipe_ideal(
         tmp_path, session, scope):
     _write(tmp_path, [_poll(_minutes(i), [_constructor()]) for i in range(11)],
            recipes=[IRON_ROD])

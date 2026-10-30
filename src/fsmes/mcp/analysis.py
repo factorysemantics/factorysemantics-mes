@@ -251,6 +251,19 @@ def register(mcp, call) -> dict:
         `constraint`, `coverage`, `stations_rated`, `stations_withheld` - is the
         whole line's and stays true however few stations are shown.
 
+        `energy` is present only on a plant whose reader writes power readings
+        (today, a Satisfactory factory) and is never part of any OEE figure.
+        Every number carries its unit in its name: `capacity_mw`,
+        `consumed_mw`, `peak_demand_mw` and `headroom_mw` for the circuits as
+        they stand at the window's end; `mwh` used in the window; per building
+        `kwh_per_unit` against `ideal_kwh_per_unit` (the recipe's rate at 100 %
+        clock over the building's nominal draw) and `gap_kwh_per_unit`. An
+        ideal of `null` with an `ideal_note` beginning "unknown" means the
+        recipe is not in the game's reference - say so, never guess one.
+        `last_trip.why` names the demand that blew a fuse; `generators` says
+        what each one makes and burns. Absent means the plant reports no
+        power, not that it uses none.
+
         Reading is free - no capability is needed for this call.
         """
         payload = call(plant, "GET",

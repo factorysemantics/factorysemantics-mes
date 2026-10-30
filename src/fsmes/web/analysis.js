@@ -235,6 +235,148 @@ function renderTag(data) {
   });
 }
 
+/* ---------- energy ---------- */
+/* Energy beside OEE, never in it. The API leaves the block out on a plant
+   with no power readings, and then the panel is not drawn at all: an empty
+   energy panel on a plant with no power figures would say "0 MW", which nobody measured. */
+const mw = (v) => (v === null || v === undefined ? "—" : `${(+v).toFixed(1)} MW`);
+const kwh = (v) => (v === null || v === undefined ? "—" : `${(+v).toFixed(2)} kWh`);
+const mwhText = (v) => (v === null || v === undefined ? "—" : `${(+v).toFixed(3)} MWh`);
+
+function cell(text, cls) {
+  const td = document.createElement("td");
+  if (cls) td.className = cls;
+  if (text instanceof Node) td.appendChild(text); else td.textContent = text;
+  return td;
+}
+
+function renderEnergy(e) {
+  const panel = $("#energy-panel");
+  if (!e) { panel.classList.add("hidden"); return; }
+  panel.classList.remove("hidden");
+
+  // One bar: what the circuits draw now, against what they can give, with
+  // the peak demand marked - the draw if every building wanted power at once.
+  const host = $("#energy-bar");
+  host.replaceChildren();
+  const cap = e.capacity_mw, used = e.consumed_mw, peak = e.peak_demand_mw;
+  if (cap === null && used === null) {
+    empty(host, "No circuit figures in this window.");
+  } else {
+    const top = Math.max(cap || 0, peak || 0, used || 0) || 1;
+    const at = (v) => `${((v / top) * 100).toFixed(2)}%`;
+    const bar = document.createElement("div");
+    bar.className = "bar";
+    bar.setAttribute("role", "img");
+    bar.setAttribute("aria-label",
+      `drawing ${mw(used)} of ${mw(cap)} capacity, peak demand ${mw(peak)}`);
+    const fill = document.createElement("i");
+    fill.className = "used";
+    fill.style.width = at(used || 0);
+    fill.title = `drawing now: ${mw(used)}`;
+    bar.appendChild(fill);
+    if (cap !== null && peak !== null && peak > cap) {
+      const over = document.createElement("i");
+      over.className = "over";
+      over.style.left = at(cap);
+      over.style.width = at(peak - cap);
+      over.title = `peak demand over capacity by ${mw(peak - cap)}`;
+      bar.appendChild(over);
+    }
+    if (cap !== null) {
+      const c = document.createElement("i");
+      c.className = "cap";
+      c.style.left = at(cap);
+      c.title = `capacity: ${mw(cap)}`;
+      bar.appendChild(c);
+    }
+    if (peak !== null) {
+      const p = document.createElement("i");
+      p.className = "peak";
+      p.style.left = at(peak);
+      p.title = `peak demand: ${mw(peak)}`;
+      bar.appendChild(p);
+    }
+    const key = document.createElement("div");
+    key.className = "key";
+    key.innerHTML =
+      `<b style="background:var(--running)"></b>drawing now ${mw(used)}` +
+      `<b style="background:var(--idle)"></b>peak demand ${mw(peak)}` +
+      `<b style="background:var(--text)"></b>capacity ${mw(cap)}`;
+    host.append(bar, key);
+  }
+
+  const circuits = e.circuits_total === 1 ? "1 circuit" : `${e.circuits_total} circuits`;
+  const facts = [
+    `${mwhText(e.mwh)} used in this window`,
+    e.headroom_mw === null ? "headroom unknown"
+      : e.headroom_mw < 0 ? `${mw(-e.headroom_mw)} short at peak demand`
+      : `${mw(e.headroom_mw)} headroom at peak demand`,
+    circuits,
+  ];
+  if (e.generators_total) facts.push(`${mwhText(e.mwh_made)} made by ${e.generators_total} generators`);
+  $("#energy-facts").textContent = facts.join(" · ");
+
+  const trip = $("#energy-trip");
+  if (e.tripped || e.last_trip) {
+    const t = e.last_trip;
+    trip.textContent = e.tripped
+      ? `Fuse out now on ${(e.circuits.find((c) => c.tripped) || {}).circuit || "a circuit"}: ` +
+        ((e.circuits.find((c) => c.tripped) || {}).why || t?.why || "")
+      : `Fuse tripped in this window (${t.circuit}, ${FS.fmt.clock(t.at)}, ` +
+        `${e.tripped_polls} poll${e.tripped_polls === 1 ? "" : "s"} out): ${t.why}`;
+    trip.classList.remove("hidden");
+  } else {
+    trip.classList.add("hidden");
+  }
+
+  const body = $("#energy-table tbody");
+  body.replaceChildren();
+  for (const b of e.buildings) {
+    const tr = document.createElement("tr");
+    const who = document.createElement("span");
+    who.append(FS.link("machine", b.code, "code"));
+    const name = document.createElement("span");
+    name.className = "name";
+    name.textContent = b.name;
+    who.append(name);
+    tr.appendChild(cell(who));
+    tr.appendChild(cell(kwh(b.kwh_per_unit), "num"));
+    if (b.ideal_kwh_per_unit === null) {
+      const td = cell(b.ideal_note && b.ideal_note.startsWith("unknown") ? "unknown" : "—",
+                      "num unknown");
+      td.title = b.ideal_note || "";
+      tr.appendChild(td);
+    } else {
+      tr.appendChild(cell(kwh(b.ideal_kwh_per_unit), "num"));
+    }
+    const gap = b.gap_kwh_per_unit;
+    tr.appendChild(cell(gap === null ? "—" : `${gap > 0 ? "+" : ""}${kwh(gap)}`,
+                        "num" + (gap !== null && gap > 0.005 ? " gap-over" : "")));
+    tr.appendChild(cell(mw(b.mw_now), "num"));
+    tr.appendChild(cell(mwhText(b.mwh), "num"));
+    tr.appendChild(cell(num(b.units), "num"));
+    body.appendChild(tr);
+  }
+  if (!e.buildings.length) {
+    const tr = document.createElement("tr");
+    const td = cell("No building drew power in this window.", "muted");
+    td.colSpan = 7;
+    tr.appendChild(td);
+    body.appendChild(tr);
+  }
+
+  const gens = e.generators.map((g) =>
+    `${g.code}: ${mw(g.output_mw)} of ${mw(g.capacity_mw)}, burning ${g.fuel || "unknown fuel"}`);
+  $("#energy-generators").textContent = e.generators_total
+    ? `${e.generators_total} generators — ${gens.join(" · ")}`
+    : "No generators reported.";
+  $("#energy-note").textContent =
+    `${e.buildings_total} buildings, worst gap first. ` + e.note +
+    " Ideal is the recipe's rate at 100 % clock against the building's nominal draw; " +
+    "unknown when the recipe is not in the game's reference.";
+}
+
 /* ---------- load ---------- */
 async function load() {
   const q = query();
@@ -290,6 +432,7 @@ async function load() {
     : `${FS.fmt.stamp(oee.window.start)} → ${FS.fmt.clock(oee.window.end)}`;
 
   renderOee(oee);
+  renderEnergy(oee.energy);
   renderTimeline(timeline);
   renderPareto(downtime);
   renderProduction(production);

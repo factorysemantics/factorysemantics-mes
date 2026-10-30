@@ -167,6 +167,9 @@
         <h2>OEE <span id="oee-window" class="muted"></span></h2>
         <div id="oee-bars" class="bars"></div>
         <p id="oee-facts" class="muted small"></p>
+        <!-- Energy beside OEE, never in it: drawn only on a plant whose reader
+             writes power readings, and only for a machine that drew power. -->
+        <p id="oee-energy" class="small hidden"></p>
         <!-- The coverage ledger: where the time nobody watched went. Beside the
              figures, never instead of them - unless this plant's pack sets a
              floor this window is below, in which case it is instead of them. -->

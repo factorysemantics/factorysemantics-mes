@@ -3,7 +3,7 @@ and what one part cost against what its recipe says it should.
 
 Read from the tag history - the power readings a reader wrote (today, the
 Satisfactory reader; `fsmes.integrations.satisfactory.energy` says what each
-one is made from). A plant with no power readings at all has no energy
+one is made from - the names are kept here). A plant with no power readings at all has no energy
 block: `breakdown` returns None and no screen draws an empty panel.
 
 ONE DEFINITION PER NUMBER:
@@ -32,20 +32,55 @@ from sqlalchemy.orm import Session
 
 from fsmes.domain.masterdata import Equipment
 from fsmes.domain.timeseries import TagValue
-from fsmes.integrations.satisfactory import energy as tags
 from fsmes.services import equipment as equipment_service
 
 UNITS = {"draw": "MW", "energy": "MWh", "per_part": "kWh"}
 
-_MACHINE_TAGS = (tags.DRAW, tags.DRAW_MAX, tags.IDEAL, tags.OUTPUT, tags.CAPACITY,
-                 tags.LOAD, tags.FUEL, tags.FUEL_ITEMS)
+# ---- the readings' names: the vocabulary a reader writes and this reads ----
+# Kept here, below the readers, so a service never imports an edge; the
+# Satisfactory reader takes them from here.
+
+#: Readings on a building or a generator, as `<CODE>.<tag>`.
+DRAW = "PowerMW"
+DRAW_MAX = "PowerMaxMW"
+ENERGY = "EnergyMWh"
+IDEAL = "IdealKWhPerUnit"
+OUTPUT = "OutputMW"
+CAPACITY = "CapacityMW"
+LOAD = "LoadPercent"
+FUEL = "Fuel"
+FUEL_ITEMS = "FuelItems"
+
+#: A circuit's readings carry no machine: `POWER.CIRCUIT-<group>.<field>`.
+CIRCUIT_PREFIX = "POWER."
+TRIPPED = "FuseTripped"
+
+
+def kwh_per_unit(mwh_booked: float | None, units: float | None) -> float | None:
+    """kWh a part over a window: MWh booked x 1000 / units booked. None when
+    nothing was made - a figure per part needs a part."""
+    if mwh_booked is None or not units:
+        return None
+    return mwh_booked * 1000.0 / units
+
+
+def trip_sentence(peak: float | None, capacity: float | None) -> str:
+    """Why a fuse is out, in the figures of the poll that saw it."""
+    if peak is None or capacity is None:
+        return "fuse tripped; the feed did not carry the demand"
+    if peak > capacity:
+        return f"fuse tripped: demand {peak:g} MW over capacity {capacity:g} MW"
+    return (f"fuse tripped: demand {peak:g} MW within capacity {capacity:g} MW at this "
+            "poll - the trip came before it and the fuse has not been reset")
+
+_MACHINE_TAGS = (DRAW, DRAW_MAX, IDEAL, OUTPUT, CAPACITY, LOAD, FUEL, FUEL_ITEMS)
 
 
 def has_power(db: Session) -> bool:
     """Whether any reader ever wrote a circuit reading on this plant."""
     return db.scalar(
         select(TagValue.id).where(TagValue.equipment_id.is_(None),
-                                  TagValue.tag.like(tags.CIRCUIT_PREFIX + "%"))
+                                  TagValue.tag.like(CIRCUIT_PREFIX + "%"))
         .order_by(TagValue.id.desc()).limit(1)) is not None
 
 
@@ -72,12 +107,12 @@ def _circuits(db: Session, start: datetime, end: datetime) -> tuple[list[dict], 
     figures of the poll that saw it, and how many polls saw a fuse out."""
     rows = db.execute(
         select(TagValue.tag, TagValue.ts, TagValue.value_num)
-        .where(TagValue.equipment_id.is_(None), TagValue.tag.like(tags.CIRCUIT_PREFIX + "%"),
+        .where(TagValue.equipment_id.is_(None), TagValue.tag.like(CIRCUIT_PREFIX + "%"),
                TagValue.ts > start, TagValue.ts <= end)
         .order_by(TagValue.ts)).all()
     by_circuit: dict[str, dict[datetime, dict[str, float]]] = {}
     for tag, ts, value in rows:
-        name, _, field = tag[len(tags.CIRCUIT_PREFIX):].rpartition(".")
+        name, _, field = tag[len(CIRCUIT_PREFIX):].rpartition(".")
         by_circuit.setdefault(name, {}).setdefault(ts, {})[field] = value
     out, last_trip, tripped_polls = [], None, 0
     # The circuits as they stand: the ones in the window's last power poll.
@@ -89,16 +124,16 @@ def _circuits(db: Session, start: datetime, end: datetime) -> tuple[list[dict], 
         at = max(polls)
         now = polls[at]
         cap, peak = now.get("CapacityMW"), now.get("PeakDemandMW")
-        tripped = bool(now.get(tags.TRIPPED))
+        tripped = bool(now.get(TRIPPED))
         for ts, figures in polls.items():
-            if figures.get(tags.TRIPPED):
+            if figures.get(TRIPPED):
                 tripped_polls += 1
                 if last_trip is None or ts >= last_trip["at"]:
                     last_trip = {
                         "circuit": name, "at": ts,
                         "peak_demand_mw": figures.get("PeakDemandMW"),
                         "capacity_mw": figures.get("CapacityMW"),
-                        "why": tags.trip_sentence(figures.get("PeakDemandMW"),
+                        "why": trip_sentence(figures.get("PeakDemandMW"),
                                                   figures.get("CapacityMW")),
                     }
         if at != last_poll:
@@ -111,7 +146,7 @@ def _circuits(db: Session, start: datetime, end: datetime) -> tuple[list[dict], 
             "battery_percent": _r(now.get("BatteryPercent")),
             "battery_capacity_mwh": _r(now.get("BatteryCapacityMWh")),
             "tripped": tripped,
-            "why": tags.trip_sentence(peak, cap) if tripped else None,
+            "why": trip_sentence(peak, cap) if tripped else None,
         })
     return out, last_trip, tripped_polls
 
@@ -128,7 +163,7 @@ def breakdown(db: Session, start: datetime, end: datetime,
     machine_ids = db.scalars(
         select(TagValue.equipment_id)
         .where(TagValue.equipment_id.is_not(None),
-               TagValue.tag.like("%." + tags.DRAW) | TagValue.tag.like("%." + tags.OUTPUT),
+               TagValue.tag.like("%." + DRAW) | TagValue.tag.like("%." + OUTPUT),
                TagValue.ts > start, TagValue.ts <= end)
         .distinct()).all()
     query = select(Equipment).where(Equipment.id.in_(machine_ids))
@@ -140,7 +175,7 @@ def breakdown(db: Session, start: datetime, end: datetime,
     energy_sum = dict(db.execute(
         select(TagValue.equipment_id, func.sum(TagValue.value_num))
         .where(TagValue.equipment_id.in_(ids),
-               TagValue.tag.like("%." + tags.ENERGY),
+               TagValue.tag.like("%." + ENERGY),
                TagValue.ts > start, TagValue.ts <= end)
         .group_by(TagValue.equipment_id)).all()) if ids else {}
     latest = _latest(db, machines, _MACHINE_TAGS, end)
@@ -154,21 +189,21 @@ def breakdown(db: Session, start: datetime, end: datetime,
             row = latest.get((_id, tag))
             return None if row is None else row.value_num
 
-        if (machine.id, tags.OUTPUT) in latest:
-            fuel = latest.get((machine.id, tags.FUEL))
+        if (machine.id, OUTPUT) in latest:
+            fuel = latest.get((machine.id, FUEL))
             generators.append({
                 "code": machine.code, "name": machine.name,
-                "output_mw": _r(num(tags.OUTPUT)), "capacity_mw": _r(num(tags.CAPACITY)),
-                "load_percent": _r(num(tags.LOAD), 1),
+                "output_mw": _r(num(OUTPUT)), "capacity_mw": _r(num(CAPACITY)),
+                "load_percent": _r(num(LOAD), 1),
                 "fuel": fuel.value_text if fuel is not None else None,
-                "fuel_items": _r(num(tags.FUEL_ITEMS), 1),
+                "fuel_items": _r(num(FUEL_ITEMS), 1),
                 "mwh_made": _r(mwh, 4),
             })
             continue
         good, scrap, _ = made.get(machine.id, (0.0, 0.0, 0.0))
         units = good + scrap
-        per_part = tags.kwh_per_unit(mwh, units)
-        ideal_row = latest.get((machine.id, tags.IDEAL))
+        per_part = kwh_per_unit(mwh, units)
+        ideal_row = latest.get((machine.id, IDEAL))
         ideal = ideal_row.value_num if ideal_row is not None else None
         if ideal_row is None:
             ideal_note = "no recipe set"
@@ -178,7 +213,7 @@ def breakdown(db: Session, start: datetime, end: datetime,
             ideal_note = None
         buildings.append({
             "code": machine.code, "name": machine.name,
-            "mw_now": _r(num(tags.DRAW)), "mw_full_speed": _r(num(tags.DRAW_MAX)),
+            "mw_now": _r(num(DRAW)), "mw_full_speed": _r(num(DRAW_MAX)),
             "mwh": _r(mwh, 4), "units": units,
             "kwh_per_unit": _r(per_part, 2),
             "ideal_kwh_per_unit": _r(ideal, 2),
