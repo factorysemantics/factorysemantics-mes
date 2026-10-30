@@ -20,6 +20,28 @@ goes under Honesty with a migration line, so plant people can find it.
   to get "nothing serialised carries LOT-CAP-001" and an empty table.
   `GET /trace/where-used/{lot}` and the MCP `where_used` tool carry the same
   list as `orders`, with `orders_total`.
+- **A machine can be retired: off the floor, history kept.** Equipment has
+  `retired_at` and `retired_reason` (migration `a9c4e1f7b2d3`). A retired
+  machine keeps its states, production and connections, and leaves the
+  Floor, the line lists and `/health`'s `watching` count. Nothing retires a
+  machine yet except the Satisfactory reader (below).
+
+### Honesty
+
+- **The Satisfactory plant books production only for time it holds as
+  running, and shows only the save being played.** The game's `CurrentProd`
+  is a rolling figure that goes on reading for minutes after a building
+  stops, and the reader booked it whatever state it had just written, so
+  most constructors' OEE said "counted work outruns the run time" (21
+  buildings across the two evenings replayed; 1 now, whose recipe changed
+  between Iron Plate and Iron Rod - the parts mix, not booking). A poll now
+  books only for an interval whose state was *running*, as the game's
+  `IsProducing` says. A building list under a new save name
+  (`getSessionInfo.SessionName`) retires the old save's buildings for "not
+  in save <name>", a building listed again comes back, and the bar on
+  every page starts with the save: "save fsmes · ...".
+  *Migration:* production booked by an earlier reader stays as it was;
+  replay the poll files into a fresh plant to restate it.
 
 ## [0.4.2] — 2026-10-26
 
