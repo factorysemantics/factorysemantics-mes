@@ -51,6 +51,7 @@ from fsmes.kernel.tags import STRUCTURAL_TAGS
 from fsmes.services import NotFound, coverage, line_clock, masterdata, plant_settings, reasons
 from fsmes.services import calendar as calendar_service
 from fsmes.services import connection as connection_service
+from fsmes.services import energy as energy_service
 from fsmes.services import equipment as equipment_service
 from fsmes.services import line as line_service
 from fsmes.services import oee as oee_rules
@@ -444,7 +445,7 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float | None
     # fixing first, which is a more useful headline than an average nobody acts on.
     worst = min((s for s in stations if s["oee"] is not None), key=lambda s: s["oee"], default=None)
 
-    return {
+    out = {
         "line": {"code": centre.code, "name": centre.name},
         # `clamped` is true when the MES simply has not been watching for as
         # long as was asked for.
@@ -486,6 +487,26 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float | None
         # whose clock is the line's, which is every real one.
         "clock": line_clock.summary(replay),
     }
+    # Energy beside the figures, never in them: the plant's power over the
+    # window that was asked for (energy is booked only while watched, so the
+    # unwatched part of it holds none). Absent on a plant with no power
+    # readings, so no screen draws an empty panel.
+    power = energy_service.breakdown(db, asked_start, asked_end)
+    if power is not None:
+        out["energy"] = power
+    return out
+
+
+def energy(db: Session, hours: float | None = None, shift: str | None = None,
+           equipment_code: str | None = None) -> dict:
+    """The plant's energy over a window - the block `oee_breakdown` carries -
+    optionally narrowed to one machine. `energy` is None on a plant with no
+    power readings."""
+    hours = calendar_service.default_report_hours(db) if hours is None else hours
+    the_shift = _shift(db, shift)
+    start, end = _asked_window(hours, the_shift)
+    return {"window": _window_json(start, end, hours, the_shift),
+            "energy": energy_service.breakdown(db, start, end, equipment_code)}
 
 
 def _line_coverage(accounts) -> float | None:
