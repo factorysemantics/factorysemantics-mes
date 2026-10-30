@@ -142,8 +142,12 @@ def test_a_poll_under_a_new_save_retires_the_old_saves_buildings_and_the_floor_c
         # Off the floor, not out of the record: its states are still there.
         assert session.scalar(select(func.count()).select_from(EquipmentState)
                               .where(EquipmentState.equipment_id == machine.id)) > 0
-    assert done.report.retired == len(old)
-    assert connection.watching(session)["machines"] == before + len(new)
+    # The new save's own buildings that the player tore down during the day
+    # leave as well, with their own reason (five lists in a row without them).
+    torn = {code for code in new if session.scalar(
+        select(Equipment.retired_reason).where(Equipment.code == code)) == "torn down"}
+    assert done.report.retired == len(old) + len(torn)
+    assert connection.watching(session)["machines"] == before + len(new) - len(torn)
     assert not old & {e.code for e in analysis.masterdata.work_units_under(
         session, session.scalar(select(Equipment).where(Equipment.code == "CONSTRUCTORS")))}
 

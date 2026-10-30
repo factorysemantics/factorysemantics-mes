@@ -27,6 +27,7 @@ written by `fsmes pack apply`:
       personnel_skills.json    who holds which trade, and how well
       roster.json              who is on which shift, and who is away
       dispatch_rules.json      how maintenance work is handed out, in order
+      rate_orders.json         the standing mix a continuous plant is asked for
 
 The last five arrived on 2026-10-09, with the maintenance crew. A plant that
 knows its machines and not its electricians cannot hand a filler's electrical
@@ -109,6 +110,7 @@ KINDS: dict[str, str] = {
     "personnel_skills": "who holds which trade, and how well",
     "roster": "who is on which shift, and who is away",
     "dispatch_rules": "how maintenance work is handed out, tried in order",
+    "rate_orders": "the standing rate order: per item, units a minute wanted (one at most)",
 }
 
 REQUIRED: dict[str, tuple[str, ...]] = {
@@ -129,6 +131,7 @@ REQUIRED: dict[str, tuple[str, ...]] = {
     "personnel_skills": ("person", "skill"),
     "roster": ("person", "shift"),
     "dispatch_rules": ("code", "name"),
+    "rate_orders": ("code", "name", "items"),
 }
 
 OPTIONAL: dict[str, tuple[str, ...]] = {
@@ -168,6 +171,7 @@ OPTIONAL: dict[str, tuple[str, ...]] = {
     "roster": ("day", "available", "reason"),
     "dispatch_rules": ("supervisor", "equipment", "skill", "priority_at_least",
                        "strategy", "sequence", "active"),
+    "rate_orders": ("note",),
 }
 
 #: What `[[maintenance_plans]] trigger` may say, and what each counts. Spelt
@@ -483,6 +487,19 @@ def problems(directory: Path) -> list[str]:
         if row.get("available") is not None and not isinstance(row["available"], bool):
             out.append(f"{where} has available {row['available']!r}; that is true or "
                        "false.")
+    from fsmes.services import Invalid, rate_orders
+
+    orders = data.rows("rate_orders")
+    if len(orders) > 1:
+        out.append(f"rate_orders.json holds {len(orders)} orders; a plant has one rate "
+                   "order at most - put every item in it.")
+    for index, row in enumerate(orders, start=1):
+        if not isinstance(row, dict) or row.get("items") in (None, ""):
+            continue
+        try:
+            rate_orders.check(row["items"])
+        except Invalid as exc:
+            out.append(f"rate_orders.json #{index}: {exc}.")
     for index, row in enumerate(data.rows("dispatch_rules"), start=1):
         where = f"dispatch_rules.json #{index}"
         node = row.get("equipment")
@@ -612,7 +629,7 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
     )
     from fsmes.domain.common import VocabularyStatus
     from fsmes.services import calendar as calendar_service
-    from fsmes.services import maintenance, masterdata, workorders
+    from fsmes.services import maintenance, masterdata, rate_orders, workorders
 
     data = read(directory)
     cycles = cycles or {}
@@ -627,6 +644,8 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
         # Not "present": it is not there, and saying it was would be the
         # receipt telling a reader their rule had arrived.
         receipt["dispatch_rules"]["left_alone"] = 0
+    if "rate_orders" in receipt:
+        receipt["rate_orders"]["left_alone"] = 0
 
     def count(kind: str, made: bool) -> None:
         receipt[kind]["made" if made else "present"] += 1
@@ -979,4 +998,19 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
             strategy=DispatchStrategy(row.get("strategy", DispatchStrategy.LEAST_LOADED)),
             active=row.get("active", True), sequence=int(row.get("sequence", 100))))
         count("dispatch_rules", made=True)
+
+    # The rate order is the plant's own, changed on a screen or over the API
+    # whenever it wants a different mix. A pack starts a plant off with one
+    # and keeps out of it after: a plant that has any order keeps it.
+    for row in data.rows("rate_orders")[:1]:
+        found = rate_orders.current(session)
+        if found is not None:
+            if found.code == row["code"]:
+                count("rate_orders", made=False)
+            else:
+                receipt["rate_orders"]["left_alone"] += 1
+            continue
+        rate_orders.put(session, code=row["code"], name=row["name"], note=row.get("note"),
+                        items=row["items"], actor="pack")
+        count("rate_orders", made=True)
     return receipt

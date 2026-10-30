@@ -36,7 +36,7 @@ from sqlalchemy.orm import Session
 
 from fsmes import identity
 from fsmes.domain import CalendarException, ExceptionKind, ShiftPattern
-from fsmes.services import Conflict, Invalid, audit, plant_settings
+from fsmes.services import Conflict, Invalid, audit, last_play, plant_settings
 
 # Scheduling walks forward in steps; a minute is fine for a plant and keeps
 # the arithmetic exact rather than approximating with fractions of an hour.
@@ -220,6 +220,8 @@ class Shift:
 
     def key(self) -> str:
         """What a caller passes back as `shift=` to ask for this one again."""
+        if self.code == last_play.CODE:
+            return last_play.SPEC
         return f"{self.day.isoformat()}/{self.code}"
 
     def as_json(self) -> dict:
@@ -371,6 +373,9 @@ def resolve_shift(session: Session, spec: str, equipment_id: int | None = None,
         current              the shift running now
         previous             the one before it
         2026-09-14/NIGHT     a named shift on a named plant-local day
+        last_play            the latest stretch a game feed was watched
+                             without a gap or a pause (`fsmes.services.last_play`);
+                             needs no shift pattern
 
     Raises `Invalid` with one sentence when the request names no shift - the
     plant is between shifts, the code is not a pattern, the pattern does not
@@ -382,6 +387,8 @@ def resolve_shift(session: Session, spec: str, equipment_id: int | None = None,
 
     moment = now or utcnow()
     zone = identity.clock().tz
+    if spec == last_play.SPEC:
+        return last_play_shift(session, zone)
     known = patterns(session, equipment_id)
     if not known:
         raise Invalid(nothing_to_window(session, equipment_id))
@@ -432,6 +439,23 @@ def resolve_shift(session: Session, spec: str, equipment_id: int | None = None,
             f"{pattern.days}, Monday first, and no overtime exception covers "
             "that day")
     return _instance(pattern, day, zone)
+
+
+def last_play_shift(session: Session, zone: tzinfo | None = None) -> Shift:
+    """The last time somebody played, as a window a screen can name: from the
+    first poll of the latest watched stretch to its last. Refused in one
+    sentence on a plant whose reader never wrote a stretch."""
+    found = last_play.latest(session)
+    if found is None:
+        raise Invalid(
+            "no feed on this plant has said when it was watched, so there is no "
+            "last time you played - that window needs a game reader "
+            "(`fsmes run-satisfactory`); ask for a span of hours instead")
+    start, end = found
+    zone = zone or identity.clock().tz
+    day = start.replace(tzinfo=UTC).astimezone(zone).date()
+    return Shift(code=last_play.CODE, name=last_play.NAME, day=day,
+                 starts_at=start, ends_at=end)
 
 
 def stamp(row, shift: Shift | None) -> None:

@@ -242,7 +242,9 @@ def register(mcp, call) -> dict:
         `window.hours` is what was realised and `window.clamped` is true when
         this MES simply had not been watching that long. `shift` windows it on
         the plant's own clock instead - `current`, `previous`, or a day and a
-        code such as `2026-09-14/NIGHT` - and overrides `hours`. `line` left
+        code such as `2026-09-14/NIGHT`, or `last_play` on a plant a game
+        feeds: the last time somebody played, from the stretch's first poll to
+        its last - and overrides `hours`. `line` left
         out is the line with the most machines.
 
         `machines_total` is how many stations the line has. A long line holds
@@ -263,6 +265,17 @@ def register(mcp, call) -> dict:
         `last_trip.why` names the demand that blew a fuse; `generators` says
         what each one makes and burns. Absent means the plant reports no
         power, not that it uses none.
+
+        `parts_mix` is present only on a plant with a rate order or parts
+        readings, and is never part of any OEE figure; the rate order never
+        feeds OEE. Per item, in units a minute: `actual_per_minute` (good units
+        booked over the minutes the feed was watched), `target_per_minute`
+        (the rate order's), `gap_per_minute` (actual less target), and the
+        shares in % (`target_share_percent`, `actual_share_percent` of
+        `share_basis`). Rows run shortest first. A `target_per_minute` of
+        `null` with `why` means no target - not a target of zero; with no rate
+        order at all, `has_target` is false. `game_made_per_minute` is the
+        game's own figure, the check on the bookings, not a second answer.
 
         Reading is free - no capability is needed for this call.
         """

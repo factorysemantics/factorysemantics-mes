@@ -186,3 +186,9 @@ a.link { text-decoration: none; }
 .energy-table .name { color: var(--muted); font-size: 11px; display: block; }
 .energy-small { font-size: 12px; margin: 6px 0 0; }
 .energy-table th { text-transform: none; letter-spacing: 0; }
+
+/* ---------- parts mix ---------- */
+.mix-table.no-target .tgt { display: none; }
+.mix-table .short { color: var(--down); font-weight: 600; }
+.mix-table .over-target { color: var(--running); }
+.mix-table .unknown { color: var(--unknown); font-style: italic; }

@@ -381,6 +381,95 @@ function renderEnergy(e) {
     "unknown when the recipe is not in the game's reference.";
 }
 
+/* ---------- parts mix ---------- */
+
+const perMin = (v) => (v === null || v === undefined ? "—" : (+v).toFixed(1));
+const share = (v) => (v === null || v === undefined ? "—" : `${(+v).toFixed(0)} %`);
+
+/* One row per item in the order or made in the window, shortest first. With
+   no rate order the target columns are not drawn at all: no order is no
+   target, which is not a target of zero. */
+function renderPartsMix(m) {
+  const panel = $("#mix-panel");
+  if (!m) { panel.classList.add("hidden"); return; }
+  panel.classList.remove("hidden");
+  const table = $("#mix-table");
+  table.classList.toggle("no-target", !m.has_target);
+
+  const facts = [];
+  if (m.order) {
+    facts.push(`Rate order ${m.order.name}: ${perMin(m.order.per_minute_total)} units/min ` +
+               `over ${m.order.items_total} item${m.order.items_total === 1 ? "" : "s"}`);
+  } else {
+    facts.push("No rate order on this plant, so no target");
+  }
+  facts.push(m.watched_minutes === null ? "watched time unknown"
+    : `${perMin(m.watched_minutes)} min watched`);
+  facts.push(`${num(m.units_booked)} units booked`);
+  $("#mix-facts").textContent = facts.join(" · ");
+
+  const body = table.querySelector("tbody");
+  body.replaceChildren();
+  for (const r of m.items) {
+    const tr = document.createElement("tr");
+    tr.dataset.item = r.item;
+    tr.appendChild(cell(r.item));
+    if (r.target_per_minute === null) {
+      const td = cell("no target", "num tgt unknown");
+      td.title = r.why || "";
+      tr.appendChild(td);
+    } else {
+      tr.appendChild(cell(perMin(r.target_per_minute), "num tgt"));
+    }
+    const actual = cell(perMin(r.actual_per_minute), "num");
+    actual.title = `${num(r.units)} units from ${r.machines} building${r.machines === 1 ? "" : "s"}`;
+    tr.appendChild(actual);
+    tr.appendChild(cell(share(r.target_share_percent), "num tgt"));
+    tr.appendChild(cell(share(r.actual_share_percent), "num"));
+    const gap = r.gap_per_minute;
+    tr.appendChild(cell(gap === null ? "—" : `${gap > 0 ? "+" : ""}${(+gap).toFixed(1)}`,
+      "num tgt" + (gap !== null && gap < -0.05 ? " short" : gap > 0.05 ? " over-target" : "")));
+    tr.appendChild(cell(perMin(r.game_made_per_minute), "num"));
+    body.appendChild(tr);
+  }
+  if (!m.items.length) {
+    const tr = document.createElement("tr");
+    const td = cell("Nothing in the order and nothing made in this window.", "muted");
+    td.colSpan = 7;
+    tr.appendChild(td);
+    body.appendChild(tr);
+  }
+  const notes = [
+    `${m.items_total} item${m.items_total === 1 ? "" : "s"}, shortest first.`,
+    "Actual is the good units the MES booked over the minutes the game was watched; " +
+    `shares are of ${m.share_basis}. Game made is the game's own figure (getProdStats), ` +
+    "the check on the bookings: it counts every building of the save.",
+  ];
+  if (m.game_items_not_booked_total) {
+    notes.push(`The game also made ${m.game_items_not_booked_total} item` +
+      `${m.game_items_not_booked_total === 1 ? "" : "s"} the MES books none of ` +
+      `(${m.game_items_not_booked.join(", ")}).`);
+  }
+  if (m.note) notes.push(m.note + ".");
+  $("#mix-note").textContent = notes.join(" ");
+}
+
+/* "last played 04:41–05:23 today": the stretch's first poll rounded down to
+   the minute and its last rounded up, on the plant's clock. */
+function lastPlayed(start, end) {
+  const at = (ts) => new Date(/Z$|[+-]\d\d:?\d\d$/.test(String(ts)) ? ts : `${ts}Z`);
+  const zone = FS.fmt.zone() ? { timeZone: FS.fmt.zone() } : {};
+  const minute = 60000;
+  const a = new Date(Math.floor(at(start).getTime() / minute) * minute);
+  const b = new Date(Math.ceil(at(end).getTime() / minute) * minute);
+  const hm = (d) => d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false, ...zone });
+  const day = (d) => d.toLocaleDateString(undefined, zone);
+  const today = new Date();
+  const yesterday = new Date(today.getTime() - 86400000);
+  const when = day(a) === day(today) ? "today" : day(a) === day(yesterday) ? "yesterday" : day(a);
+  return `last played ${hm(a)}–${hm(b)} ${when}`;
+}
+
 /* ---------- load ---------- */
 async function load() {
   const q = query();
@@ -427,7 +516,9 @@ async function load() {
   // a shift window is a boundary, drawn where the plant's own clock puts it,
   // so it says which shift it is and how much of it has run.
   const shift = oee.window.shift;
-  $("#window-note").textContent = shift
+  $("#window-note").textContent = oee.window.named === "last_play"
+    ? `${lastPlayed(oee.window.start, oee.window.end)} · ${(oee.window.hours * 60).toFixed(0)} min`
+    : shift
     ? `${shift.code} ${shift.day} · ${FS.fmt.stamp(oee.window.start)} → ` +
       `${FS.fmt.clock(oee.window.end)}` +
       (shift.in_progress
@@ -437,6 +528,7 @@ async function load() {
 
   renderOee(oee);
   renderEnergy(oee.energy);
+  renderPartsMix(oee.parts_mix);
   renderTimeline(timeline);
   renderPareto(downtime);
   renderProduction(production);
@@ -458,6 +550,11 @@ async function fillShifts(wanted) {
   const zone = $("#shift-zone");
   const data = await api("/analysis/shifts").catch(() => null);
   const options = [new Option("by hours", "")];
+  // A plant a game feeds is run while somebody plays, not in shifts: the
+  // last time they played is the window it is asked about.
+  if (data && data.last_play) {
+    options.push(new Option(lastPlayed(data.last_play.starts, data.last_play.ends), data.last_play.key));
+  }
   if (data && data.shifts_total) {
     if (data.current) options.push(new Option("this shift", "current"));
     if (data.previous) options.push(new Option("last shift", "previous"));
@@ -466,7 +563,7 @@ async function fillShifts(wanted) {
     }
   }
   select.replaceChildren(...options);
-  select.disabled = !(data && data.shifts_total);
+  select.disabled = !(data && (data.shifts_total || data.last_play));
   // Which clock those boundaries are drawn on, and whether anybody chose it.
   // A shift boundary read in the browser's zone on a plant five hours away is
   // the whole reason `MES_PLANT_TIMEZONE` exists.
@@ -475,7 +572,7 @@ async function fillShifts(wanted) {
     : data.shifts_total
       ? `on ${data.timezone || "this machine's own clock"}` +
         (data.timezone_defaulted ? " (defaulted — nobody set MES_PLANT_TIMEZONE)" : "")
-      : (data.note || "");
+      : data.last_play ? "" : (data.note || "");
   if (wanted && [...select.options].some((o) => o.value === wanted)) {
     state.shift = wanted;
     select.value = wanted;
@@ -504,7 +601,12 @@ async function boot() {
     }
   }
   state.machine = params.get("machine") || null;
-  await fillShifts(params.get("shift"));
+  // No window in the address: on a plant a game feeds, the last time you
+  // played; elsewhere the plant's own default span. Asking for hours keeps
+  // hours.
+  const askedShift = params.get("shift") ||
+    (params.has("hours") ? null : "last_play");
+  await fillShifts(askedShift);
 
   select.onchange = () => { state.line = select.value; load().catch(fail); };
   $("#hours").onchange = (e) => { state.hours = parseFloat(e.target.value); load().catch(fail); };

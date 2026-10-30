@@ -20,6 +20,12 @@ from fsmes.assist_coverage import page_scripts, screen_pattern
 # Routes no screen calls, and why. Reasons name the plan phase that closes
 # them, so this list is also the work queue. Plan: 2026-09-02 surfaces.
 EXCLUDED = {
+    # the standing rate order: set from the pack's rate_orders.json or over
+    # the API (labs/satisfactory/README.md says how); the Parts mix panel
+    # reads it through /analysis/oee. Its own editing screen is a follow-up.
+    "GET /rate-order": "read by the API and the pack; the panel reads it inside /analysis/oee",
+    "PUT /rate-order": "set from the pack file or over the API; no editing screen yet",
+    "DELETE /rate-order": "taken away over the API; no editing screen yet",
     # auth and session plumbing a screen does not call by path
     # design chat history is a dev tool with no browse screen
     "GET /design/conversations": "dev tool; conversations are read by /design-triage",

@@ -84,11 +84,12 @@ def test_the_registry_says_how_many_modules_there_are_and_how_many_can_be_switch
 
     mounts = sum(len(m.routers) for m in registry.REGISTRY)
     tools = sum(len(m.tools) for m in registry.REGISTRY)
-    # Twenty-five router mounts across twenty-three modules: two modules mount
+    # Twenty-six router mounts across twenty-three modules: two modules mount
     # two each at one prefix, with the vocabulary first - `equipment` because
     # the machine router ends with `/{code}` and would swallow it, `quality`
-    # for the same structural reason before it has such a route.
-    assert mounts == 25, f"{mounts} routers in the registry; the app mounted 24 before it existed"
+    # for the same structural reason before it has such a route - and
+    # `analysis` mounts the rate order its parts mix is measured against.
+    assert mounts == 26, f"{mounts} routers in the registry; the app mounted 24 before it existed"
     # Fourteen tool files across twelve modules that ship one: `equipment` and
     # `quality` each have a second for their vocabulary, mirroring the second
     # router and the screen that drafts it, `dashboard` has the one that reads
@@ -253,7 +254,9 @@ def test_every_table_the_registry_names_is_a_real_table():
     # the maintenance crew joined it on 2026-10-09: skills, who holds them, the
     # roster and the supervisor's dispatch rules. 27 since quality_counts joined
     # on 2026-10-11: a characteristic the plant counts keeps its lots there too.
-    assert optional == 27, (
+    # 29 since the rate order and its lines joined analysis on 2026-10-30: the
+    # target the parts mix is measured against.
+    assert optional == 29, (
         f"{optional} of {len(known)} tables belong to a module a plant may switch off")
 
 

@@ -88,7 +88,15 @@ from fsmes.domain.execution import ProductionSource
 from fsmes.domain.masterdata import Equipment, EquipmentLevel
 from fsmes.domain.timeseries import TagValue
 from fsmes.integrations.satisfactory import energy, feed, rules
-from fsmes.services import audit, connection, counters, execution, masterdata
+from fsmes.services import (
+    audit,
+    connection,
+    counters,
+    execution,
+    last_play,
+    masterdata,
+    parts_mix,
+)
 from fsmes.services import equipment as equipment_service
 
 log = structlog.get_logger("satisfactory")
@@ -153,13 +161,24 @@ class _Building:
     running: bool = False
     """Whether the state written at the building's previous poll was
     *running*: the interval the next poll closes is run time only then."""
+    absent: int = 0
+    """Unpaused building lists of this save in a row that left it out. At
+    `torn_down_polls` the building is retired, "torn down"."""
 
 
 class Reader:
     def __init__(self, *, poll_seconds: float = 60.0, gap_polls: float = 2.5,
                  area: str = "", node: str | None = None,
-                 recipes: energy.Recipes | None = None) -> None:
+                 recipes: energy.Recipes | None = None, torn_down_polls: int = 5) -> None:
         self.poll_seconds = poll_seconds
+        #: How many unpaused building lists of one save in a row may leave a
+        #: building out before it is retired as torn down.
+        self.torn_down_polls = max(1, int(torn_down_polls))
+        #: The last poll of the stretch being watched (`services.last_play`);
+        #: None after a gap, a pause or a start.
+        self.stretch_last: datetime | None = None
+        #: The item last written per building, so it is written on change.
+        self.items_said: dict[str, str] = {}
         #: The game's recipe list, for the energy a part should cost. Empty,
         #: and every ideal is unknown.
         self.recipes = recipes or energy.Recipes()
@@ -213,11 +232,11 @@ class Reader:
             self.report.skipped += 1
             return
         if poll.factory is None and not poll.paused:
-            # No building list in this poll: nothing seen, nothing said. The
-            # poller sometimes writes the session answer a second after the
-            # rest of its poll, which reads as a poll of its own with nothing
-            # else in it; it says nothing about the buildings. If the list
-            # stays away, the gap rule says so.
+            # No building list in this poll: nothing seen, nothing said. An
+            # answer the poller wrote a second after the rest of its poll is
+            # already part of that poll (`feed.late`); what is left here is a
+            # poll that genuinely had no building list. If the list stays
+            # away, the gap rule says so.
             self.report.skipped += 1
             return
         if self.last is not None and poll.ts - self.last > self.gap:
@@ -233,6 +252,7 @@ class Reader:
             self.report.paused_polls += 1
         else:
             self._buildings(session, poll)
+            self._watched(session, poll)
         self.last = poll.ts
         baselines = {(code, "GoodCount"): b.booked for code, b in self.buildings.items()}
         baselines[FEED_KEY] = _epoch(poll.ts)
@@ -240,6 +260,37 @@ class Reader:
             baselines[(FEED_KEY[0], (SAVE_TAG + self.applied_save)[:80])] = _epoch(poll.ts)
         counters.save(session, baselines, self.node)
         self.report.polls += 1
+
+    def _watched(self, session: Session, poll: feed.Poll) -> None:
+        """One stretch reading for this watched poll - 0 opens a stretch, 1
+        continues it - and the game's own production figures, the check on
+        what was booked (`fsmes.services.last_play`, `.parts_mix`)."""
+        self._reading(session, None, last_play.STRETCH,
+                      0.0 if self.stretch_last is None else 1.0, poll.ts)
+        self.stretch_last = poll.ts
+        for row in poll.prod_stats or []:
+            name = row.get("Name") if isinstance(row, dict) else None
+            if not isinstance(name, str) or not name.strip():
+                continue
+            figures = {parts_mix.MADE: row.get("CurrentProd"),
+                       parts_mix.MAX: row.get("MaxProd"),
+                       parts_mix.CONSUMED: row.get("CurrentConsumed")}
+            numbers = {k: float(v) for k, v in figures.items()
+                       if isinstance(v, (int, float)) and not isinstance(v, bool)}
+            if not any(numbers.values()):
+                # An item the save neither makes nor uses at this poll: a
+                # row of zeros says nothing the absence of one does not.
+                continue
+            for field_, value in numbers.items():
+                self._reading(session, None, parts_mix.parts_tag(name.strip(), field_),
+                              value, poll.ts)
+
+    def _item(self, session: Session, code: str, building: dict, moment: datetime) -> None:
+        """The item the building makes, written when it changes."""
+        item = rules.item(building)
+        if item and self.items_said.get(code) != item:
+            self._reading(session, code, parts_mix.ITEM, item, moment)
+            self.items_said[code] = item
 
     def _buildings(self, session: Session, poll: feed.Poll) -> None:
         tripped = rules.tripped_circuits(poll.power)
@@ -271,6 +322,7 @@ class Reader:
             if interval.id != open_before:
                 self.report.state_changes += 1
             previous = self.buildings[code].last_ts if code in self.buildings else None
+            self._item(session, code, building, poll.ts)
             self._book(session, code, building, poll.ts,
                        running=reading.state is EquipmentStateName.RUNNING)
             self._draw(session, code, building, poll.ts, previous)
@@ -290,7 +342,28 @@ class Reader:
         for code in gone:
             self._unobserve_one(session, code, at=poll.ts, detected_at=poll.ts,
                                 reason="no longer in the game's building list")
+        self._torn_down(session, seen, poll.ts)
         self.unseen = False
+
+    def _torn_down(self, session: Session, seen: set[str], moment: datetime) -> None:
+        """A building left out of `torn_down_polls` unpaused lists of the same
+        save in a row is retired, "torn down"; listed again, it comes back
+        (`_buildings` returns every building it lists). One list leaving a
+        building out is not enough: the mod has been seen to drop one for a
+        poll."""
+        for code, state in self.buildings.items():
+            if code in seen:
+                state.absent = 0
+                continue
+            state.absent += 1
+            if state.absent != self.torn_down_polls:
+                continue
+            machine = session.scalar(select(Equipment).where(Equipment.code == code))
+            if machine is None or machine.retired_at is not None:
+                continue
+            masterdata.retire_equipment(session, code, reason="torn down", at=moment,
+                                        actor=ACTOR)
+            self.report.retired += 1
 
     def _retire_other_save(self, session: Session, seen: set[str], moment: datetime,
                            generators_listed: bool = True) -> None:
@@ -461,6 +534,9 @@ class Reader:
             self._unobserve_one(session, code, at=at, detected_at=detected_at,
                                 reason=reason)
         self.unseen = True
+        # Nothing is booked across a gap or a pause, and no stretch runs
+        # across one either.
+        self.stretch_last = None
 
     def _unobserve_one(self, session: Session, code: str, *, at: datetime,
                        detected_at: datetime, reason: str) -> None:
@@ -543,12 +619,13 @@ def source_note(session: Session, note: str) -> str:
 
 
 def replay(folder: Path, session_scope: Callable, *, poll_seconds: float = 60.0,
-           gap_polls: float = 2.5, area: str = "", now: datetime | None = None) -> Reader:
+           gap_polls: float = 2.5, area: str = "", now: datetime | None = None,
+           torn_down_polls: int = 5) -> Reader:
     """Every poll in the folder, applied once, then the feed's end said as
     what it is: if the last poll is older than the gap, nothing after it was
     seen. For tests and for `--once`."""
     reader = Reader(poll_seconds=poll_seconds, gap_polls=gap_polls, area=area,
-                    recipes=energy.Recipes.load(Path(folder)))
+                    torn_down_polls=torn_down_polls, recipes=energy.Recipes.load(Path(folder)))
     with session_scope() as session:
         reader.resume(session)
     for poll in feed.read_all(folder):
@@ -561,7 +638,7 @@ def replay(folder: Path, session_scope: Callable, *, poll_seconds: float = 60.0,
 
 def run(folder: Path, session_scope: Callable, *, poll_seconds: float = 60.0,
         gap_polls: float = 2.5, area: str = "", interval: float = 5.0, quiet: float = 10.0,
-        stop: Callable[[], bool] | None = None) -> Reader:
+        stop: Callable[[], bool] | None = None, torn_down_polls: int = 5) -> Reader:
     """Follow the folder for as long as the process lives.
 
     Every `interval` seconds it reads what the poller has appended. A poll's
@@ -573,7 +650,7 @@ def run(folder: Path, session_scope: Callable, *, poll_seconds: float = 60.0,
     """
     folder = Path(folder).expanduser()
     reader = Reader(poll_seconds=poll_seconds, gap_polls=gap_polls, area=area,
-                    recipes=energy.Recipes.load(folder))
+                    torn_down_polls=torn_down_polls, recipes=energy.Recipes.load(folder))
     follower = feed.Follower(folder)
     with session_scope() as session:
         reader.resume(session)

@@ -7,11 +7,18 @@ over), one line per endpoint per poll:
 
 All the lines of one poll carry the same `ts`. A poll here is those lines put
 back together: the buildings (`getFactory`), the power circuits (`getPower`),
-the generators (`getGenerators`, written by the poller since 2026-10-30) and
-the session (`getSessionInfo`), any of which may be missing - the poller
-asks each endpoint separately, and the session answer is absent from about
-one poll in eight of the first day. A missing answer is missing, never an
-empty one.
+the generators (`getGenerators`, written by the poller since 2026-10-30), the
+factory's production statistics (`getProdStats`) and the session
+(`getSessionInfo`), any of which may be missing - the poller asks each
+endpoint separately. A missing answer is missing, never an empty one.
+
+A LATE ANSWER BELONGS TO ITS POLL. About one poll in ten, some answers are
+written a second after the rest, under the later second: the building list
+at 04:50:35, the power, session and generators at 04:50:36. A line with no
+building list in it that arrives within `LATE_SECONDS` of a poll that has
+one, and answers an endpoint that poll has not answered yet, is folded into
+that poll at the poll's own moment. A line that repeats an endpoint the poll
+already has, or a building list, starts a poll of its own as before.
 
 Nothing here writes, and nothing here knows about the MES.
 """
@@ -32,6 +39,10 @@ log = structlog.get_logger("satisfactory.feed")
 
 #: A day's file, plain while the poller is writing it, gzipped after.
 DAY_FILE = re.compile(r"^(\d{4}-\d{2}-\d{2})\.jsonl(\.gz)?$")
+#: How long after its poll's building list a late answer may arrive and
+#: still be read as part of that poll. The poller asks every endpoint of one
+#: poll within a second or two; the next poll is a minute away.
+LATE_SECONDS = 5.0
 
 
 @dataclass
@@ -46,6 +57,10 @@ class Poll:
     """None when the poll has no generator answer - every file before
     2026-10-30 - which says nothing about whether the save has any."""
     session: dict | None = None
+    prod_stats: list[dict] | None = None
+    """The factory's production statistics, per item: made, most it could
+    make, consumed, units a minute plant-wide. None when the poll has no
+    such answer - every file before 2026-10-30."""
     endpoints: set[str] = field(default_factory=set)
 
     @property
@@ -97,6 +112,20 @@ def _absorb(poll: Poll, line: dict) -> None:
         poll.generators = data
     elif endpoint == "getSessionInfo" and isinstance(data, dict):
         poll.session = data
+    elif endpoint == "getProdStats" and isinstance(data, list):
+        poll.prod_stats = data
+
+
+def late(poll: Poll | None, line: dict, moment: datetime) -> bool:
+    """Whether `line`, stamped `moment`, is a late answer to `poll`: the poll
+    has a building list, the line is not one, answers an endpoint the poll
+    has not, and came within `LATE_SECONDS` of it."""
+    if poll is None or poll.factory is None:
+        return False
+    endpoint = str(line.get("endpoint"))
+    if endpoint == "getFactory" or endpoint in poll.endpoints:
+        return False
+    return 0 < (moment - poll.ts).total_seconds() <= LATE_SECONDS
 
 
 class Follower:
@@ -153,6 +182,9 @@ class Follower:
                 continue
             for line in self._lines(path):
                 moment = line["_ts"]
+                if late(self.pending, line, moment):
+                    _absorb(self.pending, line)
+                    continue
                 if self.pending is not None and moment != self.pending.ts:
                     if moment > self.pending.ts:
                         out.append(self.pending)
@@ -196,6 +228,9 @@ def read_file(path: Path) -> list[Poll]:
                 continue
             line = json.loads(chunk)
             moment = utc(str(line["ts"]))
+            if polls and late(polls[-1], line, moment):
+                _absorb(polls[-1], line)
+                continue
             if not polls or polls[-1].ts != moment:
                 polls.append(Poll(ts=moment))
             _absorb(polls[-1], line)

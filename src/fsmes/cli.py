@@ -394,13 +394,14 @@ def run_satisfactory(
     source = source.expanduser()
     kwargs = {"poll_seconds": settings.satisfactory_poll_seconds,
               "gap_polls": settings.satisfactory_gap_polls,
-              "area": settings.satisfactory_area}
+              "area": settings.satisfactory_area,
+              "torn_down_polls": settings.satisfactory_torn_down_polls}
     if once:
         done = reader.replay(source, session_scope, **kwargs)
         r = done.report
         typer.echo(f"{r.polls} polls applied, {r.skipped} skipped; {r.state_changes} state changes; "
                    f"{r.units_booked} units booked; {r.paused_polls} paused polls; {r.gaps} gaps; "
-                   f"{r.buildings_created} buildings made.")
+                   f"{r.buildings_created} buildings made; {r.retired} retired, {r.returned} returned.")
         return
     reader.run(source, session_scope, **kwargs)
 

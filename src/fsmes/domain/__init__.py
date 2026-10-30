@@ -87,6 +87,7 @@ from fsmes.domain.quality import (
     QualitySpec,
     SpcSignal,
 )
+from fsmes.domain.rate_orders import RateOrder, RateOrderLine
 from fsmes.domain.reasons import DowntimeReason, DowntimeReasonStatus
 from fsmes.domain.scheduling import ScheduledSlot, SlotKind
 from fsmes.domain.serialization import (
@@ -175,6 +176,8 @@ __all__ = [
     "QualityCount",
     "QualitySample",
     "QualitySpec",
+    "RateOrder",
+    "RateOrderLine",
     "RecommendedAdjustment",
     "Role",
     "RosterEntry",

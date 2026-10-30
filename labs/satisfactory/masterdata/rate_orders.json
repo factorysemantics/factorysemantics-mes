@@ -1,0 +1,22 @@
+[
+  {
+    "_note": "AN EXAMPLE - edit it. The mix this save is asked for: per item, units a minute, by the game's own item names (getProdStats Name, e.g. 'Iron Plate'). It has no quantity, no due date and never closes; the shares follow from the rates. This is the design page's example, '60 reinforced plates/min, mix 40/40/20', read as 60 iron parts a minute split 40/40/20 between plates, screws and rods (24/24/12). Change it here before the plant is built, or afterwards with PUT /rate-order - once the plant has an order the pack leaves it alone.",
+    "code": "MIX",
+    "name": "Iron parts mix",
+    "note": "Example from the design page; Scott edits it.",
+    "items": [
+      {
+        "item": "Iron Plate",
+        "per_minute": 24
+      },
+      {
+        "item": "Screws",
+        "per_minute": 24
+      },
+      {
+        "item": "Iron Rod",
+        "per_minute": 12
+      }
+    ]
+  }
+]

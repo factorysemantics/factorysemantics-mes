@@ -48,13 +48,23 @@ from fsmes.domain import (
     TagValue,
 )
 from fsmes.kernel.tags import STRUCTURAL_TAGS
-from fsmes.services import NotFound, coverage, line_clock, masterdata, plant_settings, reasons
+from fsmes.services import (
+    Invalid,
+    NotFound,
+    coverage,
+    last_play,
+    line_clock,
+    masterdata,
+    plant_settings,
+    reasons,
+)
 from fsmes.services import calendar as calendar_service
 from fsmes.services import connection as connection_service
 from fsmes.services import energy as energy_service
 from fsmes.services import equipment as equipment_service
 from fsmes.services import line as line_service
 from fsmes.services import oee as oee_rules
+from fsmes.services import parts_mix as parts_mix_service
 
 # Below this much observed history, rates are not reported at all. Unused here
 # since `fsmes.services.coverage` became the one place that answers it; kept as
@@ -241,11 +251,19 @@ def _window_json(start: datetime, end: datetime, hours: float,
         "start": start,
         "end": end,
         "clamped": round(realised, 4) < asked - 0.001,
-        "named": named or ("shift" if shift is not None else "span"),
+        "named": named or _named(shift),
     }
     if shift is not None:
         window["shift"] = shift.as_json() | {"in_progress": shift.ends_at > now}
     return window
+
+
+def _named(shift: calendar_service.Shift | None) -> str:
+    """`span`, `shift`, or `last_play` - the last time a game was played,
+    which is carried as a shift so every panel windows on it the same way."""
+    if shift is None:
+        return "span"
+    return "last_play" if shift.code == last_play.CODE else "shift"
 
 
 def machine_window(db: Session, equipment_code: str, hours: float | None = None,
@@ -494,6 +512,12 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float | None
     power = energy_service.breakdown(db, asked_start, asked_end)
     if power is not None:
         out["energy"] = power
+    # The parts mix beside them too, the same way: what was made of each item
+    # against the rate order. The order never feeds OEE. Absent on a plant
+    # with no rate order and no parts readings.
+    mix = parts_mix_service.breakdown(db, asked_start, asked_end)
+    if mix is not None:
+        out["parts_mix"] = mix
     return out
 
 
@@ -507,6 +531,22 @@ def energy(db: Session, hours: float | None = None, shift: str | None = None,
     start, end = _asked_window(hours, the_shift)
     return {"window": _window_json(start, end, hours, the_shift),
             "energy": energy_service.breakdown(db, start, end, equipment_code)}
+
+
+def parts_mix(db: Session, hours: float | None = None, shift: str | None = None,
+              equipment_code: str | None = None) -> dict:
+    """The plant's parts mix over a window - the block `oee_breakdown`
+    carries - and, for one machine, its item and rate against the order's.
+    `parts_mix` is None on a plant with no rate order and no parts readings."""
+    hours = calendar_service.default_report_hours(db) if hours is None else hours
+    the_shift = _shift(db, shift)
+    start, end = _asked_window(hours, the_shift)
+    out = {"window": _window_json(start, end, hours, the_shift),
+           "parts_mix": parts_mix_service.breakdown(db, start, end)}
+    if equipment_code:
+        unit = masterdata.get_equipment(db, equipment_code)
+        out["machine"] = parts_mix_service.machine(db, unit, start, end)
+    return out
 
 
 def _line_coverage(accounts) -> float | None:
@@ -1078,7 +1118,7 @@ def shifts(db: Session, days: int = 7) -> dict:
         # that covers the whole site - because they need different answers.
         return {"timezone": the_clock.name, "timezone_defaulted": the_clock.defaulted,
                 "days": days, "current": None, "previous": None,
-                "shifts": [], "shifts_total": 0,
+                "shifts": [], "shifts_total": 0, "last_play": _last_play(db),
                 "note": calendar_service.nothing_to_window(db, None)}
 
     found = calendar_service.occurrences(db, now - timedelta(days=days), now)
@@ -1094,10 +1134,22 @@ def shifts(db: Session, days: int = 7) -> dict:
         "shifts": [s.as_json() | {"in_progress": s.ends_at > now}
                    for s in reversed(found)],
         "shifts_total": len(found),
+        "last_play": _last_play(db),
         "note": None if current else (
             "the plant is not in a shift at the moment, so `shift=current` has "
             "no answer"),
     }
+
+
+def _last_play(db: Session) -> dict | None:
+    """The last time a game was played, when a reader said so: what a picker
+    offers as `shift=last_play`. None on a plant no game feeds."""
+    try:
+        found = calendar_service.last_play_shift(db)
+    except Invalid:
+        return None
+    return {"key": last_play.SPEC, "name": found.name,
+            "starts": found.starts_at, "ends": found.ends_at}
 
 
 def _round(value: float | None) -> float | None:
