@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import enum
 from datetime import datetime
+from typing import Any, ClassVar
 
-from sqlalchemy import ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import ForeignKey, String, Text, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from fsmes.db import Base
@@ -54,10 +55,22 @@ class Equipment(Base):
     # Floor, `watching`, `work_units`. Null is on the floor. Clearing both
     # puts it back. First written by the Satisfactory reader, for the
     # buildings of a save that is no longer the one being played.
-    retired_at: Mapped[datetime | None]
-    retired_reason: Mapped[str | None] = mapped_column(String(200))
+    #
+    #
+    # Kept out of every statement that does not ask for them: deferred, so a
+    # SELECT of equipment does not name them; `server_default` NULL, so an
+    # INSERT leaves them out unless they are set; and not fetched back by
+    # RETURNING (`eager_defaults` off, below). A plant seeded by this code at
+    # a revision older than these columns - the in-place upgrade tests do
+    # exactly that - still accepts it. Lists filter on them in SQL.
+    retired_at: Mapped[datetime | None] = mapped_column(
+        server_default=text("NULL"), deferred=True, deferred_group="retired")
+    retired_reason: Mapped[str | None] = mapped_column(
+        String(200), server_default=text("NULL"), deferred=True, deferred_group="retired")
 
     parent: Mapped[Equipment | None] = relationship(remote_side=[id], backref="children")
+
+    __mapper_args__: ClassVar[dict[str, Any]] = {"eager_defaults": False}
 
 
 class MaterialType(enum.StrEnum):

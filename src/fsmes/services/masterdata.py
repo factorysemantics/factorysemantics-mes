@@ -58,8 +58,9 @@ def work_units_under(session: Session, root: Equipment) -> list[Equipment]:
     """The machines beneath a line — through cells, groups, whatever a site
     put in between. Machines on the floor only: a retired one keeps its
     history but is not one of the line's machines any more."""
+    retired = set(session.scalars(select(Equipment.id).where(Equipment.retired_at.is_not(None))))
     return [eq for eq in descendants(session, root)
-            if eq.level == EquipmentLevel.WORK_UNIT and eq.retired_at is None]
+            if eq.level == EquipmentLevel.WORK_UNIT and eq.id not in retired]
 
 
 def on_the_floor():

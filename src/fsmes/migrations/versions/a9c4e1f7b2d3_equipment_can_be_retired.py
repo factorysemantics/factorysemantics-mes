@@ -22,8 +22,10 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     with op.batch_alter_table('equipment') as batch:
-        batch.add_column(sa.Column('retired_at', sa.DateTime(), nullable=True))
-        batch.add_column(sa.Column('retired_reason', sa.String(length=200), nullable=True))
+        batch.add_column(sa.Column('retired_at', sa.DateTime(), nullable=True,
+                                   server_default=sa.text('NULL')))
+        batch.add_column(sa.Column('retired_reason', sa.String(length=200), nullable=True,
+                                   server_default=sa.text('NULL')))
 
 
 def downgrade() -> None:
