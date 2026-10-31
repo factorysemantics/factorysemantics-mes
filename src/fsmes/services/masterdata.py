@@ -96,6 +96,37 @@ def return_equipment(session: Session, code: str, *, reason: str, actor: str) ->
     return True
 
 
+def position(machine: Equipment) -> tuple[float, float, float | None, float | None] | None:
+    """Where a machine stands, as held: (x, y, z, heading) in metres and
+    degrees, or None when nobody has said. x and y are both needed to place
+    it; z (its height) and the heading may be unknown on their own."""
+    if machine.pos_x is None or machine.pos_y is None:
+        return None
+    return machine.pos_x, machine.pos_y, machine.pos_z, machine.heading
+
+
+def place_equipment(session: Session, code: str, *, x: float, y: float,
+                    z: float | None = None, heading: float | None = None,
+                    actor: str) -> bool:
+    """Hold where a machine stands: x and y across the floor and z its
+    height, in metres, and its heading in degrees clockwise seen from above.
+    Audited. False, and nothing written, when it already stands there (to
+    the centimetre and the tenth of a degree, which is as fine as any
+    floor plan is drawn)."""
+    machine = get_equipment(session, code)
+    after = (round(x, 2), round(y, 2), None if z is None else round(z, 2),
+             None if heading is None else round(heading % 360.0, 1))
+    if position(machine) == after:
+        return False
+    before = position(machine)
+    machine.pos_x, machine.pos_y, machine.pos_z, machine.heading = after
+    keys = ("x", "y", "z", "heading")
+    audit.record(session, actor=actor, action="equipment.placed", entity_type="equipment",
+                 entity_id=code, before=dict(zip(keys, before, strict=True)) if before else None,
+                 after=dict(zip(keys, after, strict=True)))
+    return True
+
+
 def pick_machine(session: Session, operation) -> int:
     """Which machine runs an operation that names a whole cell.
 

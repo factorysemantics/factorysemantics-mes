@@ -36,7 +36,10 @@ circuit and session answer); no poll was removed or changed.
 answer is kept whole, and so is the production-statistics answer
 (`getProdStats`), each row keeping its `Name`, `ClassName`, `CurrentProd`,
 `MaxProd`, `CurrentConsumed` and `MaxConsumed`: the game's own figures the
-parts mix is checked against. No poll was removed or changed. At 05:14 a second
+parts mix is checked against. No poll was removed or changed. Since
+2026-10-31 each building and generator in it keeps its `location` too (x, y, z
+in centimetres, rotation and pitch in degrees), copied from the same poll of the
+untrimmed file, for the line view's floor plan; nothing else in it changed. At 05:14 a second
 circuit appears for one poll while the player wires one in.
 
 `ref/getRecipes.json.gz` is the game's recipe list the poller fetched once

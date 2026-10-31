@@ -44,6 +44,7 @@
   <header data-nav="line"></header>
   <div id="line-strip">
     <span id="line-name" class="line-name">loading…</span>
+    <select id="line-pick" class="line-pick hidden" aria-label="Line or area"></select>
     <span id="demo-badge" class="badge demo hidden">recorded hour</span>
     <span id="source-badge" class="badge source hidden" title=""></span>
   </div>
@@ -78,8 +79,9 @@
   </div>
   <div class="spacer"></div>
   <p class="truth">
-    Every unit on the belts is one the MES booked.
-    <span id="filling-note">Belts are still filling — the line was already running when this opened.</span>
+    <span class="belts-note">Every unit on the belts is one the MES booked.</span>
+    <span class="plan-note">Each machine stands where the MES holds it to stand. No belts are drawn: the MES does not know them.</span>
+    <span id="filling-note" class="belts-note">Belts are still filling — the line was already running when this opened.</span>
     <span id="unmatched-note" class="hidden">
       <strong id="stat-unmatched">0</strong> consumed with nothing tracked upstream — WIP the counters never showed us.
     </span>

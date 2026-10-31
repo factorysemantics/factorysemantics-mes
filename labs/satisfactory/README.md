@@ -181,6 +181,40 @@ own order is never overwritten. To change it on a running plant, as an admin:
 `GET /rate-order` reads it (any signed-in role); `DELETE /rate-order` takes
 it away, and the plant has no target again. Every change is audited.
 
+## Where the buildings stand
+
+Every building in the game's building list carries its place on the map
+(`location`: x, y, z in centimetres, and its rotation in degrees). The reader
+holds it on the building's equipment as the MES holds any machine's position:
+x and y across the floor and z its height, in metres, and its heading in
+degrees. A building is placed on first sight; it does not move after that - a
+rebuilt building is a new one.
+
+The 3D line view (Floor → Line → 3D) then draws each work centre as a floor
+plan: every building where it stands, turned the way it faces, framed on the
+middle of the line rather than on the map's origin. Its height is in the label
+("+34 m" above the lowest building in view), not in where it is drawn. The
+picker at the top of the view also offers the area, **FACTORY — every
+machine**: smelters, constructors and generators together, as they stand. The
+plan draws no belts: the MES knows where a building stands, not what runs
+between it and the next one.
+
+**A hand-drawn layout still wins.** A station with an `x` or `z` in
+`config/line_layout.json` (under `lines.<work centre>.stations.<code>`) is
+drawn where the file says, over the game's position; a `rot` alone turns it
+and keeps it where it stands. That is the same file a real plant draws its
+floor in, and the position held from a source is the fallback below it, never
+above. A building with no position on a plan is drawn in a row past the plan's
+near edge, labelled "position unknown", never at a guessed spot inside it.
+
+Machines from the committed master data that a later evening's file never
+names (they were in the 2026-10-28 file it was drawn from) have no position,
+so they wait in that row. The camera frames the buildings that stand somewhere.
+
+![The FACTORY area as a floor plan, replayed from the 2026-10-31 save](images/factory-floor-plan.png)
+
+No map picture is drawn behind the plan.
+
 ## The master data
 
 `masterdata/` was generated from one evening's file and committed:
