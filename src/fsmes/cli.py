@@ -401,7 +401,8 @@ def run_satisfactory(
         r = done.report
         typer.echo(f"{r.polls} polls applied, {r.skipped} skipped; {r.state_changes} state changes; "
                    f"{r.units_booked} units booked; {r.paused_polls} paused polls; {r.gaps} gaps; "
-                   f"{r.buildings_created} buildings made; {r.retired} retired, {r.returned} returned.")
+                   f"{r.buildings_created} buildings made, {r.buildings_placed} placed; "
+                   f"{r.retired} retired, {r.returned} returned.")
         return
     reader.run(source, session_scope, **kwargs)
 

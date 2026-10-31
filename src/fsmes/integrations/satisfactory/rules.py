@@ -26,6 +26,7 @@ waiting, not broken (the bottling lab reads them the same way).
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 from fsmes.domain.equipment import EquipmentStateName
@@ -175,3 +176,39 @@ def display_name(building: dict) -> str:
     no recipe yet."""
     name = str(building.get("Name") or building.get("ClassName") or building.get("ID"))
     return f"{name} · {building['Recipe']}" if configured(building) else name
+
+
+def position(building: dict) -> tuple[float, float, float | None, float | None] | None:
+    """Where the building stands, in the MES's terms: (x, y, z, heading).
+
+    The mod reports `location: {x, y, z, rotation, pitch}` in the game's
+    centimetres and degrees, z up. The MES holds metres: x and y across the
+    floor as the game has them, z the height, and the game's `rotation` as
+    the heading (it turns clockwise seen from above, as the MES's heading
+    does). None when the building carries no usable x and y: a building
+    with no position is not put at the origin.
+
+        {x: -43794.9, y: -139688.7, z: 8236.5, rotation: 200}
+            -> (-437.949, -1396.887, 82.365, 200.0)
+    """
+    where = building.get("location")
+    if not isinstance(where, dict):
+        return None
+    try:
+        x, y = float(where["x"]), float(where["y"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    if not (math.isfinite(x) and math.isfinite(y)):
+        return None
+
+    def optional(key: str) -> float | None:
+        try:
+            value = float(where[key])
+        except (KeyError, TypeError, ValueError):
+            return None
+        return value if math.isfinite(value) else None
+
+    z = optional("z")
+    heading = optional("rotation")
+    return (x / 100.0, y / 100.0, None if z is None else z / 100.0,
+            None if heading is None else heading % 360.0)

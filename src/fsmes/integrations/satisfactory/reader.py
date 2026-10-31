@@ -150,6 +150,7 @@ class Report:
     state_changes: int = 0
     units_booked: int = 0
     buildings_created: int = 0
+    buildings_placed: int = 0
     retired: int = 0
     returned: int = 0
     readings: int = 0
@@ -192,6 +193,9 @@ class Reader:
         self.nominal: dict[str, float] = {}
         #: The ideal last written per building, so it is written on change.
         self.ideal_said: dict[str, tuple[float | None, str]] = {}
+        #: Where each building was last seen standing, so a position is
+        #: written on first sight and on change, not every poll.
+        self.placed: dict[str, tuple[float, float, float | None, float | None]] = {}
         self._ids: dict[str, int] = {}
         #: The area a building's work centre hangs under when the reader has
         #: to make one. The plant's own code, from its pack; empty, or not in
@@ -581,7 +585,9 @@ class Reader:
                                         level=EquipmentLevel.WORK_UNIT, parent_code=centre,
                                         ideal_cycle_seconds=cycle, actor=ACTOR)
             self.report.buildings_created += 1
+            self._place(session, code, building)
             return
+        self._place(session, code, building)
         if machine.name != name or (cycle and machine.ideal_cycle_seconds != cycle):
             before = {"name": machine.name, "ideal_cycle_seconds": machine.ideal_cycle_seconds}
             machine.name = name
@@ -590,6 +596,19 @@ class Reader:
             audit.record(session, actor=ACTOR, action="equipment.updated",
                          entity_type="equipment", entity_id=code, before=before,
                          after={"name": name, "ideal_cycle_seconds": machine.ideal_cycle_seconds})
+
+    def _place(self, session: Session, code: str, building: dict) -> None:
+        """Where the building stands, held on first sight and when it moves.
+        A building in the game does not move - a rebuilt one is a new
+        building, with a new code - so this writes once per building; the
+        cache keeps it from reading the equipment row every poll."""
+        where = rules.position(building)
+        if where is None or self.placed.get(code) == where:
+            return
+        x, y, z, heading = where
+        if masterdata.place_equipment(session, code, x=x, y=y, z=z, heading=heading, actor=ACTOR):
+            self.report.buildings_placed += 1
+        self.placed[code] = where
 
     def _ensure_parent(self, session: Session, centre: tuple[str, str]) -> str:
         code, name = centre

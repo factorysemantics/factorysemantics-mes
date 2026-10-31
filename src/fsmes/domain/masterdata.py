@@ -68,6 +68,24 @@ class Equipment(Base):
     retired_reason: Mapped[str | None] = mapped_column(
         String(200), server_default=text("NULL"), deferred=True, deferred_group="retired")
 
+    # Where the machine stands on the floor, as a source reports it: x and y
+    # across the floor and z its height, in metres, and its heading in
+    # degrees. All four null is "nobody has said" - the line view then
+    # places the machine from a drawn layout or from the routing, and never
+    # at a made-up spot. A drawn `line_layout.json` entry still wins over a
+    # held position; this is the fallback below a human, not above one.
+    # First written by the Satisfactory reader, from the game's own map
+    # coordinates. Deferred and NULL by default for the same reason as
+    # `retired_at` below.
+    pos_x: Mapped[float | None] = mapped_column(
+        server_default=text("NULL"), deferred=True, deferred_group="position")
+    pos_y: Mapped[float | None] = mapped_column(
+        server_default=text("NULL"), deferred=True, deferred_group="position")
+    pos_z: Mapped[float | None] = mapped_column(
+        server_default=text("NULL"), deferred=True, deferred_group="position")
+    heading: Mapped[float | None] = mapped_column(
+        server_default=text("NULL"), deferred=True, deferred_group="position")
+
     parent: Mapped[Equipment | None] = relationship(remote_side=[id], backref="children")
 
     __mapper_args__: ClassVar[dict[str, Any]] = {"eager_defaults": False}
