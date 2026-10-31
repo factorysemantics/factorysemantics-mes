@@ -242,3 +242,8 @@ body {
 
 /* Embedded in the Line page as a tab: one header is enough. */
 .embedded header, .embedded .design-launch, .embedded .assist-launch { display: none !important; }
+
+/* A floor plan has no belts, so the footer says what the plan does show. */
+.plan-note { display: none; }
+body.plan .plan-note { display: inline; }
+body.plan .belts-note { display: none !important; }

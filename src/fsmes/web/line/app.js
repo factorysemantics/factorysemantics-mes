@@ -112,6 +112,7 @@ async function main() {
     return;
   }
 
+  document.body.classList.toggle("plan", Boolean(layout.plan));
   $("#line-name").textContent = `${layout.line.name} · ${layout.stations.length} ${layout.line.area ? "machines" : "stations"}`;
 
   // An area whose machines hold positions can be seen whole, as a floor plan.

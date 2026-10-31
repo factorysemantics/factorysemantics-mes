@@ -319,7 +319,7 @@ def layout(db: Session, line_code: str | None = None) -> dict:
             height = where[2]
         elif plan:
             placed = "routing"
-            x, z, rot = row_start + unplaced * spacing, edge, float(conf.get("rot", 0.0))
+            x, z, rot = round(row_start + unplaced * spacing, 2), round(edge, 2), float(conf.get("rot", 0.0))
             unplaced += 1
         else:
             placed = "routing"

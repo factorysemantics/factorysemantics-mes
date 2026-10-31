@@ -207,6 +207,12 @@ floor in, and the position held from a source is the fallback below it, never
 above. A building with no position on a plan is drawn in a row past the plan's
 near edge, labelled "position unknown", never at a guessed spot inside it.
 
+Machines from the committed master data that a later evening's file never
+names (they were in the 2026-10-28 file it was drawn from) have no position,
+so they wait in that row. The camera frames the buildings that stand somewhere.
+
+![The FACTORY area as a floor plan, replayed from the 2026-10-31 save](images/factory-floor-plan.png)
+
 No map picture is drawn behind the plan.
 
 ## The master data

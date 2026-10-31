@@ -192,8 +192,13 @@ export class LineScene {
     this.layout = layout;
     this.origin = 0;
     const stations = layout.stations;
-    const xs = stations.map((s) => s.x);
-    const zs = stations.map((s) => s.z);
+    // The camera frames the machines that stand somewhere. Those with no
+    // known position wait in a row past the edge, a turn of the view away.
+    const placed = stations.filter((s) => s.placed !== "routing");
+    const framed = placed.length ? placed : stations;
+    const xs = framed.map((s) => s.x);
+    const zs = framed.map((s) => s.z);
+    const allZ = stations.map((s) => s.z);
     const minX = Math.min(...xs), maxX = Math.max(...xs);
     const minZ = Math.min(...zs), maxZ = Math.max(...zs);
     const width = Math.max(12, maxX - minX);
@@ -201,19 +206,22 @@ export class LineScene {
     const extent = Math.max(width, depth);
     const mid = new THREE.Vector3((minX + maxX) / 2, 0, (minZ + maxZ) / 2);
 
+    // The floor and grid reach the waiting row as well.
+    const floorDepth = Math.max(...allZ) - Math.min(...allZ, minZ) + 80;
+    const floorMidZ = (Math.min(...allZ, minZ) + Math.max(...allZ)) / 2;
     const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(width + 80, depth + 80),
+      new THREE.PlaneGeometry(width + 80, Math.max(depth + 80, floorDepth)),
       new THREE.MeshStandardMaterial({ color: 0x151a22, roughness: 0.96, metalness: 0.02 }),
     );
     floor.rotation.x = -Math.PI / 2;
-    floor.position.set(mid.x, 0, mid.z);
+    floor.position.set(mid.x, 0, floorMidZ);
     floor.receiveShadow = true;
     this.scene.add(floor);
 
     // One cell is 10 m, so the grid is a scale bar as well as a floor.
-    const size = Math.ceil((extent + 80) / 10) * 10;
+    const size = Math.ceil((Math.max(extent + 80, floorDepth)) / 10) * 10;
     const grid = new THREE.GridHelper(size, size / 10, 0x2c3a52, 0x1d2530);
-    grid.position.set(mid.x, 0.008, mid.z);
+    grid.position.set(mid.x, 0.008, floorMidZ);
     grid.material.transparent = true;
     grid.material.opacity = 0.6;
     this.scene.add(grid);
@@ -252,7 +260,7 @@ export class LineScene {
   framePlan(mid, extent) {
     const centre = new THREE.Vector3(mid.x, 2, mid.z);
     this.controls.target.copy(centre);
-    const distance = Math.max(30, extent * 0.95);
+    const distance = Math.max(30, extent * 0.62);
     this.camera.far = Math.max(400, distance * 6);
     this.camera.updateProjectionMatrix();
     this.controls.maxDistance = Math.max(160, distance * 3);
