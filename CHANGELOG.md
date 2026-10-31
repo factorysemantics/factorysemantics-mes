@@ -12,6 +12,18 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **A machine can hold where it stands, and the 3D line view lays it out
+  there.** Equipment gains `pos_x`, `pos_y`, `pos_z` (metres; z is height)
+  and `heading` (degrees), nullable, with a migration. The Satisfactory
+  reader writes them from each building's `location` (game centimetres over
+  100) on first sight and on change. The line view places a station from a
+  drawn `line_layout.json` entry first, then the held position (framed on
+  the middle of the line), then the even run from routing order as before;
+  a line with held positions is drawn as a floor plan, height in the label.
+  An area whose machines hold positions is offered in the 3D view's picker
+  ("FACTORY — every machine"). A plant whose machines hold no position lays
+  out exactly as before.
+
 - **Parts mix against a standing rate order on a Satisfactory plant.** A rate
   order - a name and a target rate per item in units a minute, no quantity,
   no due date - is set at `PUT /rate-order` or seeded from the pack's
