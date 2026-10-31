@@ -5,12 +5,18 @@ moves a machine — twice a year, maybe. The events change a hundred times a
 minute. Serving them from one endpoint would mean re-sending the whole plant
 every half second to learn that two bottles came off the washer.
 
-The layout answers "where is everything". It is assembled from three sources, in
+The layout answers "where is everything". It is assembled from four sources, in
 descending order of authority: the optional layout file (a human drew this), the
+position the MES holds for a machine (a source reported where it stands), the
 routing (the MES knows the process order), and inference from the equipment's own
 name. A line nobody has drawn still renders — stations in routing order, evenly
 spaced — because a view that needs a config file before it shows anything is a
 view nobody turns on.
+
+A line whose machines hold positions is drawn as a floor plan: each one where it
+stands, framed on the middle of the line so the view opens on the machines and
+not on a survey origin a kilometre away. An area whose machines hold positions is
+offered as a view of its own — every machine in it, as they stand.
 
 The events answer "what has the line made since I last asked". Every unit in that
 answer is a `ProductionLog` row: a booking the MES already committed to, under
@@ -148,6 +154,41 @@ def _resolve_line(db: Session, line_code: str | None) -> tuple[Equipment, list[E
     raise NotFound(f"line {line_code} not found (known: {', '.join(c.code for c, _ in centres)})")
 
 
+def _placed_areas(db: Session) -> list[tuple[Equipment, list[Equipment]]]:
+    """Every area with at least one machine under it that holds a position,
+    with all of its machines. Offered in the line view's picker beside the
+    lines: a floor plan of the whole area is worth looking at only when the
+    MES knows where something in it stands."""
+    placed = set(db.scalars(select(Equipment.id).where(
+        Equipment.level == EquipmentLevel.WORK_UNIT,
+        Equipment.pos_x.is_not(None), Equipment.pos_y.is_not(None))))
+    if not placed:
+        return []
+    areas = db.scalars(
+        select(Equipment).where(Equipment.level == EquipmentLevel.AREA).order_by(Equipment.code)
+    ).all()
+    out = []
+    for area in areas:
+        units = masterdata.work_units_under(db, area)
+        if any(unit.id in placed for unit in units):
+            out.append((area, list(units)))
+    return out
+
+
+def _resolve_scene(db: Session, line_code: str | None) -> tuple[Equipment, list[Equipment]]:
+    """A line, as `resolve_line` finds it - or, for the line view only, an
+    area whose machines hold positions."""
+    try:
+        return _resolve_line(db, line_code)
+    except NotFound:
+        if line_code is None:
+            raise
+        for area, units in _placed_areas(db):
+            if area.code == line_code:
+                return area, units
+        raise
+
+
 def _process_order(db: Session, units: list[Equipment]) -> dict[int, int]:
     """equipment id -> routing seq, from whichever routing covers most of the line.
 
@@ -210,9 +251,28 @@ def machine_layer(db: Session) -> dict | None:
     }
 
 
+PLAN_MARGIN = 12.0  # metres between a floor plan's edge and the row of unplaced machines
+
+
+def _centre(points: list[tuple[float, float]]) -> tuple[float, float]:
+    """The middle of the box the points span: the floor plan's own centre."""
+    xs = [p[0] for p in points]
+    ys = [p[1] for p in points]
+    return (min(xs) + max(xs)) / 2.0, (min(ys) + max(ys)) / 2.0
+
+
 def layout(db: Session, line_code: str | None = None) -> dict:
-    """The scene: which machines, in what order, in what shape, where."""
-    centre, units = _resolve_line(db, line_code)
+    """The scene: which machines, in what order, in what shape, where.
+
+    Each station is placed from the first source that has it, and says
+    which in `placed`: `drawn` (an entry in the layout file with an x or
+    z), `held` (the position the MES holds, framed on the centre of the
+    held ones), or `routing` (evenly spaced in process order). When any
+    station is held the layout is a floor plan (`plan`), and a station
+    nobody placed goes in a row past the plan's near edge rather than at a
+    made-up spot inside it.
+    """
+    centre, units = _resolve_scene(db, line_code)
     drawn = _read_layout_file()
     line_conf = (drawn.get("lines") or {}).get(centre.code) or {}
     defaults = drawn.get("defaults") or {}
@@ -228,35 +288,74 @@ def layout(db: Session, line_code: str | None = None) -> dict:
     capacity = int(line_conf.get("conveyor_capacity", defaults.get("conveyor_capacity", DEFAULT_CAPACITY)))
     per_tray = int(line_conf.get("units_per_tray", defaults.get("units_per_tray", DEFAULT_PER_TRAY)))
 
+    def drawn_place(unit: Equipment) -> dict | None:
+        conf = station_conf.get(unit.code) or {}
+        return conf if "x" in conf or "z" in conf else None
+
+    held = {unit.id: where for unit in ordered
+            if drawn_place(unit) is None and (where := masterdata.position(unit)) is not None}
+    plan = bool(held)
+    if plan:
+        cx, cy = _centre([(w[0], w[1]) for w in held.values()])
+        edge = max(w[1] for w in held.values()) - cy + PLAN_MARGIN
+        xs = [w[0] - cx for w in held.values()]
+        row_start = min(xs)
+
     stations = []
+    unplaced = 0
     for index, unit in enumerate(ordered):
         conf = station_conf.get(unit.code) or {}
+        where = held.get(unit.id)
+        height = None
+        if drawn_place(unit) is not None:
+            placed = "drawn"
+            x, z, rot = float(conf.get("x", index * spacing)), float(conf.get("z", 0.0)), float(conf.get("rot", 0.0))
+        elif where is not None:
+            placed = "held"
+            # The MES's y across the floor is the view's z; its heading turns
+            # clockwise seen from above and the view's rot the other way.
+            x, z = round(where[0] - cx, 2), round(where[1] - cy, 2)
+            rot = float(conf["rot"]) if "rot" in conf else (-(where[3] or 0.0)) % 360.0
+            height = where[2]
+        elif plan:
+            placed = "routing"
+            x, z, rot = row_start + unplaced * spacing, edge, float(conf.get("rot", 0.0))
+            unplaced += 1
+        else:
+            placed = "routing"
+            x, z, rot = index * spacing, 0.0, float(conf.get("rot", 0.0))
         stations.append(
             {
                 "code": unit.code,
                 "name": unit.name,
                 "kind": conf.get("kind") or _infer_kind(unit.code, unit.name),
                 "seq": seqs.get(unit.id),
-                "x": float(conf.get("x", index * spacing)),
-                "z": float(conf.get("z", 0.0)),
-                "rot": float(conf.get("rot", 0.0)),
+                "x": float(x),
+                "z": float(z),
+                "rot": float(rot),
+                "placed": placed,
+                "height": height,
                 "cycle_seconds": unit.ideal_cycle_seconds,
                 "analog": analogs.get(unit.code),
             }
         )
 
+    lines = [{"code": c.code, "name": c.name, "stations": len(u), "area": False}
+             for c, u in _work_centres(db)]
+    lines += [{"code": a.code, "name": a.name, "stations": len(u), "area": True}
+              for a, u in _placed_areas(db)]
     return {
-        "line": {"code": centre.code, "name": centre.name},
+        "line": {"code": centre.code, "name": centre.name,
+                 "area": centre.level == EquipmentLevel.AREA},
         "source": machine_layer(db),
         "unit": {
             "label": line_conf.get("unit_label", defaults.get("unit_label", "unit")),
             "per_tray": per_tray,
         },
         "conveyor": {"capacity": capacity, "spacing": spacing},
+        "plan": plan,
         "stations": stations,
-        "lines": [
-            {"code": c.code, "name": c.name, "stations": len(u)} for c, u in _work_centres(db)
-        ],
+        "lines": lines,
     }
 
 
@@ -304,7 +403,7 @@ def events(db: Session, line_code: str | None = None, since: int = -1) -> dict:
     current tail and no units, so the belts fill with live production rather
     than with history the renderer would have to invent positions for.
     """
-    centre, units = _resolve_line(db, line_code)
+    centre, units = _resolve_scene(db, line_code)
     seqs = _process_order(db, units)
     ordered = sorted(units, key=lambda u: (seqs.get(u.id) is None, seqs.get(u.id, 0), u.code))
     by_id = {unit.id: unit.code for unit in ordered}

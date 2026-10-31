@@ -112,7 +112,24 @@ async function main() {
     return;
   }
 
-  $("#line-name").textContent = `${layout.line.name} · ${layout.stations.length} stations`;
+  $("#line-name").textContent = `${layout.line.name} · ${layout.stations.length} ${layout.line.area ? "machines" : "stations"}`;
+
+  // An area whose machines hold positions can be seen whole, as a floor plan.
+  // The picker appears only then: a plant that has never said where anything
+  // stands keeps the view it had.
+  const choices = layout.lines || [];
+  if (!DEMO && choices.some((l) => l.area)) {
+    const pick = $("#line-pick");
+    pick.replaceChildren(...choices.map((l) => new Option(
+      l.area ? `${l.code} — every machine (${l.stations})` : `${l.code} (${l.stations})`, l.code)));
+    pick.value = layout.line.code;
+    pick.addEventListener("change", () => {
+      const url = new URL(location);
+      url.searchParams.set("line", pick.value);
+      location.assign(url);
+    });
+    pick.classList.remove("hidden");
+  }
   $("#demo-badge").classList.toggle("hidden", !DEMO);
   document.title = `MES-TWIN — ${layout.line.name}`;
 

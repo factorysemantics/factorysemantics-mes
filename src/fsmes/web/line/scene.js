@@ -29,6 +29,9 @@ const BELT_TOP = BELT_HEIGHT + 0.025;
 const TRAY_LINGER = 0.45; // seconds a placed tray stays before the denester takes it
 const CASES_PER_LAYER = 4;
 const LAYERS_PER_PALLET = 4;
+// A floor plan draws each machine this many times its line-view size: a 3 m
+// cabinet becomes about the 7-10 m footprint of a building on a real floor.
+const PLAN_SCALE = 2.5;
 
 export class LineScene {
   constructor(canvas) {
@@ -118,6 +121,7 @@ export class LineScene {
 
   /** Build the whole line from a `/line/layout` payload. */
   build(layout) {
+    if (layout.plan) return this.buildPlan(layout);
     this.layout = layout;
     const stations = layout.stations;
     const extent = stations.length > 1 ? stations[stations.length - 1].x - stations[0].x : 12;
@@ -172,6 +176,99 @@ export class LineScene {
     this.buildRobots(stations);
     this.frame(extent);
     return this;
+  }
+
+  /** A floor plan: every machine where the MES holds it to stand.
+   *
+   *  No belts and no robots. The MES knows where a machine stands, not what
+   *  runs between it and the next one, and a conveyor drawn from routing
+   *  order across a real floor would cross it in straight lines that are
+   *  not there. The machines are drawn at PLAN_SCALE because a plan this
+   *  size shows real buildings, not 3 m cabinets; the height a machine
+   *  stands at is in its label ("+34 m" above the lowest), never in where
+   *  it is drawn.
+   */
+  buildPlan(layout) {
+    this.layout = layout;
+    this.origin = 0;
+    const stations = layout.stations;
+    const xs = stations.map((s) => s.x);
+    const zs = stations.map((s) => s.z);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minZ = Math.min(...zs), maxZ = Math.max(...zs);
+    const width = Math.max(12, maxX - minX);
+    const depth = Math.max(12, maxZ - minZ);
+    const extent = Math.max(width, depth);
+    const mid = new THREE.Vector3((minX + maxX) / 2, 0, (minZ + maxZ) / 2);
+
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(width + 80, depth + 80),
+      new THREE.MeshStandardMaterial({ color: 0x151a22, roughness: 0.96, metalness: 0.02 }),
+    );
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.set(mid.x, 0, mid.z);
+    floor.receiveShadow = true;
+    this.scene.add(floor);
+
+    // One cell is 10 m, so the grid is a scale bar as well as a floor.
+    const size = Math.ceil((extent + 80) / 10) * 10;
+    const grid = new THREE.GridHelper(size, size / 10, 0x2c3a52, 0x1d2530);
+    grid.position.set(mid.x, 0.008, mid.z);
+    grid.material.transparent = true;
+    grid.material.opacity = 0.6;
+    this.scene.add(grid);
+
+    const heights = stations.map((s) => s.height).filter((h) => typeof h === "number");
+    const ground = heights.length ? Math.min(...heights) : null;
+
+    stations.forEach((station) => {
+      const machine = makeMachine(station.kind);
+      machine.group.scale.setScalar(PLAN_SCALE);
+      machine.group.position.set(station.x, 0, station.z);
+      machine.group.rotation.y = THREE.MathUtils.degToRad(station.rot || 0);
+      this.scene.add(machine.group);
+
+      const rise = ground !== null && typeof station.height === "number"
+        ? Math.round(station.height - ground) : 0;
+      const note = station.placed === "routing" ? "position unknown" : rise >= 1 ? `+${rise} m` : "";
+      // The label's second line holds 30 characters; the note is the part
+      // that must not be cut off.
+      const name = station.name || "";
+      const label = makeLabel(station.code, note ? `${name.slice(0, Math.max(0, 27 - note.length))} · ${note}` : name);
+      label.scale.multiplyScalar(PLAN_SCALE * 1.4);
+      label.position.set(station.x, machine.height * PLAN_SCALE + 3.2, station.z);
+      this.scene.add(label);
+
+      this.machines.set(station.code, { ...machine, station, state: "unknown" });
+    });
+
+    this.spacings = [];
+    this.framePlan(mid, extent);
+    return this;
+  }
+
+  /** The whole plan in shot, from one corner, high enough to see past the
+   *  near buildings to the far ones. */
+  framePlan(mid, extent) {
+    const centre = new THREE.Vector3(mid.x, 2, mid.z);
+    this.controls.target.copy(centre);
+    const distance = Math.max(30, extent * 0.95);
+    this.camera.far = Math.max(400, distance * 6);
+    this.camera.updateProjectionMatrix();
+    this.controls.maxDistance = Math.max(160, distance * 3);
+    this.camera.position.set(centre.x - distance * 0.45, distance * 0.62, centre.z + distance * 0.72);
+    this.camera.lookAt(centre);
+    this.key.target.position.copy(centre);
+
+    this.scene.fog.near = Math.max(60, distance * 1.4);
+    this.scene.fog.far = Math.max(260, distance * 4);
+
+    const reach = extent * 0.7 + 30;
+    Object.assign(this.key.shadow.camera, { left: -reach, right: reach, top: reach, bottom: -reach, near: 1, far: reach * 4 });
+    this.key.position.set(centre.x - reach * 0.6, reach * 1.2, centre.z + reach * 0.7);
+    this.key.shadow.camera.updateProjectionMatrix();
+
+    this.controls.update();
   }
 
   buildRobots(stations) {

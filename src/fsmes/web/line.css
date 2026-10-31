@@ -68,6 +68,15 @@ body {
 .sep { width: 1px; height: 20px; background: var(--line); }
 
 .line-name { color: var(--muted); font-size: 14px; }
+.line-pick {
+  background: var(--panel, transparent);
+  color: inherit;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font: inherit;
+  font-size: 13px;
+}
 
 .badge {
   font-size: 11px;
