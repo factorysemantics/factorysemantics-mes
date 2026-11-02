@@ -125,7 +125,6 @@ def test_the_route_refuses_anything_but_a_lowercase_glb_in_the_models_folder(cli
     (pack / "line_layout.json").write_text("{}", encoding="utf-8")
     (pack.parent / "secret.glb").write_bytes(make_cube_glb.cube_glb())
     (pack / "models" / "x.gltf").write_text("{}", encoding="utf-8")
-    (pack / "models" / "X.glb").unlink(missing_ok=True)
     assert client.get(f"/line/models/{name}").status_code == 404
 
 
