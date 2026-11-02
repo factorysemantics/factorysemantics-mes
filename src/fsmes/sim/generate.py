@@ -13,6 +13,15 @@ scaffolding.
 
 Deterministic: the same seed gives byte-identical output.
 
+A station may also carry **units**: the parts of a machine that have a state
+of their own and count nothing - the welding robots in a body-shop cell. Each
+gets its own table (`{station}_{unit}`), and the station's state follows
+them: a unit down makes the station down, with the unit's fault code on the
+station's `FaultCode`; a unit away for its periodic service (a tip dress
+every N welds) makes the station's state setup. All of it is opt-in, so a
+line that names no units, no `fault_code` and no `cycle_cv` draws the same
+random numbers and writes the same bytes it always did.
+
 A config also has a **factory form**: a top-level `"lines": [...]` array
 instead of a top-level `"stations"` list. Each entry is an ordinary
 single-line config (same `stations`/`buffers`/`events`/`orders`/
@@ -121,6 +130,32 @@ def _validate_line(config: dict, label: str) -> dict:
     if "Line" in names:
         sys.exit(f"{label}: 'Line' is reserved for the line-level table.")
 
+    for station in stations:
+        units = station.get("units") or []
+        unit_names = [u.get("name", "") for u in units]
+        for unit in unit_names:
+            if not unit or not all(c.isalnum() or c == "_" for c in unit):
+                sys.exit(f"{label}: unit name {unit!r} on {station['name']} — letters, digits "
+                         f"and underscore only (it becomes part of a table name).")
+        if len(set(unit_names)) != len(unit_names):
+            sys.exit(f"{label}: duplicate unit names on {station['name']}.")
+        for unit in units:
+            table = unit_table(station, unit)
+            if table in names:
+                sys.exit(f"{label}: unit {unit['name']!r} on {station['name']} makes table "
+                         f"{table!r}, which is also a station.")
+            service = unit.get("service")
+            if service and (int(service.get("every", 0)) <= 0
+                            or int(service.get("duration_s", 0)) <= 0
+                            or int(unit.get("ops_per_piece", 0)) <= 0):
+                sys.exit(f"{label}: unit {table} has a `service` but it needs `every` (operations "
+                         f"between services), `duration_s`, and the unit's `ops_per_piece`, all "
+                         f"positive - otherwise it is never serviced or always is.")
+        cv = station.get("cycle_cv")
+        if cv is not None and not 0 < float(cv) < 1:
+            sys.exit(f"{label}: {station['name']} `cycle_cv` is the spread of its cycle as a "
+                     f"fraction of the cycle, between 0 and 1; it says {cv!r}.")
+
     duration = int(config.get("duration_s", 3600))
     for event in config.get("events", []):
         kind = event.get("type")
@@ -133,6 +168,19 @@ def _validate_line(config: dict, label: str) -> dict:
         # would be asking which machine the network outage happened to.
         if kind not in ("changeover", *OBSERVER_TYPES) and station not in names:
             sys.exit(f"{label}: event {kind!r} names station {station!r}, which is not in stations.")
+        if event.get("unit") is not None:
+            units = [u.get("name") for u in stations[names.index(station)].get("units", [])]
+            if kind != "down":
+                sys.exit(f"{label}: event {kind!r} names unit {event['unit']!r}; only a "
+                         "`down` happens to one unit - everything else is the station's.")
+            if event["unit"] not in units:
+                sys.exit(f"{label}: event 'down' names unit {event['unit']!r} on {station}, "
+                         f"which has {', '.join(units) or 'none'}.")
+        if "fault_code" in event and (kind != "down" or not isinstance(event["fault_code"], int)
+                                      or isinstance(event["fault_code"], bool)
+                                      or event["fault_code"] <= 0):
+            sys.exit(f"{label}: `fault_code` belongs on a 'down' event and is a positive "
+                     "whole number - the number the PLC holds while it is down.")
         for key in ("start", "end", "at"):
             if key in event and not 0 <= int(event[key]) <= duration:
                 sys.exit(f"{label}: event {kind!r} {key}={event[key]} is outside 0..{duration}.")
@@ -293,6 +341,20 @@ def _targets(event: dict, analogs: list[dict]) -> set[str]:
     return {analogs[0]["name"]} if analogs else set()
 
 
+def unit_table(station: dict, unit: dict) -> str:
+    """The table, and OPC object, a station's unit publishes on."""
+    return f"{station['name']}_{unit['name']}"
+
+
+def station_has_faults(config: dict, station: dict) -> bool:
+    """Whether a station publishes `FaultCode`: it has units, whose faults it
+    reports, or a scripted breakdown of its own carries a fault number. A
+    station with neither publishes exactly the columns it always did."""
+    return bool(station.get("units")) or any(
+        e.get("type") == "down" and e.get("station") == station["name"] and "fault_code" in e
+        for e in config.get("events", []))
+
+
 def simulate(config: dict) -> dict[str, list[list]]:
     """One looping pass of the line -> rows per table. Pure function of the config."""
     rng = random.Random(config.get("seed", 0))
@@ -337,6 +399,8 @@ def simulate(config: dict) -> dict[str, list[list]]:
     offsets: dict[str, list[dict]] = {}               # station -> analog held off its base
     quiet: dict[str, list[dict]] = {}                 # station -> windows a tag does not arrive in
     rates: dict[str, list[dict]] = {}                 # station -> windows it runs at another rate
+    unit_downs: dict[tuple[str, str], list[tuple[int, int, int]]] = {}  # (station, unit) -> (start, end, code)
+    down_codes: dict[str, list[tuple[int, int, int]]] = {}  # station -> its own downs' fault numbers
 
     for event in config.get("events", []):
         kind, station = event["type"], event.get("station")
@@ -346,8 +410,14 @@ def simulate(config: dict) -> dict[str, list[list]]:
                  "start": int(event["start"]), "end": int(event["end"])})
         if kind == "changeover":
             changeovers.append((int(event["start"]), int(event["end"])))
+        elif kind == "down" and event.get("unit") is not None:
+            unit_downs.setdefault((station, event["unit"]), []).append(
+                (int(event["start"]), int(event["end"]), int(event.get("fault_code", 0))))
         elif kind == "down":
             downs.setdefault(station, []).append((int(event["start"]), int(event["end"])))
+            if "fault_code" in event:
+                down_codes.setdefault(station, []).append(
+                    (int(event["start"]), int(event["end"]), int(event["fault_code"])))
         elif kind == "drift":
             drifts.setdefault(station, []).append(event)
         elif kind == "scrap_burst":
@@ -405,9 +475,31 @@ def simulate(config: dict) -> dict[str, list[list]]:
     order_index = 0
     shown = [RUNNING] * n              # what each machine publishes on its State tag
     idle_held = [0] * n                # seconds it has been emergently idle
+    # A station with `cycle_cv` draws each cycle's length: people, not a
+    # cam. None until its first cycle starts, so a line without one draws
+    # nothing extra and its random stream is the one it always had.
+    cycle_len: list[float | None] = [None] * n
+    # Units: per station, per unit - operations since its last service, the
+    # window of its service (from, until; none yet is (-1, -1)), and its
+    # running seconds.
+    wear = [[int((u.get("service") or {}).get("start", 0)) for u in s.get("units", [])]
+            for s in stations]
+    serviced = [[(-1, -1)] * len(s.get("units", [])) for s in stations]
+    unit_run = [[0] * len(s.get("units", [])) for s in stations]
+    fault = [0] * n                    # the fault number the station holds this tick
 
     rows: dict[str, list[list]] = {s["name"]: [] for s in stations}
+    for s in stations:
+        for u in s.get("units", []):
+            rows[unit_table(s, u)] = []
     rows["Line"] = []
+
+    def unit_fault(name: str, unit: str, t: int) -> int | None:
+        """The fault number a unit is down with at `t`, or None if it is not."""
+        for a, b, code in unit_downs.get((name, unit), []):
+            if in_win(t, a, b):
+                return code
+        return None
 
     for t in range(duration):
         changing = any(in_win(t, c0, c1) for c0, c1 in changeovers)
@@ -424,12 +516,27 @@ def simulate(config: dict) -> dict[str, list[list]]:
         for i in range(n - 1, -1, -1):
             station = stations[i]
             name = station["name"]
+            fault[i] = 0
             if changing:
                 states[i] = CHANGEOVER
                 continue
             if any(in_win(t, a, b) for a, b in downs.get(name, [])):
                 states[i] = DOWN
+                fault[i] = next((c for a, b, c in down_codes.get(name, []) if in_win(t, a, b)), 0)
                 continue
+            units = station.get("units") or ()
+            if units:
+                # The cell follows its robots: one down is the cell down, with
+                # that robot's fault; one away being serviced is the cell in
+                # setup. Either way the cell makes nothing this second.
+                codes = [unit_fault(name, u["name"], t) for u in units]
+                if any(c is not None for c in codes):
+                    states[i] = DOWN
+                    fault[i] = next(c for c in codes if c is not None)
+                    continue
+                if any(a <= t < b for a, b in serviced[i]):
+                    states[i] = CHANGEOVER
+                    continue
             if any(in_win(t, a, b) for a, b in stops.get(name, [])):
                 states[i] = STOPPED
                 continue
@@ -453,11 +560,18 @@ def simulate(config: dict) -> dict[str, list[list]]:
                 states[i] = STARVED       # nothing upstream (station 0 pulls from raw)
                 continue
 
-            accum[i] += rate_at(station, t) / 60.0
+            if station.get("cycle_cv"):
+                if cycle_len[i] is None:
+                    cycle_len[i] = _draw_cycle(rng, station, rate_at(station, t))
+                accum[i] += 1.0 / cycle_len[i]
+            else:
+                accum[i] += rate_at(station, t) / 60.0
             take = int(accum[i])
             if take <= 0:
                 continue  # still RUNNING, just mid-cycle
             accum[i] -= take
+            if station.get("cycle_cv"):
+                cycle_len[i] = _draw_cycle(rng, station, rate_at(station, t))
             if i > 0:
                 take = min(take, buffers[i - 1])
                 buffers[i - 1] -= take
@@ -475,6 +589,15 @@ def simulate(config: dict) -> dict[str, list[list]]:
             produced[i], scrapped[i] = take, bad
             good[i] += ok
             scrap[i] += bad
+            # Every body that left the cell was welded by each of its units.
+            # One that has reached its service count goes for it now, between
+            # bodies, which is when a tip dress happens on a real line.
+            for j, unit in enumerate(units):
+                service = unit.get("service")
+                wear[i][j] += take * int(unit.get("ops_per_piece", 0))
+                if service and wear[i][j] >= int(service["every"]):
+                    serviced[i][j] = (t + 1, t + 1 + int(service["duration_s"]))
+                    wear[i][j] = 0
 
         # Scripted counter resets — the "counts wrong" drill, on demand.
         for i, station in enumerate(stations):
@@ -552,11 +675,14 @@ def simulate(config: dict) -> dict[str, list[list]]:
                     continue
                 values.append(round(value, int(analog.get("decimals", 2))))
 
-            cycle_ms = (
-                round(60000.0 / rate_at(station, t) + rng.gauss(0, 15))
-                if shown[i] == RUNNING
-                else 0
-            )
+            if shown[i] == RUNNING and station.get("cycle_cv") and cycle_len[i] is not None:
+                cycle_ms = round(cycle_len[i] * 1000.0 + rng.gauss(0, 15))
+            else:
+                cycle_ms = (
+                    round(60000.0 / rate_at(station, t) + rng.gauss(0, 15))
+                    if shown[i] == RUNNING
+                    else 0
+                )
             if shown[i] == RUNNING:
                 run_seconds[i] += 1
             rows[name].append([
@@ -571,11 +697,71 @@ def simulate(config: dict) -> dict[str, list[list]]:
                 # Ready is not running: a machine can be willing and starved.
                 0 if shown[i] in (DOWN, CHANGEOVER) else 1,
                 *values,
+                *([fault[i]] if station_has_faults(config, station) else []),
             ])
+            for j, unit in enumerate(station.get("units") or ()):
+                rows[unit_table(station, unit)].append(
+                    _unit_row(rng, config, station, unit, t, shown[i], changing,
+                              unit_fault(name, unit["name"], t),
+                              serviced[i][j][0] <= t < serviced[i][j][1],
+                              wear[i][j], unit_run[i], j))
 
         rows["Line"].append([t, orders[order_index], 0 if changing else 1, good[-1]])
 
     return rows
+
+
+def _draw_cycle(rng: random.Random, station: dict, rate: float) -> float:
+    """One cycle's length, in seconds, for a station whose cycle varies.
+    Never under half its mean: a person can be quick, not instantaneous."""
+    mean = 60.0 / rate
+    return max(0.5 * mean, rng.gauss(mean, float(station["cycle_cv"]) * mean))
+
+
+def _unit_row(rng: random.Random, config: dict, station: dict, unit: dict, t: int,
+              cell: int, changing: bool, down_code: int | None, servicing: bool,
+              wear: int, run: list[int], j: int) -> list:
+    """What one unit publishes this second.
+
+    Its own breakdown and its own service are its own states; otherwise it
+    is doing what its cell is doing - welding while the cell runs, waiting
+    while the cell waits. Waiting on a sibling that broke is stopped, not
+    down: the fault is the sibling's."""
+    if down_code is not None:
+        state = DOWN
+    elif servicing or changing:
+        state = CHANGEOVER
+    elif cell in (RUNNING, STARVED, BLOCKED):
+        state = cell
+    else:
+        state = STOPPED
+    if state == RUNNING:
+        run[j] += 1
+    table = unit_table(station, unit)
+    values = []
+    for analog in station_analogs(unit):
+        value = float(analog.get("base", 0.0))
+        if analog.get("running_only") and state != RUNNING:
+            value = 0.0
+        else:
+            value += rng.gauss(0.0, float(analog.get("noise", 0.0)))
+        values.append(round(value, int(analog.get("decimals", 2))))
+    cycle_s = float(unit.get("cycle_s", 60.0 / float(station["rate_per_min"])))
+    cycle_ms = round(cycle_s * 1000.0 + rng.gauss(0, 15)) if state == RUNNING else 0
+    service = unit.get("service")
+    return [
+        t, state, down_code or 0, alarm_word(state, table, t, {}, {}), cycle_ms,
+        round(run[j] / 60.0, 2), 0 if state in (DOWN, CHANGEOVER) else 1,
+        *([wear] if service else []),
+        *values,
+    ]
+
+
+def unit_header(unit: dict) -> list[str]:
+    service = unit.get("service")
+    return ["TSec", "State", "FaultCode", "AlarmWord", "CycleTimeMs", "RunMinutes", "ReadyBit",
+            *([service.get("counter", "ServiceCount")] if service else []),
+            *[a.get("name", "Value") for a in station_analogs(unit)]]
 
 
 # ------------------------------------------------------------------ output
@@ -593,7 +779,10 @@ def write_output(config: dict, rows: dict[str, list[list]], out: Path,
         headers[station["name"]] = [
             "TSec", "State", "GoodCount", "ScrapCount", "TotalCount", "AlarmWord",
             "CycleTimeMs", "RunMinutes", "ReadyBit", *signals,
+            *(["FaultCode"] if station_has_faults(config, station) else []),
         ]
+        for unit in station.get("units") or ():
+            headers[unit_table(station, unit)] = unit_header(unit)
     for name in line_tables:
         headers[name] = ["TSec", "OrderId", "OrderActive", "LineGoodCount"]
 
@@ -605,7 +794,7 @@ def write_output(config: dict, rows: dict[str, list[list]], out: Path,
 
     # schema.ini pins column types so the ODBC text driver never guesses wrong.
     int_cols = {"TSec", "State", "GoodCount", "ScrapCount", "CycleTimeMs",
-                "OrderId", "OrderActive", "LineGoodCount"}
+                "OrderId", "OrderActive", "LineGoodCount", "FaultCode"}
     lines = []
     for table, header in headers.items():
         lines.append(f"[{table}.csv]")
@@ -679,9 +868,13 @@ def write_manifest(config: dict, out: Path) -> Path:
                 "min": spec["min"], "max": spec["max"],
                 "initial": spec["initial"], "lag_s": spec["lag_s"],
                 "drives": spec["drives"], "decimals": spec["decimals"]}
+        if station_has_faults(config, station):
+            tags["FaultCode"] = _FAULT_TAG
         tables[station["name"]] = {"tags": tags}
         if inspection:
             tables[station["name"]]["inspection"] = inspection
+        for unit in station.get("units") or ():
+            tables[unit_table(station, unit)] = {"tags": _unit_tags(unit), "unit_of": station["name"]}
 
     manifest = {
         "_what": "Every tag this line exposes, generated from its line.json. "
@@ -697,6 +890,36 @@ def write_manifest(config: dict, out: Path) -> Path:
     path = out / MANIFEST_NAME
     path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     return path
+
+
+_FAULT_TAG = {"kind": "state", "writable": False,
+              "note": "the fault number held while down, 0 otherwise; the tag map's "
+                      "reason_map says what each one means"}
+
+
+def _unit_tags(unit: dict) -> dict[str, dict]:
+    """A unit's tags: a machine's, less the counters - a robot in a cell
+    makes no bodies of its own, the cell counts them."""
+    tags: dict[str, dict] = {
+        "State": {"kind": "state", "writable": False,
+                  "note": "raw PLC integer; the tag map maps it to an MES state"},
+        "FaultCode": _FAULT_TAG,
+        "AlarmWord": {"kind": "alarm", "writable": False,
+                      "bits": {"0": "fault", "3": "planned stop"}},
+        "CycleTimeMs": {"kind": "pv", "unit": "ms", "writable": False},
+        "RunMinutes": {"kind": "pv", "unit": "min", "writable": False},
+        "ReadyBit": {"kind": "state", "writable": False},
+    }
+    service = unit.get("service")
+    if service:
+        tags[service.get("counter", "ServiceCount")] = {
+            "kind": "pv", "unit": service.get("unit", "ops"), "writable": False,
+            "note": f"operations since the last service; serviced every {service['every']}"}
+    for analog in station_analogs(unit):
+        tags[analog.get("name", "Value")] = {"kind": "pv", "unit": analog.get("unit", ""),
+                                             "writable": False,
+                                             "nominal": float(analog.get("base", 0.0))}
+    return tags
 
 
 def disconnects(config: dict) -> list[dict]:
@@ -774,7 +997,12 @@ def _scenario_rows(config: dict) -> list[tuple[str, str]]:
             # A `.get` here would print "None" for a type somebody added and
             # forgot; the timeline is what a person runs the exercise from,
             # so an unknown kind stops the write instead of printing a blank.
-            what = {"down": "DOWN",
+            down = "DOWN"
+            if event.get("unit"):
+                down = f"{event['unit']} DOWN - the cell is down with it"
+            if event.get("fault_code"):
+                down += f" (fault {event['fault_code']})"
+            what = {"down": down,
                     "drift": f"analog drifts to {event.get('to')}",
                     "offset": (f"{event.get('analog', 'its process value')} held "
                                f"{float(event.get('offset', 0.0)):+g} off base"),
@@ -822,6 +1050,16 @@ def write_scenario(config: dict, out_dir: Path) -> None:
             "are not on the tag at all; a longer one is published from the "
             f"filter's end, which costs it its first {filter_s}s. Nothing in "
             "the table above is filtered — a scripted stop is the story.")
+    serviced = [f"{unit_table(st, u)} every {u['service']['every']} "
+                f"(x{u['ops_per_piece']} a piece, {u['service']['duration_s']}s)"
+                for st in config["stations"] for u in st.get("units") or () if u.get("service")]
+    if serviced:
+        lines.append("")
+        lines.append(
+            "**Services.** Not in the table because nobody scripted when: each unit "
+            "below goes for its service (a tip dress) between pieces once it has done "
+            "that many operations, and its station is in setup (5) while it does - "
+            + "; ".join(serviced) + ".")
     lines.append("")
     lines.append("States: 0 stopped · 1 running · 2 starved · 3 blocked · 4 down · 5 changeover")
     (out_dir / "scenario.md").write_text("\n".join(lines) + "\n", encoding="utf-8")

@@ -29,10 +29,16 @@ from sqlalchemy import select, tuple_
 from fsmes import shadow
 from fsmes.config import Settings
 from fsmes.db import read_only_session, session_scope
-from fsmes.domain import ConnectionStateName, ProductionSource, TagValue
+from fsmes.domain import (
+    ConnectionStateName,
+    EquipmentState,
+    EquipmentStateName,
+    ProductionSource,
+    TagValue,
+)
 from fsmes.integrations.opc.security import apply_security, explain_connection_error
 from fsmes.integrations.opc.tag_map import MachineMap, load_manifest, load_tag_map
-from fsmes.kernel.tags import COUNTER_TAGS, INSPECTION_PREFIX, INSPECTION_TAGS, SEMANTIC_TAGS
+from fsmes.kernel.tags import COUNTER_TAGS, INSPECTION_PREFIX, INSPECTION_TAGS
 from fsmes.services import (
     audit,
     counters,
@@ -273,6 +279,10 @@ class _Handler:
         # Per machine: when it last said it was counting with no order open,
         # and what has gone to the unassigned list since.
         self._unassigned: dict[str, list] = {}
+        # Per machine with a `reason_tag`: the last thing it said about why
+        # it stopped. Held because the reason and the State arrive as two
+        # data changes, in either order.
+        self._reasons: dict[str, object] = {}
 
     async def datachange_notification(self, node, value, _data) -> None:
         spec, tag = self.node_info[node]
@@ -547,9 +557,9 @@ class _Handler:
                 except Exception:
                     log.exception("trigger evaluation failed", equipment=spec.equipment, tag=tag)
 
-        decisions = [(spec, tag, value) for spec, tag, value, _o, _a in batch if tag in SEMANTIC_TAGS]
+        decisions = [(spec, tag, value) for spec, tag, value, _o, _a in batch if spec.acts_on(tag)]
         history = [(spec.equipment, tag, value, observed)
-                   for spec, tag, value, observed, _a in batch if tag not in SEMANTIC_TAGS]
+                   for spec, tag, value, observed, _a in batch if not spec.acts_on(tag)]
         if decisions:
             self._book_with_retry(decisions)
         if history:
@@ -686,9 +696,21 @@ class _Handler:
                 try:
                     with session.begin_nested():
                         self._record(session, spec, tag, value)
+                        state = spec.to_state(value)
+                        code, said = (spec.reason_for(self._reasons.get(spec.equipment))
+                                      if state is EquipmentStateName.DOWN else (None, None))
                         equipment.set_state(
-                            session, equipment_code=spec.equipment,
-                            state=spec.to_state(value), actor="opc-agent")
+                            session, equipment_code=spec.equipment, state=state,
+                            reason=said, reason_code=code, actor="opc-agent")
+                except Exception as exc:
+                    _failed("failed to process data change", exc,
+                            equipment=spec.equipment, tag=tag, value=value)
+            elif spec.reason_tag is not None and tag == spec.reason_tag:
+                self._reasons[spec.equipment] = value
+                try:
+                    with session.begin_nested():
+                        self._record(session, spec, tag, value)
+                        self._name_open_stop(session, spec, value)
                 except Exception as exc:
                     _failed("failed to process data change", exc,
                             equipment=spec.equipment, tag=tag, value=value)
@@ -730,6 +752,21 @@ class _Handler:
         # is - which is what lets another reader pick the count up exactly
         # where this one left it, and what makes a restart on one box honest.
         counters.save(session, pending, self.node)
+
+    def _name_open_stop(self, session, spec: MachineMap, value) -> None:
+        """The reason arrived after the State that it explains: name the stop
+        that is open now, if it is a breakdown nobody has named yet. Never a
+        new interval, and never over a name somebody already gave."""
+        code, said = spec.reason_for(value)
+        if said is None:
+            return
+        open_ = session.scalar(select(EquipmentState).where(
+            EquipmentState.equipment_id == self._equipment_id(session, spec.equipment),
+            EquipmentState.ended_at.is_(None)))
+        if open_ is None or open_.state is not EquipmentStateName.DOWN or open_.reason is not None:
+            return
+        open_.reason, open_.reason_code = said[:120], code[:40] if code else None
+        session.flush()
 
     def _note_unassigned(self, code: str, quantities: dict) -> None:
         """Say that a machine is counting with no order open, and how much.
@@ -1134,9 +1171,9 @@ async def run(settings: Settings, holds=None, node: str | None = None) -> None:
                 # State change that says it broke down. Inspection groups are
                 # events, not samples: every change is queued and delivered,
                 # because a queue of one would keep one judged unit in ten.
-                fast = [n for n, (_, tag) in node_info.items() if tag in SEMANTIC_TAGS]
-                slow = [n for n, (_, tag) in node_info.items()
-                        if tag not in SEMANTIC_TAGS and not _is_inspection_tag(tag)]
+                fast = [n for n, (spec, tag) in node_info.items() if spec.acts_on(tag)]
+                slow = [n for n, (spec, tag) in node_info.items()
+                        if not spec.acts_on(tag) and not _is_inspection_tag(tag)]
                 groups = [n for n, (spec, tag) in node_info.items()
                           if _is_inspection_tag(tag) and spec.equipment in inspections]
 
