@@ -321,10 +321,11 @@ def test_the_forbidden_list_is_read_from_the_labs_and_not_typed_here():
     # or is renamed is noticed here rather than by the guard quietly relaxing.
     # `finewire` is the third pack, invented in M8 piece 3 to disagree with
     # the pack format: it extended this guard on the day it landed, which is
-    # what building the list from the labs is for.
+    # what building the list from the labs is for. `bodyshop`, the fourth,
+    # did the same on 2026-11-02.
     names = {literal for literal, kind in literals.items()
              if kind == "a lab plant's registry name"}
-    assert names == {"bottling", "machining", "finewire", "cutlery",
+    assert names == {"bottling", "machining", "finewire", "bodyshop", "cutlery",
                      "megafactory"}, names
 
 

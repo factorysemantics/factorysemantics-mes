@@ -38,7 +38,12 @@ from fsmes.domain import (
 )
 from fsmes.integrations.opc.security import apply_security, explain_connection_error
 from fsmes.integrations.opc.tag_map import MachineMap, load_manifest, load_tag_map
-from fsmes.kernel.tags import COUNTER_TAGS, INSPECTION_PREFIX, INSPECTION_TAGS
+from fsmes.kernel.tags import (  # noqa: F401  (SEMANTIC_TAGS: read here by the tests)
+    COUNTER_TAGS,
+    INSPECTION_PREFIX,
+    INSPECTION_TAGS,
+    SEMANTIC_TAGS,
+)
 from fsmes.services import (
     audit,
     counters,

@@ -31,7 +31,8 @@ LABS = REPO / "labs"
 #: pack that stops being valid is a failing test rather than a plant that
 #: refuses to start on somebody's morning.
 SHIPPED = ("labs/multiplant/bottling", "labs/multiplant/machining",
-           "labs/multiplant/finewire", "labs/cutlery", "labs/megafactory/full")
+           "labs/multiplant/finewire", "labs/multiplant/bodyshop", "labs/cutlery",
+           "labs/megafactory/full")
 
 MINIMAL = '''
 [pack]
@@ -591,7 +592,7 @@ def test_the_fleet_file_lists_every_multiplant_pack():
     import tomllib
 
     fleet = tomllib.loads((LABS / "multiplant" / "fleet.toml").read_text(encoding="utf-8"))
-    assert sorted(fleet["packs"]) == ["bottling", "finewire", "machining"]
+    assert sorted(fleet["packs"]) == ["bodyshop", "bottling", "finewire", "machining"]
 
 
 def test_a_pack_that_cannot_be_read_never_puts_the_parsers_words_on_the_public_endpoint(applied):
