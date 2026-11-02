@@ -2,7 +2,7 @@
   "_comment": "Kestrel Motors body shop line 1, served by the replay from out/. Eight cells, each a machine with counters; twenty robots, each a part of its cell (`counts: false`): a robot publishes a state, a fault number, its cycle time, its weld current and its tip wear, and counts nothing - the cell counts the bodies. Read-only (`order_tag` null) because a replayed CSV cannot be written to.",
   "_cycle_seconds": "Cells: 60 / rate_per_min from line.json - FR10 70.6 s is the longest, the bottleneck. Robots: their own weld cycle within the cell's, which OEE never reads (a robot is an equipment module, not a machine on the line).",
   "_state_map": "The same site decision as bottling: starved (2) and blocked (3) are IDLE, the tip dress and any changeover (5) are SETUP, only a fault (4) is DOWN.",
-  "_reason": "`reason_tag` is the PLC's fault number, held while down. When a robot faults, its cell publishes the same number, so the cell's stop and the robot's carry the same reason. 101 is a weld gun fault and 102 a robot collision stop, in this plant's own downtime vocabulary.",
+  "_reason": "`reason_tag` is the PLC's fault number, held while down. When a robot faults, its cell publishes the same number, so the cell's stop and the robot's carry the same reason. 101 is a weld gun fault and 102 a robot collision stop, in this plant's own downtime vocabulary. MF10 has no robots and no PLC fault number, so it names no reason tag.",
   "line": {
     "object": "Line",
     "publishes_order": "OrderId",
@@ -135,11 +135,6 @@
       "cycle_seconds": 65.217,
       "analog": "AirPressure",
       "order_tag": null,
-      "reason_tag": "FaultCode",
-      "reason_map": {
-        "101": "weld_gun_fault",
-        "102": "robot_collision"
-      },
       "state_map": {
         "0": "idle",
         "1": "running",
