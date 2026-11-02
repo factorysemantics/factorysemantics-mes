@@ -21,6 +21,7 @@ packs/<name>/
                     maintenance plans, shifts — data, not a script
   mappings/         inbound columns, inbound SQL
   line_layout.json  optional geometry for the line view
+  models/           optional machine models for the 3D line view (.glb)
   README.md         what this plant is, for the next engineer
 ```
 
@@ -270,6 +271,53 @@ data_dir = "labs/multiplant/.data"
 Paths are relative to the fleet file. `[environment] data_dir` stays here and not in a pack: where several plants keep their databases on one machine is a fact about the machine. `FSMES_PLANT_REGISTRY` still points at it — the variable kept its name; what it points at changed.
 
 See [plants from a fleet file](registry.md) for running them.
+
+## Your own machine models
+
+The 3D line view (`/dashboard/line/3d`) draws every machine from built-in
+shapes - boxes, cylinders, a lathe for the bottles - and those stay the
+default. A pack can carry its own machine models in `models/`, next to
+`line_layout.json` (wherever `[files] line_layout` points, `models/` is its
+sibling, whether or not the layout file exists).
+
+| File | Draws |
+|---|---|
+| `models/<kind>.glb` | every machine of that kind: `filler`, `washer`, `mixer`, `denester`, `depalletiser`, `inspector`, `packer`, `palletiser`, `generic` (the kind the layout answer reports for the station) |
+| `models/<code>.glb` | one machine, by its equipment code, lowercased in the URL (`FILL01.glb` on disk is served as `fill01.glb`) |
+| any `models/<name>.glb` | the station whose `line_layout.json` entry says `"model": "<name>.glb"` |
+
+A station's model is the first of those that exists, in the order layout
+entry, machine code, kind. `GET /line/layout` gives each station
+`model`: its URL (`/line/models/filler.glb`) or `null` for the built-in shape.
+
+```json
+{"lines": {"LINE1": {"stations": {"FILL01": {"model": "big-filler.glb"}}}}}
+```
+
+**The format.** GLB (glTF 2.0 binary), with everything embedded. Metres. The
+origin is the centre of the machine's footprint at floor level, front toward
+-Z, the line running along +X. Roughly real size: the conveyors still join
+where the built-in shape would end. Under 8 MB a file; a larger one is not
+offered and not served.
+
+**State colour.** Every mesh whose material is named `signal` - a model's
+status bands and beacon - is recoloured by the machine's MES state, as the
+built-in bands are, and pulses when it is down. A node named `spin` turns
+while the machine runs and stands still otherwise. A model with no `signal`
+material gets a lit ring on the floor around it, in the state colour.
+
+**What the route serves.** `GET /line/models/<name>` serves a file from that
+folder only, for signed-in users, as `model/gltf-binary` cached for an hour.
+`<name>` must match `^[a-z0-9_-]+\.glb$`; anything else - another extension, a
+path, `..`, capitals - is a 404, as is a file over the cap.
+
+**Nothing comes from the internet.** The loader is three.js's own, committed
+under `web/vendor/`; the models are the plant's own files. A model that is
+missing or fails to load leaves the built-in shape in place with one warning in
+the browser console - the view is never blank, and never waits for a model to
+show a machine's state. One that has not arrived 3 s after the view first draws
+gets the same warning and keeps the built-in shape, but is still drawn if it
+arrives later: on a slow PC, drawing the view itself can take most of that.
 
 ## See also
 
