@@ -15,9 +15,10 @@
  * hide the machine it shows. Either way they are the machine's `bands`, so
  * applyStates and the down-pulse in scene.js treat them as before.
  *
- * A model that fails to load, or takes longer than MODEL_TIMEOUT_MS, leaves the
- * built-in shape where it is with one console.warn: the view is never blank and
- * never waits on a download to show state.
+ * A model that fails to load, or takes longer than MODEL_TIMEOUT_MS after the
+ * view's first frame, leaves the built-in shape where it is with one
+ * console.warn: the view is never blank and never waits on a download to show
+ * state.
  */
 
 import * as THREE from "three";
@@ -35,6 +36,15 @@ function load(url) {
   if (!loads.has(url)) loads.set(url, loader.loadAsync(url).then((gltf) => gltf.scene));
   return loads.get(url);
 }
+
+/* The time limit is for the model's download, not for the view's own start:
+ * the first frame compiles every shader in the scene, and on a slow plant PC
+ * (or software WebGL) that alone can take seconds. So the download starts at
+ * once and the clock starts when the first frame has been drawn - two
+ * animation frames from build(), the second of them after the first render. */
+const firstFrame = () => new Promise((resolve) => {
+  requestAnimationFrame(() => requestAnimationFrame(resolve));
+});
 
 function inTime(promise, ms) {
   let timer;
@@ -73,7 +83,8 @@ export function dressWithModel(machine) {
   const url = machine.station.model;
   if (!url) return Promise.resolve(machine);
   machine.modelState = "loading";
-  return inTime(load(url), MODEL_TIMEOUT_MS).then((source) => {
+  const loading = load(url);
+  return firstFrame().then(() => inTime(loading, MODEL_TIMEOUT_MS)).then((source) => {
     const model = source.clone(true);
     model.name = `model:${url}`;
     model.traverse((node) => {

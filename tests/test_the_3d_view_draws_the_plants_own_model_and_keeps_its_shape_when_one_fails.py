@@ -190,7 +190,7 @@ def test_the_filler_is_drawn_from_its_model_and_a_missing_or_late_model_keeps_th
 
     filler = page.evaluate(DRESS, "FILL01")
     assert filler == {"state": "loaded", "model": "model:/line/models/filler.glb",
-                      "modelShowing": True, "builtInShowing": False, "ring": True}
+                      "modelShowing": True, "builtInShowing": False, "ring": True}, warnings
     for code in ("WASH01", "QI01"):
         kept = page.evaluate(DRESS, code)
         assert kept == {"state": "failed", "model": None, "modelShowing": False,
