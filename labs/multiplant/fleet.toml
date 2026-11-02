@@ -9,7 +9,7 @@
 #
 # Paths are relative to this file. Adding a plant is a directory and a line
 # here; if it ever needs a change under src/, that change is the bug.
-packs = ["bottling", "machining", "finewire"]
+packs = ["bottling", "machining", "finewire", "bodyshop"]
 
 [environment]
 data_dir = "labs/multiplant/.data"

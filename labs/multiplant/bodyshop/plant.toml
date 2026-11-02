@@ -1,0 +1,40 @@
+# The body shop, as a pack.
+#
+# Kestrel Motors is invented, and so is everything it makes: a simulated
+# body-in-white line of eight cells and twenty robots, replayed from
+# `fsmes sim-generate line.json`. See README.md.
+
+[pack]
+format = 1
+requires = ">=0.1.2"
+
+[plant]
+name       = "bodyshop"
+label      = "Kestrel Motors / Body Line 1 — 8-cell body-in-white line, 20 robots"
+timezone   = "America/Detroit"
+profile    = "laptop"
+enterprise = "KESTREL"
+site       = "KM1"
+
+[serve]
+api_host     = "127.0.0.1"
+api_port     = 8030
+opc_endpoint = "opc.tcp://127.0.0.1:4845/fsmes/bodyshop"
+simulate     = true
+
+[files]
+tag_map     = "tag_map.json"
+replay_dir  = "out"
+masterdata  = "masterdata"
+floor       = "floor.json"
+# Eight cells in a straight run, twelve metres apart. A model of your own goes
+# in models/<CODE>.glb beside this file and replaces that cell's box.
+line_layout = "line_layout.json"
+
+[oee]
+# The same floor as the other lab packs: a window watched less than 80% of
+# reports no figure, with the coverage ledger instead.
+coverage_floor = 0.8
+
+[erp]
+mode = "off"

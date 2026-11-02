@@ -1,0 +1,593 @@
+{
+  "_comment": "Kestrel Motors body shop line 1, served by the replay from out/. Eight cells, each a machine with counters; twenty robots, each a part of its cell (`counts: false`): a robot publishes a state, a fault number, its cycle time, its weld current and its tip wear, and counts nothing - the cell counts the bodies. Read-only (`order_tag` null) because a replayed CSV cannot be written to.",
+  "_cycle_seconds": "Cells: 60 / rate_per_min from line.json - FR10 70.6 s is the longest, the bottleneck. Robots: their own weld cycle within the cell's, which OEE never reads (a robot is an equipment module, not a machine on the line).",
+  "_state_map": "The same site decision as bottling: starved (2) and blocked (3) are IDLE, the tip dress and any changeover (5) are SETUP, only a fault (4) is DOWN.",
+  "_reason": "`reason_tag` is the PLC's fault number, held while down. When a robot faults, its cell publishes the same number, so the cell's stop and the robot's carry the same reason. 101 is a weld gun fault and 102 a robot collision stop, in this plant's own downtime vocabulary.",
+  "line": {
+    "object": "Line",
+    "publishes_order": "OrderId",
+    "order_code": "BLD-{value}"
+  },
+  "machines": [
+    {
+      "equipment": "UB10",
+      "object": "UB10",
+      "cycle_seconds": 63.158,
+      "analog": "AirPressure",
+      "order_tag": null,
+      "reason_tag": "FaultCode",
+      "reason_map": {
+        "101": "weld_gun_fault",
+        "102": "robot_collision"
+      },
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "UB20",
+      "object": "UB20",
+      "cycle_seconds": 61.856,
+      "analog": "AirPressure",
+      "order_tag": null,
+      "reason_tag": "FaultCode",
+      "reason_map": {
+        "101": "weld_gun_fault",
+        "102": "robot_collision"
+      },
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FR10",
+      "object": "FR10",
+      "cycle_seconds": 70.588,
+      "analog": "AirPressure",
+      "order_tag": null,
+      "reason_tag": "FaultCode",
+      "reason_map": {
+        "101": "weld_gun_fault",
+        "102": "robot_collision"
+      },
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FR20",
+      "object": "FR20",
+      "cycle_seconds": 63.158,
+      "analog": "AirPressure",
+      "order_tag": null,
+      "reason_tag": "FaultCode",
+      "reason_map": {
+        "101": "weld_gun_fault",
+        "102": "robot_collision"
+      },
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "RS10",
+      "object": "RS10",
+      "cycle_seconds": 61.856,
+      "analog": "AirPressure",
+      "order_tag": null,
+      "reason_tag": "FaultCode",
+      "reason_map": {
+        "101": "weld_gun_fault",
+        "102": "robot_collision"
+      },
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "RS20",
+      "object": "RS20",
+      "cycle_seconds": 60.0,
+      "analog": "AirPressure",
+      "order_tag": null,
+      "reason_tag": "FaultCode",
+      "reason_map": {
+        "101": "weld_gun_fault",
+        "102": "robot_collision"
+      },
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MF10",
+      "object": "MF10",
+      "cycle_seconds": 65.217,
+      "analog": "AirPressure",
+      "order_tag": null,
+      "reason_tag": "FaultCode",
+      "reason_map": {
+        "101": "weld_gun_fault",
+        "102": "robot_collision"
+      },
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "QI10",
+      "object": "QI10",
+      "cycle_seconds": 60.0,
+      "analog": "GapMean",
+      "order_tag": null,
+      "reason_tag": "FaultCode",
+      "reason_map": {
+        "101": "weld_gun_fault",
+        "102": "robot_collision"
+      },
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "UB10-R1",
+      "object": "UB10_R1",
+      "cycle_seconds": 38.4,
+      "analog": "WeldCurrent",
+      "counts": false,
+      "order_tag": null,
+      "reason_tag": "FaultCode",
+      "reason_map": {
+        "101": "weld_gun_fault",
+        "102": "robot_collision"
+      },
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "UB10-R2",
+      "object": "UB10_R2",
+      "cycle_seconds": 35.2,
+      "analog": "WeldCurrent",
+      "counts": false,
+      "order_tag": null,
+      "reason_tag": "FaultCode",
+      "reason_map": {
+        "101": "weld_gun_fault",
+        "102": "robot_collision"
+      },
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "UB10-R3",
+      "object": "UB10_R3",
+      "cycle_seconds": 41.6,
+      "analog": "WeldCurrent",
+      "counts": false,
+      "order_tag": null,
+      "reason_tag": "FaultCode",
+      "reason_map": {
+        "101": "weld_gun_fault",
+        "102": "robot_collision"
+      },
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "UB10-R4",
+      "object": "UB10_R4",
+      "cycle_seconds": 32.0,
+      "analog": "WeldCurrent",
+      "counts": false,
+      "order_tag": null,
+      "reason_tag": "FaultCode",
+      "reason_map": {
+        "101": "weld_gun_fault",
+        "102": "robot_collision"
+      },
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "UB20-R1",
+      "object": "UB20_R1",
+      "cycle_seconds": 48.0,
+      "analog": "WeldCurrent",
+      "counts": false,
+      "order_tag": null,
+      "reason_tag": "FaultCode",
+      "reason_map": {
+        "101": "weld_gun_fault",
+        "102": "robot_collision"
+      },
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "UB20-R2",
+      "object": "UB20_R2",
+      "cycle_seconds": 44.8,
+      "analog": "WeldCurrent",
+      "counts": false,
+      "order_tag": null,
+      "reason_tag": "FaultCode",
+      "reason_map": {
+        "101": "weld_gun_fault",
+        "102": "robot_collision"
+      },
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "UB20-R3",
+      "object": "UB20_R3",
+      "cycle_seconds": 41.6,
+      "analog": "WeldCurrent",
+      "counts": false,
+      "order_tag": null,
+      "reason_tag": "FaultCode",
+      "reason_map": {
+        "101": "weld_gun_fault",
+        "102": "robot_collision"
+      },
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FR10-R1",
+      "object": "FR10_R1",
+      "cycle_seconds": 28.8,
+      "analog": "WeldCurrent",
+      "counts": false,
+      "order_tag": null,
+      "reason_tag": "FaultCode",
+      "reason_map": {
+        "101": "weld_gun_fault",
+        "102": "robot_collision"
+      },
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FR10-R2",
+      "object": "FR10_R2",
+      "cycle_seconds": 32.0,
+      "analog": "WeldCurrent",
+      "counts": false,
+      "order_tag": null,
+      "reason_tag": "FaultCode",
+      "reason_map": {
+        "101": "weld_gun_fault",
+        "102": "robot_collision"
+      },
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FR10-R3",
+      "object": "FR10_R3",
+      "cycle_seconds": 35.2,
+      "analog": "WeldCurrent",
+      "counts": false,
+      "order_tag": null,
+      "reason_tag": "FaultCode",
+      "reason_map": {
+        "101": "weld_gun_fault",
+        "102": "robot_collision"
+      },
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FR10-R4",
+      "object": "FR10_R4",
+      "cycle_seconds": 25.6,
+      "analog": "WeldCurrent",
+      "counts": false,
+      "order_tag": null,
+      "reason_tag": "FaultCode",
+      "reason_map": {
+        "101": "weld_gun_fault",
+        "102": "robot_collision"
+      },
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FR20-R1",
+      "object": "FR20_R1",
+      "cycle_seconds": 44.8,
+      "analog": "WeldCurrent",
+      "counts": false,
+      "order_tag": null,
+      "reason_tag": "FaultCode",
+      "reason_map": {
+        "101": "weld_gun_fault",
+        "102": "robot_collision"
+      },
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FR20-R2",
+      "object": "FR20_R2",
+      "cycle_seconds": 48.0,
+      "analog": "WeldCurrent",
+      "counts": false,
+      "order_tag": null,
+      "reason_tag": "FaultCode",
+      "reason_map": {
+        "101": "weld_gun_fault",
+        "102": "robot_collision"
+      },
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FR20-R3",
+      "object": "FR20_R3",
+      "cycle_seconds": 38.4,
+      "analog": "WeldCurrent",
+      "counts": false,
+      "order_tag": null,
+      "reason_tag": "FaultCode",
+      "reason_map": {
+        "101": "weld_gun_fault",
+        "102": "robot_collision"
+      },
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "RS10-R1",
+      "object": "RS10_R1",
+      "cycle_seconds": 51.2,
+      "analog": "WeldCurrent",
+      "counts": false,
+      "order_tag": null,
+      "reason_tag": "FaultCode",
+      "reason_map": {
+        "101": "weld_gun_fault",
+        "102": "robot_collision"
+      },
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "RS10-R2",
+      "object": "RS10_R2",
+      "cycle_seconds": 41.6,
+      "analog": "WeldCurrent",
+      "counts": false,
+      "order_tag": null,
+      "reason_tag": "FaultCode",
+      "reason_map": {
+        "101": "weld_gun_fault",
+        "102": "robot_collision"
+      },
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "RS10-R3",
+      "object": "RS10_R3",
+      "cycle_seconds": 48.0,
+      "analog": "WeldCurrent",
+      "counts": false,
+      "order_tag": null,
+      "reason_tag": "FaultCode",
+      "reason_map": {
+        "101": "weld_gun_fault",
+        "102": "robot_collision"
+      },
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "RS20-R1",
+      "object": "RS20_R1",
+      "cycle_seconds": 54.4,
+      "analog": "WeldCurrent",
+      "counts": false,
+      "order_tag": null,
+      "reason_tag": "FaultCode",
+      "reason_map": {
+        "101": "weld_gun_fault",
+        "102": "robot_collision"
+      },
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "RS20-R2",
+      "object": "RS20_R2",
+      "cycle_seconds": 44.8,
+      "analog": "WeldCurrent",
+      "counts": false,
+      "order_tag": null,
+      "reason_tag": "FaultCode",
+      "reason_map": {
+        "101": "weld_gun_fault",
+        "102": "robot_collision"
+      },
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "QI10-R1",
+      "object": "QI10_R1",
+      "cycle_seconds": 48.0,
+      "analog": "CameraTemp",
+      "counts": false,
+      "order_tag": null,
+      "reason_tag": "FaultCode",
+      "reason_map": {
+        "101": "weld_gun_fault",
+        "102": "robot_collision"
+      },
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    }
+  ]
+}

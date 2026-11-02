@@ -1,0 +1,607 @@
+{
+  "_what": "Kestrel Motors, body shop line 1 - a simulated body-in-white line: eight cells in a straight run, 20 welding and vision robots as parts of their cells, a body every 60-75 s, three bodies of buffer between cells. Nothing here is a real plant.",
+  "_why_units": "A robot is not a machine on the floor: it makes no body of its own, its cell does. Each robot is a `unit` of its cell, with its own table (FR10_R2), its own state and fault number, and no counters; the cell's state follows its robots - one robot down is the cell down with that robot's fault, one robot away for its tip dress is the cell in setup.",
+  "_tip_dress": "Every welding robot dresses its tips every 300 welds, for 8 s, between bodies. A weld takes 1.6 s gun-to-gun, so a robot's cycle is its welds times 1.6 s and always ends inside its cell's. `ops_per_piece` is the spot welds that robot puts on one body, so a robot with 30 welds a body dresses every 10 bodies. `TipWear` on each robot counts the welds since its last dress; `start` staggers them so a cell's robots do not all dress together.",
+  "_mf10": "Metal finish is people with sanders and a light tunnel, not robots: `cycle_cv` 0.18 draws every body's cycle around its mean, so MF10 is the slower, noisier cell in the records and the cell whose buffers move.",
+  "_qi10": "Gap-and-flush measurement: one vision robot. Its rejects go to the rework bay, not to scrap, so its ScrapCount stays zero; the rework loop is not modelled in this pack.",
+  "_faults": "Fault numbers are the PLC's own: 101 weld gun fault, 102 robot collision stop. The tag map's reason_map names them in this plant's downtime vocabulary.",
+  "channel": "Kestrel",
+  "dsn": "KestrelCSV",
+  "seed": 26,
+  "duration_s": 3600,
+  "state_filter_s": 15,
+  "orders": [
+    110201
+  ],
+  "buffers": {
+    "capacity": 3,
+    "initial": 2
+  },
+  "stations": [
+    {
+      "name": "UB10",
+      "rate_per_min": 0.95,
+      "scrap_pct": 0.0,
+      "analogs": [
+        {
+          "name": "AirPressure",
+          "base": 6.2,
+          "noise": 0.05,
+          "unit": "bar",
+          "decimals": 2
+        }
+      ],
+      "units": [
+        {
+          "name": "R1",
+          "ops_per_piece": 24,
+          "cycle_s": 38.4,
+          "service": {
+            "every": 300,
+            "duration_s": 8,
+            "counter": "TipWear",
+            "unit": "welds",
+            "start": 0
+          },
+          "analogs": [
+            {
+              "name": "WeldCurrent",
+              "base": 10500.0,
+              "noise": 180.0,
+              "running_only": true,
+              "unit": "A",
+              "decimals": 0
+            }
+          ]
+        },
+        {
+          "name": "R2",
+          "ops_per_piece": 22,
+          "cycle_s": 35.2,
+          "service": {
+            "every": 300,
+            "duration_s": 8,
+            "counter": "TipWear",
+            "unit": "welds",
+            "start": 70
+          },
+          "analogs": [
+            {
+              "name": "WeldCurrent",
+              "base": 10500.0,
+              "noise": 180.0,
+              "running_only": true,
+              "unit": "A",
+              "decimals": 0
+            }
+          ]
+        },
+        {
+          "name": "R3",
+          "ops_per_piece": 26,
+          "cycle_s": 41.6,
+          "service": {
+            "every": 300,
+            "duration_s": 8,
+            "counter": "TipWear",
+            "unit": "welds",
+            "start": 140
+          },
+          "analogs": [
+            {
+              "name": "WeldCurrent",
+              "base": 10500.0,
+              "noise": 180.0,
+              "running_only": true,
+              "unit": "A",
+              "decimals": 0
+            }
+          ]
+        },
+        {
+          "name": "R4",
+          "ops_per_piece": 20,
+          "cycle_s": 32.0,
+          "service": {
+            "every": 300,
+            "duration_s": 8,
+            "counter": "TipWear",
+            "unit": "welds",
+            "start": 210
+          },
+          "analogs": [
+            {
+              "name": "WeldCurrent",
+              "base": 10500.0,
+              "noise": 180.0,
+              "running_only": true,
+              "unit": "A",
+              "decimals": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "UB20",
+      "rate_per_min": 0.97,
+      "scrap_pct": 0.0,
+      "analogs": [
+        {
+          "name": "AirPressure",
+          "base": 6.2,
+          "noise": 0.05,
+          "unit": "bar",
+          "decimals": 2
+        }
+      ],
+      "units": [
+        {
+          "name": "R1",
+          "ops_per_piece": 30,
+          "cycle_s": 48.0,
+          "service": {
+            "every": 300,
+            "duration_s": 8,
+            "counter": "TipWear",
+            "unit": "welds",
+            "start": 37
+          },
+          "analogs": [
+            {
+              "name": "WeldCurrent",
+              "base": 10500.0,
+              "noise": 180.0,
+              "running_only": true,
+              "unit": "A",
+              "decimals": 0
+            }
+          ]
+        },
+        {
+          "name": "R2",
+          "ops_per_piece": 28,
+          "cycle_s": 44.8,
+          "service": {
+            "every": 300,
+            "duration_s": 8,
+            "counter": "TipWear",
+            "unit": "welds",
+            "start": 107
+          },
+          "analogs": [
+            {
+              "name": "WeldCurrent",
+              "base": 10500.0,
+              "noise": 180.0,
+              "running_only": true,
+              "unit": "A",
+              "decimals": 0
+            }
+          ]
+        },
+        {
+          "name": "R3",
+          "ops_per_piece": 26,
+          "cycle_s": 41.6,
+          "service": {
+            "every": 300,
+            "duration_s": 8,
+            "counter": "TipWear",
+            "unit": "welds",
+            "start": 177
+          },
+          "analogs": [
+            {
+              "name": "WeldCurrent",
+              "base": 10500.0,
+              "noise": 180.0,
+              "running_only": true,
+              "unit": "A",
+              "decimals": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "FR10",
+      "rate_per_min": 0.85,
+      "scrap_pct": 0.0,
+      "analogs": [
+        {
+          "name": "AirPressure",
+          "base": 6.2,
+          "noise": 0.05,
+          "unit": "bar",
+          "decimals": 2
+        }
+      ],
+      "units": [
+        {
+          "name": "R1",
+          "ops_per_piece": 18,
+          "cycle_s": 28.8,
+          "service": {
+            "every": 300,
+            "duration_s": 8,
+            "counter": "TipWear",
+            "unit": "welds",
+            "start": 74
+          },
+          "analogs": [
+            {
+              "name": "WeldCurrent",
+              "base": 10500.0,
+              "noise": 180.0,
+              "running_only": true,
+              "unit": "A",
+              "decimals": 0
+            }
+          ]
+        },
+        {
+          "name": "R2",
+          "ops_per_piece": 20,
+          "cycle_s": 32.0,
+          "service": {
+            "every": 300,
+            "duration_s": 8,
+            "counter": "TipWear",
+            "unit": "welds",
+            "start": 144
+          },
+          "analogs": [
+            {
+              "name": "WeldCurrent",
+              "base": 10500.0,
+              "noise": 180.0,
+              "running_only": true,
+              "unit": "A",
+              "decimals": 0
+            }
+          ]
+        },
+        {
+          "name": "R3",
+          "ops_per_piece": 22,
+          "cycle_s": 35.2,
+          "service": {
+            "every": 300,
+            "duration_s": 8,
+            "counter": "TipWear",
+            "unit": "welds",
+            "start": 214
+          },
+          "analogs": [
+            {
+              "name": "WeldCurrent",
+              "base": 10500.0,
+              "noise": 180.0,
+              "running_only": true,
+              "unit": "A",
+              "decimals": 0
+            }
+          ]
+        },
+        {
+          "name": "R4",
+          "ops_per_piece": 16,
+          "cycle_s": 25.6,
+          "service": {
+            "every": 300,
+            "duration_s": 8,
+            "counter": "TipWear",
+            "unit": "welds",
+            "start": 284
+          },
+          "analogs": [
+            {
+              "name": "WeldCurrent",
+              "base": 10500.0,
+              "noise": 180.0,
+              "running_only": true,
+              "unit": "A",
+              "decimals": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "FR20",
+      "rate_per_min": 0.95,
+      "scrap_pct": 0.0,
+      "analogs": [
+        {
+          "name": "AirPressure",
+          "base": 6.2,
+          "noise": 0.05,
+          "unit": "bar",
+          "decimals": 2
+        }
+      ],
+      "units": [
+        {
+          "name": "R1",
+          "ops_per_piece": 28,
+          "cycle_s": 44.8,
+          "service": {
+            "every": 300,
+            "duration_s": 8,
+            "counter": "TipWear",
+            "unit": "welds",
+            "start": 111
+          },
+          "analogs": [
+            {
+              "name": "WeldCurrent",
+              "base": 10500.0,
+              "noise": 180.0,
+              "running_only": true,
+              "unit": "A",
+              "decimals": 0
+            }
+          ]
+        },
+        {
+          "name": "R2",
+          "ops_per_piece": 30,
+          "cycle_s": 48.0,
+          "service": {
+            "every": 300,
+            "duration_s": 8,
+            "counter": "TipWear",
+            "unit": "welds",
+            "start": 181
+          },
+          "analogs": [
+            {
+              "name": "WeldCurrent",
+              "base": 10500.0,
+              "noise": 180.0,
+              "running_only": true,
+              "unit": "A",
+              "decimals": 0
+            }
+          ]
+        },
+        {
+          "name": "R3",
+          "ops_per_piece": 24,
+          "cycle_s": 38.4,
+          "service": {
+            "every": 300,
+            "duration_s": 8,
+            "counter": "TipWear",
+            "unit": "welds",
+            "start": 251
+          },
+          "analogs": [
+            {
+              "name": "WeldCurrent",
+              "base": 10500.0,
+              "noise": 180.0,
+              "running_only": true,
+              "unit": "A",
+              "decimals": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "RS10",
+      "rate_per_min": 0.97,
+      "scrap_pct": 0.0,
+      "analogs": [
+        {
+          "name": "AirPressure",
+          "base": 6.2,
+          "noise": 0.05,
+          "unit": "bar",
+          "decimals": 2
+        }
+      ],
+      "units": [
+        {
+          "name": "R1",
+          "ops_per_piece": 32,
+          "cycle_s": 51.2,
+          "service": {
+            "every": 300,
+            "duration_s": 8,
+            "counter": "TipWear",
+            "unit": "welds",
+            "start": 28
+          },
+          "analogs": [
+            {
+              "name": "WeldCurrent",
+              "base": 10500.0,
+              "noise": 180.0,
+              "running_only": true,
+              "unit": "A",
+              "decimals": 0
+            }
+          ]
+        },
+        {
+          "name": "R2",
+          "ops_per_piece": 26,
+          "cycle_s": 41.6,
+          "service": {
+            "every": 300,
+            "duration_s": 8,
+            "counter": "TipWear",
+            "unit": "welds",
+            "start": 98
+          },
+          "analogs": [
+            {
+              "name": "WeldCurrent",
+              "base": 10500.0,
+              "noise": 180.0,
+              "running_only": true,
+              "unit": "A",
+              "decimals": 0
+            }
+          ]
+        },
+        {
+          "name": "R3",
+          "ops_per_piece": 30,
+          "cycle_s": 48.0,
+          "service": {
+            "every": 300,
+            "duration_s": 8,
+            "counter": "TipWear",
+            "unit": "welds",
+            "start": 168
+          },
+          "analogs": [
+            {
+              "name": "WeldCurrent",
+              "base": 10500.0,
+              "noise": 180.0,
+              "running_only": true,
+              "unit": "A",
+              "decimals": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "RS20",
+      "rate_per_min": 1.0,
+      "scrap_pct": 0.0,
+      "analogs": [
+        {
+          "name": "AirPressure",
+          "base": 6.2,
+          "noise": 0.05,
+          "unit": "bar",
+          "decimals": 2
+        }
+      ],
+      "units": [
+        {
+          "name": "R1",
+          "ops_per_piece": 34,
+          "cycle_s": 54.4,
+          "service": {
+            "every": 300,
+            "duration_s": 8,
+            "counter": "TipWear",
+            "unit": "welds",
+            "start": 65
+          },
+          "analogs": [
+            {
+              "name": "WeldCurrent",
+              "base": 10500.0,
+              "noise": 180.0,
+              "running_only": true,
+              "unit": "A",
+              "decimals": 0
+            }
+          ]
+        },
+        {
+          "name": "R2",
+          "ops_per_piece": 28,
+          "cycle_s": 44.8,
+          "service": {
+            "every": 300,
+            "duration_s": 8,
+            "counter": "TipWear",
+            "unit": "welds",
+            "start": 135
+          },
+          "analogs": [
+            {
+              "name": "WeldCurrent",
+              "base": 10500.0,
+              "noise": 180.0,
+              "running_only": true,
+              "unit": "A",
+              "decimals": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "MF10",
+      "rate_per_min": 0.92,
+      "scrap_pct": 0.0,
+      "analogs": [
+        {
+          "name": "AirPressure",
+          "base": 6.2,
+          "noise": 0.05,
+          "unit": "bar",
+          "decimals": 2
+        }
+      ],
+      "cycle_cv": 0.18
+    },
+    {
+      "name": "QI10",
+      "rate_per_min": 1.0,
+      "scrap_pct": 0.0,
+      "analogs": [
+        {
+          "name": "GapMean",
+          "base": 4.0,
+          "noise": 0.12,
+          "running_only": true,
+          "unit": "mm",
+          "decimals": 2
+        },
+        {
+          "name": "FlushMean",
+          "base": 0.0,
+          "noise": 0.18,
+          "running_only": true,
+          "unit": "mm",
+          "decimals": 2
+        }
+      ],
+      "units": [
+        {
+          "name": "R1",
+          "cycle_s": 48.0,
+          "analogs": [
+            {
+              "name": "CameraTemp",
+              "base": 38.0,
+              "noise": 0.3,
+              "unit": "C",
+              "decimals": 1
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "events": [
+    {
+      "type": "down",
+      "station": "FR10",
+      "unit": "R2",
+      "start": 900,
+      "end": 1380,
+      "fault_code": 101
+    },
+    {
+      "type": "down",
+      "station": "RS10",
+      "unit": "R1",
+      "start": 2400,
+      "end": 2520,
+      "fault_code": 102
+    }
+  ]
+}

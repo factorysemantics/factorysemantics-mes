@@ -1,0 +1,14 @@
+[
+  {"code": "BLD-110201", "material": "BIW-S4", "quantity": 60, "priority": 10, "release": true, "due_in_hours": 1},
+  {"code": "BLD-110202", "material": "BIW-E5", "quantity": 90, "priority": 10, "release": false, "due_in_hours": 3},
+  {"code": "BLD-110203", "material": "BIW-S4", "quantity": 120, "priority": 10, "release": false, "due_in_hours": 5},
+  {"code": "BLD-110204", "material": "BIW-E5", "quantity": 90, "priority": 10, "release": false, "due_in_hours": 7},
+  {"code": "BLD-110205", "material": "BIW-S4", "quantity": 120, "priority": 10, "release": false, "due_in_hours": 9},
+  {"code": "BLD-110206", "material": "BIW-E5", "quantity": 120, "priority": 10, "release": false, "due_in_hours": 11},
+  {"code": "BLD-110207", "material": "BIW-S4", "quantity": 120, "priority": 10, "release": false, "due_in_hours": 13},
+  {"code": "BLD-110208", "material": "BIW-E5", "quantity": 90, "priority": 10, "release": false, "due_in_hours": 15},
+  {"code": "BLD-110209", "material": "BIW-S4", "quantity": 120, "priority": 10, "release": false, "due_in_hours": 17},
+  {"code": "BLD-110210", "material": "BIW-E5", "quantity": 90, "priority": 10, "release": false, "due_in_hours": 19},
+  {"code": "BLD-110211", "material": "BIW-S4", "quantity": 120, "priority": 10, "release": false, "due_in_hours": 21},
+  {"code": "BLD-110212", "material": "BIW-E5", "quantity": 120, "priority": 10, "release": false, "due_in_hours": 23}
+]
