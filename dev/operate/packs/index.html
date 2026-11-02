@@ -1569,6 +1569,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#your-own-machine-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Your own machine models
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4654,6 +4665,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#your-own-machine-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Your own machine models
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4705,6 +4727,7 @@ fsmes<span class="w"> </span>pack<span class="w"> </span>migrate<span class="w">
                     maintenance plans, shifts — data, not a script
   mappings/         inbound columns, inbound SQL
   line_layout.json  optional geometry for the line view
+  models/           optional machine models for the 3D line view (.glb)
   README.md         what this plant is, for the next engineer
 </code></pre></div>
 <p>Four things a pack may <strong>not</strong> contain (<a href="../../decisions/0022-what-a-plant-pack-may-contain/">decision 0022</a>):</p>
@@ -4939,6 +4962,60 @@ Usable, as far as a file can say: 9 file(s) read, nothing refused, 4 thing(s) on
 </code></pre></div>
 <p>Paths are relative to the fleet file. <code>[environment] data_dir</code> stays here and not in a pack: where several plants keep their databases on one machine is a fact about the machine. <code>FSMES_PLANT_REGISTRY</code> still points at it — the variable kept its name; what it points at changed.</p>
 <p>See <a href="../registry/">plants from a fleet file</a> for running them.</p>
+<h2 id="your-own-machine-models">Your own machine models<a class="headerlink" href="#your-own-machine-models" title="Permanent link">&para;</a></h2>
+<p>The 3D line view (<code>/dashboard/line/3d</code>) draws every machine from built-in
+shapes - boxes, cylinders, a lathe for the bottles - and those stay the
+default. A pack can carry its own machine models in <code>models/</code>, next to
+<code>line_layout.json</code> (wherever <code>[files] line_layout</code> points, <code>models/</code> is its
+sibling, whether or not the layout file exists).</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Draws</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>models/&lt;kind&gt;.glb</code></td>
+<td>every machine of that kind: <code>filler</code>, <code>washer</code>, <code>mixer</code>, <code>denester</code>, <code>depalletiser</code>, <code>inspector</code>, <code>packer</code>, <code>palletiser</code>, <code>generic</code> (the kind the layout answer reports for the station)</td>
+</tr>
+<tr>
+<td><code>models/&lt;code&gt;.glb</code></td>
+<td>one machine, by its equipment code, lowercased in the URL (<code>FILL01.glb</code> on disk is served as <code>fill01.glb</code>)</td>
+</tr>
+<tr>
+<td>any <code>models/&lt;name&gt;.glb</code></td>
+<td>the station whose <code>line_layout.json</code> entry says <code>"model": "&lt;name&gt;.glb"</code></td>
+</tr>
+</tbody>
+</table>
+<p>A station's model is the first of those that exists, in the order layout
+entry, machine code, kind. <code>GET /line/layout</code> gives each station
+<code>model</code>: its URL (<code>/line/models/filler.glb</code>) or <code>null</code> for the built-in shape.</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="nt">"lines"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"LINE1"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"stations"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"FILL01"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"big-filler.glb"</span><span class="p">}}}}}</span>
+</code></pre></div>
+<p><strong>The format.</strong> GLB (glTF 2.0 binary), with everything embedded. Metres. The
+origin is the centre of the machine's footprint at floor level, front toward
+-Z, the line running along +X. Roughly real size: the conveyors still join
+where the built-in shape would end. Under 8 MB a file; a larger one is not
+offered and not served.</p>
+<p><strong>State colour.</strong> Every mesh whose material is named <code>signal</code> - a model's
+status bands and beacon - is recoloured by the machine's MES state, as the
+built-in bands are, and pulses when it is down. A node named <code>spin</code> turns
+while the machine runs and stands still otherwise. A model with no <code>signal</code>
+material gets a lit ring on the floor around it, in the state colour.</p>
+<p><strong>What the route serves.</strong> <code>GET /line/models/&lt;name&gt;</code> serves a file from that
+folder only, for signed-in users, as <code>model/gltf-binary</code> cached for an hour.
+<code>&lt;name&gt;</code> must match <code>^[a-z0-9_-]+\.glb$</code>; anything else - another extension, a
+path, <code>..</code>, capitals - is a 404, as is a file over the cap.</p>
+<p><strong>Nothing comes from the internet.</strong> The loader is three.js's own, committed
+under <code>web/vendor/</code>; the models are the plant's own files. A model that is
+missing or fails to load leaves the built-in shape in place with one warning in
+the browser console - the view is never blank, and never waits for a model to
+show a machine's state. One that has not arrived 3 s after the view first draws
+gets the same warning and keeps the built-in shape, but is still drawn if it
+arrives later: on a slow PC, drawing the view itself can take most of that.</p>
 <h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../modules/">Switch a module off</a> — what <code>[modules]</code> compiles to</li>
