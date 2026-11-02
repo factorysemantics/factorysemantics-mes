@@ -20,6 +20,9 @@ from fsmes.assist_coverage import page_scripts, screen_pattern
 # Routes no screen calls, and why. Reasons name the plan phase that closes
 # them, so this list is also the work queue. Plan: 2026-09-02 surfaces.
 EXCLUDED = {
+    # a plant's own machine models: the 3D view fetches each by the URL the
+    # layout answer gives a station, never by a path written in a script
+    "GET /line/models/{name}": "fetched by line/models.js from each station's `model` URL in /line/layout",
     # the standing rate order: set from the pack's rate_orders.json or over
     # the API (labs/satisfactory/README.md says how); the Parts mix panel
     # reads it through /analysis/oee. Its own editing screen is a follow-up.
