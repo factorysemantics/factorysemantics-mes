@@ -7,7 +7,7 @@ is held back by over a second (so the view has to wait for it, as it would on
 a phone over the tailnet), the washer's answers 404, and the inspector's never
 answers at all. The filler must end up as the cube; the washer and the
 inspector must keep their primitives, each with one console warning, the
-inspector's after the 3 s limit.
+inspector's after the 3 s limit (it is then "late": drawn if it ever arrives).
 
 The palletiser's own model (`PAL01.glb`) is the cube drawn to the convention
 the crew's models follow: its material is named `signal` and its node `spin`.
@@ -184,16 +184,19 @@ def test_the_filler_is_drawn_from_its_model_and_a_missing_or_late_model_keeps_th
     assert before["builtInShowing"] and before["model"] is None
 
     page.wait_for_function(
-        """() => ['FILL01', 'WASH01', 'QI01', 'PAL01'].every(
-             (c) => ['loaded', 'failed'].includes(window.__line.scene.machines.get(c).modelState))""",
+        """() => {
+          const state = (c) => window.__line.scene.machines.get(c).modelState;
+          return state('FILL01') === 'loaded' && state('PAL01') === 'loaded'
+            && state('WASH01') === 'failed' && state('QI01') === 'late';
+        }""",
         timeout=15000)
 
     filler = page.evaluate(DRESS, "FILL01")
     assert filler == {"state": "loaded", "model": "model:/line/models/filler.glb",
                       "modelShowing": True, "builtInShowing": False, "ring": True}, warnings
-    for code in ("WASH01", "QI01"):
+    for code, state in (("WASH01", "failed"), ("QI01", "late")):
         kept = page.evaluate(DRESS, code)
-        assert kept == {"state": "failed", "model": None, "modelShowing": False,
+        assert kept == {"state": state, "model": None, "modelShowing": False,
                         "builtInShowing": True, "ring": False}, code
     # A machine with no model in the pack is exactly as it was.
     assert page.evaluate("() => window.__line.scene.machines.get('LD01').modelState") is None
@@ -212,8 +215,11 @@ def test_the_filler_is_drawn_from_its_model_and_a_missing_or_late_model_keeps_th
     }""")
     assert signals == {"bands": ["signal"], "colour": 0x6E7681, "spin": "spin"}
 
+    # One warning per model that missed, never two. (On a slow runner the
+    # held-back filler may also pass 3 s; it is then warned about and still drawn.)
     about = [w for w in warnings if "keeps its built-in shape" in w]
-    assert len(about) == 2, warnings
-    assert any("washer.glb" in w for w in about)
-    assert any("inspector.glb" in w and "longer than 3 s" in w for w in about)
+    for name in ("washer.glb", "inspector.glb", "filler.glb"):
+        assert sum(name in w for w in about) <= 1, warnings
+    assert any("washer.glb" in w for w in about), warnings
+    assert any("inspector.glb" in w and "longer than 3 s" in w for w in about), warnings
     context.close()

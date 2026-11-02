@@ -15,10 +15,13 @@
  * hide the machine it shows. Either way they are the machine's `bands`, so
  * applyStates and the down-pulse in scene.js treat them as before.
  *
- * A model that fails to load, or takes longer than MODEL_TIMEOUT_MS after the
- * view's first frame, leaves the built-in shape where it is with one
+ * A model that fails to load leaves the built-in shape where it is, with one
  * console.warn: the view is never blank and never waits on a download to show
- * state.
+ * state. One that has not arrived MODEL_TIMEOUT_MS after the view's first
+ * frame gets the same warning and the same built-in shape, but is still drawn
+ * if it arrives later: on a slow plant PC, or software WebGL, drawing the view
+ * itself can take most of those seconds, and a model that comes late is
+ * better than one thrown away.
  */
 
 import * as THREE from "three";
@@ -37,21 +40,19 @@ function load(url) {
   return loads.get(url);
 }
 
-/* The time limit is for the model's download, not for the view's own start:
- * the first frame compiles every shader in the scene, and on a slow plant PC
- * (or software WebGL) that alone can take seconds. So the download starts at
- * once and the clock starts when the first frame has been drawn - two
- * animation frames from build(), the second of them after the first render. */
+/* The clock starts when the first frame has been drawn - two animation frames
+ * from build(), the second after the first render - so the view's own start
+ * (every shader compiled once) is not charged to the model. The download
+ * starts at once. */
 const firstFrame = () => new Promise((resolve) => {
   requestAnimationFrame(() => requestAnimationFrame(resolve));
 });
 
-function inTime(promise, ms) {
-  let timer;
-  const late = new Promise((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`took longer than ${ms / 1000} s`)), ms);
-  });
-  return Promise.race([promise, late]).finally(() => clearTimeout(timer));
+function warnOnce(machine, url, reason) {
+  if (warned.has(url)) return;
+  warned.add(url);
+  console.warn(`line view: ${machine.station.code} keeps its built-in shape; ` +
+    `model ${url} did not load (${reason})`);
 }
 
 /** A flat lit ring just outside the model's footprint, in the state colour. */
@@ -77,14 +78,24 @@ function floorRing(bounds, state) {
 /**
  * Put the station's model in place of its built-in body, if it arrives in time.
  * `machine` is the scene's own entry for the station; it gains `modelState`
- * ("loading", then "loaded" or "failed") so a test or the console can tell.
+ * ("loading", then "loaded" or "failed", with "late" between when the time
+ * limit passes first) so a test or the console can tell.
  */
 export function dressWithModel(machine) {
   const url = machine.station.model;
   if (!url) return Promise.resolve(machine);
   machine.modelState = "loading";
-  const loading = load(url);
-  return firstFrame().then(() => inTime(loading, MODEL_TIMEOUT_MS)).then((source) => {
+  let timer;
+  firstFrame().then(() => {
+    if (machine.modelState !== "loading") return;
+    timer = setTimeout(() => {
+      if (machine.modelState !== "loading") return;
+      machine.modelState = "late";
+      warnOnce(machine, url, `took longer than ${MODEL_TIMEOUT_MS / 1000} s; drawn if it still arrives`);
+    }, MODEL_TIMEOUT_MS);
+  });
+  return load(url).then((source) => {
+    clearTimeout(timer);
     const model = source.clone(true);
     model.name = `model:${url}`;
     model.traverse((node) => {
@@ -120,12 +131,9 @@ export function dressWithModel(machine) {
     machine.modelState = "loaded";
     return machine;
   }).catch((err) => {
+    clearTimeout(timer);
     machine.modelState = "failed";
-    if (!warned.has(url)) {
-      warned.add(url);
-      console.warn(`line view: ${machine.station.code} keeps its built-in shape; ` +
-        `model ${url} did not load (${err && err.message ? err.message : err})`);
-    }
+    warnOnce(machine, url, err && err.message ? err.message : String(err));
     return machine;
   });
 }

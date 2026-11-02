@@ -176,8 +176,8 @@ Blender exports) in a `models/` folder beside the pack's `line_layout.json`.
   model with neither gets a lit ring on the floor in the state colour.
 - **Nothing is fetched from the internet.** The files are the plant's own,
   served by the plant at `/line/models/<name>` to signed-in users. A model that
-  is missing, broken or takes longer than 3 s to load leaves the built-in shape
-  in place.
+  is missing or broken leaves the built-in shape in place; one that takes
+  longer than 3 s keeps it too, until it arrives.
 
 More in [docs/operate/packs.md](docs/operate/packs.md#your-own-machine-models).
 

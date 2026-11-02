@@ -313,9 +313,11 @@ path, `..`, capitals - is a 404, as is a file over the cap.
 
 **Nothing comes from the internet.** The loader is three.js's own, committed
 under `web/vendor/`; the models are the plant's own files. A model that is
-missing, fails to load, or takes longer than 3 s leaves the built-in shape in
-place with one warning in the browser console - the view is never blank, and
-never waits for a model to show a machine's state.
+missing or fails to load leaves the built-in shape in place with one warning in
+the browser console - the view is never blank, and never waits for a model to
+show a machine's state. One that has not arrived 3 s after the view first draws
+gets the same warning and keeps the built-in shape, but is still drawn if it
+arrives later: on a slow PC, drawing the view itself can take most of that.
 
 ## See also
 
