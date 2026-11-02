@@ -10,7 +10,8 @@ the MES already booked, so the picture on screen can be trusted to the same
 degree as the OEE figures beside it.
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import FileResponse
 
 from fsmes.api.deps import DbDep
 from fsmes.services import line as line_service
@@ -46,3 +47,17 @@ def wip(db: DbDep, line: str | None = None) -> dict:
 
     centre, _units = line_service.resolve_line(db, line)
     return tags.line_wip(db, centre)
+
+
+@router.get("/models/{name}")
+def model(name: str) -> FileResponse:
+    """One of the plant's own machine models, from `models/` beside its layout.
+
+    Only a lowercase `<name>.glb` from that folder, and only up to 8 MB;
+    anything else is a 404 that says nothing about what else is on disk.
+    """
+    path = line_service.model_file(name)
+    if path is None:
+        raise HTTPException(status_code=404, detail="no such model")
+    return FileResponse(path, media_type="model/gltf-binary",
+                        headers={"Cache-Control": "private, max-age=3600"})

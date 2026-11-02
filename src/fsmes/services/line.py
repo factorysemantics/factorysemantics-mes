@@ -26,6 +26,7 @@ and it must never start.
 """
 
 import json
+import re
 from functools import lru_cache
 from pathlib import Path
 
@@ -80,6 +81,61 @@ def _infer_kind(code: str, name: str) -> str:
         if needle in haystack:
             return kind
     return "generic"
+
+
+# A plant's own machine models: `models/` beside `line_layout.json`. Only a
+# lowercase name ending in `.glb` is ever served, and only from that folder, so
+# no request can reach anything else in the pack or outside it. The size cap is
+# what keeps one careless CAD export from stalling every operator's screen.
+MODEL_NAME = re.compile(r"^[a-z0-9_-]+\.glb$")
+MODEL_MAX_BYTES = 8 * 1024 * 1024
+MODEL_ROUTE = "/line/models/"
+
+
+def models_dir() -> Path:
+    """Where this plant keeps its machine models: `models/` next to its layout file."""
+    return Path(get_settings().line_layout_file).parent / "models"
+
+
+def model_file(name: str) -> Path | None:
+    """The model file a URL name stands for, or None if it may not be served.
+
+    The name is matched against the folder's files ignoring case, because a
+    CAD export names its file `FILLER-01.glb` and a URL is always lowercase;
+    an exact match wins over a case-folded one. A name outside the pattern, a
+    file that is not there, and a file over the cap are all None.
+    """
+    if not MODEL_NAME.fullmatch(name):
+        return None
+    folder = models_dir()
+    try:
+        candidates = sorted(entry for entry in folder.iterdir() if entry.name.lower() == name)
+    except OSError:
+        return None
+    candidates.sort(key=lambda entry: entry.name != name)
+    for entry in candidates:
+        try:
+            if entry.is_file() and entry.stat().st_size <= MODEL_MAX_BYTES:
+                return entry
+        except OSError:
+            continue
+    return None
+
+
+def _station_model(code: str, kind: str, conf: dict) -> str | None:
+    """The URL of the model a station is drawn with, or None for the built-in shape.
+
+    The first that exists wins: the file `line_layout.json` names for this
+    station, then `<code>.glb`, then `<kind>.glb`. A name the layout gives that
+    is not in the folder falls through to the next rather than leaving the
+    station blank.
+    """
+    named = conf.get("model")
+    for name in (named.lower() if isinstance(named, str) else None,
+                 f"{code.lower()}.glb", f"{kind.lower()}.glb"):
+        if name and model_file(name) is not None:
+            return MODEL_ROUTE + name
+    return None
 
 
 @lru_cache(maxsize=4)
@@ -324,11 +380,13 @@ def layout(db: Session, line_code: str | None = None) -> dict:
         else:
             placed = "routing"
             x, z, rot = index * spacing, 0.0, float(conf.get("rot", 0.0))
+        kind = conf.get("kind") or _infer_kind(unit.code, unit.name)
         stations.append(
             {
                 "code": unit.code,
                 "name": unit.name,
-                "kind": conf.get("kind") or _infer_kind(unit.code, unit.name),
+                "kind": kind,
+                "model": _station_model(unit.code, kind, conf),
                 "seq": seqs.get(unit.id),
                 "x": float(x),
                 "z": float(z),
