@@ -23,6 +23,7 @@ import {
   makePallet,
   makeTray,
 } from "./parts.js";
+import { dressWithModel } from "./models.js";
 import { RobotArm } from "./robot.js";
 
 const BELT_TOP = BELT_HEIGHT + 0.025;
@@ -140,7 +141,11 @@ export class LineScene {
       label.position.set(station.x - this.origin, machine.height + 1.15, station.z);
       this.scene.add(label);
 
-      this.machines.set(station.code, { ...machine, station, state: "unknown" });
+      const entry = { ...machine, station, state: "unknown" };
+      this.machines.set(station.code, entry);
+      // The plant's own model, if its pack has one: drawn over this shape
+      // when it arrives, and this shape stays if it does not.
+      dressWithModel(entry);
     });
 
     // Conveyors, and one instanced pool of bottles per belt.
@@ -247,7 +252,11 @@ export class LineScene {
       label.position.set(station.x, machine.height * PLAN_SCALE + 3.2, station.z);
       this.scene.add(label);
 
-      this.machines.set(station.code, { ...machine, station, state: "unknown" });
+      const entry = { ...machine, station, state: "unknown" };
+      this.machines.set(station.code, entry);
+      // The plant's own model, if its pack has one: drawn over this shape
+      // when it arrives, and this shape stays if it does not.
+      dressWithModel(entry);
     });
 
     this.spacings = [];

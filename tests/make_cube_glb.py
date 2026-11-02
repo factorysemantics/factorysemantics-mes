@@ -32,7 +32,9 @@ def _cube() -> tuple[list[float], list[int]]:
     return [v for corner in corners for v in corner], indices
 
 
-def cube_glb() -> bytes:
+def cube_glb(material: str = "grey", node: str = "test-cube") -> bytes:
+    """The cube. `material` and `node` name its one material and node, so a test
+    can make the cube follow the line view's conventions (`signal`, `spin`)."""
     positions, indices = _cube()
     vertices = struct.pack(f"<{len(positions)}f", *positions)
     triangles = struct.pack(f"<{len(indices)}H", *indices)
@@ -42,10 +44,10 @@ def cube_glb() -> bytes:
         "asset": {"version": "2.0", "generator": "fsmes tests/make_cube_glb.py"},
         "scene": 0,
         "scenes": [{"nodes": [0]}],
-        "nodes": [{"name": "test-cube", "mesh": 0}],
+        "nodes": [{"name": node, "mesh": 0}],
         "meshes": [{"name": "test-cube", "primitives": [
             {"attributes": {"POSITION": 0}, "indices": 1, "material": 0}]}],
-        "materials": [{"name": "grey", "doubleSided": True, "pbrMetallicRoughness": {
+        "materials": [{"name": material, "doubleSided": True, "pbrMetallicRoughness": {
             "baseColorFactor": [0.6, 0.62, 0.66, 1.0], "metallicFactor": 0.2, "roughnessFactor": 0.7}}],
         "buffers": [{"byteLength": len(binary)}],
         "bufferViews": [
@@ -65,10 +67,10 @@ def cube_glb() -> bytes:
     return struct.pack("<III", GLB_MAGIC, GLB_VERSION, 12 + len(chunks)) + chunks
 
 
-def write_cube(path: Path) -> Path:
+def write_cube(path: Path, **names: str) -> Path:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(cube_glb())
+    path.write_bytes(cube_glb(**names))
     return path
 
 

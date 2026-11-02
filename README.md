@@ -155,6 +155,32 @@ python -m venv .venv; .venv\Scripts\python -m pip install -e ".[dev]"
 
 The public demo is the cutlery plant from `labs/cutlery`, simulated, serving a copy of one scored hour. The way in is [factorysemantics.com/demo](https://factorysemantics.com/demo/), which emails a link; `demo.factorysemantics.com` is gated and turns away anyone arriving without one. It runs on one desktop. Nothing there is a real factory.
 
+## Your own machine models
+
+The 3D line view draws every machine from built-in shapes. A plant can show its
+own machines instead: put GLB files (glTF 2.0 binary, as any CAD tool or
+Blender exports) in a `models/` folder beside the pack's `line_layout.json`.
+
+- **Names.** `<kind>.glb` for every machine of a kind - `filler`, `washer`,
+  `mixer`, `denester`, `depalletiser`, `inspector`, `packer`, `palletiser`,
+  `generic` - or `<MACHINE-CODE>.glb` for one machine. `line_layout.json` may
+  name a file per station with `"model": "big-filler.glb"`.
+- **Which one wins.** The file the layout names, then the machine's own, then
+  its kind's. Without any, the built-in shape, exactly as before.
+- **Format.** Metres; the origin at the centre of the machine's footprint on
+  the floor; front toward -Z. Materials embedded. At most 8 MB a file; names are
+  lowercase letters, digits, `-` and `_` (a file named `FILL01.glb` on disk is
+  found for machine `FILL01`).
+- **State colour.** Meshes whose material is named `signal` carry the running,
+  idle or down colour, and a node named `spin` turns while the machine runs. A
+  model with neither gets a lit ring on the floor in the state colour.
+- **Nothing is fetched from the internet.** The files are the plant's own,
+  served by the plant at `/line/models/<name>` to signed-in users. A model that
+  is missing, broken or takes longer than 3 s to load leaves the built-in shape
+  in place.
+
+More in [docs/operate/packs.md](docs/operate/packs.md#your-own-machine-models).
+
 ## Where things are
 
 | | |
