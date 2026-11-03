@@ -163,7 +163,7 @@ Blender exports) in a `models/` folder beside the pack's `line_layout.json`.
 
 - **Names.** `<kind>.glb` for every machine of a kind - `filler`, `washer`,
   `mixer`, `denester`, `depalletiser`, `inspector`, `packer`, `palletiser`,
-  `generic` - or `<MACHINE-CODE>.glb` for one machine. `line_layout.json` may
+  `cell`, `generic` - or `<MACHINE-CODE>.glb` for one machine. `line_layout.json` may
   name a file per station with `"model": "big-filler.glb"`.
 - **Which one wins.** The file the layout names, then the machine's own, then
   its kind's. Without any, the built-in shape, exactly as before.
@@ -178,6 +178,12 @@ Blender exports) in a `models/` folder beside the pack's `line_layout.json`.
   served by the plant at `/line/models/<name>` to signed-in users. A model that
   is missing or broken leaves the built-in shape in place; one that takes
   longer than 3 s keeps it too, until it arrives.
+
+- **Where they stand.** Draw the floor, export it to a positions file, run
+  `fsmes layout from-freecad positions.json` (`--check` first to see what
+  would move), and reload the 3D tab: each machine stands where you drew it,
+  turned as you drew it, and the view frames the whole line. The file format
+  is in [docs/operate/packs.md](docs/operate/packs.md#where-the-machines-stand).
 
 More in [docs/operate/packs.md](docs/operate/packs.md#your-own-machine-models).
 

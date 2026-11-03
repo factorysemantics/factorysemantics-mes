@@ -272,6 +272,74 @@ Paths are relative to the fleet file. `[environment] data_dir` stays here and no
 
 See [plants from a fleet file](registry.md) for running them.
 
+## Where the machines stand
+
+`line_layout.json` says where each machine stands on the 3D line view's floor:
+`x` along the line, `z` across it, in metres, and `rot`, the machine turned in
+degrees counter-clockwise seen from above. You can type those numbers in, or
+draw the floor and import them:
+
+1. **Draw** the line in your CAD program, one part per machine, named for its
+   equipment code (`FILL01`, `UB10`).
+2. **Export** the drawing to a positions file (below). A drawing program's
+   export macro writes it; so can you, by hand.
+3. **Import** it:
+
+   ```bash
+   fsmes layout from-freecad positions.json --check   # what would change; writes nothing
+   fsmes layout from-freecad positions.json           # writes it
+   ```
+
+   It writes into the `line_layout.json` beside the positions file, or the
+   plant's own (`MES_LINE_LAYOUT_FILE`), or the one `--layout` names. If the
+   layout has more than one line and the file names none of them, say which
+   with `--line`.
+4. **Reload** the 3D tab. The view frames the whole line on first load,
+   however it is drawn.
+
+It prints what it did, with totals - `Line BS1: 8 cells in the drawing - 1
+changed, 0 new, 7 unchanged.` - and a line per cell that moved. Only each
+drawn cell's `x`, `z`, `rot` and `model` are written; its `kind`, `name` and
+everything else in the file stay as they were, in the order they were. A cell
+the layout does not know is added as `generic`. A station in the layout that
+is not in the drawing is kept where it was and named. Running it twice writes
+nothing the second time.
+
+**The positions file.** JSON, UTF-8 (a byte-order mark and Windows line ends
+are fine):
+
+```json
+{
+  "units": "m",
+  "line": "BS1",
+  "frame": {"x": "FreeCAD X", "z": "-FreeCAD Y", "y": "up", "front": "-Z",
+            "rot": "degrees about vertical, CCW from above"},
+  "source": "floor.FCStd",
+  "cells": [
+    {"code": "UB10", "x": 0.0,  "z": 0.0, "rot": 0.0,  "model": "UB10.glb"},
+    {"code": "QI10", "x": 84.0, "z": 0.0, "rot": 90.0, "model": "QI10.glb"}
+  ]
+}
+```
+
+| Key | Means |
+|---|---|
+| `units` | must be `"m"`; a file in millimetres is refused, not divided |
+| `line` | the line code the cells belong to (optional with a one-line layout) |
+| `frame` | the exporter saying its numbers are already the floor's: x along the line, z across it, y up, front toward -Z, rot counter-clockwise from above. It must be exactly this block. A file in any other frame - mirrored, axes swapped, rot clockwise - is refused rather than flipped, because a mirrored plant looks right until somebody walks it |
+| `source` | the drawing it came from; printed, not stored |
+| `cells` | one per machine: `code`, `x`, `z`, `rot` (0 if left out) and `model` (optional; a file name in `models/`, any folder in front of it is dropped) |
+
+The body-shop pack carries one, `labs/multiplant/bodyshop/positions.json`, with
+the numbers its layout already has: `fsmes layout from-freecad
+labs/multiplant/bodyshop/positions.json --check` says `8 unchanged`.
+
+**What the line carries.** The line's `unit_label` picks what rides the
+belts: `bottle` (and `unit`, the default) draws bottles, clear before the
+filler and filled after it; anything else - `body` on the body shop - draws a
+plain slab the size of a car floor, shorter if the belts are short. The
+`cell` kind draws a fenced robot cell with an opening on every side.
+
 ## Your own machine models
 
 The 3D line view (`/dashboard/line/3d`) draws every machine from built-in
@@ -282,7 +350,7 @@ sibling, whether or not the layout file exists).
 
 | File | Draws |
 |---|---|
-| `models/<kind>.glb` | every machine of that kind: `filler`, `washer`, `mixer`, `denester`, `depalletiser`, `inspector`, `packer`, `palletiser`, `generic` (the kind the layout answer reports for the station) |
+| `models/<kind>.glb` | every machine of that kind: `filler`, `washer`, `mixer`, `denester`, `depalletiser`, `inspector`, `packer`, `palletiser`, `cell`, `generic` (the kind the layout answer reports for the station) |
 | `models/<code>.glb` | one machine, by its equipment code, lowercased in the URL (`FILL01.glb` on disk is served as `fill01.glb`) |
 | any `models/<name>.glb` | the station whose `line_layout.json` entry says `"model": "<name>.glb"` |
 

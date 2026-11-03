@@ -2317,7 +2317,7 @@ app.add_typer(layout_app, name="layout")
 @layout_app.command("from-freecad")
 def layout_from_freecad(
     positions: Path = typer.Argument(
-        ..., help="The positions file the FreeCAD export macro wrote (positions.json)."),
+        ..., help="The positions file your drawing's export wrote (positions.json)."),
     layout: Path = typer.Option(
         None, "--layout", help="The line_layout.json to write into. Default: the "
         "line_layout.json beside the positions file if there is one, else this plant's "
@@ -2330,13 +2330,15 @@ def layout_from_freecad(
 ) -> None:
     """Put the machines where you drew them.
 
-    Draw the floor in FreeCAD, run the export macro, then run this with the
-    positions.json it wrote. Each cell's x, z (metres along and across the
+    Draw the floor in your CAD program, export it to a positions file, then
+    run this with that file. Each cell's x, z (metres along and across the
     line), rot (degrees counter-clockwise seen from above) and model file go
     into the layout; everything else in it is kept. Reload the 3D tab to see it.
 
-    The file must say {"units": "m"} and the frame the macro writes; one that
-    says anything else is refused, never flipped to fit. A cell the layout does
+    The positions file is one small JSON file, documented in
+    docs/operate/packs.md ("Where the machines stand"): {"units": "m"}, the
+    line, a frame block, and one entry per cell. A file whose units or frame
+    say anything else is refused, never flipped to fit. A cell the layout does
     not know is added as a plain box; a machine you did not draw stays where it
     was and is listed. Use --check first to see what would move.
     """

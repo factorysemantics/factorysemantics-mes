@@ -29,7 +29,8 @@ import math
 from dataclasses import dataclass, field
 from pathlib import Path, PureWindowsPath
 
-#: The one frame this reader accepts, as the exporter writes it.
+#: The one frame this reader accepts, word for word as the exporter writes it.
+#: The axis names are the drawing program's own; they are part of the file format.
 FRAME = {
     "x": "FreeCAD X",
     "z": "-FreeCAD Y",
@@ -126,7 +127,7 @@ def read_positions(path: Path) -> Positions:
         raise PositionsError(
             "the file's frame is not the one this reads - x along the line, z across it "
             f"(-FreeCAD Y), y up, front -Z, rot in degrees CCW from above. It says: {frame!r}. "
-            "Nothing was flipped to make it fit; export it again with the current macro.")
+            "Nothing was flipped to make it fit; export it again so the frame matches.")
     cells_in = data.get("cells")
     if not isinstance(cells_in, list) or not cells_in:
         raise PositionsError("cells must be a list with at least one cell in it")
