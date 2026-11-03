@@ -1,0 +1,27 @@
+{
+  "_comment": "Geometry for the 3D line view of the body shop: eight cells in a straight run, twelve metres apart, one body on each carrier. Every cell is `generic` - a box with its code on it - until a model of your own is in models/<CODE>.glb beside this file, which the view loads in its place.",
+  "defaults": {
+    "spacing": 12.0,
+    "conveyor_capacity": 3,
+    "units_per_tray": 1,
+    "unit_label": "body"
+  },
+  "lines": {
+    "BS1": {
+      "unit_label": "body",
+      "units_per_tray": 1,
+      "conveyor_capacity": 3,
+      "spacing": 12.0,
+      "stations": {
+        "UB10": {"kind": "generic", "x": 0.0, "z": 0.0},
+        "UB20": {"kind": "generic", "x": 12.0, "z": 0.0},
+        "FR10": {"kind": "generic", "x": 24.0, "z": 0.0},
+        "FR20": {"kind": "generic", "x": 36.0, "z": 0.0},
+        "RS10": {"kind": "generic", "x": 48.0, "z": 0.0},
+        "RS20": {"kind": "generic", "x": 60.0, "z": 0.0},
+        "MF10": {"kind": "generic", "x": 72.0, "z": 0.0},
+        "QI10": {"kind": "generic", "x": 84.0, "z": 0.0}
+      }
+    }
+  }
+}

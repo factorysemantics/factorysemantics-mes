@@ -1,6 +1,6 @@
 # Multi-plant lab — several MES systems, one machine
 
-Three completely separate MES instances, described by three **plant packs**,
+Four completely separate MES instances, described by four **plant packs**,
 running side by side from one wheel:
 
 | Plant | Shape | Dashboard | Database |
@@ -8,6 +8,7 @@ running side by side from one wheel:
 | **bottling** | ACME Beverages, Kansas City — 6-station bottling line | http://127.0.0.1:8010/dashboard | `.data/bottling.db` |
 | **machining** | Northgate Machining, Cell A — 3-station machining cell | http://127.0.0.1:8020/dashboard | `.data/machining.db` |
 | **finewire** | Fine Wire Drawing Works, Hall 2 — invented, never started | http://127.0.0.1:8050/dashboard | PostgreSQL, per its pack |
+| **bodyshop** | Kestrel Motors, Body Line 1 — 8 welding cells, 20 robots as parts of them | http://127.0.0.1:8030/dashboard | `.data/bodyshop.db` |
 
 Sign in as `SCOTT` / `operator`, or `ADMIN` / `admin`.
 
@@ -48,22 +49,23 @@ MES_WORDS          what it calls things
 No product code was added to run a second plant, a third, or a plant with two
 modules switched off. Adding one is a directory and a line in `fleet.toml`.
 
-## The two plants disagree about the line
+## The plants disagree about the line
 
 Deliberate. If any plant-specific assumption has leaked into MES code rather
-than config, running these two together is where it shows:
+than config, running them together is where it shows:
 
-|  | bottling | machining |
-|---|---|---|
-| Stations | 6 | 3 |
-| Names | LD, RD, Washer, QI, Refill, Palletiser | Saw, Mill, Deburr |
-| Analogs | FeedRate, MotorTemp, WashTemp, RejectPct, FillWeight, AirPressure | BladeLoad, SpindleTemp, CycleForce |
-| Rates | 102–115/min | 18–25/min |
-| Buffers | 20 | 6 (nowhere to hide) |
-| Product | Filled Bottle 500ml | Machined Bracket |
-| Routing | RT-BOTTLE, 6 ops | RT-BRACKET, 3 ops |
-| Quality spec | fill_weight 494–506 g | spindle_temp 50–70 °C |
-| Order book | 10 orders, 151,600 | 9 orders, 27,600 |
+|  | bottling | machining | bodyshop |
+|---|---|---|---|
+| Stations | 6 | 3 | 8 cells, 20 robots inside them |
+| Names | LD, RD, Washer, QI, Refill, Palletiser | Saw, Mill, Deburr | UB10, UB20, FR10, FR20, RS10, RS20, MF10, QI10 |
+| Analogs | FeedRate, MotorTemp, WashTemp, RejectPct, FillWeight, AirPressure | BladeLoad, SpindleTemp, CycleForce | AirPressure, GapMean, FlushMean; per robot WeldCurrent, TipWear |
+| Rates | 102–115/min | 18–25/min | 0.85–1.0/min (a body every 60–71 s) |
+| Buffers | 20 | 6 (nowhere to hide) | 3 |
+| Product | Filled Bottle 500ml | Machined Bracket | Body in white, two styles |
+| Routing | RT-BOTTLE, 6 ops | RT-BRACKET, 3 ops | RT-BIW-S4 and RT-BIW-E5, 8 ops each |
+| Quality spec | fill_weight 494–506 g | spindle_temp 50–70 °C | gap_mean 3.5–4.5 mm |
+| Order book | 10 orders, 151,600 | 9 orders, 27,600 | 12 orders, 1,260 bodies |
+| A stop's reason | none on the tag | none on the tag | the PLC's fault number (`reason_tag`) |
 
 ## Each plant has an order book, and the floor works it
 
@@ -76,6 +78,7 @@ order released and the rest planned, due dates in sequence.
 | bottling | palletiser, 0.588 s → 6,122/h | 10 orders, 151,600 bottles | 24.8 h |
 | machining | mill, 3.333 s → 1,080/h | 9 orders, 27,600 brackets | 25.6 h |
 | finewire | wrapper, 3.6 s → 1,000 kg/h | 5 orders, 26,000 kg | 26.0 h |
+| bodyshop | FR10, 70.6 s → 51/h | 12 orders, 1,260 bodies | 24.7 h |
 
 A real hour makes less than the rating — scrap, micro-stops, a changeover — so
 a fresh plant runs **longer** than those figures before its book is empty,
@@ -108,6 +111,18 @@ ERP mode, namespace mode, inbound feed and tag-map addressing style all
 different — and it is what proves the pack format is not the demo plant's
 shape with another name on it. It has never been started and there is no line
 data for it. Its own README says what it is and what it proved.
+
+## The fourth plant has machines inside its machines
+
+`bodyshop/` is a simulated body-in-white line: eight cells, and twenty robots
+that are **parts of their cells**, not stations of their own. A robot
+publishes a state, a fault number, its weld current and its tip wear, and
+counts nothing; its cell counts the bodies, and the cell's state follows its
+robots — one robot faulted is the cell down with that robot's reason, one
+robot dressing its tips is the cell in setup. It is the first pack whose PLC
+says *why* it stopped, so its tag map names a `reason_tag` and the stop
+arrives labelled. Its README says what it plays and how to put your own
+models on its 3D line.
 
 ## Bottling plays a shift; machining plays an hour
 
@@ -366,6 +381,7 @@ machining/masterdata/       this plant's whole definition, as data
 machining/line.json         LineSim config -> the plant's physics
 machining/out/              generated per-second CSVs (regenerate, never commit)
 finewire/                   the invented third pack; see its README
+bodyshop/                   a body-in-white line with robots inside its cells; see its README
 .data/                      databases and PID files (gitignored)
 ```
 

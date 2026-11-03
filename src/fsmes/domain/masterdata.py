@@ -19,12 +19,19 @@ class EquipmentLevel(enum.StrEnum):
     AREA = "area"
     WORK_CENTER = "work_center"
     WORK_UNIT = "work_unit"
+    # ISA-95's rung below a unit: a part of a machine with a state of its own
+    # that is not a machine on the floor - a welding robot in a body-shop
+    # cell, a head on a filler. It carries tags and a state history; it is
+    # not in the line's machine list, its OEE or its timeline, because the
+    # unit it belongs to is what makes the product and what the line waits on.
+    EQUIPMENT_MODULE = "equipment_module"
 
 
 class Equipment(Base):
     """ISA-95 equipment hierarchy (enterprise→site→area→work center→work unit)
     as one self-referencing table. Work units are the machines that run
-    operations and carry OPC tags.
+    operations and carry OPC tags; an equipment module is a part of one with
+    a state of its own (a robot in a cell), off the floor's machine lists.
 
     The tree may be any depth: a plant with six lines, each holding several
     cells, each holding machines, is `site → area* → work_center → cell →

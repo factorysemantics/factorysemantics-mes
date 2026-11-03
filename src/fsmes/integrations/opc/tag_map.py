@@ -50,6 +50,20 @@ servers disagree about all of it:
                     null for a read-only source (a CSV replay, a historian, a
                     server the MES has no write rights on). Null means the
                     machine is observed but never commanded.
+    counts          false for equipment that makes nothing it could count: a
+                    welding robot inside a cell, whose cell counts the bodies.
+                    It subscribes to no GoodCount or ScrapCount, and books no
+                    production. Absent means true, which is every machine.
+    reason_tag      the tag on which the machine says WHY it stopped - a PLC
+                    fault number, held while it is down. When State maps to
+                    down, the open interval is named from it; when it arrives
+                    after the State change, the stop it explains is named
+                    then. Absent means the machine does not say, and its stops
+                    are named the way every plant's are, by somebody here.
+    reason_map      reason_tag value -> the plant's downtime reason code, e.g.
+                    {"101": "weld_gun_fault"}. A value the map does not know
+                    is still written on the stop as what the machine said
+                    ("FaultCode 999") with no code: unknown is not a guess.
 
 Only `equipment` and one of `object`/`node_id`/`nodes` are required; the rest
 default to the twin's own simulator conventions, so existing maps keep working.
@@ -82,7 +96,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from fsmes.domain import EquipmentStateName
-from fsmes.kernel.tags import MANIFEST_NAME
+from fsmes.kernel.tags import MANIFEST_NAME, SEMANTIC_TAGS
 
 DEFAULT_ANALOG = "Temperature"
 DEFAULT_ORDER_TAG = "OrderCode"
@@ -107,6 +121,9 @@ class MachineMap:
     nodes: dict[str, str] = field(default_factory=dict)  # tag -> full node id
     order_tag: str | None = DEFAULT_ORDER_TAG  # None = read-only source
     state_map: dict[str, EquipmentStateName] = field(default_factory=dict)
+    counts: bool = True  # False: no counters, no production booked
+    reason_tag: str | None = None  # the tag naming why it stopped
+    reason_map: dict[str, str] = field(default_factory=dict)  # raw -> reason code
 
     @property
     def tags(self) -> tuple[str, ...]:
@@ -117,7 +134,9 @@ class MachineMap:
         ScrapCount node, and subscribing to a tag that does not exist would
         turn one missing counter into a machine that reports nothing at all.
         """
-        canonical = ("State", "GoodCount", "ScrapCount", self.analog, *self.extra_tags)
+        counters = ("GoodCount", "ScrapCount") if self.counts else ()
+        reason = (self.reason_tag,) if self.reason_tag else ()
+        canonical = ("State", *counters, *reason, self.analog, *self.extra_tags)
         # Dedupe while keeping order: a map that lists its primary analog
         # again under extras should not subscribe to it twice.
         seen: dict[str, None] = {}
@@ -149,6 +168,29 @@ class MachineMap:
         if tag in self.nodes:
             return self.nodes[tag]
         return self.node_id.format(tag=tag) if self.node_id else None
+
+    def acts_on(self, tag: str) -> bool:
+        """True for a tag the agent books from rather than only records:
+        the state, the counters, and the tag that says why it stopped."""
+        return tag in SEMANTIC_TAGS or (self.reason_tag is not None and tag == self.reason_tag)
+
+    def reason_for(self, value) -> tuple[str | None, str | None]:
+        """`(reason_code, reason)` for a reason-tag value, or `(None, None)`
+        when the machine is saying nothing (no tag, or zero / empty).
+
+        A value the map does not know keeps what the machine said and no
+        code, rather than a guessed one."""
+        if not self.reason_tag or value is None:
+            return None, None
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            if not value:
+                return None, None
+            key = str(int(value))
+        else:
+            key = str(value).strip()
+            if not key or key == "0":
+                return None, None
+        return self.reason_map.get(key), f"{self.reason_tag} {key}"
 
     def to_state(self, value) -> EquipmentStateName:
         """Translate a raw State tag value into an MES equipment state.
@@ -300,7 +342,14 @@ def load_tag_map(path: Path, manifest: dict | None = None) -> list[MachineMap]:
             # `order_tag` absent = the default writable tag; explicit null = read-only.
             order_tag=m.get("order_tag", DEFAULT_ORDER_TAG),
             state_map={str(k): EquipmentStateName(v) for k, v in (m.get("state_map") or {}).items()},
+            counts=bool(m.get("counts", True)),
+            reason_tag=m.get("reason_tag") or None,
+            reason_map={str(k): str(v) for k, v in (m.get("reason_map") or {}).items()},
         )
+        if spec.reason_map and not spec.reason_tag:
+            raise ValueError(
+                f"tag map entry {spec.equipment!r} has a `reason_map` and no `reason_tag`: "
+                f"it says what the fault numbers mean and not which tag carries them.")
         if not spec.tags:
             raise ValueError(
                 f"tag map entry {spec.equipment!r} subscribes to nothing — its 'nodes' has none of "
@@ -335,6 +384,6 @@ def _extra_tags(entry: dict, tables: dict) -> tuple[str, ...]:
     if entry.get("node_id") or entry.get("nodes"):
         return ()                                         # see load_tag_map
     published = tables.get(entry.get("object") or entry.get("equipment"), {})
-    canonical = {"State", "GoodCount", "ScrapCount",
+    canonical = {"State", "GoodCount", "ScrapCount", entry.get("reason_tag"),
                  entry.get("analog", DEFAULT_ANALOG), "TSec"}
     return tuple(tag for tag in published.get("tags", ()) if tag not in canonical)

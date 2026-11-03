@@ -1,0 +1,4 @@
+[
+  {"material": "BIW-S4", "characteristic": "gap_mean", "unit": "mm", "min": 3.5, "max": 4.5},
+  {"material": "BIW-E5", "characteristic": "gap_mean", "unit": "mm", "min": 3.5, "max": 4.5}
+]

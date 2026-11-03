@@ -22,7 +22,7 @@ COUNTER_TAGS: tuple[str, ...] = ("GoodCount", "ScrapCount", "TotalCount")
 
 # Served as integers rather than floats: a PLC state word and an alarm word
 # are bit patterns, and rounding one is meaningless.
-INTEGER_TAGS: tuple[str, ...] = ("State", "AlarmWord")
+INTEGER_TAGS: tuple[str, ...] = ("State", "AlarmWord", "FaultCode")
 
 # What the MES *acts on* rather than merely records: these set equipment
 # state and book production, so they are never sampled down or batched.
@@ -41,6 +41,9 @@ STRUCTURAL_TAGS: tuple[str, ...] = (
     "CycleTimeMs",
     "RunMinutes",
     "ReadyBit",
+    # The fault number a machine holds while it is down: a code, not a
+    # process value, and never "the" signal a chart should draw.
+    "FaultCode",
 )
 
 # An inspection station's group: the tags a vision system publishes together

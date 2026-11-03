@@ -1,0 +1,11 @@
+{
+  "_what": "What the simulated floor at the body shop does that no PLC reports. Read only by `fsmes run-operations`; a real plant leaves this file out and has people instead.",
+  "planning": {
+    "_what": "How many lots the simulated planner keeps in the book behind the one on the line. It copies style, quantity and priority from the pack's own book in rotation and continues the BLD- numbering; it never releases one.",
+    "keep_planned": 3
+  },
+  "stops": {
+    "_what": "The words this floor puts on a stop that has ended and that nobody named. A robot's fault is not one of them: the PLC holds a fault number while it is down and the tag map's reason_map names it, so a weld gun fault arrives named. What is left is the setup, and on this line a setup is a tip dress.",
+    "changeover": "tip_dress"
+  }
+}

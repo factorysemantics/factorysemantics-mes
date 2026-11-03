@@ -1,0 +1,12 @@
+[
+  {
+    "code": "minor",
+    "name": "Minor",
+    "description": "Something is out of specification and the plant can work through it in the normal course of the shift. This is what a recorded check outside its limits opens, and what an SPC rule other than rule 1 opens."
+  },
+  {
+    "code": "major",
+    "name": "Major",
+    "description": "Something is out of specification badly enough that somebody should look at it now rather than at the end of the shift. This is what SPC rule 1 - a point beyond three sigma - opens."
+  }
+]

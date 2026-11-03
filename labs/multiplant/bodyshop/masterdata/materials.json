@@ -1,0 +1,6 @@
+[
+  {"code": "PNL-SET-S4", "name": "Stamped panel set, 4-door saloon", "unit": "set", "type": "raw"},
+  {"code": "PNL-SET-E5", "name": "Stamped panel set, 5-door estate", "unit": "set", "type": "raw"},
+  {"code": "BIW-S4", "name": "Body in white, 4-door saloon", "unit": "body", "type": "finished"},
+  {"code": "BIW-E5", "name": "Body in white, 5-door estate", "unit": "body", "type": "finished"}
+]

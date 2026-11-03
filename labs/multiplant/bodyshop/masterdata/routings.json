@@ -1,0 +1,96 @@
+[
+  {
+    "code": "RT-BIW-S4",
+    "name": "Body in white, saloon",
+    "material": "BIW-S4",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Underbody framing",
+        "equipment": "UB10"
+      },
+      {
+        "seq": 20,
+        "name": "Underbody respot",
+        "equipment": "UB20"
+      },
+      {
+        "seq": 30,
+        "name": "Framing (sides and roof marriage)",
+        "equipment": "FR10"
+      },
+      {
+        "seq": 40,
+        "name": "Framing respot",
+        "equipment": "FR20"
+      },
+      {
+        "seq": 50,
+        "name": "Respot 1",
+        "equipment": "RS10"
+      },
+      {
+        "seq": 60,
+        "name": "Respot 2",
+        "equipment": "RS20"
+      },
+      {
+        "seq": 70,
+        "name": "Metal finish",
+        "equipment": "MF10"
+      },
+      {
+        "seq": 80,
+        "name": "Gap-and-flush measurement",
+        "equipment": "QI10"
+      }
+    ]
+  },
+  {
+    "code": "RT-BIW-E5",
+    "name": "Body in white, estate",
+    "material": "BIW-E5",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Underbody framing",
+        "equipment": "UB10"
+      },
+      {
+        "seq": 20,
+        "name": "Underbody respot",
+        "equipment": "UB20"
+      },
+      {
+        "seq": 30,
+        "name": "Framing (sides and roof marriage)",
+        "equipment": "FR10"
+      },
+      {
+        "seq": 40,
+        "name": "Framing respot",
+        "equipment": "FR20"
+      },
+      {
+        "seq": 50,
+        "name": "Respot 1",
+        "equipment": "RS10"
+      },
+      {
+        "seq": 60,
+        "name": "Respot 2",
+        "equipment": "RS20"
+      },
+      {
+        "seq": 70,
+        "name": "Metal finish",
+        "equipment": "MF10"
+      },
+      {
+        "seq": 80,
+        "name": "Gap-and-flush measurement",
+        "equipment": "QI10"
+      }
+    ]
+  }
+]
