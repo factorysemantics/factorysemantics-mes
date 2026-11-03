@@ -87,6 +87,27 @@ function renderReadout(flow, stations) {
   $("#filling-note").classList.toggle("hidden", flow.warm);
 }
 
+/** How much of each edge of the window the page's own chrome covers, in
+ *  pixels: the header and line strip at the top, the station cards on the
+ *  right (when the window is wide enough to show them), the footer. The
+ *  3D view frames the line in what is left. */
+function chromeInsets() {
+  const width = window.innerWidth, height = window.innerHeight;
+  const shown = (selector) => {
+    const el = document.querySelector(selector);
+    if (!el || getComputedStyle(el).display === "none") return null;
+    const box = el.getBoundingClientRect();
+    return box.width && box.height ? box : null;
+  };
+  const strip = shown("#line-strip"), header = shown("header"), cards = shown("#stations"), foot = shown("#foot");
+  return {
+    top: Math.max(0, strip ? strip.bottom : 0, header ? header.bottom : 0),
+    right: cards ? Math.max(0, width - cards.left) : 0,
+    bottom: foot ? Math.max(0, height - foot.top) : 0,
+    left: 0,
+  };
+}
+
 /* ------------------------------------------------------------------- boot */
 
 async function main() {
@@ -161,7 +182,9 @@ async function main() {
     badge.classList.remove("hidden");
   }
 
-  const scene = new LineScene($("#stage")).build(layout);
+  const scene = new LineScene($("#stage"));
+  scene.insets = chromeInsets;
+  scene.build(layout);
   const flow = new LineFlow(layout.stations, {
     capacity: layout.conveyor.capacity,
     spacings: scene.spacings,

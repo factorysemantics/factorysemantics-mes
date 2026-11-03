@@ -46,6 +46,8 @@ export const MATERIALS = {
   timber: mat(TIMBER, { metalness: 0.0, roughness: 0.95 }),
   glassEmpty: mat(GLASS_EMPTY, { metalness: 0.1, roughness: 0.15, transparent: true, opacity: 0.55 }),
   glassFull: mat(GLASS_FULL, { metalness: 0.15, roughness: 0.2, transparent: true, opacity: 0.85 }),
+  // A body in white: bare pressed steel, before the paint shop.
+  bodyInWhite: mat(0xc3ccd6, { metalness: 0.6, roughness: 0.4 }),
 };
 
 export const BELT_HEIGHT = 1.0;
@@ -82,6 +84,22 @@ export function bottleGeometry() {
 }
 
 export const BOTTLE_HEIGHT = 0.215;
+
+/** What a carrier holds when the line does not make bottles: a flat slab the
+ *  size of a car's floor pan, 4 x 1.8 x 0.4 m at full size. `length` scales
+ *  it down for a line whose belts are too short to carry three of those. */
+export function slabGeometry(length = 4.0) {
+  const k = length / 4.0;
+  const geometry = new THREE.BoxGeometry(length, 0.4 * Math.max(0.5, k), 1.8 * k);
+  geometry.translate(0, 0.2 * Math.max(0.5, k), 0);
+  return geometry;
+}
+
+/** Whether a line's units are drawn as bottles. Bottles for a line that says
+ *  `bottle`, and for one that never said (`unit`, the default), so a plant
+ *  nobody drew keeps the picture it had; a slab for any other unit. */
+export const drawsBottles = (unitLabel) =>
+  ["bottle", "bottles", "unit", "units", ""].includes(String(unitLabel || "").toLowerCase());
 
 /* ---------------------------------------------------------------- conveyors */
 
@@ -136,10 +154,17 @@ const SHAPES = {
   mixer: { length: 2.6, width: 2.2, height: 1.6 },
   packer: { length: 2.8, width: 2.0, height: 1.8 },
   generic: { length: MACHINE_LENGTH, width: 2.0, height: 1.6 },
+  cell: { length: 6.0, width: 5.5, height: 2.2 },
 };
 
 /** How much of the line a station of this kind occupies, in metres. */
 export const machineLength = (kind) => (SHAPES[kind] || SHAPES.generic).length;
+
+/** A station's footprint, length along its own x and width across it. */
+export const footprint = (kind) => {
+  const shape = SHAPES[kind] || SHAPES.generic;
+  return { length: shape.length, width: shape.width, height: shape.height };
+};
 
 /** Shared chassis: plinth, body, guard frame, and the status band that carries
  *  the machine's MES state. Every silhouette is this plus its own top half. */
@@ -214,6 +239,7 @@ function tunnel(group, { length, width, height }) {
  * turning through a breakdown is a lie a plant manager spots instantly.
  */
 export function makeMachine(kind) {
+  if (kind === "cell") return makeCell(SHAPES.cell);
   const shape = SHAPES[kind] || SHAPES.generic;
   const { group, bands, height } = chassis(shape);
   let spin = null;
@@ -336,6 +362,65 @@ export function makeMachine(kind) {
   return { group, bands, spin, height, shape };
 }
 
+/** A fenced robot work cell, the kind welding and assembly lines are made of: a light floor plate,
+ *  a fence line with a post at each corner and an opening where the line
+ *  passes through, and the status band along the front and back rails. What
+ *  works inside it - robots, fixtures - is the plant's own model's to draw. */
+function makeCell({ length, width, height }) {
+  const group = new THREE.Group();
+  const bands = [];
+  const plate = box(length, 0.06, width, mat(0x4a5464, { metalness: 0.2, roughness: 0.85 }));
+  plate.position.y = 0.03;
+  group.add(plate);
+
+  const post = mat(0xd8a72a, { metalness: 0.3, roughness: 0.6 });
+  const mesh = mat(GUARD, { metalness: 0.4, roughness: 0.7, transparent: true, opacity: 0.3 });
+  const hx = length / 2, hz = width / 2;
+  for (const [x, z] of [[-hx, -hz], [hx, -hz], [-hx, hz], [hx, hz]]) {
+    const p = box(0.12, height, 0.12, post);
+    p.position.set(x, height / 2, z);
+    group.add(p);
+  }
+  // Every side is two panels with a gap between: the line runs through the
+  // ends, and a cell drawn turned a quarter still has a way in for it.
+  const gap = 1.6;
+  const panels = [];
+  for (const z of [-hz, hz]) {
+    const side = (length - gap) / 2;
+    panels.push([-(gap / 2 + side / 2), z, side, 0], [gap / 2 + side / 2, z, side, 0]);
+  }
+  for (const x of [-hx, hx]) {
+    const side = (width - gap) / 2;
+    panels.push([x, -(gap / 2 + side / 2), side, Math.PI / 2], [x, gap / 2 + side / 2, side, Math.PI / 2]);
+  }
+  for (const [x, z, span, turn] of panels) {
+    const panel = box(span, height * 0.82, 0.03, mesh);
+    panel.position.set(x, height * 0.45, z);
+    panel.rotation.y = turn;
+    group.add(panel);
+  }
+  for (const z of [-hz, hz]) {
+    const band = box(length, 0.14, 0.06, new THREE.MeshStandardMaterial({
+      color: STATE_COLOURS.unknown, emissive: STATE_COLOURS.unknown,
+      emissiveIntensity: 1.2, metalness: 0.0, roughness: 0.4,
+    }));
+    band.position.set(0, height, z);
+    group.add(band);
+    bands.push(band);
+  }
+  const beacon = cyl(0.09, 0.26, new THREE.MeshStandardMaterial({
+    color: STATE_COLOURS.unknown, emissive: STATE_COLOURS.unknown,
+    emissiveIntensity: 1.6, metalness: 0.0, roughness: 0.3,
+  }), 12);
+  beacon.position.set(-hx, height + 0.13, -hz);
+  group.add(beacon);
+  bands.push(beacon);
+
+  shadowed(group);
+  plate.castShadow = false;
+  return { group, bands, spin: null, height, shape: { length, width, height } };
+}
+
 /* -------------------------------------------------------- trays and pallets */
 
 /** An open tray of empties: what the depalletiser lifts. */
@@ -402,41 +487,63 @@ export const PALLET_DECK = 0.112;
 
 /* ------------------------------------------------------------------- labels */
 
-/** A station label drawn to a canvas — no font files to ship, and it stays
- *  legible at any camera distance because sprites do not foreshorten. */
+/** A station label drawn to a canvas - no font files to ship. It is the same
+ *  size on screen near and far (`sizeAttenuation` off): on a 90 m line a
+ *  label that shrinks with distance is unreadable at the far end. The scene
+ *  sets its scale from the viewport with `sizeLabel`. */
+/** A label's width over its height, as its canvas is drawn. */
+export const LABEL_ASPECT = 512 / 176;
+
 export function makeLabel(code, name) {
   const canvas = document.createElement("canvas");
   canvas.width = 512;
-  canvas.height = 128;
+  canvas.height = 176;
   const ctx = canvas.getContext("2d");
 
-  ctx.fillStyle = "rgba(14, 17, 22, 0.82)";
-  ctx.strokeStyle = "rgba(38, 48, 64, 1)";
+  ctx.fillStyle = "rgba(10, 13, 18, 0.9)";
+  ctx.strokeStyle = "rgba(70, 86, 110, 1)";
   ctx.lineWidth = 3;
   if (ctx.roundRect) {
     ctx.beginPath();
-    ctx.roundRect(6, 6, 500, 116, 14);
+    ctx.roundRect(6, 6, 500, 164, 16);
     ctx.fill();
     ctx.stroke();
   } else {
-    ctx.fillRect(6, 6, 500, 116);
-    ctx.strokeRect(6, 6, 500, 116);
+    ctx.fillRect(6, 6, 500, 164);
+    ctx.strokeRect(6, 6, 500, 164);
   }
 
-  ctx.fillStyle = "#e6edf3";
-  ctx.font = "600 52px ui-monospace, Consolas, monospace";
   ctx.textAlign = "center";
-  ctx.fillText(code, 256, 62);
-  ctx.fillStyle = "#8b98a5";
-  ctx.font = "400 30px system-ui, Segoe UI, sans-serif";
-  ctx.fillText((name || "").slice(0, 30), 256, 102);
+  ctx.fillStyle = "#f0f6fc";
+  ctx.font = "700 72px ui-monospace, Consolas, monospace";
+  ctx.fillText(code, 256, 80);
+  // The name under it, as large as fits the plate: a long name is set
+  // smaller rather than cut off, down to a floor, then shortened.
+  ctx.fillStyle = "#b4c0cc";
+  let text = name || "";
+  let size = 46;
+  const fits = () => { ctx.font = `500 ${size}px system-ui, Segoe UI, sans-serif`; return ctx.measureText(text).width <= 472; };
+  while (!fits() && size > 40) size -= 2;
+  while (!fits() && text.length > 4) text = `${text.slice(0, -2)}\u2026`;
+  ctx.fillText(text, 256, 140);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.anisotropy = 4;
 
-  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false }));
-  sprite.scale.set(2.4, 0.6, 1);
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: texture, transparent: true, depthTest: false, sizeAttenuation: false,
+  }));
+  sprite.scale.set(0.12, 0.04, 1);
   sprite.renderOrder = 10;
+  sprite.name = `label:${code}`;
   return sprite;
+}
+
+/** Size a label `pixels` tall on screen, whatever its distance, for a
+ *  perspective camera filling a viewport `viewportHeight` pixels tall. */
+export function sizeLabel(sprite, camera, viewportHeight, pixels) {
+  const projectionY = camera.projectionMatrix.elements[5];
+  const h = (2 * pixels) / (viewportHeight * projectionY);
+  sprite.scale.set(h * LABEL_ASPECT, h, 1);
 }
