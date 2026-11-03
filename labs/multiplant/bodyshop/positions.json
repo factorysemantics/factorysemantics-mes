@@ -1,0 +1,62 @@
+{
+  "units": "m",
+  "line": "BS1",
+  "frame": {
+    "x": "FreeCAD X",
+    "z": "-FreeCAD Y",
+    "y": "up",
+    "front": "-Z",
+    "rot": "degrees about vertical, CCW from above"
+  },
+  "source": "floor.FCStd",
+  "cells": [
+    {
+      "code": "UB10",
+      "x": 0.0,
+      "z": 0.0,
+      "rot": 0.0
+    },
+    {
+      "code": "UB20",
+      "x": 12.0,
+      "z": 0.0,
+      "rot": 0.0
+    },
+    {
+      "code": "FR10",
+      "x": 24.0,
+      "z": 0.0,
+      "rot": 0.0
+    },
+    {
+      "code": "FR20",
+      "x": 36.0,
+      "z": 0.0,
+      "rot": 0.0
+    },
+    {
+      "code": "RS10",
+      "x": 48.0,
+      "z": 0.0,
+      "rot": 0.0
+    },
+    {
+      "code": "RS20",
+      "x": 60.0,
+      "z": 0.0,
+      "rot": 0.0
+    },
+    {
+      "code": "MF10",
+      "x": 72.0,
+      "z": 0.0,
+      "rot": 0.0
+    },
+    {
+      "code": "QI10",
+      "x": 84.0,
+      "z": 0.0,
+      "rot": 90.0
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 {
-  "_comment": "Geometry for the 3D line view of the body shop: eight cells in a straight run, twelve metres apart, one body on each carrier. Every cell is `generic` - a box with its code on it - until a model of your own is in models/<CODE>.glb beside this file, which the view loads in its place.",
+  "_comment": "Geometry for the 3D line view of the body shop: eight cells in a straight run, twelve metres apart, one body on each carrier, QI10 turned a quarter as positions.json draws it. Every cell is a `cell` - a fenced robot cell with its code on it - until a model of your own is in models/<CODE>.glb beside this file, which the view loads in its place. To move the cells to where your own drawing has them: fsmes layout from-freecad positions.json (see docs/operate/packs.md).",
   "defaults": {
     "spacing": 12.0,
     "conveyor_capacity": 3,
@@ -13,14 +13,14 @@
       "conveyor_capacity": 3,
       "spacing": 12.0,
       "stations": {
-        "UB10": {"kind": "generic", "x": 0.0, "z": 0.0},
-        "UB20": {"kind": "generic", "x": 12.0, "z": 0.0},
-        "FR10": {"kind": "generic", "x": 24.0, "z": 0.0},
-        "FR20": {"kind": "generic", "x": 36.0, "z": 0.0},
-        "RS10": {"kind": "generic", "x": 48.0, "z": 0.0},
-        "RS20": {"kind": "generic", "x": 60.0, "z": 0.0},
-        "MF10": {"kind": "generic", "x": 72.0, "z": 0.0},
-        "QI10": {"kind": "generic", "x": 84.0, "z": 0.0}
+        "UB10": {"kind": "cell", "x": 0.0, "z": 0.0},
+        "UB20": {"kind": "cell", "x": 12.0, "z": 0.0},
+        "FR10": {"kind": "cell", "x": 24.0, "z": 0.0},
+        "FR20": {"kind": "cell", "x": 36.0, "z": 0.0},
+        "RS10": {"kind": "cell", "x": 48.0, "z": 0.0},
+        "RS20": {"kind": "cell", "x": 60.0, "z": 0.0},
+        "MF10": {"kind": "cell", "x": 72.0, "z": 0.0},
+        "QI10": {"kind": "cell", "x": 84.0, "z": 0.0, "rot": 90.0}
       }
     }
   }
