@@ -2309,6 +2309,65 @@ def maintenance_rules() -> None:
                    f"{_people(trade['people'])}")
 
 
+layout_app = typer.Typer(
+    help="The 3D line view's layout file: where each machine stands.")
+app.add_typer(layout_app, name="layout")
+
+
+@layout_app.command("from-freecad")
+def layout_from_freecad(
+    positions: Path = typer.Argument(
+        ..., help="The positions file the FreeCAD export macro wrote (positions.json)."),
+    layout: Path = typer.Option(
+        None, "--layout", help="The line_layout.json to write into. Default: the "
+        "line_layout.json beside the positions file if there is one, else this plant's "
+        "(MES_LINE_LAYOUT_FILE)."),
+    line: str = typer.Option(
+        None, "--line", help="Which line in the layout the cells belong to. Default: the "
+        "line the file names, if the layout has it, else the layout's only line."),
+    check: bool = typer.Option(
+        False, "--check", help="Print what would change and write nothing."),
+) -> None:
+    """Put the machines where you drew them.
+
+    Draw the floor in FreeCAD, run the export macro, then run this with the
+    positions.json it wrote. Each cell's x, z (metres along and across the
+    line), rot (degrees counter-clockwise seen from above) and model file go
+    into the layout; everything else in it is kept. Reload the 3D tab to see it.
+
+    The file must say {"units": "m"} and the frame the macro writes; one that
+    says anything else is refused, never flipped to fit. A cell the layout does
+    not know is added as a plain box; a machine you did not draw stays where it
+    was and is listed. Use --check first to see what would move.
+    """
+    from fsmes.services import layout_import
+
+    if layout is None:
+        beside = positions.parent / "line_layout.json"
+        layout = beside if beside.exists() else Path(get_settings().line_layout_file)
+    try:
+        drawn = layout_import.read_positions(positions)
+        current = layout_import.read_layout(layout)
+        updated, report = layout_import.apply(current, drawn, line)
+    except layout_import.PositionsError as exc:
+        typer.echo(f"NOT OK  {exc}")
+        raise typer.Exit(2) from None
+
+    typer.echo(f"Drawing {positions}" + (f" (from {drawn.source})" if drawn.source else ""))
+    typer.echo(f"Layout  {layout}" + ("" if layout.exists() else " (new file)"))
+    for text in layout_import.describe(report):
+        typer.echo(text)
+    if check:
+        typer.echo("--check: nothing written.")
+        return
+    if updated == current:
+        typer.echo("Nothing to write: the layout already says this.")
+        return
+    layout.parent.mkdir(parents=True, exist_ok=True)
+    layout_import.write_layout(layout, updated)
+    typer.echo(f"Written. Reload the 3D tab to see line {report.line} as drawn.")
+
+
 pack_app = typer.Typer(
     help="Plant packs: the one directory that says which plant this is.")
 app.add_typer(pack_app, name="pack")

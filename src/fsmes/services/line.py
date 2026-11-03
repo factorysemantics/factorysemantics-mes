@@ -143,7 +143,8 @@ def _layout_file(path: str, mtime: float) -> dict:
     """The drawn layout, or an empty one. `mtime` is in the cache key so editing
     the file takes effect on the next request instead of the next restart."""
     try:
-        return json.loads(Path(path).read_text(encoding="utf-8"))
+        # utf-8-sig: a layout saved by Notepad starts with a byte-order mark.
+        return json.loads(Path(path).read_text(encoding="utf-8-sig"))
     except FileNotFoundError:
         return {}
 
