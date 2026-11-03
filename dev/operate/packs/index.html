@@ -1569,6 +1569,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#where-the-machines-stand" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where the machines stand
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#your-own-machine-models" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4665,6 +4676,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#where-the-machines-stand" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where the machines stand
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#your-own-machine-models" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4962,6 +4984,86 @@ Usable, as far as a file can say: 9 file(s) read, nothing refused, 4 thing(s) on
 </code></pre></div>
 <p>Paths are relative to the fleet file. <code>[environment] data_dir</code> stays here and not in a pack: where several plants keep their databases on one machine is a fact about the machine. <code>FSMES_PLANT_REGISTRY</code> still points at it — the variable kept its name; what it points at changed.</p>
 <p>See <a href="../registry/">plants from a fleet file</a> for running them.</p>
+<h2 id="where-the-machines-stand">Where the machines stand<a class="headerlink" href="#where-the-machines-stand" title="Permanent link">&para;</a></h2>
+<p><code>line_layout.json</code> says where each machine stands on the 3D line view's floor:
+<code>x</code> along the line, <code>z</code> across it, in metres, and <code>rot</code>, the machine turned in
+degrees counter-clockwise seen from above. You can type those numbers in, or
+draw the floor and import them:</p>
+<ol>
+<li><strong>Draw</strong> the line in your CAD program, one part per machine, named for its
+   equipment code (<code>FILL01</code>, <code>UB10</code>).</li>
+<li><strong>Export</strong> the drawing to a positions file (below). A drawing program's
+   export macro writes it; so can you, by hand.</li>
+<li><strong>Import</strong> it:</li>
+</ol>
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>layout<span class="w"> </span>from-freecad<span class="w"> </span>positions.json<span class="w"> </span>--check<span class="w">   </span><span class="c1"># what would change; writes nothing</span>
+fsmes<span class="w"> </span>layout<span class="w"> </span>from-freecad<span class="w"> </span>positions.json<span class="w">           </span><span class="c1"># writes it</span>
+</code></pre></div>
+<p>It writes into the <code>line_layout.json</code> beside the positions file, or the
+   plant's own (<code>MES_LINE_LAYOUT_FILE</code>), or the one <code>--layout</code> names. If the
+   layout has more than one line and the file names none of them, say which
+   with <code>--line</code>.
+4. <strong>Reload</strong> the 3D tab. The view frames the whole line on first load,
+   however it is drawn.</p>
+<p>It prints what it did, with totals - <code>Line BS1: 8 cells in the drawing - 1
+changed, 0 new, 7 unchanged.</code> - and a line per cell that moved. Only each
+drawn cell's <code>x</code>, <code>z</code>, <code>rot</code> and <code>model</code> are written; its <code>kind</code>, <code>name</code> and
+everything else in the file stay as they were, in the order they were. A cell
+the layout does not know is added as <code>generic</code>. A station in the layout that
+is not in the drawing is kept where it was and named. Running it twice writes
+nothing the second time.</p>
+<p><strong>The positions file.</strong> JSON, UTF-8 (a byte-order mark and Windows line ends
+are fine):</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">"units"</span><span class="p">:</span><span class="w"> </span><span class="s2">"m"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"line"</span><span class="p">:</span><span class="w"> </span><span class="s2">"BS1"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"frame"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"x"</span><span class="p">:</span><span class="w"> </span><span class="s2">"FreeCAD X"</span><span class="p">,</span><span class="w"> </span><span class="nt">"z"</span><span class="p">:</span><span class="w"> </span><span class="s2">"-FreeCAD Y"</span><span class="p">,</span><span class="w"> </span><span class="nt">"y"</span><span class="p">:</span><span class="w"> </span><span class="s2">"up"</span><span class="p">,</span><span class="w"> </span><span class="nt">"front"</span><span class="p">:</span><span class="w"> </span><span class="s2">"-Z"</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"rot"</span><span class="p">:</span><span class="w"> </span><span class="s2">"degrees about vertical, CCW from above"</span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"floor.FCStd"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"cells"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span><span class="nt">"code"</span><span class="p">:</span><span class="w"> </span><span class="s2">"UB10"</span><span class="p">,</span><span class="w"> </span><span class="nt">"x"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">  </span><span class="nt">"z"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="nt">"rot"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">  </span><span class="nt">"model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"UB10.glb"</span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="nt">"code"</span><span class="p">:</span><span class="w"> </span><span class="s2">"QI10"</span><span class="p">,</span><span class="w"> </span><span class="nt">"x"</span><span class="p">:</span><span class="w"> </span><span class="mf">84.0</span><span class="p">,</span><span class="w"> </span><span class="nt">"z"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="nt">"rot"</span><span class="p">:</span><span class="w"> </span><span class="mf">90.0</span><span class="p">,</span><span class="w"> </span><span class="nt">"model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"QI10.glb"</span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>units</code></td>
+<td>must be <code>"m"</code>; a file in millimetres is refused, not divided</td>
+</tr>
+<tr>
+<td><code>line</code></td>
+<td>the line code the cells belong to (optional with a one-line layout)</td>
+</tr>
+<tr>
+<td><code>frame</code></td>
+<td>the exporter saying its numbers are already the floor's: x along the line, z across it, y up, front toward -Z, rot counter-clockwise from above. It must be exactly this block. A file in any other frame - mirrored, axes swapped, rot clockwise - is refused rather than flipped, because a mirrored plant looks right until somebody walks it</td>
+</tr>
+<tr>
+<td><code>source</code></td>
+<td>the drawing it came from; printed, not stored</td>
+</tr>
+<tr>
+<td><code>cells</code></td>
+<td>one per machine: <code>code</code>, <code>x</code>, <code>z</code>, <code>rot</code> (0 if left out) and <code>model</code> (optional; a file name in <code>models/</code>, any folder in front of it is dropped)</td>
+</tr>
+</tbody>
+</table>
+<p>The body-shop pack carries one, <code>labs/multiplant/bodyshop/positions.json</code>, with
+the numbers its layout already has: <code>fsmes layout from-freecad
+labs/multiplant/bodyshop/positions.json --check</code> says <code>8 unchanged</code>.</p>
+<p><strong>What the line carries.</strong> The line's <code>unit_label</code> picks what rides the
+belts: <code>bottle</code> (and <code>unit</code>, the default) draws bottles, clear before the
+filler and filled after it; anything else - <code>body</code> on the body shop - draws a
+plain slab the size of a car floor, shorter if the belts are short. The
+<code>cell</code> kind draws a fenced robot cell with an opening on every side.</p>
 <h2 id="your-own-machine-models">Your own machine models<a class="headerlink" href="#your-own-machine-models" title="Permanent link">&para;</a></h2>
 <p>The 3D line view (<code>/dashboard/line/3d</code>) draws every machine from built-in
 shapes - boxes, cylinders, a lathe for the bottles - and those stay the
@@ -4978,7 +5080,7 @@ sibling, whether or not the layout file exists).</p>
 <tbody>
 <tr>
 <td><code>models/&lt;kind&gt;.glb</code></td>
-<td>every machine of that kind: <code>filler</code>, <code>washer</code>, <code>mixer</code>, <code>denester</code>, <code>depalletiser</code>, <code>inspector</code>, <code>packer</code>, <code>palletiser</code>, <code>generic</code> (the kind the layout answer reports for the station)</td>
+<td>every machine of that kind: <code>filler</code>, <code>washer</code>, <code>mixer</code>, <code>denester</code>, <code>depalletiser</code>, <code>inspector</code>, <code>packer</code>, <code>palletiser</code>, <code>cell</code>, <code>generic</code> (the kind the layout answer reports for the station)</td>
 </tr>
 <tr>
 <td><code>models/&lt;code&gt;.glb</code></td>
