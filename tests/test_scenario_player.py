@@ -13,6 +13,7 @@ import socket
 from pathlib import Path
 
 import pytest
+import structlog
 from asyncua import Client, Server, ua
 from typer.testing import CliRunner
 
@@ -112,6 +113,7 @@ def test_play_in_shadow_mode_writes_nothing_and_does_not_connect(monkeypatch):
     monkeypatch.setenv("MES_ERP_MODE", "off")
     monkeypatch.setenv("MES_UNS_MODE", "off")
     get_settings.cache_clear()
+    logging_before = structlog.get_config()
     try:
         # Port 1 answers nobody: had the player tried to connect, it would
         # say so instead of naming shadow mode.
@@ -119,6 +121,7 @@ def test_play_in_shadow_mode_writes_nothing_and_does_not_connect(monkeypatch):
                                           "--endpoint", "opc.tcp://127.0.0.1:1/none"])
     finally:
         get_settings.cache_clear()
+        structlog.configure(**logging_before)
     assert result.exit_code == 1
     assert "Nothing written" in result.output and "Shadow mode" in result.output
 
