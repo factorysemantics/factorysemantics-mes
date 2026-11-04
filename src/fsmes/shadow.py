@@ -91,7 +91,7 @@ class Outbound:
 #: `allowed`    — it runs, because nothing about the plant leaves this box
 #:                by it, and nothing outside this MES changes.
 #:
-#: **36 entries.** The count is stated because a register that quietly loses
+#: **38 entries.** The count is stated because a register that quietly loses
 #: a row is worse than no register, and `tests/test_shadow_mode.py` scans the
 #: source for outbound primitives and fails on any call site not covered by
 #: an entry here.
@@ -152,6 +152,16 @@ REGISTER: tuple[Outbound, ...] = (
         verdict="allowed",
         note="`fsmes opc-verify` and `fsmes opc-browse` connect, browse and "
              "read. Commissioning a shadow plant is exactly this",
+    ),
+    Outbound(
+        name="opc.scenario_play",
+        where="fsmes.integrations.opc.scenario:play",
+        reaches="tags on an OPC UA server, Kepware first, written by `fsmes scenario play`",
+        verdict="refused",
+        note="the player writes only tags on channels its file declares "
+             "Simulator or Memory Based, but it still changes another "
+             "server, so shadow mode stops it before it connects and again "
+             "at the first write",
     ),
     # ------------------------------------------------------------- the ERP
     Outbound(
@@ -421,6 +431,14 @@ REGISTER: tuple[Outbound, ...] = (
         reaches="the MES's own bundled OPC UA server",
         verdict="allowed",
         note="replays recorded tables into that same bundled server",
+    ),
+    Outbound(
+        name="sim.scenario_rehearsal",
+        where="fsmes.integrations.opc.scenario:rehearsal_server",
+        reaches="its own OPC UA server, on loopback, holding a scenario's tags",
+        verdict="allowed",
+        note="`fsmes scenario serve` makes the tags writable so a scenario can "
+             "be rehearsed without Kepware. It is not a plant",
     ),
     Outbound(
         name="sim.harness",

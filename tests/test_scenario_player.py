@@ -105,6 +105,24 @@ def test_check_without_a_server_says_what_is_wrong_and_exits_2(tmp_path):
     assert "line 4:" in result.output and "not a time" in result.output
 
 
+def test_play_in_shadow_mode_writes_nothing_and_does_not_connect(monkeypatch):
+    from fsmes.config import get_settings
+
+    monkeypatch.setenv("MES_SHADOW", "true")
+    monkeypatch.setenv("MES_ERP_MODE", "off")
+    monkeypatch.setenv("MES_UNS_MODE", "off")
+    get_settings.cache_clear()
+    try:
+        # Port 1 answers nobody: had the player tried to connect, it would
+        # say so instead of naming shadow mode.
+        result = CliRunner().invoke(app, ["scenario", "play", str(EXAMPLES / "setpoint-drill.json"),
+                                          "--endpoint", "opc.tcp://127.0.0.1:1/none"])
+    finally:
+        get_settings.cache_clear()
+    assert result.exit_code == 1
+    assert "Nothing written" in result.output and "Shadow mode" in result.output
+
+
 # --------------------------------------------------------------- the safety
 
 

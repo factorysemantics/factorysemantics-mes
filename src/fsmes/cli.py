@@ -2441,6 +2441,12 @@ def scenario_play(
         typer.echo(f"--from {exc}")
         raise typer.Exit(2) from None
     settings = _scenario_settings(endpoint, security, user, password)
+    from fsmes import shadow
+
+    if shadow.enabled(settings):
+        typer.echo(f"Nothing written: {shadow.BANNER} A scenario writes tags on another "
+                   f"server, so it does not run in shadow mode. {shadow.HOW_TO_LEAVE}")
+        raise typer.Exit(1)
 
     async def go() -> int:
         client = await _scenario_connect(settings)

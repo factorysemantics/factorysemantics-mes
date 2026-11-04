@@ -41,6 +41,10 @@ them fails:
 `fsmes scenario check --endpoint` runs exactly these checks, writes nothing,
 and prints one line per tag: type, access, node.
 
+In shadow mode (`MES_SHADOW=true`) `play` writes nothing at all: shadow mode
+promises this MES changes nothing outside its own database, and a scenario
+changes tags on another server. Run the player from a shell without it.
+
 Why the file has to name the driver: Kepware's address space does not say which
 driver a channel uses — its System Tags list names none
 ([Kepware Server help, System Tags](https://support.ptc.com/help/kepware/kepware_server/en/kepware/server/system-tags.html)).

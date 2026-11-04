@@ -38,6 +38,8 @@ from typing import Any
 
 from asyncua import Client, Server, ua
 
+from fsmes import shadow
+
 SAFE_DRIVERS = {"simulator": "Simulator", "memory based": "Memory Based"}
 NODE_ID = re.compile(r"^(ns=\d+;|nsu=[^;]+;)?[isgb]=")
 
@@ -668,7 +670,9 @@ async def play(client: Client, scenario: Scenario, targets: dict[str, Target], *
     """Write every value at its time. Returns how many writes were made.
 
     Refuses to start unless every target was judged writable: a scenario half
-    played is a test of nothing."""
+    played is a test of nothing. Refused outright in shadow mode, which
+    promises that this MES changes nothing outside its own database."""
+    shadow.guard("opc.scenario_play", detail=f"Nothing written from {scenario.source}.")
     blocked = [t for t in targets.values() if t.problem]
     if blocked:
         raise ScenarioError([f"{t.tag.alias}: {t.verdict}: {t.problem}" for t in blocked])
