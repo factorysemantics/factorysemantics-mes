@@ -154,12 +154,27 @@ class Setpoint:
         return self.actual_offset
 
 
-def load_table(directory: Path, name: str) -> list[dict[str, float | int]]:
-    """Read one generated table, converting every column to a number.
+def _cell(v: str | None) -> float | int | str | None:
+    """One CSV cell: None when empty, a number when it reads as one, else the
+    text itself - a batch or carrier identifier is a reading too."""
+    if v is None or v == "":
+        return None
+    if v.lstrip("-").isdigit():
+        return int(v)
+    try:
+        return float(v)
+    except ValueError:
+        return v
+
+
+def load_table(directory: Path, name: str) -> list[dict[str, float | int | str]]:
+    """Read one generated table, converting every numeric column to a number.
 
     Values are typed by content rather than by a schema: the generator writes
     integers for counters and states and decimals for process values, and
     keeping that distinction is what makes State readable as an int downstream.
+    A cell that is not a number is kept as text (an identifier tag); what the
+    server publishes it as comes from the manifest, see `variant_type`.
     """
     path = Path(directory) / f"{name}.csv"
     if not path.exists():
@@ -175,9 +190,7 @@ def load_table(directory: Path, name: str) -> list[dict[str, float | int]]:
             # than read as zero: zero is a reading, and the difference
             # between a reading of zero and no reading at all is the whole
             # point of the scenario that writes one.
-            rows.append({k: (None if v is None or v == ""
-                             else int(v) if v.lstrip("-").isdigit() else float(v))
-                         for k, v in raw.items()})
+            rows.append({k: _cell(v) for k, v in raw.items()})
     if not rows:
         raise ValueError(f"{path} has a header but no rows")
     return rows
@@ -329,12 +342,40 @@ class Inspector:
         await server.write_attribute_value(node.nodeid, ua.DataValue(variant, SourceTimestamp=ts, ServerTimestamp=ts))
 
 
+def variant_type(tag: str, meta: dict) -> ua.VariantType:
+    """What the replay publishes a column as.
+
+    The fixed names keep the types they always had - counters Int64 to match
+    the twin's own simulator, state and alarm words Int32 - and the manifest
+    says the rest: a per-side counter or a defect counter is a counter, a
+    side's state word is an integer, an identifier is text."""
+    kind = meta.get("kind")
+    if kind == "text":
+        return ua.VariantType.String
+    if tag in COUNTERS or kind == "counter":
+        return ua.VariantType.Int64
+    if tag in INTEGER_TAGS or meta.get("integer"):
+        return ua.VariantType.Int32
+    return ua.VariantType.Double
+
+
+def _variant(value, kind: ua.VariantType) -> ua.Variant:
+    if kind is ua.VariantType.String:
+        return ua.Variant(str(value), kind)
+    if kind is ua.VariantType.Double:
+        return ua.Variant(float(value), kind)
+    return ua.Variant(int(value), kind)
+
+
 class ReplayMachine:
     """One station: writes its row of the table to its tags, once per tick."""
 
     def __init__(self, spec: MachineMap, rows: list[dict], nodes: dict,
-                 setpoints: dict | None = None, follows: dict | None = None):
+                 setpoints: dict | None = None, follows: dict | None = None,
+                 types: dict[str, ua.VariantType] | None = None):
         self.spec = spec
+        # tag -> what it is published as; a tag not in here goes by its name.
+        self.types = types or {}
         self.rows = rows
         self.nodes = nodes  # tag name -> node
         # tag -> Setpoint, and pv tag -> the setpoint that drives it.
@@ -377,12 +418,11 @@ class ReplayMachine:
                     value = round(float(value) + offsets[sp.name], sp.decimals)
             # Counters are Int64 to match the twin's own simulator, so the
             # agent's counter handling sees the same types on both paths.
-            if tag in COUNTERS:
-                await node.write_value(ua.Variant(int(value), ua.VariantType.Int64))
-            elif tag in INTEGER_TAGS:
-                await node.write_value(ua.Variant(int(value), ua.VariantType.Int32))
-            else:
+            kind = self.types.get(tag) or variant_type(tag, {})
+            if kind is ua.VariantType.Double:
                 await node.write_value(float(value))
+            else:
+                await node.write_value(_variant(value, kind))
 
 
 async def build_server(settings: Settings, machines: list[MachineMap], directory: Path,
@@ -407,23 +447,36 @@ async def build_server(settings: Settings, machines: list[MachineMap], directory
         nodes: dict = {}
         setpoints: dict = {}
         follows: dict = {}
+        types: dict = {}
+
+        async def add(tag: str, value, kind: ua.VariantType | None = None,
+                      obj=obj, spec=spec):
+            """A tag's variable: under the machine's object by its name, or -
+            for a machine whose map addresses its tags by node id, a Kepware
+            map - at exactly that node id, so the agent reading that map
+            finds every tag where a real server would put it."""
+            node_id = spec.node(tag) if spec.by_node_id else None
+            where = ua.NodeId.from_string(node_id) if node_id else idx
+            if kind is None:
+                return await obj.add_variable(where, tag, value)
+            return await obj.add_variable(where, tag, ua.Variant(value, kind))
 
         for tag in spec.tags:
             meta = tag_meta.get(tag, {})
             if _is_inspection_tag(tag):
                 # An event tag: no column behind it, written per judged unit.
                 if tag in ("InspSerial", "InspMembers"):
-                    nodes[tag] = await obj.add_variable(idx, tag, ua.Variant("", ua.VariantType.String))
+                    nodes[tag] = await add(tag, "", ua.VariantType.String)
                 elif tag == "InspSeq":
-                    nodes[tag] = await obj.add_variable(idx, tag, ua.Variant(0, ua.VariantType.Int64))
+                    nodes[tag] = await add(tag, 0, ua.VariantType.Int64)
                 elif tag == "InspPass":
-                    nodes[tag] = await obj.add_variable(idx, tag, ua.Variant(0, ua.VariantType.Int32))
+                    nodes[tag] = await add(tag, 0, ua.VariantType.Int32)
                 else:
-                    nodes[tag] = await obj.add_variable(idx, tag, 0.0)
+                    nodes[tag] = await add(tag, 0.0)
                 continue
             if meta.get("kind") == "sp":
                 # A commanded value: writable, and no column behind it.
-                node = await obj.add_variable(idx, tag, float(meta["initial"]))
+                node = await add(tag, float(meta["initial"]))
                 await node.set_writable()
                 nodes[tag] = node
                 setpoints[tag] = Setpoint(tag, meta, node, period_s)
@@ -435,18 +488,15 @@ async def build_server(settings: Settings, machines: list[MachineMap], directory
                     f"Regenerate the line (`fsmes sim-generate <line.json>`) so "
                     f"the data and its manifest agree.")
             initial = rows[0][tag]
-            if tag in COUNTERS:
-                nodes[tag] = await obj.add_variable(
-                    idx, tag, ua.Variant(int(initial), ua.VariantType.Int64))
-            elif tag in INTEGER_TAGS:
-                nodes[tag] = await obj.add_variable(
-                    idx, tag, ua.Variant(int(initial), ua.VariantType.Int32))
+            kind = types[tag] = variant_type(tag, meta)
+            if kind is ua.VariantType.Double:
+                nodes[tag] = await add(tag, float(initial))
             else:
-                nodes[tag] = await obj.add_variable(idx, tag, float(initial))
+                nodes[tag] = await add(tag, _variant(initial, kind).Value, kind)
             if meta.get("follows"):
                 follows[tag] = meta["follows"]
 
-        replays.append(ReplayMachine(spec, rows, nodes, setpoints, follows))
+        replays.append(ReplayMachine(spec, rows, nodes, setpoints, follows, types))
         inspection = manifest.get("tables", {}).get(spec.object, {}).get("inspection")
         if inspection:
             inspectors.append(Inspector(spec, inspection, nodes, flow, seed=len(inspectors) + 1))
