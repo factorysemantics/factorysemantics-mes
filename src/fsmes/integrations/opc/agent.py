@@ -692,12 +692,17 @@ class _Handler:
         """
         latest: dict[tuple[str, str], int] = {}
         for i, (spec, tag, _value) in enumerate(decisions):
-            if tag in COUNTER_TAGS:
+            if tag in spec.counter_tags:
                 latest[(spec.equipment, tag)] = i
         deltas: dict[str, dict[str, int]] = {}
         order: list[str] = []
+        tags_of: dict[str, tuple[str, ...]] = {}  # machine -> the tags it counts on
         for i, (spec, tag, value) in enumerate(decisions):
-            if tag == "State":
+            if tag == spec.state_tag:
+                if tag == spec.reason_tag:
+                    # A downtime code read as the state: the one value both
+                    # stops the machine and says why.
+                    self._reasons[spec.equipment] = value
                 try:
                     with session.begin_nested():
                         self._record(session, spec, tag, value)
@@ -719,14 +724,19 @@ class _Handler:
                 except Exception as exc:
                     _failed("failed to process data change", exc,
                             equipment=spec.equipment, tag=tag, value=value)
-            elif tag in COUNTER_TAGS and latest.get((spec.equipment, tag)) == i:
+            elif tag in spec.counter_tags and latest.get((spec.equipment, tag)) == i:
                 self._record(session, spec, tag, value)
                 delta = self._counter_delta(spec.equipment, tag, int(value), pending)
                 if delta:
                     if spec.equipment not in deltas:
                         order.append(spec.equipment)
-                    deltas.setdefault(spec.equipment, {})[
-                        "good" if tag == "GoodCount" else "scrap"] = delta
+                        tags_of[spec.equipment] = tuple(spec.counter_tags)
+                    # A machine counting on several tags (a press's two tools)
+                    # books their sum; each tag's own delta came from its own
+                    # baseline, and its value went to history under its name.
+                    role = spec.counter_tags[tag]
+                    quantities = deltas.setdefault(spec.equipment, {})
+                    quantities[role] = quantities.get(role, 0) + delta
         for code in order:
             quantities = deltas[code]
             try:
@@ -747,7 +757,7 @@ class _Handler:
                 # move with them, or the units in `quantities` are gone: drop
                 # them from the pending set and the next reading re-measures
                 # the delta from where this one started.
-                for tag in COUNTER_TAGS:
+                for tag in tags_of[code]:
                     pending.pop((code, tag), None)
                 _failed("failed to book production", exc, equipment=code,
                         units_owed=sum(quantities.values()), **quantities)

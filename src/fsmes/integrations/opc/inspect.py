@@ -146,7 +146,7 @@ async def verify(settings: Settings, *, seconds: int = 10) -> int:
                     a = b = "-"
                 else:
                     moved = moved or a != b
-                    if tag == "State":
+                    if tag == spec.state_tag:
                         try:
                             note = f"-> {spec.to_state(b).value}"
                         except ValueError as exc:

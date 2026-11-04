@@ -12,6 +12,42 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **A machine can count on several tags, and a machine with no state word can
+  still say when it is down.** A tag map entry's `counters` names the tags
+  that count good and the tags that count scrap -
+  `{"good": ["Good_A", "Good_B"], "scrap": ["Scrap_A", "Scrap_B"]}` for a
+  press with two tools - and the agent books their sum, each tag's delta on
+  its own, so a counter that resets on one tool does not book the other's
+  parts twice. `state_tag` names the tag the state is read from when it is not
+  `State`, and a `state_map` key `"*"` maps every value the map does not list:
+  a PLC that publishes only a downtime code is mapped `{"0": "running", "*":
+  "down"}` with the same tag as its `reason_tag`, and says nothing it cannot
+  know (no starved, no blocked). A `counters` entry that names an unknown
+  role, lists a tag twice, names none, or sits on a machine with `counts:
+  false` is refused when the map loads. A map without these fields reads
+  exactly as before.
+
+- **The line generator can describe machines side by side, machines with two
+  sides, defect counters and identifiers.** A station's `stage` puts it beside
+  the stations of the same stage, sharing one buffer in front and one behind;
+  `sides` gives one machine per-side counters (a template with `{side}` in
+  it) and a per-side state, and a `down` event can stop one side while the
+  other runs on at its own share of the rate; `scrap_kinds` splits a
+  station's scrap across named defect counters, and a `scrap_burst` can name
+  the kind; `texts` publishes identifiers (a batch, a tray, a carrier) that step
+  every `every_s` seconds. The replay serves text as String, and serves a
+  machine that the tag map addresses by `nodes` at those node ids, so a map
+  written in a vendor's addressing can be proved against the replay before
+  the PLC exists. Every existing line generates byte-identical output.
+
+- **A machine that stopped on a downtime code says why in the plant's words.**
+  The machine page used to print the raw value the machine gave
+  (`FaultCode 41`). When the tag map's `reason_map` turned it into one of the
+  plant's codes, the page now reads `Tool A crash (FaultCode 41)`, and
+  `GET /equipment/{code}` carries `reason_code` and `reason_name` beside
+  `reason`. A code the map does not know still shows only what the machine
+  said.
+
 - **A machine can hold where it stands, and the 3D line view lays it out
   there.** Equipment gains `pos_x`, `pos_y`, `pos_z` (metres; z is height)
   and `heading` (degrees), nullable, with a migration. The Satisfactory

@@ -46,6 +46,16 @@ servers disagree about all of it:
                     already carries the MES state name. A PLC almost never does:
                     it sends an integer, and only the site knows that 3 means
                     "blocked" and that blocked is idle time, not downtime.
+                    The key "*", if present, is the state for every value the
+                    map does not list - {"0": "running", "*": "down"} for a
+                    downtime code read as the state. Without it an unlisted
+                    value is refused, never guessed.
+    state_tag       the tag the state is read from; absent means State. A
+                    machine whose PLC keeps no state word, only a downtime
+                    code that is zero while it may run, names that tag here
+                    (and usually as its `reason_tag` too, so the one value
+                    both stops the machine and says why). What such a tag
+                    cannot say - starved, blocked, idle - it does not say.
     order_tag       the writable tag the MES pushes the order code down to, or
                     null for a read-only source (a CSV replay, a historian, a
                     server the MES has no write rights on). Null means the
@@ -64,6 +74,19 @@ servers disagree about all of it:
                     {"101": "weld_gun_fault"}. A value the map does not know
                     is still written on the stop as what the machine said
                     ("FaultCode 999") with no code: unknown is not a guess.
+    counters        the tags the machine counts on, when it is not one good
+                    and one scrap counter: {"good": ["Good_A", "Good_B"],
+                    "scrap": ["Scrap_A", "Scrap_B"]}. A press with two tools
+                    keeps a counter per tool and no total; a machine with
+                    several outfeeds can keep one per outfeed. The machine's good is the sum of what its
+                    good tags counted, its scrap the sum of its scrap tags,
+                    each tag's own increase taken from its own last value -
+                    so one tag resetting or arriving late moves nothing else.
+                    Each tag is also recorded under its own name, which is
+                    where the per-side split lives. Absent means GoodCount
+                    and ScrapCount, which is every machine before this field.
+                    A role may be an empty list (a machine counting no scrap)
+                    but not both.
 
 Only `equipment` and one of `object`/`node_id`/`nodes` are required; the rest
 default to the twin's own simulator conventions, so existing maps keep working.
@@ -124,6 +147,20 @@ class MachineMap:
     counts: bool = True  # False: no counters, no production booked
     reason_tag: str | None = None  # the tag naming why it stopped
     reason_map: dict[str, str] = field(default_factory=dict)  # raw -> reason code
+    # role ("good" / "scrap") -> the tags summed into it. Empty = GoodCount / ScrapCount.
+    counters: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    state_tag: str = "State"  # the tag the machine's state is read from
+
+    @property
+    def counter_tags(self) -> dict[str, str]:
+        """Every tag this machine counts on -> what it counts, `good` or `scrap`.
+
+        Empty for a machine that counts nothing (`counts: false`)."""
+        if not self.counts:
+            return {}
+        if not self.counters:
+            return {"GoodCount": "good", "ScrapCount": "scrap"}
+        return {tag: role for role in ("good", "scrap") for tag in self.counters.get(role, ())}
 
     @property
     def tags(self) -> tuple[str, ...]:
@@ -134,9 +171,9 @@ class MachineMap:
         ScrapCount node, and subscribing to a tag that does not exist would
         turn one missing counter into a machine that reports nothing at all.
         """
-        counters = ("GoodCount", "ScrapCount") if self.counts else ()
+        counters = tuple(self.counter_tags)
         reason = (self.reason_tag,) if self.reason_tag else ()
-        canonical = ("State", *counters, *reason, self.analog, *self.extra_tags)
+        canonical = (self.state_tag, *counters, *reason, self.analog, *self.extra_tags)
         # Dedupe while keeping order: a map that lists its primary analog
         # again under extras should not subscribe to it twice.
         seen: dict[str, None] = {}
@@ -172,7 +209,14 @@ class MachineMap:
     def acts_on(self, tag: str) -> bool:
         """True for a tag the agent books from rather than only records:
         the state, the counters, and the tag that says why it stopped."""
-        return tag in SEMANTIC_TAGS or (self.reason_tag is not None and tag == self.reason_tag)
+        if tag == self.state_tag or (self.reason_tag is not None and tag == self.reason_tag):
+            return True
+        if self.counters or self.state_tag != "State":
+            # A machine that names its counters counts on those alone: a
+            # GoodCount it also publishes is recorded, never booked a second
+            # time. And one whose state is another tag is not set by a State.
+            return tag in self.counter_tags
+        return tag in SEMANTIC_TAGS
 
     def reason_for(self, value) -> tuple[str | None, str | None]:
         """`(reason_code, reason)` for a reason-tag value, or `(None, None)`
@@ -203,7 +247,8 @@ class MachineMap:
             return EquipmentStateName(str(value).strip().lower())
         key = str(int(value)) if isinstance(value, (int, float)) and not isinstance(value, bool) else str(value)
         try:
-            return self.state_map[key]
+            return self.state_map[key] if "*" not in self.state_map else (
+                self.state_map.get(key) or self.state_map["*"])
         except KeyError:
             raise ValueError(
                 f"{self.equipment}: State={value!r} is not in the tag map's state_map "
@@ -345,6 +390,8 @@ def load_tag_map(path: Path, manifest: dict | None = None) -> list[MachineMap]:
             counts=bool(m.get("counts", True)),
             reason_tag=m.get("reason_tag") or None,
             reason_map={str(k): str(v) for k, v in (m.get("reason_map") or {}).items()},
+            counters=_counters(m),
+            state_tag=str(m.get("state_tag") or "State"),
         )
         if spec.reason_map and not spec.reason_tag:
             raise ValueError(
@@ -353,7 +400,7 @@ def load_tag_map(path: Path, manifest: dict | None = None) -> list[MachineMap]:
         if not spec.tags:
             raise ValueError(
                 f"tag map entry {spec.equipment!r} subscribes to nothing — its 'nodes' has none of "
-                f"State/GoodCount/ScrapCount/{spec.analog}"
+                f"State/{'/'.join(spec.counter_tags) or 'its counters'}/{spec.analog}"
             )
         machines.append(spec)
     return machines
@@ -377,6 +424,39 @@ async def folder_for(objects, idx: int, spec: MachineMap, made: dict) -> object:
     return parent
 
 
+def _counters(entry: dict) -> dict[str, tuple[str, ...]]:
+    """A machine's `counters`, checked: refused rather than half-read, because a
+    counter tag booked under the wrong role is production that never happened."""
+    block = entry.get("counters")
+    if block is None:
+        return {}
+    who = entry.get("equipment")
+    if not isinstance(block, dict) or set(block) - {"good", "scrap"}:
+        raise ValueError(
+            f"tag map entry {who!r}: `counters` says which tags count good and which count "
+            f"scrap - {{\"good\": [...], \"scrap\": [...]}}; it says {block!r}.")
+    if entry.get("counts") is False:
+        raise ValueError(f"tag map entry {who!r} has `counters` and `counts: false`: it names "
+                         f"the tags it counts on and says it counts nothing.")
+    out: dict[str, tuple[str, ...]] = {}
+    seen: set[str] = set()
+    for role in ("good", "scrap"):
+        tags = block.get(role) or []
+        if not isinstance(tags, list) or not all(isinstance(t, str) and t.strip() for t in tags):
+            raise ValueError(f"tag map entry {who!r}: `counters.{role}` is a list of tag names; "
+                             f"it says {tags!r}.")
+        for tag in tags:
+            if tag in seen:
+                raise ValueError(f"tag map entry {who!r}: {tag!r} is listed twice in `counters`; "
+                                 f"a count summed twice is production that did not happen.")
+            seen.add(tag)
+        out[role] = tuple(tags)
+    if not seen:
+        raise ValueError(f"tag map entry {who!r}: `counters` names no tag at all. Leave it out "
+                         f"for GoodCount and ScrapCount, or write `counts: false`.")
+    return out
+
+
 def _extra_tags(entry: dict, tables: dict) -> tuple[str, ...]:
     """What else this machine subscribes to, beyond the canonical four."""
     if entry.get("extra_tags") is not None:
@@ -384,6 +464,8 @@ def _extra_tags(entry: dict, tables: dict) -> tuple[str, ...]:
     if entry.get("node_id") or entry.get("nodes"):
         return ()                                         # see load_tag_map
     published = tables.get(entry.get("object") or entry.get("equipment"), {})
-    canonical = {"State", "GoodCount", "ScrapCount", entry.get("reason_tag"),
+    counters = entry.get("counters") or {}
+    canonical = {"State", entry.get("state_tag"), "GoodCount", "ScrapCount", entry.get("reason_tag"),
+                 *(counters.get("good") or ()), *(counters.get("scrap") or ()),
                  entry.get("analog", DEFAULT_ANALOG), "TSec"}
     return tuple(tag for tag in published.get("tags", ()) if tag not in canonical)
