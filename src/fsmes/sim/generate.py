@@ -155,6 +155,9 @@ def _validate_line(config: dict, label: str) -> dict:
         if cv is not None and not 0 < float(cv) < 1:
             sys.exit(f"{label}: {station['name']} `cycle_cv` is the spread of its cycle as a "
                      f"fraction of the cycle, between 0 and 1; it says {cv!r}.")
+        _validate_sides(station, label)
+        _validate_extras(station, label)
+    _validate_stages(stations, label)
 
     duration = int(config.get("duration_s", 3600))
     for event in config.get("events", []):
@@ -176,6 +179,23 @@ def _validate_line(config: dict, label: str) -> dict:
             if event["unit"] not in units:
                 sys.exit(f"{label}: event 'down' names unit {event['unit']!r} on {station}, "
                          f"which has {', '.join(units) or 'none'}.")
+        if event.get("side") is not None:
+            sides = [str(s) for s in (stations[names.index(station)].get("sides") or {})
+                     .get("names", [])]
+            if kind != "down":
+                sys.exit(f"{label}: event {kind!r} names side {event['side']!r}; only a "
+                         "`down` happens to one side - everything else is the station's.")
+            if str(event["side"]) not in sides:
+                sys.exit(f"{label}: event 'down' names side {event['side']!r} on {station}, "
+                         f"which has {', '.join(sides) or 'none'}.")
+            if "fault_code" in event:
+                sys.exit(f"{label}: a side's stop on {station} carries no `fault_code`: the "
+                         "machine runs on with its other side, so it holds no fault number.")
+        if kind == "scrap_burst" and event.get("scrap_kind") is not None:
+            kinds = (stations[names.index(station)].get("scrap_kinds") or {})
+            if event["scrap_kind"] not in kinds:
+                sys.exit(f"{label}: scrap_burst names scrap kind {event['scrap_kind']!r} on "
+                         f"{station}, which has {', '.join(kinds) or 'none'}.")
         if "fault_code" in event and (kind != "down" or not isinstance(event["fault_code"], int)
                                       or isinstance(event["fault_code"], bool)
                                       or event["fault_code"] <= 0):
@@ -212,6 +232,141 @@ def _validate_line(config: dict, label: str) -> dict:
                 sys.exit(f"{label}: event {kind!r} effect names analog {effect.get('analog')!r} on {target}, "
                          f"which has {', '.join(analogs) or 'none'}.")
     return config
+
+
+#: The columns every station publishes, whatever else it carries. A side
+#: counter, a scrap kind or a text tag with one of these names would be a
+#: second column of the same name, and a CSV reader keeps only one of them.
+_STATION_COLUMNS = ("TSec", "State", "GoodCount", "ScrapCount", "TotalCount", "AlarmWord",
+                    "CycleTimeMs", "RunMinutes", "ReadyBit", "FaultCode")
+_SIDE_ROLES = ("good", "scrap")
+
+
+def _validate_sides(station: dict, label: str) -> None:
+    """A station's sides: the halves of one machine that count apart.
+
+    A press with two tools runs both at once and its PLC keeps a good and a
+    scrap counter per tool; a machine with several outfeeds can count each
+    one apart. The machine is one machine - one state, one place on the line -
+    and its parts are counted on their own tags. `names` are the sides,
+    `counters` the tag names each one publishes (a template with `{side}`
+    in it, and what it counts: good or scrap), and `state`, if given, the
+    tag carrying each side's own state word.
+    """
+    sides = station.get("sides")
+    if sides is None:
+        return
+    name = station["name"]
+    names = [str(s) for s in sides.get("names") or ()]
+    if len(names) < 2 or len(set(names)) != len(names):
+        sys.exit(f"{label}: {name} `sides.names` lists the sides of the machine - two or more, "
+                 f"each once; it says {sides.get('names')!r}.")
+    counters = sides.get("counters") or {}
+    if not counters:
+        sys.exit(f"{label}: {name} has `sides` and no `sides.counters`, so nothing is counted "
+                 f"per side. Name each counter tag with `{{side}}` in it, and whether it counts "
+                 f"good or scrap.")
+    for template, role in counters.items():
+        if "{side}" not in template or role not in _SIDE_ROLES:
+            sys.exit(f"{label}: {name} side counter {template!r}: {role!r} - a side counter is a "
+                     f"tag name with `{{side}}` in it, counting `good` or `scrap`.")
+    state = sides.get("state")
+    if state is not None and "{side}" not in str(state):
+        sys.exit(f"{label}: {name} `sides.state` is the tag name of each side's state word, "
+                 f"with `{{side}}` in it; it says {state!r}.")
+
+
+def _validate_extras(station: dict, label: str) -> None:
+    """Scrap kinds and text tags, and that no column is published twice."""
+    name = station["name"]
+    kinds = station.get("scrap_kinds")
+    if kinds is not None and (not isinstance(kinds, dict) or not kinds or any(
+            isinstance(w, bool) or not isinstance(w, (int, float)) or w <= 0
+            for w in kinds.values())):
+        sys.exit(f"{label}: {name} `scrap_kinds` maps each defect counter's tag name to "
+                 f"its share of the scrap, a positive number; it says {kinds!r}.")
+    for text in station.get("texts") or ():
+        tag = text.get("name")
+        every = text.get("every_s")
+        if not tag or not isinstance(every, int) or isinstance(every, bool) or every <= 0:
+            sys.exit(f"{label}: {name} text tag {text!r} needs a `name` and `every_s`, the "
+                     f"whole seconds between one value and the next.")
+        try:
+            sample = text_value(text, 0)
+        except (KeyError, IndexError, ValueError) as exc:
+            sys.exit(f"{label}: {name} text tag {tag!r} `format` {text.get('format')!r} does not "
+                     f"render with a number `{{n}}`: {exc}.")
+        if not sample.isascii() or any(c in sample for c in ',"\r\n') or not sample.strip():
+            sys.exit(f"{label}: {name} text tag {tag!r} renders {sample!r}; a value is printable "
+                     f"ASCII with no comma, quote or line break, because it is a CSV cell.")
+    extra = [*side_columns(station), *(kinds or {}),
+             *(t["name"] for t in station.get("texts") or ())]
+    fixed = {*_STATION_COLUMNS, *(a.get("name", "Value") for a in station_analogs(station))}
+    clash = sorted({c for c in extra if c in fixed or extra.count(c) > 1})
+    if clash:
+        sys.exit(f"{label}: {name} would publish {', '.join(clash)} twice - a side counter, a "
+                 f"scrap kind or a text tag has the name of another column.")
+
+
+def _validate_stages(stations: list[dict], label: str) -> None:
+    """Stations sharing a `stage` stand side by side, not one after another.
+
+    They must be listed together: a stage is one place on the line, fed by one
+    buffer and feeding one, and a label that comes back after another station
+    would be two places with one name."""
+    seen: list[str] = []
+    for station in stations:
+        stage = station.get("stage")
+        if stage is None:
+            seen.append("")
+            continue
+        if not isinstance(stage, str) or not stage or not all(c.isalnum() or c == "_" for c in stage):
+            sys.exit(f"{label}: {station['name']} `stage` {stage!r} - letters, digits and "
+                     f"underscore only.")
+        if stage in seen and seen[-1] != stage:
+            sys.exit(f"{label}: stage {stage!r} comes back after another station. The machines "
+                     f"of one stage are listed together, because they stand together.")
+        seen.append(stage)
+
+
+def stage_of(stations: list[dict]) -> list[int]:
+    """Each station's place on the line, counting parallel machines once.
+
+    A station with no `stage` is a place of its own, so a line that names no
+    stages has one place per station - which is the serial line every config
+    before stages described, buffer for buffer."""
+    places: list[int] = []
+    for i, station in enumerate(stations):
+        stage = station.get("stage")
+        if i and stage is not None and stage == stations[i - 1].get("stage"):
+            places.append(places[-1])
+        else:
+            places.append(places[-1] + 1 if places else 0)
+    return places
+
+
+def side_columns(station: dict) -> list[str]:
+    """Every per-side column a station publishes, in table order: each
+    counter template for each side, then each side's state word."""
+    sides = station.get("sides")
+    if not sides:
+        return []
+    names = [str(s) for s in sides.get("names") or ()]
+    columns = [template.format(side=side) for template in sides.get("counters") or {}
+               for side in names]
+    if sides.get("state"):
+        columns += [str(sides["state"]).format(side=side) for side in names]
+    return columns
+
+
+def text_value(text: dict, t: int) -> str:
+    """What a text tag says at line second `t`: its `format` with `{n}` the
+    number of the current value, stepping every `every_s` seconds from
+    `first` (`phase` seconds into its first step at t=0). A batch, a tray or a
+    carrier has an identifier that changes when the next one starts; that is
+    all a stub of one needs to be."""
+    n = int(text.get("first", 1)) + (t + int(text.get("phase", 0))) // int(text["every_s"])
+    return str(text.get("format", "{n}")).format(n=n)
 
 
 def load_config(path: Path) -> dict:
@@ -400,6 +555,7 @@ def simulate(config: dict) -> dict[str, list[list]]:
     quiet: dict[str, list[dict]] = {}                 # station -> windows a tag does not arrive in
     rates: dict[str, list[dict]] = {}                 # station -> windows it runs at another rate
     unit_downs: dict[tuple[str, str], list[tuple[int, int, int]]] = {}  # (station, unit) -> (start, end, code)
+    side_downs: dict[tuple[str, str], list[tuple[int, int]]] = {}  # (station, side) -> windows
     down_codes: dict[str, list[tuple[int, int, int]]] = {}  # station -> its own downs' fault numbers
 
     for event in config.get("events", []):
@@ -410,6 +566,9 @@ def simulate(config: dict) -> dict[str, list[list]]:
                  "start": int(event["start"]), "end": int(event["end"])})
         if kind == "changeover":
             changeovers.append((int(event["start"]), int(event["end"])))
+        elif kind == "down" and event.get("side") is not None:
+            side_downs.setdefault((station, str(event["side"])), []).append(
+                (int(event["start"]), int(event["end"])))
         elif kind == "down" and event.get("unit") is not None:
             unit_downs.setdefault((station, event["unit"]), []).append(
                 (int(event["start"]), int(event["end"]), int(event.get("fault_code", 0))))
@@ -467,7 +626,13 @@ def simulate(config: dict) -> dict[str, list[list]]:
         return float(station["rate_per_min"])
 
     # --- the line itself -------------------------------------------------
-    buffers = [initial] * (n - 1)      # buffer[i] sits after station i
+    # A buffer sits after each *place* on the line, not each station: the
+    # machines of one `stage` stand side by side, draw from the buffer before
+    # them and fill the one after. A line with no stages has a place per
+    # station, and these are the buffers it always had.
+    place = stage_of(stations)
+    last_place = place[-1]
+    buffers = [initial] * last_place   # buffer[k] sits after place k
     good = [0] * n
     scrap = [0] * n
     run_seconds = [0] * n              # what each machine reports as its runtime
@@ -487,6 +652,19 @@ def simulate(config: dict) -> dict[str, list[list]]:
     serviced = [[(-1, -1)] * len(s.get("units", [])) for s in stations]
     unit_run = [[0] * len(s.get("units", [])) for s in stations]
     fault = [0] * n                    # the fault number the station holds this tick
+    # Sides: per station, per side - its good and scrap so far, and whose turn
+    # the next unit is. A unit goes to the next side that is running, so two
+    # tools share a press's output evenly and one stopped tool's share goes
+    # to nobody: the press runs at the rate its running sides make.
+    side_names = [[str(x) for x in (s.get("sides") or {}).get("names", [])] for s in stations]
+    side_good = [[0] * len(names) for names in side_names]
+    side_scrap = [[0] * len(names) for names in side_names]
+    side_turn = [0] * n
+    kinds = [list((s.get("scrap_kinds") or {}).items()) for s in stations]
+    kind_count = [[0] * len(k) for k in kinds]
+
+    def side_down(name: str, side: str, t: int) -> bool:
+        return any(in_win(t, a, b) for a, b in side_downs.get((name, side), []))
 
     rows: dict[str, list[list]] = {s["name"]: [] for s in stations}
     for s in stations:
@@ -553,10 +731,15 @@ def simulate(config: dict) -> dict[str, list[list]]:
             if any(in_win(t, a, b) for a, b in starved.get(name, [])):
                 states[i] = STARVED
                 continue
-            if i < n - 1 and buffers[i] >= capacity:
+            k = place[i]
+            live = [j for j, side in enumerate(side_names[i]) if not side_down(name, side, t)]
+            if side_names[i] and not live:
+                states[i] = DOWN          # every side stopped: the machine makes nothing
+                continue
+            if k < last_place and buffers[k] >= capacity:
                 states[i] = BLOCKED       # no space downstream
                 continue
-            if i > 0 and buffers[i - 1] <= 0:
+            if k > 0 and buffers[k - 1] <= 0:
                 states[i] = STARVED       # nothing upstream (station 0 pulls from raw)
                 continue
 
@@ -565,18 +748,19 @@ def simulate(config: dict) -> dict[str, list[list]]:
                     cycle_len[i] = _draw_cycle(rng, station, rate_at(station, t))
                 accum[i] += 1.0 / cycle_len[i]
             else:
-                accum[i] += rate_at(station, t) / 60.0
+                accum[i] += rate_at(station, t) / 60.0 * (
+                    len(live) / len(side_names[i]) if side_names[i] else 1)
             take = int(accum[i])
             if take <= 0:
                 continue  # still RUNNING, just mid-cycle
             accum[i] -= take
             if station.get("cycle_cv"):
                 cycle_len[i] = _draw_cycle(rng, station, rate_at(station, t))
-            if i > 0:
-                take = min(take, buffers[i - 1])
-                buffers[i - 1] -= take
-            if i < n - 1:
-                take = min(take, capacity - buffers[i])
+            if k > 0:
+                take = min(take, buffers[k - 1])
+                buffers[k - 1] -= take
+            if k < last_place:
+                take = min(take, capacity - buffers[k])
 
             scrap_pct = float(station.get("scrap_pct", 0.0))
             for burst in bursts.get(name, []):
@@ -584,8 +768,22 @@ def simulate(config: dict) -> dict[str, list[list]]:
                     scrap_pct = float(burst["scrap_pct"])
             bad = sum(1 for _ in range(take) if rng.random() < scrap_pct / 100.0)
             ok = take - bad
-            if i < n - 1:
-                buffers[i] += ok
+            if k < last_place:
+                buffers[k] += ok
+            if live:
+                for tally, count in ((side_good[i], ok), (side_scrap[i], bad)):
+                    for _ in range(count):
+                        tally[live[side_turn[i] % len(live)]] += 1
+                        side_turn[i] += 1
+            if kinds[i] and bad:
+                burst_kind = next((b["scrap_kind"] for b in bursts.get(name, [])
+                                   if b.get("scrap_kind") is not None
+                                   and in_win(t, int(b["start"]), int(b["end"]))), None)
+                names_, weights = zip(*kinds[i], strict=True)
+                for _ in range(bad):
+                    which = (names_.index(burst_kind) if burst_kind is not None
+                             else rng.choices(range(len(names_)), weights)[0])
+                    kind_count[i][which] += 1
             produced[i], scrapped[i] = take, bad
             good[i] += ok
             scrap[i] += bad
@@ -604,6 +802,9 @@ def simulate(config: dict) -> dict[str, list[list]]:
             if t in resets.get(station["name"], []):
                 good[i] = 0
                 scrap[i] = 0
+                side_good[i] = [0] * len(side_names[i])
+                side_scrap[i] = [0] * len(side_names[i])
+                kind_count[i] = [0] * len(kinds[i])
 
         # --- what each machine publishes --------------------------------
         # The physics above is untouched by the state filter: `states` drives
@@ -698,6 +899,11 @@ def simulate(config: dict) -> dict[str, list[list]]:
                 0 if shown[i] in (DOWN, CHANGEOVER) else 1,
                 *values,
                 *([fault[i]] if station_has_faults(config, station) else []),
+                *_side_values(station, side_names[i], side_good[i], side_scrap[i],
+                              [DOWN if side_down(name, side, t) else shown[i]
+                               for side in side_names[i]]),
+                *kind_count[i],
+                *(text_value(text, t) for text in station.get("texts") or ()),
             ])
             for j, unit in enumerate(station.get("units") or ()):
                 rows[unit_table(station, unit)].append(
@@ -706,9 +912,23 @@ def simulate(config: dict) -> dict[str, list[list]]:
                               serviced[i][j][0] <= t < serviced[i][j][1],
                               wear[i][j], unit_run[i], j))
 
-        rows["Line"].append([t, orders[order_index], 0 if changing else 1, good[-1]])
+        # What the line made is what its last place made - every machine of
+        # it, when the line ends in machines side by side.
+        made = sum(good[i] for i in range(n) if place[i] == last_place)
+        rows["Line"].append([t, orders[order_index], 0 if changing else 1, made])
 
     return rows
+
+
+def _side_values(station: dict, names: list[str], good: list[int], scrap: list[int],
+                 states: list[int]) -> list[int]:
+    """A station's per-side columns, in `side_columns` order."""
+    sides = station.get("sides")
+    if not sides:
+        return []
+    values = [(good if role == "good" else scrap)[j]
+              for role in (sides.get("counters") or {}).values() for j in range(len(names))]
+    return values + (list(states) if sides.get("state") else [])
 
 
 def _draw_cycle(rng: random.Random, station: dict, rate: float) -> float:
@@ -780,6 +1000,8 @@ def write_output(config: dict, rows: dict[str, list[list]], out: Path,
             "TSec", "State", "GoodCount", "ScrapCount", "TotalCount", "AlarmWord",
             "CycleTimeMs", "RunMinutes", "ReadyBit", *signals,
             *(["FaultCode"] if station_has_faults(config, station) else []),
+            *side_columns(station), *(station.get("scrap_kinds") or {}),
+            *(text["name"] for text in station.get("texts") or ()),
         ]
         for unit in station.get("units") or ():
             headers[unit_table(station, unit)] = unit_header(unit)
@@ -795,13 +1017,18 @@ def write_output(config: dict, rows: dict[str, list[list]], out: Path,
     # schema.ini pins column types so the ODBC text driver never guesses wrong.
     int_cols = {"TSec", "State", "GoodCount", "ScrapCount", "CycleTimeMs",
                 "OrderId", "OrderActive", "LineGoodCount", "FaultCode"}
+    text_cols: set[str] = set()
+    for station in config["stations"]:
+        int_cols.update(side_columns(station), station.get("scrap_kinds") or {})
+        text_cols.update(text["name"] for text in station.get("texts") or ())
     lines = []
     for table, header in headers.items():
         lines.append(f"[{table}.csv]")
         lines.append("Format=CSVDelimited")
         lines.append("ColNameHeader=True")
         for index, column in enumerate(header, 1):
-            lines.append(f"Col{index}={column} {'Long' if column in int_cols else 'Double'}")
+            kind = "Text" if column in text_cols else "Long" if column in int_cols else "Double"
+            lines.append(f"Col{index}={column} {kind}")
         lines.append("")
     (out / "schema.ini").write_text("\n".join(lines), encoding="ascii")
 
@@ -870,6 +1097,13 @@ def write_manifest(config: dict, out: Path) -> Path:
                 "drives": spec["drives"], "decimals": spec["decimals"]}
         if station_has_faults(config, station):
             tags["FaultCode"] = _FAULT_TAG
+        tags.update(_side_tags(station))
+        for kind in station.get("scrap_kinds") or {}:
+            tags[kind] = {"kind": "counter", "writable": False,
+                          "note": "scrap of this kind; the kinds add up to ScrapCount"}
+        for text in station.get("texts") or ():
+            tags[text["name"]] = {"kind": "text", "writable": False,
+                                  "note": f"an identifier, the next one every {text['every_s']} s"}
         tables[station["name"]] = {"tags": tags}
         if inspection:
             tables[station["name"]]["inspection"] = inspection
@@ -890,6 +1124,26 @@ def write_manifest(config: dict, out: Path) -> Path:
     path = out / MANIFEST_NAME
     path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     return path
+
+
+def _side_tags(station: dict) -> dict[str, dict]:
+    """The manifest entries of a station's per-side columns."""
+    sides = station.get("sides")
+    if not sides:
+        return {}
+    names = [str(x) for x in sides.get("names") or ()]
+    tags: dict[str, dict] = {}
+    for template, role in (sides.get("counters") or {}).items():
+        for side in names:
+            tags[template.format(side=side)] = {
+                "kind": "counter", "writable": False, "side": side, "counts": role,
+                "note": f"the {role} counted by side {side} alone"}
+    if sides.get("state"):
+        for side in names:
+            tags[str(sides["state"]).format(side=side)] = {
+                "kind": "state", "integer": True, "writable": False, "side": side,
+                "note": "side's own state: 4 while it is stopped, the machine's otherwise"}
+    return tags
 
 
 _FAULT_TAG = {"kind": "state", "writable": False,
