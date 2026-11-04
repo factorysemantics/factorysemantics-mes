@@ -1,0 +1,17 @@
+{
+  "_note": "A set-and-ramp drill against the KepSim replay server (`fsmes run-opc-sim --replay`): its setpoints are the tags it lets a client write. Feed rate steps down, the washer is ramped up three degrees over a minute and set back. The process values that follow them move on the replay's own lag.",
+  "name": "setpoint drill",
+  "namespace": "urn:mes-twin:sim",
+  "drivers": {"LD": "Simulator", "Washer": "Simulator"},
+  "tags": {
+    "ld.feed":   "LD/FeedRateSP",
+    "wash.temp": "Washer/WashTempSP"
+  },
+  "steps": [
+    {"at": "00:00", "tag": "ld.feed",   "value": 110.0},
+    {"at": "00:05", "tag": "ld.feed",   "value": 90.0},
+    {"at": "00:10", "tag": "wash.temp", "ramp": {"from": 71.0, "to": 74.0, "over": 60, "every": 10}},
+    {"at": "01:20", "tag": "wash.temp", "value": 71.0},
+    {"at": "01:30", "tag": "ld.feed",   "value": 110.0}
+  ]
+}

@@ -58,6 +58,9 @@ class FakeNode:
         self.writes.append(value)
         self.value = value
 
+    async def write_attribute(self, attribute, data_value):
+        await self.write_value(data_value.Value.Value)
+
     async def read_value(self):
         return self.value
 
@@ -132,6 +135,20 @@ def test_no_setpoint_reaches_the_plant_in_shadow_mode(shadow_on):
     node = FakeNode(65.0)
     with pytest.raises(shadow.ShadowRefused) as caught:
         asyncio.run(opc_agent.write_node(node, 60.0, path="opc.adjustment_write", what="MIX01.TemperatureSP"))
+    assert node.writes == []
+    assert "Shadow mode" in str(caught.value)
+
+
+def test_a_scenario_writes_nothing_in_shadow_mode(shadow_on):
+    from fsmes.integrations.opc import scenario
+
+    plan = scenario.parse('{"drivers": {"Sim": "Simulator"}, "tags": {"t": "ns=2;s=Sim.D.T"},'
+                          ' "steps": [{"at": 0, "tag": "t", "value": 1}]}')
+    node = FakeNode(0)
+    target = scenario.Target(tag=plan.tags["t"], node=node, variant=scenario.ua.VariantType.Int16,
+                             writable=True)
+    with pytest.raises(shadow.ShadowRefused) as caught:
+        asyncio.run(scenario.play(None, plan, {"t": target}, out=lambda line: None))
     assert node.writes == []
     assert "Shadow mode" in str(caught.value)
 
@@ -404,6 +421,7 @@ PROVED_BY = {
     "opc.node_write": "test_no_setpoint_reaches_the_plant_in_shadow_mode",
     "opc.adjustment_write": "test_an_approved_recommendation_waits_instead_of_reaching_the_machine",
     "opc.order_code": "test_the_order_code_is_not_written_down_to_the_machines",
+    "opc.scenario_play": "test_a_scenario_writes_nothing_in_shadow_mode",
     "erp.adapter": "test_no_live_erp_adapter_can_be_built_in_shadow_mode",
     "erp.rest": "test_a_live_erp_and_shadow_mode_cannot_both_be_asked_for",
     "erp.erpnext": "test_a_live_erp_and_shadow_mode_cannot_both_be_asked_for",
@@ -442,7 +460,8 @@ def test_every_path_shadow_mode_closes_is_proved_closed_in_this_file():
 #: patterns matched against the source of each call. Named, because a
 #: failure should say what kind of reach it found.
 PRIMITIVES = {
-    "an OPC UA node write": r"\.write_value\s*\(|\.write_attribute_value\s*\(|\.set_writable\s*\(",
+    "an OPC UA node write": (r"\.write_value\s*\(|\.write_attribute_value\s*\(|\.write_attribute\s*\(|"
+                             r"\.set_writable\s*\("),
     # `session` is deliberately absent from the receiver list: a SQLAlchemy
     # Session's .get() is a database read and appears in half the package.
     "an HTTP call": (r"\b(?:httpx|requests)\.\w*\s*\(|\burlopen\s*\(|"
