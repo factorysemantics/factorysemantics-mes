@@ -38,7 +38,7 @@ from fsmes.domain import (
 from fsmes.integrations.opc.tag_map import load_manifest, load_tag_map
 from fsmes.kernel.tags import STRUCTURAL_TAGS
 from fsmes.services import connection as connection_service
-from fsmes.services import execution, masterdata, workorders
+from fsmes.services import execution, masterdata, reasons, workorders
 
 # A tag written once a second that has not written for a minute is not live.
 # Reported as a fact beside the age; the screen decides how loudly to say it.
@@ -275,6 +275,12 @@ def head(db: Session, unit: Equipment) -> dict:
         "ideal_cycle_seconds": unit.ideal_cycle_seconds,
         "state": state.state.value if state else "unknown",
         "reason": state.reason if state else None,
+        # What the machine said is kept as it said it ("FaultCode 41"); when
+        # the tag map turned that into one of the plant's codes, the plant's
+        # own word for it rides beside it, so the page can say both.
+        "reason_code": state.reason_code if state else None,
+        "reason_name": (reasons.labels(db).get(state.reason_code)
+                        if state is not None and state.reason_code else None),
         "since": state.started_at if state else None,
         "connection": connection_service.summary(
             connection_service.open_connections(db, [unit.id]).get(unit.id)),

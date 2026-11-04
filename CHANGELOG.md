@@ -40,6 +40,14 @@ goes under Honesty with a migration line, so plant people can find it.
   written in a vendor's addressing can be proved against the replay before
   the PLC exists. Every existing line generates byte-identical output.
 
+- **A machine that stopped on a downtime code says why in the plant's words.**
+  The machine page used to print the raw value the machine gave
+  (`FaultCode 41`). When the tag map's `reason_map` turned it into one of the
+  plant's codes, the page now reads `Tool A crash (FaultCode 41)`, and
+  `GET /equipment/{code}` carries `reason_code` and `reason_name` beside
+  `reason`. A code the map does not know still shows only what the machine
+  said.
+
 - **A machine can hold where it stands, and the 3D line view lays it out
   there.** Equipment gains `pos_x`, `pos_y`, `pos_z` (metres; z is height)
   and `heading` (degrees), nullable, with a migration. The Satisfactory

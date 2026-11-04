@@ -42,6 +42,13 @@ function hours() { return FS.span.hours(); }
 
 /* ---------- head ---------- */
 
+/* Why it stopped, in the plant's word with the machine's own beside it -
+   "Tool A crash (FaultCode 41)" - or whichever of the two exists. */
+function stopWords(h) {
+  if (h.reason_name && h.reason && h.reason !== h.reason_name) return `${h.reason_name} (${h.reason})`;
+  return h.reason_name || h.reason || "";
+}
+
 function renderHead(h) {
   head = h;
   document.title = `${h.code} — FactorySemantics MES`;
@@ -56,7 +63,7 @@ function renderHead(h) {
   $("#m-since").textContent = lost
     ? `no connection since ${lost.since ? fmt.clock(lost.since) : "an unknown time"}`
       + (lost.reason ? ` — ${lost.reason}` : "")
-    : (h.since ? `since ${fmt.clock(h.since)}` + (h.reason ? ` — ${h.reason}` : "") : "");
+    : (h.since ? `since ${fmt.clock(h.since)}` + (stopWords(h) ? ` — ${stopWords(h)}` : "") : "");
   $("#m-order").textContent = h.current_order || "—";
   $("#m-op").textContent = h.current_operation ? `${h.current_operation} (op ${h.current_seq})` : "—";
   $("#m-cc").textContent = h.cost_center || "—";
