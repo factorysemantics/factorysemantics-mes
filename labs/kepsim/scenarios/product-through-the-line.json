@@ -1,0 +1,30 @@
+{
+  "_note": "Three cans through the KepSim line's six stations, LD to Palletiser, 20 s apart. The tags sit on a scratch Simulator channel, SimScratch, so the replayed line is never touched. Rehearse with `fsmes scenario serve` (docs/operate/scenarios.md).",
+  "name": "three cans through the line",
+  "drivers": {"SimScratch": "Simulator"},
+  "tags": {
+    "ld.state":   "ns=2;s=SimScratch.LD.State",
+    "ld.good":    "ns=2;s=SimScratch.LD.GoodCount",
+    "ld.serial":  "ns=2;s=SimScratch.LD.Serial",
+    "rd.state":   "ns=2;s=SimScratch.RD.State",
+    "rd.good":    "ns=2;s=SimScratch.RD.GoodCount",
+    "wash.state": "ns=2;s=SimScratch.Washer.State",
+    "wash.good":  "ns=2;s=SimScratch.Washer.GoodCount",
+    "qi.good":    "ns=2;s=SimScratch.QI.GoodCount",
+    "qi.serial":  "ns=2;s=SimScratch.QI.Serial",
+    "qi.pass":    {"node": "ns=2;s=SimScratch.QI.Pass", "type": "Boolean"},
+    "fill.good":  "ns=2;s=SimScratch.Refill.GoodCount",
+    "pal.good":   "ns=2;s=SimScratch.Palletiser.GoodCount"
+  },
+  "product": {
+    "id": "CAN-{n:04d}", "units": 3, "every_s": 20, "advance_s": 8, "start": "00:02",
+    "stations": [
+      {"station": "LD",         "state": "ld.state",   "running": 1, "after": 0, "count": "ld.good", "id": "ld.serial"},
+      {"station": "RD",         "state": "rd.state",   "running": 1, "after": 0, "count": "rd.good"},
+      {"station": "Washer",     "state": "wash.state", "running": 1, "after": 0, "count": "wash.good"},
+      {"station": "QI",         "count": "qi.good",    "id": "qi.serial", "set": {"qi.pass": true}},
+      {"station": "Refill",     "count": "fill.good"},
+      {"station": "Palletiser", "count": "pal.good"}
+    ]
+  }
+}

@@ -168,6 +168,7 @@ generated at.
 | `kepware_setup.py` | Config API: channel + devices (`--discover` / `--delete`) |
 | `verify_readback.py` | OPC UA read-back proof, driven by the MES tag map |
 | `scenario.md` | what breaks, when, and why it's interesting |
+| `scenarios/` | files for `fsmes scenario play`: a product through the six stations, a setpoint drill — see [docs/operate/scenarios.md](../../docs/operate/scenarios.md) |
 
 The MES-side pieces live in the main package:
 `src/fsmes/integrations/opc/csv_replay.py` (the replay server),
