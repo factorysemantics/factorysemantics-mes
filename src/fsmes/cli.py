@@ -2309,6 +2309,203 @@ def maintenance_rules() -> None:
                    f"{_people(trade['people'])}")
 
 
+scenario_app = typer.Typer(
+    help="Scenarios: timed tag values written into an OPC UA server (Kepware or any other).")
+app.add_typer(scenario_app, name="scenario")
+
+SCENARIO_ENDPOINT = typer.Option(None, "--endpoint", help="The server, opc.tcp://host:port. "
+                                 "Default: MES_OPC_ENDPOINT.")
+SCENARIO_SECURITY = typer.Option(None, "--security", help="Policy,mode as for the agent, e.g. "
+                                 "Basic256Sha256,SignAndEncrypt. Default: MES_OPC_SECURITY.")
+SCENARIO_USER = typer.Option(None, "--user", help="Default: MES_OPC_USER.")
+SCENARIO_PASSWORD = typer.Option(None, "--password", help="Default: MES_OPC_PASSWORD.")
+
+
+def _scenario_settings(endpoint, security, user, password) -> Settings:
+    """The agent's own connection settings, with whatever the command line
+    overrides: the same certificate, so a server that trusts the agent
+    trusts this."""
+    settings = get_settings()
+    setup_logging("ERROR", settings.log_dir, "scenario")
+    update = {key: value for key, value in (("opc_endpoint", endpoint), ("opc_security", security),
+                                            ("opc_user", user), ("opc_password", password))
+              if value is not None}
+    return settings.model_copy(update=update)
+
+
+def _scenario_file(file: Path):
+    from fsmes.integrations.opc import scenario
+
+    try:
+        return scenario.load(file)
+    except scenario.ScenarioError as exc:
+        typer.echo(f"NOT OK  {file}: {len(exc.problems)} problem(s)")
+        for problem in exc.problems:
+            typer.echo(f"  {problem}")
+        raise typer.Exit(2) from None
+
+
+async def _scenario_connect(settings: Settings):
+    import logging
+
+    from asyncua import Client
+
+    from fsmes.integrations.opc.security import apply_security, explain_connection_error
+
+    # The library's own chatter (the session timeout it negotiated) is not
+    # what a person playing a scenario needs to read between the writes.
+    logging.getLogger("asyncua").setLevel(logging.ERROR)
+    client = Client(settings.opc_endpoint)
+    await apply_security(client, settings)
+    try:
+        await client.connect()
+    except Exception as exc:
+        typer.echo(f"Could not connect to {settings.opc_endpoint}:\n{explain_connection_error(exc)}")
+        raise typer.Exit(2) from None
+    return client
+
+
+@scenario_app.command("check")
+def scenario_check(
+    file: Path = typer.Argument(..., help="The scenario file (JSON)."),
+    endpoint: str = typer.Option(None, "--endpoint", help="Also check against this server: every "
+                                 "tag found, its type and access, and the driver rule. Without it, "
+                                 "only the file is checked."),
+    security: str = SCENARIO_SECURITY,
+    user: str = SCENARIO_USER,
+    password: str = SCENARIO_PASSWORD,
+    timeline: bool = typer.Option(False, "--timeline", help="Also print every write, in order."),
+) -> None:
+    """Say what is wrong with a scenario file before it is played.
+
+    Offline, it reads the file and names the line of each mistake. With
+    --endpoint it connects (reading only, writing nothing) and reports, for
+    every tag the scenario writes: whether the server has it, its type, whether
+    it may be written, and whether its channel passes the driver rule —
+    Simulator and Memory Based channels only, never a PLC driver.
+    Exit 0 = every tag can be written; 1 = some cannot; 2 = the file is wrong
+    or the server cannot be reached.
+    """
+    from fsmes.integrations.opc import scenario
+
+    plan = _scenario_file(file)
+    counts = sum(1 for w in plan.writes if w.increment is not None)
+    typer.echo(f"OK  {file}: {plan.name} — {len(plan.writes)} writes to {len(plan.used())} of "
+               f"{len(plan.tags)} tags over {scenario.clock(plan.end)}"
+               + (f" ({counts} are counts going up from what the tag holds)" if counts else ""))
+    if timeline:
+        scenario.timeline(plan, typer.echo)
+    if endpoint is None:
+        return
+
+    async def go() -> int:
+        client = await _scenario_connect(_scenario_settings(endpoint, security, user, password))
+        try:
+            targets = await scenario.inspect(client, plan)
+        finally:
+            await client.disconnect()
+        typer.echo(f"Connected to {endpoint}")
+        return scenario.report(targets, typer.echo)
+
+    raise typer.Exit(1 if asyncio.run(go()) else 0)
+
+
+@scenario_app.command("play")
+def scenario_play(
+    file: Path = typer.Argument(..., help="The scenario file (JSON)."),
+    endpoint: str = SCENARIO_ENDPOINT,
+    security: str = SCENARIO_SECURITY,
+    user: str = SCENARIO_USER,
+    password: str = SCENARIO_PASSWORD,
+    speed: float = typer.Option(1.0, "--speed", help="2 plays twice as fast; 0.5 half as fast."),
+    start: str = typer.Option("0", "--from", help="Start part way in, minutes:seconds (\"02:00\"); "
+                              "writes before it are skipped."),
+) -> None:
+    """Write a scenario's values into the server, each at its time.
+
+    Every tag is checked first, exactly as `fsmes scenario check --endpoint`
+    does, and nothing is written unless all of them pass: a tag on a channel
+    not declared Simulator or Memory Based is refused, a read-only tag is
+    reported. Values are written as the tag's own type. Prints a line per
+    write; stops at the end or on Ctrl-C.
+    """
+    from fsmes.integrations.opc import scenario
+
+    plan = _scenario_file(file)
+    if speed <= 0:
+        typer.echo("--speed must be more than 0.")
+        raise typer.Exit(2)
+    try:
+        offset = scenario.parse_time(start)
+    except ValueError as exc:
+        typer.echo(f"--from {exc}")
+        raise typer.Exit(2) from None
+    settings = _scenario_settings(endpoint, security, user, password)
+
+    async def go() -> int:
+        client = await _scenario_connect(settings)
+        try:
+            targets = await scenario.inspect(client, plan)
+            if any(t.problem for t in targets.values()):
+                typer.echo(f"Nothing written. {settings.opc_endpoint}:")
+                scenario.report(targets, typer.echo)
+                return 1
+            typer.echo(f"Playing {plan.name} into {settings.opc_endpoint} at {speed:g}x"
+                       + (f" from {scenario.clock(offset)}" if offset else "")
+                       + f" — {sum(1 for w in plan.writes if w.at >= offset)} writes, "
+                       f"{scenario.clock(max(plan.end - offset, 0) / speed)}. Ctrl-C stops.")
+            try:
+                done = await scenario.play(client, plan, targets, speed=speed, start=offset,
+                                           out=typer.echo)
+            except scenario.ScenarioError as exc:
+                for problem in exc.problems:
+                    typer.echo(problem)
+                return 1
+            typer.echo(f"Done: {done} writes.")
+            return 0
+        finally:
+            with contextlib.suppress(Exception):
+                await client.disconnect()
+
+    try:
+        raise typer.Exit(asyncio.run(go()))
+    except KeyboardInterrupt:
+        typer.echo("Stopped (Ctrl-C). The tags keep the last values written.")
+        raise typer.Exit(130) from None
+
+
+@scenario_app.command("serve")
+def scenario_serve(
+    file: Path = typer.Argument(..., help="The scenario file (JSON)."),
+    endpoint: str = typer.Option("opc.tcp://127.0.0.1:4945/fsmes/scenario", "--endpoint",
+                                 help="Where to listen. Loopback by default."),
+) -> None:
+    """Rehearse without Kepware: serve the scenario's tags as writable memory tags.
+
+    Every tag in the file is served at its own address, writable, like a
+    Kepware Memory Based channel — so `fsmes scenario play` and anything that
+    reads the tags (this MES's agent, another MES) can be tried at home. A
+    tag's type comes from its `type` in the file, else from its first value.
+    Anonymous and unencrypted: for one machine, not a network. Ctrl-C stops.
+    """
+    from fsmes.integrations.opc import scenario
+
+    plan = _scenario_file(file)
+    setup_logging("ERROR", get_settings().log_dir, "scenario")
+
+    async def go() -> None:
+        server = await scenario.rehearsal_server(plan, endpoint)
+        async with server:
+            typer.echo(f"Serving {len(plan.tags)} tags of {plan.name} at {endpoint}. Ctrl-C stops.")
+            while True:
+                await asyncio.sleep(3600)
+
+    try:
+        asyncio.run(go())
+    except KeyboardInterrupt:
+        typer.echo("Stopped.")
+
+
 layout_app = typer.Typer(
     help="The 3D line view's layout file: where each machine stands.")
 app.add_typer(layout_app, name="layout")
