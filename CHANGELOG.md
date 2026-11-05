@@ -12,6 +12,15 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **`fsmes tagmap from-kepware`: a draft tag map from a KEPServerEX project
+  export.** Save the project as JSON, name the channel, and the command
+  writes one machine per device with every tag at its Kepware node id. The
+  state, the good and scrap counters, the process value and the text
+  identifiers are guessed from tag names by a short word list. Every guess
+  says why under `_guess`, every tag it could not place is listed under
+  `_unmapped`, and placed plus unmapped is the export's own count. It works
+  on the file alone and touches no server. The last line it prints points to
+  `fsmes opc-verify`. See `docs/operate/kepware-export.md`.
 - **A machine can count on several tags, and a machine with no state word can
   still say when it is down.** A tag map entry's `counters` names the tags
   that count good and the tags that count scrap -
