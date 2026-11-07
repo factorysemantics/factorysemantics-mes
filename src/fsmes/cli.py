@@ -188,6 +188,48 @@ def make_tag_map(
     typer.echo("Next: `fsmes opc-verify` against the live server, then `fsmes seed-line`.")
 
 
+tagmap_app = typer.Typer(help="Draft a tag map from what the plant already has.")
+app.add_typer(tagmap_app, name="tagmap")
+
+
+@tagmap_app.command("from-kepware")
+def tagmap_from_kepware(
+    export: Path = typer.Argument(..., help="The project file from KEPServerEX, saved as JSON (not encrypted)."),
+    channel: list[str] = typer.Option(..., help="A channel whose devices are the machines; repeat for several."),
+    device: list[str] = typer.Option(None, help="Only this device; repeat for several. Default: every device."),
+    out: Path = typer.Option(Path("tag_map_kepware.json"), help="Where to write the draft."),
+) -> None:
+    """Draft a tag map from a KEPServerEX project export, on this PC.
+
+    One machine per device. Which tag is the state, which count good and
+    scrap, which is the process value is guessed from the tag names, and every
+    guess says why under `_guess`; tags it could not place are listed under
+    `_unmapped`. It reads a file and writes a file: nothing of the export
+    leaves this computer, and no server is touched.
+    """
+    from fsmes.integrations.opc.kepware_export import ExportError, write_draft
+
+    try:
+        data, notes = write_draft(export, out, channel, device or None)
+    except ExportError as exc:
+        typer.echo(f"Export problem: {exc}")
+        raise typer.Exit(1) from None
+    except ValueError as exc:
+        typer.echo(f"The draft would not load as a tag map: {exc}")
+        raise typer.Exit(1) from None
+    totals = data["_totals"]
+    for note in notes:
+        typer.echo(f"  note: {note}")
+    for machine in data["machines"]:
+        typer.echo(f"  {machine['equipment']}: {len(machine['nodes'])} tags placed, each a guess; "
+                   f"{len(data['_unmapped'].get(machine['equipment'], []))} unmapped")
+    typer.echo(f"Wrote {out}: {totals['machines']} machines from {totals['devices']} devices; "
+               f"{totals['tags']} tags, {totals['placed']} placed, {totals['unmapped']} unmapped.")
+    typer.echo("It is a draft: read every `_guess`, place what is under `_unmapped`, set cycle_seconds "
+               "and reason_map.")
+    typer.echo(f"Next: `fsmes opc-verify` against the live server, with MES_TAG_MAP_FILE={out}.")
+
+
 @app.command()
 def seed_line(
     line: str = typer.Argument(..., help="Code for the line (work centre), e.g. LINE1."),

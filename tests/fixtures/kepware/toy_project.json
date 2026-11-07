@@ -1,0 +1,224 @@
+{
+  "project": {
+    "common.ALLTYPES_DESCRIPTION": "An invented two-station line for tests.",
+    "channels": [
+      {
+        "common.ALLTYPES_NAME": "Line",
+        "servermain.MULTIPLE_TYPES_DEVICE_DRIVER": "Simulator",
+        "devices": [
+          {
+            "common.ALLTYPES_NAME": "PRESS-1",
+            "servermain.MULTIPLE_TYPES_DEVICE_DRIVER": "Simulator",
+            "servermain.DEVICE_MODEL": 0,
+            "tags": [
+              {
+                "common.ALLTYPES_NAME": "DowntimeCode",
+                "common.ALLTYPES_DESCRIPTION": "",
+                "servermain.TAG_ADDRESS": "R0001",
+                "servermain.TAG_DATA_TYPE": 5,
+                "servermain.TAG_READ_WRITE_ACCESS": 1,
+                "servermain.TAG_SCAN_RATE_MILLISECONDS": 100
+              },
+              {
+                "common.ALLTYPES_NAME": "Good_A",
+                "common.ALLTYPES_DESCRIPTION": "",
+                "servermain.TAG_ADDRESS": "R0002",
+                "servermain.TAG_DATA_TYPE": 7,
+                "servermain.TAG_READ_WRITE_ACCESS": 1,
+                "servermain.TAG_SCAN_RATE_MILLISECONDS": 100
+              },
+              {
+                "common.ALLTYPES_NAME": "Good_B",
+                "common.ALLTYPES_DESCRIPTION": "",
+                "servermain.TAG_ADDRESS": "R0004",
+                "servermain.TAG_DATA_TYPE": 7,
+                "servermain.TAG_READ_WRITE_ACCESS": 1,
+                "servermain.TAG_SCAN_RATE_MILLISECONDS": 100
+              },
+              {
+                "common.ALLTYPES_NAME": "Reject_A",
+                "common.ALLTYPES_DESCRIPTION": "",
+                "servermain.TAG_ADDRESS": "R0006",
+                "servermain.TAG_DATA_TYPE": 5,
+                "servermain.TAG_READ_WRITE_ACCESS": 1,
+                "servermain.TAG_SCAN_RATE_MILLISECONDS": 100
+              },
+              {
+                "common.ALLTYPES_NAME": "Reject_B",
+                "common.ALLTYPES_DESCRIPTION": "",
+                "servermain.TAG_ADDRESS": "R0007",
+                "servermain.TAG_DATA_TYPE": 5,
+                "servermain.TAG_READ_WRITE_ACCESS": 1,
+                "servermain.TAG_SCAN_RATE_MILLISECONDS": 100
+              },
+              {
+                "common.ALLTYPES_NAME": "TotalCount",
+                "common.ALLTYPES_DESCRIPTION": "",
+                "servermain.TAG_ADDRESS": "R0008",
+                "servermain.TAG_DATA_TYPE": 7,
+                "servermain.TAG_READ_WRITE_ACCESS": 1,
+                "servermain.TAG_SCAN_RATE_MILLISECONDS": 100
+              },
+              {
+                "common.ALLTYPES_NAME": "Status",
+                "common.ALLTYPES_DESCRIPTION": "",
+                "servermain.TAG_ADDRESS": "R0010",
+                "servermain.TAG_DATA_TYPE": 5,
+                "servermain.TAG_READ_WRITE_ACCESS": 1,
+                "servermain.TAG_SCAN_RATE_MILLISECONDS": 100
+              },
+              {
+                "common.ALLTYPES_NAME": "Heartbeat",
+                "common.ALLTYPES_DESCRIPTION": "",
+                "servermain.TAG_ADDRESS": "R0011",
+                "servermain.TAG_DATA_TYPE": 5,
+                "servermain.TAG_READ_WRITE_ACCESS": 1,
+                "servermain.TAG_SCAN_RATE_MILLISECONDS": 100
+              },
+              {
+                "common.ALLTYPES_NAME": "HydraulicPressure",
+                "common.ALLTYPES_DESCRIPTION": "",
+                "servermain.TAG_ADDRESS": "R0012",
+                "servermain.TAG_DATA_TYPE": 8,
+                "servermain.TAG_READ_WRITE_ACCESS": 1,
+                "servermain.TAG_SCAN_RATE_MILLISECONDS": 100
+              },
+              {
+                "common.ALLTYPES_NAME": "OilTemp",
+                "common.ALLTYPES_DESCRIPTION": "",
+                "servermain.TAG_ADDRESS": "R0014",
+                "servermain.TAG_DATA_TYPE": 8,
+                "servermain.TAG_READ_WRITE_ACCESS": 1,
+                "servermain.TAG_SCAN_RATE_MILLISECONDS": 100
+              },
+              {
+                "common.ALLTYPES_NAME": "Setpoint_Speed",
+                "common.ALLTYPES_DESCRIPTION": "",
+                "servermain.TAG_ADDRESS": "R0016",
+                "servermain.TAG_DATA_TYPE": 4,
+                "servermain.TAG_READ_WRITE_ACCESS": 1,
+                "servermain.TAG_SCAN_RATE_MILLISECONDS": 100
+              },
+              {
+                "common.ALLTYPES_NAME": "DoorOpen",
+                "common.ALLTYPES_DESCRIPTION": "",
+                "servermain.TAG_ADDRESS": "B0001",
+                "servermain.TAG_DATA_TYPE": 1,
+                "servermain.TAG_READ_WRITE_ACCESS": 1,
+                "servermain.TAG_SCAN_RATE_MILLISECONDS": 100
+              }
+            ],
+            "tag_groups": [
+              {
+                "common.ALLTYPES_NAME": "ToolA",
+                "tags": [
+                  {
+                    "common.ALLTYPES_NAME": "Die_Serial",
+                    "common.ALLTYPES_DESCRIPTION": "",
+                    "servermain.TAG_ADDRESS": "S0001",
+                    "servermain.TAG_DATA_TYPE": 0,
+                    "servermain.TAG_READ_WRITE_ACCESS": 1,
+                    "servermain.TAG_SCAN_RATE_MILLISECONDS": 100
+                  }
+                ],
+                "tag_groups": []
+              },
+              {
+                "common.ALLTYPES_NAME": "ToolB",
+                "tags": [
+                  {
+                    "common.ALLTYPES_NAME": "Die_Serial",
+                    "common.ALLTYPES_DESCRIPTION": "",
+                    "servermain.TAG_ADDRESS": "S0002",
+                    "servermain.TAG_DATA_TYPE": 0,
+                    "servermain.TAG_READ_WRITE_ACCESS": 1,
+                    "servermain.TAG_SCAN_RATE_MILLISECONDS": 100
+                  }
+                ],
+                "tag_groups": []
+              }
+            ]
+          },
+          {
+            "common.ALLTYPES_NAME": "WASH-1",
+            "servermain.MULTIPLE_TYPES_DEVICE_DRIVER": "Simulator",
+            "servermain.DEVICE_MODEL": 0,
+            "tags": [
+              {
+                "common.ALLTYPES_NAME": "FaultCode",
+                "common.ALLTYPES_DESCRIPTION": "",
+                "servermain.TAG_ADDRESS": "R0001",
+                "servermain.TAG_DATA_TYPE": 5,
+                "servermain.TAG_READ_WRITE_ACCESS": 1,
+                "servermain.TAG_SCAN_RATE_MILLISECONDS": 100
+              },
+              {
+                "common.ALLTYPES_NAME": "AlarmWord",
+                "common.ALLTYPES_DESCRIPTION": "",
+                "servermain.TAG_ADDRESS": "R0002",
+                "servermain.TAG_DATA_TYPE": 5,
+                "servermain.TAG_READ_WRITE_ACCESS": 1,
+                "servermain.TAG_SCAN_RATE_MILLISECONDS": 100
+              },
+              {
+                "common.ALLTYPES_NAME": "Count",
+                "common.ALLTYPES_DESCRIPTION": "",
+                "servermain.TAG_ADDRESS": "R0003",
+                "servermain.TAG_DATA_TYPE": 7,
+                "servermain.TAG_READ_WRITE_ACCESS": 1,
+                "servermain.TAG_SCAN_RATE_MILLISECONDS": 100
+              },
+              {
+                "common.ALLTYPES_NAME": "Mode",
+                "common.ALLTYPES_DESCRIPTION": "",
+                "servermain.TAG_ADDRESS": "R0005",
+                "servermain.TAG_DATA_TYPE": 5,
+                "servermain.TAG_READ_WRITE_ACCESS": 1,
+                "servermain.TAG_SCAN_RATE_MILLISECONDS": 100
+              },
+              {
+                "common.ALLTYPES_NAME": "TankTemp",
+                "common.ALLTYPES_DESCRIPTION": "",
+                "servermain.TAG_ADDRESS": "R0006",
+                "servermain.TAG_DATA_TYPE": 9,
+                "servermain.TAG_READ_WRITE_ACCESS": 1,
+                "servermain.TAG_SCAN_RATE_MILLISECONDS": 100
+              },
+              {
+                "common.ALLTYPES_NAME": "Lot_Number",
+                "common.ALLTYPES_DESCRIPTION": "",
+                "servermain.TAG_ADDRESS": "S0001",
+                "servermain.TAG_DATA_TYPE": 0,
+                "servermain.TAG_READ_WRITE_ACCESS": 1,
+                "servermain.TAG_SCAN_RATE_MILLISECONDS": 100
+              }
+            ],
+            "tag_groups": []
+          }
+        ]
+      },
+      {
+        "common.ALLTYPES_NAME": "Scratch",
+        "servermain.MULTIPLE_TYPES_DEVICE_DRIVER": "Simulator",
+        "devices": [
+          {
+            "common.ALLTYPES_NAME": "Device1",
+            "servermain.MULTIPLE_TYPES_DEVICE_DRIVER": "Simulator",
+            "servermain.DEVICE_MODEL": 0,
+            "tags": [
+              {
+                "common.ALLTYPES_NAME": "Tag1",
+                "common.ALLTYPES_DESCRIPTION": "",
+                "servermain.TAG_ADDRESS": "R0001",
+                "servermain.TAG_DATA_TYPE": 5,
+                "servermain.TAG_READ_WRITE_ACCESS": 1,
+                "servermain.TAG_SCAN_RATE_MILLISECONDS": 100
+              }
+            ],
+            "tag_groups": []
+          }
+        ]
+      }
+    ]
+  }
+}
