@@ -359,33 +359,41 @@ function drawSpecs() {
 
 /* ---------- inspection history: the server's page ---------- */
 
-function historyQuery() {
-  const p = new URLSearchParams({ limit: String(HISTORY_PAGE), offset: String(filters.hOffset) });
+/* The filters of the history, without its page: the list and its export
+   read the same range, so the file holds every row the table would show.
+   A date box is a plant day, not an instant - "from the 3rd" means from the
+   start of the 3rd on the plant's clock, and "to the 3rd" to the end of it -
+   so it is sent as a bare date and the server draws the day in the plant's
+   own zone. */
+function historyFilters() {
+  const p = new URLSearchParams();
   if (filters.hMaterial) p.set("material", filters.hMaterial);
   if (filters.hChar) p.set("characteristic", filters.hChar);
   if (filters.hResult) p.set("result", filters.hResult);
-  // A date box is a plant day, not an instant: "from the 3rd" means from the
-  // start of the 3rd, and "to the 3rd" means to the end of it.
-  if (filters.hFrom) p.set("since", `${filters.hFrom}T00:00:00`);
-  if (filters.hTo) p.set("until", `${filters.hTo}T23:59:59`);
+  if (filters.hFrom) p.set("since", filters.hFrom);
+  if (filters.hTo) p.set("until", filters.hTo);
+  return p;
+}
+
+function historyQuery() {
+  const p = historyFilters();
+  p.set("limit", String(HISTORY_PAGE));
+  p.set("offset", String(filters.hOffset));
   return `/quality/checks?${p}`;
 }
 
-function decorateWhen() {
-  const toggle = $("#h-when-toggle");
-  if (!filters.hFrom && !filters.hTo) {
-    toggle.textContent = "When ▾";
-    toggle.classList.remove("filtering");
-    return;
-  }
-  const short = (d) => (d ? new Date(`${d}T00:00:00`).toLocaleDateString(undefined,
-    { month: "short", day: "numeric" }) : "…");
-  toggle.textContent = `${short(filters.hFrom)}–${short(filters.hTo)}`;
-  toggle.classList.add("filtering");
+/* The export link follows the filters, and says how many rows it holds
+   before anybody presses it: a file is a list too. */
+function decorateExport(total) {
+  const link = $("#h-export");
+  const p = historyFilters();
+  link.href = `/quality/checks/export.xlsx${p.toString() ? `?${p}` : ""}`;
+  const n = (total || 0).toLocaleString();
+  link.title = `Download these ${n} checks as a spreadsheet`;
+  link.setAttribute("aria-label", `Export ${n} checks as xlsx`);
 }
 
 function drawChecks() {
-  decorateWhen();
   const body = $("#checks tbody");
   body.textContent = "";
   const page = historyPage;
@@ -393,6 +401,7 @@ function drawChecks() {
   const narrowed = Boolean(filters.hMaterial || filters.hChar || filters.hResult
                            || filters.hFrom || filters.hTo);
   $("#h-count").textContent = `— ${page.items.length} of ${(page.total || 0).toLocaleString()}${narrowed ? " matching" : ""}`;
+  decorateExport(page.total);
   for (const c of page.items) {
     const row = el("tr");
     row.appendChild(el("td", "muted", stamp(c.ts)));
@@ -735,7 +744,6 @@ $("#h-material").addEventListener("change", () => {
 });
 $("#h-char").addEventListener("change", () => { filters.hChar = $("#h-char").value; filters.hOffset = 0; writeUrl(); refresh(); });
 $("#h-result").addEventListener("change", () => { filters.hResult = $("#h-result").value; filters.hOffset = 0; writeUrl(); refresh(); });
-FS.popover("#h-when-toggle", "#h-when-pop");
 $("#h-from").addEventListener("change", () => { filters.hFrom = $("#h-from").value; filters.hOffset = 0; writeUrl(); refresh(); });
 $("#h-to").addEventListener("change", () => { filters.hTo = $("#h-to").value; filters.hOffset = 0; writeUrl(); refresh(); });
 $("#h-clear").addEventListener("click", () => {
