@@ -364,10 +364,10 @@ def run(persona_name: str, base: str, out: Path, task: str | None = None,
         if why_not:
             echo(f"walks disabled: {why_not}")
             break
-        key = f"{persona.name}/{t.slug}"
+        key = f"{base} {persona.name}/{t.slug}"      # one a day per plant
         state = _state()
         if not again and state.get(key) == when:
-            echo(f"  {key}: walked already today - --again to walk it twice")
+            echo(f"  {persona.name}/{t.slug}: walked already today on {base} - --again to walk it twice")
             continue
         result = walk_one(persona, t, base, out, when, account=account, echo=echo,
                           runner=runner)

@@ -302,3 +302,12 @@ def test_administration_is_refused_whatever_the_role():
     assert walk_browser.forbidden("http://h:8110/admin")
     assert not walk_browser.forbidden("http://h:8110/dashboard/quality")
     assert not walk_browser.forbidden("http://h:8110/administrative-notes")
+
+
+def test_one_a_day_is_per_plant_so_bottling_and_machining_are_both_walked(tmp_path):
+    quiet = {"echo": lambda *_: None, "when": "2026-11-09", "task": "book-output"}
+    first = walk.run("operator", "http://127.0.0.1:8110", tmp_path / "a",
+                     runner=fake_claude(verdict=DONE), **quiet)
+    second = walk.run("operator", "http://127.0.0.1:8120", tmp_path / "b",
+                      runner=fake_claude(verdict=DONE), **quiet)
+    assert len(first) == len(second) == 1
