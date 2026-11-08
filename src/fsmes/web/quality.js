@@ -376,9 +376,10 @@ function historyFilters() {
 }
 
 function historyQuery() {
-  const p = historyFilters();
-  p.set("limit", String(HISTORY_PAGE));
-  p.set("offset", String(filters.hOffset));
+  const p = new URLSearchParams({
+    ...Object.fromEntries(historyFilters()),
+    limit: String(HISTORY_PAGE), offset: String(filters.hOffset),
+  });
   return `/quality/checks?${p}`;
 }
 

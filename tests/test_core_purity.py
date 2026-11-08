@@ -52,6 +52,9 @@ LADDER: tuple[tuple[str, tuple[str, ...]], ...] = (
         # and anything else that has to say those words must all read them
         # from one place and cannot be allowed to reach up for them.
         "migration",
+        # The xlsx writer: a zip of a few XML files from the standard library.
+        # It knows cells and nothing about checks; a router hands it rows.
+        "xlsx",
     )),
     ("domain", (
         # The tables and their relationships. Imports `db` and itself; that
