@@ -2,7 +2,7 @@
 
 from datetime import date, datetime
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Response
 from pydantic import BaseModel
 from sqlalchemy import func, select
 
@@ -349,6 +349,81 @@ def record_count(body: CountIn, db: DbDep, actor: ActorDep) -> dict:
     }
 
 
+#: What a date box means when it is the whole of `since` or `until`.
+_A_DAY_IS_A_PLANT_DAY = (
+    "A bare date (2026-09-01) is a day on the plant's own clock: `since` from "
+    "its first moment, `until` to its last. A date and time is an instant in "
+    "UTC, as every timestamp in this API is.")
+
+
+def _instant(text: str | None, *, end: bool) -> tuple[datetime, bool] | None:
+    """`since` or `until` as a naive-UTC bound, and whether it is inclusive.
+
+    A bare date is a plant day, not a day in Greenwich: "to the 3rd" on a
+    Chicago line means to midnight in Chicago, and a range drawn in UTC would
+    move six hours of somebody's night shift into the wrong day of the file.
+    The end of a day is the start of the next one, exclusive, so a reading at
+    23:59:59.6 is still on it.
+    """
+    from datetime import UTC, timedelta
+
+    from fsmes import identity
+    from fsmes.services import Invalid
+
+    if not text:
+        return None
+    text = text.strip()
+    try:
+        if len(text) == 10:
+            day = date.fromisoformat(text)
+            if end:
+                day += timedelta(days=1)
+            local = datetime(day.year, day.month, day.day, tzinfo=identity.clock().tz)
+            return local.astimezone(UTC).replace(tzinfo=None), not end
+        moment = datetime.fromisoformat(text)
+    except ValueError:
+        raise Invalid(f"{text!r} is neither a date (2026-09-01) nor a date and time "
+                      f"(2026-09-01T06:00:00)") from None
+    if moment.tzinfo is not None:
+        moment = moment.astimezone(UTC).replace(tzinfo=None)
+    return moment, True
+
+
+def _checks_query(material, characteristic, result, order, since, until):
+    """The inspection history's filters, once, for the list and its export.
+
+    One query for both is what makes "every row the list would show" true of
+    the file rather than a promise about it.
+    """
+    query = select(QualityCheck).order_by(QualityCheck.id.desc())
+    if result:
+        query = query.where(QualityCheck.result == result)
+    start = _instant(since, end=False)
+    if start:
+        query = query.where(QualityCheck.ts >= start[0])
+    stop = _instant(until, end=True)
+    if stop:
+        moment, inclusive = stop
+        query = query.where(QualityCheck.ts <= moment if inclusive else QualityCheck.ts < moment)
+    if order:
+        query = query.where(QualityCheck.work_order_id.in_(
+            select(WorkOrder.id).where(WorkOrder.code == order)))
+    if material or characteristic:
+        query = query.join(QualitySpec)
+        if characteristic:
+            query = query.where(QualitySpec.characteristic == characteristic)
+        if material:
+            query = query.join(Material).where(Material.code == material)
+    return query
+
+
+def _codes(db, model, ids) -> dict:
+    ids = {i for i in ids if i}
+    if not ids:
+        return {}
+    return {row.id: row.code for row in db.scalars(select(model).where(model.id.in_(ids)))}
+
+
 @router.get("/checks")
 def list_checks(
     db: DbDep,
@@ -356,8 +431,8 @@ def list_checks(
     characteristic: str | None = None,
     result: str | None = Query(None, description="pass or fail."),
     order: str | None = Query(None, description="Only checks recorded against this work order."),
-    since: datetime | None = Query(None, description="Taken at or after this."),
-    until: datetime | None = Query(None, description="Taken at or before this."),
+    since: str | None = Query(None, description="Taken at or after this. " + _A_DAY_IS_A_PLANT_DAY),
+    until: str | None = Query(None, description="Taken at or before this. " + _A_DAY_IS_A_PLANT_DAY),
     limit: int = paging.LimitQuery,
     offset: int = paging.OffsetQuery,
 ) -> dict:
@@ -366,7 +441,8 @@ def list_checks(
     Filtering by result is the one a supervisor actually wants: a year of
     passes is not what anybody came here to read. A date range is the other
     one - "what did this shift measure" is a question about a window, and
-    scrolling back through a quarter to find it is not an answer.
+    scrolling back through a quarter to find it is not an answer. The same
+    range, with the same filters, is a spreadsheet at `/quality/checks/export.xlsx`.
 
     Every row says which instrument took the reading and which machine it was
     taken at, and `null` in either is *not recorded* rather than nothing. A
@@ -380,37 +456,11 @@ def list_checks(
     check that was taken by hand - which is somebody's decision about what a
     filtered list means, not this endpoint's guess.
     """
-    query = select(QualityCheck).order_by(QualityCheck.id.desc())
-    if result:
-        query = query.where(QualityCheck.result == result)
-    if since:
-        query = query.where(QualityCheck.ts >= since)
-    if until:
-        query = query.where(QualityCheck.ts <= until)
-    if order:
-        query = query.where(QualityCheck.work_order_id.in_(
-            select(WorkOrder.id).where(WorkOrder.code == order)))
-    if material or characteristic:
-        query = query.join(QualitySpec)
-        if characteristic:
-            query = query.where(QualitySpec.characteristic == characteristic)
-        if material:
-            query = query.join(Material).where(Material.code == material)
-
+    query = _checks_query(material, characteristic, result, order, since, until)
     checks, total = paging.paginate(db, query, limit, offset)
-    order_codes = {}
-    ids = {c.work_order_id for c in checks if c.work_order_id}
-    if ids:
-        order_codes = {wo.id: wo.code for wo in db.scalars(select(WorkOrder).where(WorkOrder.id.in_(ids)))}
-    gauge_codes = {}
-    gauge_ids = {c.gauge_id for c in checks if c.gauge_id}
-    if gauge_ids:
-        gauge_codes = {g.id: g.code for g in db.scalars(select(Gauge).where(Gauge.id.in_(gauge_ids)))}
-    stations = {}
-    station_ids = {c.equipment_id for c in checks if c.equipment_id}
-    if station_ids:
-        stations = {e.id: e.code for e in db.scalars(
-            select(Equipment).where(Equipment.id.in_(station_ids)))}
+    order_codes = _codes(db, WorkOrder, (c.work_order_id for c in checks))
+    gauge_codes = _codes(db, Gauge, (c.gauge_id for c in checks))
+    stations = _codes(db, Equipment, (c.equipment_id for c in checks))
     return paging.page(
         [
             {
@@ -427,6 +477,135 @@ def list_checks(
             for c in checks
         ],
         total, limit, offset,
+    )
+
+
+#: The export's columns, in order. One row per check, under this header.
+EXPORT_COLUMNS = (
+    "When", "Material", "Characteristic", "Value", "Unit", "Min", "Max",
+    "Result", "Who", "Order", "Machine", "Gauge", "Non-conformance",
+)
+
+
+def _nonconformances_of(db, checks) -> dict[int, list[str]]:
+    """Which hold each check led to, from the links the MES wrote down.
+
+    Three links exist: a rule firing on the reading (`spc_signals`), the
+    hold a sample opened (its evidence names the sample), and the hold one
+    out-of-spec reading opened (its evidence names the check, since this
+    change). A failed check from before that last link has no recorded hold,
+    and the file says "not linked" for it rather than matching descriptions
+    and guessing.
+    """
+    from fsmes.domain import SpcSignal
+
+    if not checks:
+        return {}
+    ids = [c.id for c in checks]
+    found: dict[int, list[str]] = {}
+    nc_codes = {}
+    for chunk in range(0, len(ids), 500):
+        part = ids[chunk:chunk + 500]
+        for signal in db.scalars(select(SpcSignal).where(
+                SpcSignal.check_id.in_(part), SpcSignal.nonconformance_id.is_not(None))):
+            found.setdefault(signal.check_id, []).append(signal.nonconformance_id)
+    by_sample: dict[int, list[int]] = {}
+    for c in checks:
+        if c.sample_id:
+            by_sample.setdefault(c.sample_id, []).append(c.id)
+    from datetime import timedelta
+
+    # A hold is opened in the same moment as the reading or after it, never
+    # before: the oldest reading bounds the search, so an export of last
+    # month does not read every hold the plant ever raised.
+    first = min(c.ts for c in checks)
+    for nc in db.scalars(select(NonConformance).where(
+            NonConformance.evidence.is_not(None),
+            NonConformance.created_at >= first - timedelta(minutes=1))):
+        why = nc.evidence or {}
+        if why.get("source") != "quality":
+            continue
+        nc_codes[nc.id] = nc.code
+        if why.get("check") is not None:
+            found.setdefault(why["check"], []).append(nc.id)
+        for check_id in by_sample.get(why.get("sample"), []):
+            found.setdefault(check_id, []).append(nc.id)
+    missing = {i for ids_ in found.values() for i in ids_} - set(nc_codes)
+    nc_codes |= _codes(db, NonConformance, missing)
+    return {check: sorted({nc_codes[i] for i in ncs if i in nc_codes})
+            for check, ncs in found.items()}
+
+
+@router.get("/checks/export.xlsx", dependencies=[require("plant.read")])
+def export_checks(
+    db: DbDep,
+    material: str | None = None,
+    characteristic: str | None = None,
+    result: str | None = Query(None, description="pass or fail."),
+    order: str | None = Query(None, description="Only checks recorded against this work order."),
+    since: str | None = Query(None, description="Taken at or after this. " + _A_DAY_IS_A_PLANT_DAY),
+    until: str | None = Query(None, description="Taken at or before this. " + _A_DAY_IS_A_PLANT_DAY),
+) -> Response:
+    """The inspection history as a spreadsheet: every check the list would show.
+
+    Same filters as `GET /quality/checks`, no paging: one row per check under
+    a header row, oldest first, as a person reading two months down a page
+    expects. Times are the plant's own wall clock, named in the header, so a
+    reading at six in the morning says six in the morning.
+
+    An empty cell is *not recorded* and never zero: a specification with no
+    minimum has an empty Min, not a Min of 0. A check against no order says
+    "no order", one whose machine or inspector was never recorded says "not
+    recorded", and a failed check whose hold the MES did not link says "not
+    linked". The row count is in the `X-Total-Count` header and in the
+    filename's range, so the file states its total before anybody opens it.
+    """
+    from sqlalchemy.orm import selectinload
+
+    from fsmes import identity, xlsx
+
+    query = (_checks_query(material, characteristic, result, order, since, until)
+             .order_by(None).order_by(QualityCheck.ts, QualityCheck.id)
+             .options(selectinload(QualityCheck.spec).selectinload(QualitySpec.material)))
+    checks = list(db.scalars(query))
+    order_codes = _codes(db, WorkOrder, (c.work_order_id for c in checks))
+    gauge_codes = _codes(db, Gauge, (c.gauge_id for c in checks))
+    stations = _codes(db, Equipment, (c.equipment_id for c in checks))
+    holds = _nonconformances_of(db, checks)
+    clock = identity.clock()
+
+    def row(c: QualityCheck) -> list:
+        spec = c.spec
+        result_text = c.result.value if hasattr(c.result, "value") else str(c.result)
+        if holds.get(c.id):
+            hold = ", ".join(holds[c.id])
+        else:
+            hold = "not linked" if result_text == "fail" else None
+        return [
+            identity.to_plant(c.ts).replace(tzinfo=None),
+            spec.material.code,
+            spec.characteristic,
+            c.value,
+            spec.unit or None,
+            spec.min_value,
+            spec.max_value,
+            result_text,
+            c.checked_by or "not recorded",
+            order_codes.get(c.work_order_id) or "no order",
+            stations.get(c.equipment_id) or "not recorded",
+            gauge_codes.get(c.gauge_id) or "not recorded",
+            hold,
+        ]
+
+    header = list(EXPORT_COLUMNS)
+    header[0] = f"When ({clock.name})" if clock.name else "When"
+    body = xlsx.workbook("Quality checks", header, (row(c) for c in checks))
+    span = "-to-".join(part for part in ((since or "")[:10], (until or "")[:10]) if part) or "all"
+    return Response(
+        content=body,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="quality-checks-{span}.xlsx"',
+                 "X-Total-Count": str(len(checks))},
     )
 
 
