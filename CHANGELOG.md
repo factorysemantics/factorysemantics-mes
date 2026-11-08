@@ -12,6 +12,17 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **Export the quality checks of a date range as an xlsx file.** Inspection
+  History on the Quality screen has From and To in its filter bar (they used
+  to be behind a "When" toggle) and an **Export xlsx** button beside the
+  filters, which downloads every check the table would show for that range.
+  `GET /quality/checks/export.xlsx` takes the list's own filters and gives one
+  header row, then one row per check, oldest first: when (on the plant's
+  clock), material, characteristic, value, unit, min, max, result, who,
+  order, machine, gauge, non-conformance. An empty range is a file with the
+  header and no rows. A limit the specification does not have is an empty
+  cell, never 0. Gated on `plant.read`. The writer is the standard library's
+  `zipfile` (`fsmes.xlsx`); nothing new to install.
 - **`fsmes tagmap from-kepware`: a draft tag map from a KEPServerEX project
   export.** Save the project as JSON, name the channel, and the command
   writes one machine per device with every tag at its Kepware node id. The
@@ -110,6 +121,14 @@ goes under Honesty with a migration line, so plant people can find it.
   machine yet except the Satisfactory reader (below).
 
 ### Honesty
+
+- **A date in the inspection history's range is a day on the plant's clock.**
+  The Quality screen sent "from the 3rd" as midnight in UTC, so a Chicago
+  plant's evening checks landed in the next day's range. `since` and `until`
+  on `GET /quality/checks` (and the export) now also take a bare date, meaning
+  that plant day from its first moment to its last; a date and time is still
+  a UTC instant, as before. *Migration:* none; a saved screen link with dates
+  now reads the plant's days.
 
 - **A Satisfactory building that ran at full rate all evening gets a figure,
   and one placed in the last minutes says "too new to rate".** The reader
