@@ -1,0 +1,49 @@
+# A pretend shift supervisor, walked through the lab plant by `fsmes walk`.
+#
+# Each task is one sentence, said the way the plant's owner would say it to a
+# new hire; `expect` is what a working MES would have shown at the end. The
+# walker plays the persona with no other help, and leaves a card saying where
+# it got stuck. Five tasks.
+#
+# The account is a lab account (plant.LAB_USERS) with the supervisor role,
+# never an admin. Its password comes from the environment variable named
+# here, or the lab-only default when that is unset - never from this file.
+
+persona: supervisor
+role: shift supervisor
+account: WALK-SUP
+password_env: FSMES_WALK_PASSWORD
+who: >-
+  Runs the day shift on the bottling line. Knows the machines and the orders,
+  reads OEE every morning, answers to the plant manager for quality. Has used
+  spreadsheets for years and this MES for a week.
+
+tasks:
+  - slug: export-quality-xlsx
+    task: Export the last two months of quality checks as an xlsx file.
+    expect: >-
+      The quality checks list, filtered to the last two months, and a button
+      that downloads them as an .xlsx file.
+
+  - slug: oee-worst-machine
+    task: Read this shift's OEE and tell me which machine lost the most.
+    expect: >-
+      The shift's OEE by machine, with the machine that lost the most time or
+      output named or easy to pick out.
+
+  - slug: why-down-at-ten
+    task: Find out why the filler was down at 10:00 this morning.
+    expect: >-
+      The filler's stop around 10:00 with its reason and how long it lasted.
+
+  - slug: release-next-order
+    task: Release the next planned work order to the line.
+    expect: >-
+      A planned order changes to released, and the line sees it as the next
+      order.
+
+  - slug: close-nonconformance
+    task: Look at the open nonconformances and close one that has been dealt with.
+    expect: >-
+      The list of open nonconformances, one opened, a disposition recorded and
+      the nonconformance closed.

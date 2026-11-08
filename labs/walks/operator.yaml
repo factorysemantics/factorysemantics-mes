@@ -1,0 +1,49 @@
+# A pretend line operator, walked through the lab plant by `fsmes walk`.
+#
+# Each task is one sentence, said the way the plant's owner would say it to a
+# new hire; `expect` is what a working MES would have shown at the end. Five
+# tasks. Booking output or recording a check writes to the lab plant, which
+# is fine: `crew lab-up --fresh` restores the copy.
+#
+# The account is a lab account (plant.LAB_USERS) with the operator role. Its
+# password comes from the environment variable named here, or the lab-only
+# default when that is unset - never from this file.
+
+persona: operator
+role: line operator
+account: WALK-OP
+password_env: FSMES_WALK_PASSWORD
+who: >-
+  Runs the filler on the bottling line. Knows the machine well, books what
+  the line made at the end of a run, and is not a computer person.
+
+tasks:
+  - slug: book-output
+    task: We counted 120 good and 3 scrap at the filler; book them on the order that is running.
+    expect: >-
+      The running order on the filler, a place to enter 120 good and 3 scrap,
+      and the booking confirmed on the order.
+
+  - slug: record-quality-check
+    task: I measured the fill height on a bottle from the filler at 141 mm; record that check.
+    expect: >-
+      A form for the filler's quality check, 141 mm entered for fill height,
+      and the check saved with pass or fail shown.
+
+  - slug: raise-nonconformance
+    task: Raise a nonconformance for a batch of underfilled bottles.
+    expect: >-
+      A nonconformance created against the filler or its order, with a
+      description, and it shows as open.
+
+  - slug: read-work-instruction
+    task: Read the work instruction for the order that is running.
+    expect: >-
+      The running order and its work instruction or document, open and
+      readable.
+
+  - slug: say-why-stopped
+    task: The filler just stopped; tell the system why.
+    expect: >-
+      The filler's current stop, a list of reasons, and the chosen reason
+      saved on the stop.

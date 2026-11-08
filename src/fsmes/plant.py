@@ -75,6 +75,10 @@ LAB_ONLY_AGENT_PASSWORD = "agent-lab-only"
 # row has to say which of them read the plant.
 LAB_ONLY_ANALYST_PASSWORD = "analyst-lab-only"
 
+# The pretend users `fsmes walk` signs in as, the same way and for the same
+# reason. FSMES_WALK_PASSWORD overrides it; a plant that keeps it is told so.
+LAB_ONLY_WALK_PASSWORD = "walk-lab-only"
+
 LAB_USERS = [
     ("SCOTT", "Scott K", "operator", "operator"),
     # The simulated shop floor signs in as itself. Invented checks and issues
@@ -118,6 +122,15 @@ LAB_USERS = [
     # "what did the agent do to my plant" already is.
     ("ANALYST", "Plant Analyst",
      os.environ.get("FSMES_ANALYST_PASSWORD", LAB_ONLY_ANALYST_PASSWORD), "analyst"),
+    # The pretend supervisor and operator `fsmes walk` plays (labs/walks/).
+    # Accounts of their own, never the simulator's and never a person's: a
+    # walk books output and records checks the way a person would, and the
+    # audit trail has to say it was a walk. The roles a person in that job
+    # holds - never admin - so a walk hits the same walls a person would.
+    ("WALK-SUP", "Walker: shift supervisor",
+     os.environ.get("FSMES_WALK_PASSWORD", LAB_ONLY_WALK_PASSWORD), "supervisor"),
+    ("WALK-OP", "Walker: line operator",
+     os.environ.get("FSMES_WALK_PASSWORD", LAB_ONLY_WALK_PASSWORD), "operator"),
 ]
 
 
