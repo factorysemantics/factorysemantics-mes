@@ -4220,6 +4220,38 @@ def autoloop_cmd(
     typer.echo(f"done - read {note}")
 
 
+@app.command("walk")
+def walk_cmd(
+    persona: str = typer.Argument(..., help="A persona in labs/walks/: supervisor, operator."),
+    base: str = typer.Option(..., "--base", help="The lab plant to walk, e.g. http://127.0.0.1:8110."),
+    out: Path = typer.Option(..., "--out", help="Where the cards go; screenshots in shots/, logs in logs/."),
+    task: str = typer.Option(None, "--task", help="One task's slug. Default: all the persona's tasks."),
+    account: str = typer.Option(
+        None, "--account",
+        help="Sign in as this lab account instead of the persona's own."),
+    again: bool = typer.Option(
+        False, "--again", help="Walk a task that was already walked today."),
+) -> None:
+    """A pretend user walks a lab plant and leaves one card per task.
+
+    Each task is one headless Claude run (Sonnet, the Claude Code login)
+    driving a headless browser signed in as the persona's lab account, at
+    most 20 steps. It writes <out>/<date>-<slug>.md, one screen: three lines
+    on what happened, and the walk's evidence. Nothing is merged and no pull
+    request is opened. Needs the dev and mcp extras (Playwright, mcp) and
+    `claude` on PATH. Kill switch: touch ~/.local/share/fsmes/walk.off
+    """
+    from fsmes.sim import walk
+
+    try:
+        cards = walk.run(persona, base, out, task=task, account=account, again=again,
+                         echo=typer.echo)
+    except walk.WalkError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(2) from None
+    typer.echo(f"{len(cards)} card(s) written to {out}")
+
+
 lab_app = typer.Typer(
     help="Experiments: a plan, a run, and a directory somebody else can read.",
 )
