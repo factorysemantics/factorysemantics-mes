@@ -567,6 +567,7 @@ async function refresh() {
     if (filterMaterial) query.set("material", filterMaterial);
     if (dueAfter) query.set("due_after", dueAfter);
     if (dueBefore) query.set("due_before", `${dueBefore}T23:59:59`);
+    exportOrders(query);
     const [paged, totals, unassigned] = await Promise.all([
       api(`/workorders?${query}`),
       api("/workorders/summary").catch(() => null),

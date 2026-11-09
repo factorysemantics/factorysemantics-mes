@@ -40,6 +40,10 @@ let series = [];       // the checks behind the chart: one material/characterist
 let specPage = { items: [], total: 0, limit: SPEC_PAGE, offset: 0, has_more: false };
 let historyPage = { items: [], total: 0, limit: HISTORY_PAGE, offset: 0, has_more: false };
 let ncPage = { items: [], total: 0, limit: NC_PAGE, offset: 0, has_more: false };
+// The filters each of those pages was fetched for, so the export's count is
+// the count of the rows its link would download.
+let historyFor = new URLSearchParams();
+let ncFor = new URLSearchParams();
 
 const filters = {
   // the chart
@@ -397,7 +401,7 @@ function drawChecks() {
   const narrowed = Boolean(filters.hMaterial || filters.hChar || filters.hResult
                            || filters.hFrom || filters.hTo);
   $("#h-count").textContent = `— ${page.items.length} of ${(page.total || 0).toLocaleString()}${narrowed ? " matching" : ""}`;
-  exportChecks(historyFilters(), page.total);
+  exportChecks(historyFor, page.total);
   for (const c of page.items) {
     const row = el("tr");
     row.appendChild(el("td", "muted", stamp(c.ts)));
@@ -548,9 +552,8 @@ function ncFilters() {
 }
 
 function ncQuery() {
-  const p = ncFilters();
-  p.set("limit", String(NC_PAGE));
-  p.set("offset", String(filters.nOffset));
+  const p = new URLSearchParams({ limit: String(NC_PAGE), offset: String(filters.nOffset) });
+  for (const [key, value] of ncFilters()) p.append(key, value);
   return `/quality/nonconformances?${p}`;
 }
 
@@ -567,7 +570,7 @@ function drawNcs() {
   const what = NC_SCOPES[filters.nStatus] || "in any status";
   const ncNarrowed = Boolean(filters.nQ || filters.nFrom || filters.nTo);
   $("#n-count").textContent = `— ${page.items.length} of ${page.total.toLocaleString()} ${what}${ncNarrowed ? " matching" : ""}`;
-  exportNcs(ncFilters(), page.total);
+  exportNcs(ncFor, page.total);
   if (!page.items.length) {
     list.appendChild(el("li", "muted", filters.nStatus.startsWith("open") && !ncNarrowed
       ? "none open — the line is inside spec" : "none match"));
@@ -654,6 +657,10 @@ function drawNcs() {
 
 async function refresh() {
   try {
+    const hAsked = historyFilters();
+    const nAsked = ncFilters();
+    exportChecks(hAsked);
+    exportNcs(nAsked);
     const [f, sp, h, n, all, failed, stillOpen] = await Promise.all([
       api("/quality/specs/facets"),
       api(specQuery()),
@@ -669,7 +676,9 @@ async function refresh() {
     facets = f;
     specPage = sp;
     historyPage = h;
+    historyFor = hAsked;
     ncPage = n;
+    ncFor = nAsked;
 
     // The chart opens on something: the material asked for in the address
     // bar, else the first material that has a specification at all.

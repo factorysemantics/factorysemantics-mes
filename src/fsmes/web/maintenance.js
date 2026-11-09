@@ -801,6 +801,7 @@ async function loadHistory() {
   const until = $("#history-to").value;
   if (since) params.set("since", since);
   if (until) params.set("until", until);
+  exportHistory(params);
   const page = await api(`/maintenance/orders?${params}`);
   exportHistory(params, page.total);
   historyOffset = page.offset;

@@ -216,3 +216,52 @@ def test_the_export_button_downloads_its_list_named_for_the_list_and_the_range(b
     finally:
         context.close()
     assert _rows(body) == 1 + expected
+
+
+def test_a_late_reply_to_the_from_box_does_not_take_the_to_box_out_of_the_file(browser, plant):
+    """Picking From then To fetches the list twice. On a slow link the first
+    reply can land last; the walk on 2026-11-08 caught the button downloading
+    From's range with To's already in the box. Here the page's own fetch
+    holds From's reply three times as long as To's, so it lands last - a
+    route handler cannot do this, because the sync API runs them one at a
+    time and would answer them in order."""
+    context = browser.new_context(viewport={"width": 1400, "height": 1000}, accept_downloads=True)
+    try:
+        reply = context.request.post(
+            f"{plant}/auth/login", data=json.dumps({"code": "ADMIN", "password": "admin"}),
+            headers={"Content-Type": "application/json"})
+        assert reply.ok
+        page = context.new_page()
+        page.add_init_script(f"""(() => {{
+          const real = window.fetch.bind(window);
+          window.__answered = [];
+          window.fetch = async (input, init) => {{
+            const url = String(input && input.url || input);
+            if (!url.includes("/workorders?")) return real(input, init);
+            const from = url.includes("due_after"), to = url.includes("due_before");
+            const reply = await real(input, init);
+            await new Promise((r) => setTimeout(r, {int(DELAY_SECONDS * 1000)} * (from && !to ? 3 : 1)));
+            window.__answered.push(from && !to ? "from" : to ? "both" : "none");
+            return reply;
+          }};
+        }})()""")
+        page.goto(f"{plant}/dashboard/orders", wait_until="load", timeout=30000)
+        page.wait_for_function("() => window.__answered.includes('none')", timeout=20000)
+        for box, day in (("#f-due-after", "2026-09-01"), ("#f-due-before", "2026-09-30")):
+            page.evaluate("""([sel, day]) => { const el = document.querySelector(sel);
+                             el.value = day; el.dispatchEvent(new Event('change', {bubbles: true})); }""",
+                          [box, day])
+        page.wait_for_function(
+            "() => window.__answered.includes('both') && window.__answered.includes('from')",
+            timeout=20000)
+        order = page.evaluate("() => window.__answered")
+        assert order.index("from") > order.index("both"), order
+        assert "5 orders" in page.get_attribute("#order-export", "aria-label")
+        with page.expect_download(timeout=20000) as caught:
+            page.click("#order-export")
+        download = caught.value
+        assert download.suggested_filename == "work-orders-due-2026-09-01-to-2026-09-30.xlsx"
+        body = Path(download.path()).read_bytes()
+    finally:
+        context.close()
+    assert _rows(body) == 1 + 5

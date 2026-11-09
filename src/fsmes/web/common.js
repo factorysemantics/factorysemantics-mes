@@ -415,12 +415,20 @@
       link.href = path;
       host.appendChild(link);
     }
+    /* Called twice per fetch: with the filters alone when the list asks
+       (the link follows the screen at once), then with the total when the
+       list answers. A reply to filters the screen has moved on from - the
+       From box's fetch landing after the To box's - is not this link's any
+       more, and is ignored: the file is always the range in the boxes. */
+    let asked = null;
     return function update(params, total) {
       if (!link) return;
       const p = new URLSearchParams(params || {});
       p.delete("limit");
       p.delete("offset");
       const query = p.toString();
+      if (total === undefined) asked = query;
+      else if (asked !== null && asked !== query) return;
       link.href = `${path}${query ? `?${query}` : ""}`;
       const n = total === undefined || total === null ? null : Number(total).toLocaleString();
       link.title = n === null ? `Download these ${noun} as a spreadsheet`
