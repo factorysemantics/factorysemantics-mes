@@ -12,6 +12,23 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **Export xlsx on every list a supervisor would take to Excel.** Work
+  orders, non-conformances, completed maintenance, the audit trail, lots,
+  OEE by station and the stops behind the downtime pareto each have an
+  **Export xlsx** button, the same one Inspection History has, and a
+  `GET …/export.xlsx` beside their list endpoint: `/workorders`,
+  `/quality/nonconformances`, `/maintenance/orders`, `/ops/activity`,
+  `/execution/lots`, `/analysis/oee`, `/analysis/downtime`. Each takes the
+  list's own filters and holds every matching row, not a page: a bold,
+  frozen header row, times as date cells on the plant's clock with the zone
+  in the header, an empty range a header and no rows. Each is gated on the
+  capability that reads its list (`audit.read` for the audit trail). The
+  non-conformances, the completed maintenance and the audit trail gained
+  From and To in their bars (`since`/`until` on their lists), read as plant
+  days; for maintenance the date is when a job was completed, or for work
+  not done yet when it was raised. One step writes them all
+  (`fsmes.api.export`); nothing new to install.
+
 - **Export the quality checks of a date range as an xlsx file.** Inspection
   History on the Quality screen has From and To in its filter bar (they used
   to be behind a "When" toggle) and an **Export xlsx** button beside the
@@ -119,6 +136,13 @@ goes under Honesty with a migration line, so plant people can find it.
   machine keeps its states, production and connections, and leaves the
   Floor, the line lists and `/health`'s `watching` count. Nothing retires a
   machine yet except the Satisfactory reader (below).
+
+### Fixed
+
+- **The audit trail's "anyone" no longer filters for a person called
+  anyone.** On the Ops screen the option had no value, so a browser sent its
+  text: once the list of people had been filled, any reload of the trail
+  with "anyone" picked asked for `actor=anyone` and came back empty.
 
 ### Honesty
 
