@@ -787,8 +787,38 @@ $("#form-report").addEventListener("submit", async (event) => {
     body.order = form.get("order");
     if (chosen && chosen.dataset.seq) body.seq = Number(chosen.dataset.seq);
   }
-  await act("/execution/report", "Output booked.", body);
+  const result = $("#report-result");
+  try {
+    const booked = await api("/execution/report", { method: "POST", body });
+    const said = describeBooking(booked);
+    toast(said.short, "good");
+    result.textContent = said.long;
+    await refresh();
+  } catch (error) {
+    toast(error.message, "bad");
+  }
 });
+
+/* The sentence an operator needs after pressing Book. The order's Good is
+   finished output - the last step's good - so 120 booked at the filler of a
+   six-step line moves the filler's count and leaves the order's where it was.
+   On 2026-11-08 the pretend operator booked 120 at FILL01, watched the Work
+   Orders table for a jump of 120, saw the line's own trickle instead, and
+   could not tell whether its booking had gone in. Say what moved and what
+   did not, with the numbers. */
+function describeBooking(b) {
+  const n = (x) => Number(x || 0).toLocaleString();
+  const what = `${n(b.booked_good)} good, ${n(b.booked_scrap)} scrap`;
+  const step = `${b.order} op ${b.seq}${b.operation ? ` ${b.operation}` : ""}`;
+  const short = `Output booked: ${what} on ${step}.`;
+  if (b.order_good_qty === undefined) return { short, long: short };
+  const atLast = b.seq === b.final_seq;
+  const stepNow = `That step now has ${n(b.good_qty)} good and ${n(b.scrap_qty)} scrap.`;
+  const orderNow = atLast
+    ? `The order's Good is now ${n(b.order_good_qty)} and its Scrap ${n(b.order_scrap_qty)}.`
+    : `The order's Good stays ${n(b.order_good_qty)}: it counts finished output from op ${b.final_seq} ${b.final_operation}, the last step, and rises when that step books. Its Scrap, counted at every step, is now ${n(b.order_scrap_qty)}.`;
+  return { short, long: `${short} ${stepNow} ${orderNow}` };
+}
 
 /* A lot arriving, booked in by hand. The quantity is in the material's own
    unit and the code is the label on the physical thing, so neither is

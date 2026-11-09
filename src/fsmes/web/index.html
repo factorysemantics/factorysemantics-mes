@@ -55,7 +55,11 @@
       <form id="form-report" class="stack" data-assist="report-form" data-needs-cap="production.book">
         <h3>Book output</h3>
         <div class="row">
-          <input name="equipment" list="machine-options" placeholder="Machine" aria-label="Machine"
+          <!-- Its own name, not "Machine": the machine search further down
+               answered to the same word, and the walker's first typing went
+               into the search instead of the booking (2026-11-08). -->
+          <input name="equipment" list="machine-options" placeholder="Book on machine"
+                 aria-label="Machine to book on" title="The machine that made these units"
                  autocomplete="off" data-assist="report-equipment" required>
           <select name="order" aria-label="Order" data-assist="report-order"
                   title="Which order this output books against"></select>
@@ -64,6 +68,11 @@
           <button data-assist="report-submit">Book</button>
         </div>
         <datalist id="machine-options"></datalist>
+        <!-- What the last booking did, kept on screen after the toast has
+             gone: the step's new count, and the order's, because the order's
+             Good is the last step's output and a booking at any other step
+             does not move it. -->
+        <p id="report-result" class="muted small" aria-live="polite" data-assist="report-result"></p>
       </form>
       <!-- Stock arriving. Until 2026-09-26 the only way a lot got into this
            plant was production booking one or the ERP link sending one: a
@@ -201,7 +210,7 @@
       </div>
       <div class="table-wrap">
         <table id="orders">
-          <thead><tr><th>Order</th><th>Material</th><th>Status</th><th>Progress</th><th class="num">Good</th><th class="num">Scrap</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Order</th><th>Material</th><th>Status</th><th>Progress</th><th class="num" title="Finished output: the good count of the last step">Good</th><th class="num" title="Scrap at every step, added up">Scrap</th><th>Actions</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
