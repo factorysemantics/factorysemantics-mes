@@ -76,3 +76,15 @@
   padding: var(--s3);
 }
 .reason .row { display: flex; gap: var(--s2); justify-content: flex-end; }
+
+/* Inspection history's bar carries a date range and the export beside the
+   filters; on a phone it wraps rather than pushing the page sideways. */
+.filter-bar[data-assist="history-filters"] { flex-wrap: wrap; }
+.range-field {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+#h-export { padding: 5px 12px; font-size: var(--fs-sm); margin-left: auto; }

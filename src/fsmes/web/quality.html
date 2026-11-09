@@ -123,20 +123,15 @@
           <option value="fail">Failures only</option>
           <option value="pass">Passes only</option>
         </select>
-        <div class="popover-host">
-          <button id="h-when-toggle" class="ghost" type="button" aria-expanded="false">When ▾</button>
-          <div id="h-when-pop" class="popover hidden">
-            <div class="field">
-              <label for="h-from">Taken from</label>
-              <input id="h-from" type="date" aria-label="Taken from">
-            </div>
-            <div class="field">
-              <label for="h-to">Taken to</label>
-              <input id="h-to" type="date" aria-label="Taken to">
-            </div>
-          </div>
-        </div>
+        <!-- In the bar, not behind a "When" toggle: the pretend supervisor read
+             that toggle as a sort and reported there was no date range. -->
+        <label class="range-field" for="h-from">From
+          <input id="h-from" type="date" aria-label="Taken from"></label>
+        <label class="range-field" for="h-to">To
+          <input id="h-to" type="date" aria-label="Taken to"></label>
         <button id="h-clear" class="ghost" type="button">Clear</button>
+        <a id="h-export" class="ghost" href="/quality/checks/export.xlsx" download
+           data-assist="history-export">Export xlsx</a>
       </div>
       <div class="table-wrap">
         <table id="checks">

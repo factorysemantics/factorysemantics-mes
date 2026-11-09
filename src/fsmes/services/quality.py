@@ -286,6 +286,13 @@ def record_check(
             ),
             work_order_code=work_order_code,
             actor=actor,
+            # The reading that opened it, so the hold and the check can be
+            # found from each other - the inspection history's export names
+            # the hold on the row. A sample's hold names its sample the same way.
+            evidence={"source": "quality", "material": material_code,
+                      "characteristic": characteristic, "unit": spec.unit,
+                      "check": check.id, "value": value,
+                      "gauge": instrument.code if instrument else None},
         )
     # The rules see this reading now, while the line is still running it.
     from fsmes.services import spc as spc_service
