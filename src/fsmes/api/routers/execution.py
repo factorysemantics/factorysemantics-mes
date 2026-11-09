@@ -110,7 +110,30 @@ def report(body: ReportIn, db: DbDep, actor: ActorDep) -> dict:
         source=ProductionSource.MANUAL,
         actor=actor,
     )
-    return {"order": op.order.code, "seq": op.seq, "good_qty": op.good_qty, "scrap_qty": op.scrap_qty} if op else {}
+    if op is None:
+        return {}
+    # What the booking did, all of it. The order's Good is finished output -
+    # the last operation's good - so 120 booked at the filler of a six-step
+    # line moves the filler's count and not the order's. An operator who
+    # watched the Work Orders table for a jump of 120 saw none and could not
+    # tell whether the booking went in (the walker's card, 2026-11-08). The
+    # reply now carries the step's new totals and the order's, and names the
+    # step whose good the order's Good counts, so a screen can say so.
+    order = op.order
+    final = order.operations[-1]
+    return {
+        "order": order.code,
+        "seq": op.seq,
+        "operation": op.name,
+        "good_qty": op.good_qty,
+        "scrap_qty": op.scrap_qty,
+        "booked_good": body.good,
+        "booked_scrap": body.scrap,
+        "order_good_qty": order.good_qty,
+        "order_scrap_qty": order.scrap_qty,
+        "final_seq": final.seq,
+        "final_operation": final.name,
+    }
 
 
 @router.get("/unassigned")
