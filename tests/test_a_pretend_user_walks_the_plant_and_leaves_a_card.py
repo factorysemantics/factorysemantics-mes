@@ -99,7 +99,7 @@ CARD = """---
 card: 2026-11-09-export-quality-xlsx
 persona: supervisor
 plant: http://127.0.0.1:8110
-status: waiting-on-scott
+status: new
 risk: UI
 pr:
 ---

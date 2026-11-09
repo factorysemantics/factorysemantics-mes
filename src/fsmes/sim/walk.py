@@ -311,7 +311,7 @@ def card_text(result: dict) -> str:
         f"card: {result['card']}",
         f"persona: {result['persona']}",
         f"plant: {result['plant']}",
-        "status: waiting-on-scott",
+        "status: new",  # the judge sets waiting-on-scott once pr: is filled
         f"risk: {result.get('risk') or 'UI'}",
         "pr:",
         "---",
