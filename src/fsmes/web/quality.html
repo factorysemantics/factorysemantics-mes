@@ -85,6 +85,10 @@
           <option value="">Any status</option>
         </select>
         <input id="n-q" type="search" placeholder="Code, order or text" aria-label="Code, order or text" data-assist="nc-search">
+        <label class="range-field" for="n-from">From
+          <input id="n-from" type="date" aria-label="Raised from"></label>
+        <label class="range-field" for="n-to">To
+          <input id="n-to" type="date" aria-label="Raised to"></label>
       </div>
       <ul id="ncs" class="feed" data-assist="nc-list"></ul>
       <div id="disposition" class="reason hidden" data-assist="nc-disposition">
@@ -130,7 +134,7 @@
         <label class="range-field" for="h-to">To
           <input id="h-to" type="date" aria-label="Taken to"></label>
         <button id="h-clear" class="ghost" type="button">Clear</button>
-        <a id="h-export" class="ghost" href="/quality/checks/export.xlsx" download
+        <a id="h-export" class="ghost export-xlsx" href="/quality/checks/export.xlsx" download
            data-assist="history-export">Export xlsx</a>
       </div>
       <div class="table-wrap">

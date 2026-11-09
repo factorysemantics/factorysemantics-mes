@@ -91,10 +91,13 @@
       <h2>Activity <span class="muted">— the audit trail</span></h2>
       <p class="muted small">Humans and agents in the same spine. Filter by
         <code>AGENT</code> to see everything an agent has done to this plant.</p>
-      <div class="row log-controls">
+      <div class="row log-controls" data-assist="activity-filters">
         <select id="actor-filter" aria-label="Who"></select>
         <input id="action-filter" placeholder="action starts with… e.g. quality.">
-        <span class="spacer"></span>
+        <label class="range-field" for="activity-from">From
+          <input id="activity-from" type="date" aria-label="Written from"></label>
+        <label class="range-field" for="activity-to">To
+          <input id="activity-to" type="date" aria-label="Written to"></label>
       </div>
       <div class="table-wrap logs" data-assist="ops-activity">
         <table id="activity">

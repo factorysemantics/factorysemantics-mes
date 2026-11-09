@@ -390,6 +390,45 @@
     });
   };
 
+  /* The Export xlsx button, beside a list's filters - one control for every
+     list a supervisor takes to Excel, so it looks and behaves as one thing on
+     every tab. It is a link to the list's own `export.xlsx`, carrying the
+     filters the list is showing (never its page: the file holds every
+     matching row), and its label says how many rows it will hold before
+     anybody presses it - a file is a list too.
+
+       const exportOrders = FS.exportXlsx("#order-filters", "/workorders/export.xlsx", "orders");
+       exportOrders(params, page.total);   // each time the list redraws
+
+     `params` is a URLSearchParams or a plain object; `limit` and `offset`
+     are dropped from it. `total` may be left out where the screen has no
+     count to give. An existing link in the bar with the class
+     `export-xlsx` is reused, so a page can place it in its HTML. */
+  FS.exportXlsx = function exportXlsx(bar, path, noun, { id, assist } = {}) {
+    const host = typeof bar === "string" ? document.querySelector(bar) : bar;
+    let link = host ? host.querySelector("a.export-xlsx") : null;
+    if (host && !link) {
+      link = FS.el("a", "ghost export-xlsx", "Export xlsx");
+      link.setAttribute("download", "");
+      if (id) link.id = id;
+      if (assist) link.dataset.assist = assist;
+      link.href = path;
+      host.appendChild(link);
+    }
+    return function update(params, total) {
+      if (!link) return;
+      const p = new URLSearchParams(params || {});
+      p.delete("limit");
+      p.delete("offset");
+      const query = p.toString();
+      link.href = `${path}${query ? `?${query}` : ""}`;
+      const n = total === undefined || total === null ? null : Number(total).toLocaleString();
+      link.title = n === null ? `Download these ${noun} as a spreadsheet`
+                              : `Download these ${n} ${noun} as a spreadsheet`;
+      link.setAttribute("aria-label", n === null ? `Export ${noun} as xlsx` : `Export ${n} ${noun} as xlsx`);
+    };
+  };
+
   /* Every row of a paged list, page by page, up to a stated ceiling.
 
      For the handful of places that genuinely need the whole of a bounded

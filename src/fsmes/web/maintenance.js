@@ -781,6 +781,10 @@ function wirePlans() {
 
 const HISTORY_PAGE = 50;
 let historyOffset = 0;
+/* Export xlsx: every completed job the filters match, not this page. */
+const exportHistory = FS.exportXlsx('[data-assist="maintenance-history-filters"]',
+                                    "/maintenance/orders/export.xlsx", "completed jobs",
+                                    { id: "history-export", assist: "maintenance-history-export" });
 
 async function loadHistory() {
   // The server's page of done work, filtered there: history grows for as
@@ -792,7 +796,13 @@ async function loadHistory() {
   if (machine) params.set("equipment", machine);
   if (kind) params.set("kind", kind);
   if (q) params.set("q", q);
+  // From/To are plant days on the day the work was completed.
+  const since = $("#history-from").value;
+  const until = $("#history-to").value;
+  if (since) params.set("since", since);
+  if (until) params.set("until", until);
   const page = await api(`/maintenance/orders?${params}`);
+  exportHistory(params, page.total);
   historyOffset = page.offset;
   const done = page.items;
   const body = $("#history-table tbody");
@@ -854,6 +864,8 @@ function onTab(name) {
   const reloadHistory = () => { historyOffset = 0; loadHistory().catch(fail); };
   $("#history-machine").addEventListener("change", reloadHistory);
   $("#history-kind").addEventListener("change", reloadHistory);
+  $("#history-from").addEventListener("change", reloadHistory);
+  $("#history-to").addEventListener("change", reloadHistory);
   $("#history-q").addEventListener("input", () => { clearTimeout(typing); typing = setTimeout(reloadHistory, 250); });
   for (const id of ["plan-q", "plan-filter-machine", "plan-filter-trigger"]) {
     $(`#${id}`).addEventListener("input", () => { planOffset = 0; drawPlans(); });

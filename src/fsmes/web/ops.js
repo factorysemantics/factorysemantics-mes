@@ -119,18 +119,35 @@ async function loadLog() {
   }
 }
 
-async function loadActivity() {
+/* Export xlsx: the screen shows the latest eighty rows, the file every row
+   of the range under the same filters. */
+const exportActivity = FS.exportXlsx('[data-assist="activity-filters"]', "/ops/activity/export.xlsx",
+                                     "audit rows", { id: "activity-export", assist: "activity-export" });
+
+function activityFilters() {
+  const p = new URLSearchParams();
   const actor = $("#actor-filter").value;
   const action = $("#action-filter").value.trim();
-  const out = await api(`/ops/activity?limit=80`
-    + (actor ? `&actor=${encodeURIComponent(actor)}` : "")
-    + (action ? `&action=${encodeURIComponent(action)}` : ""));
+  if (actor) p.set("actor", actor);
+  if (action) p.set("action", action);
+  if ($("#activity-from").value) p.set("since", $("#activity-from").value);
+  if ($("#activity-to").value) p.set("until", $("#activity-to").value);
+  return p;
+}
+
+async function loadActivity() {
+  const filters = activityFilters();
+  exportActivity(filters);
+  const out = await api(`/ops/activity?limit=80${filters.toString() ? `&${filters}` : ""}`);
 
   const select = $("#actor-filter");
   if (select.dataset.filled !== String(out.actors.length)) {
     const chosen = select.value;
     select.textContent = "";
-    select.appendChild(el("option", null, "anyone"));
+    // Value "", not its text: "anyone" is no filter, not a person called anyone.
+    const anyone = el("option", null, "anyone");
+    anyone.value = "";
+    select.appendChild(anyone);
     for (const who of out.actors) {
       const opt = el("option", null, who);
       opt.value = who;
@@ -273,6 +290,8 @@ async function refresh() {
 
 $("#log-level").addEventListener("change", loadLog);
 $("#actor-filter").addEventListener("change", loadActivity);
+$("#activity-from").addEventListener("change", loadActivity);
+$("#activity-to").addEventListener("change", loadActivity);
 $("#action-filter").addEventListener("input", () => {
   clearTimeout(window._af);
   window._af = setTimeout(loadActivity, 350);

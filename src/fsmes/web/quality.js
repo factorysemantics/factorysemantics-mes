@@ -49,7 +49,7 @@ const filters = {
   // specifications
   sQ: "", sMaterial: "", sOffset: 0,
   // non-conformances
-  nStatus: NC_DEFAULT_SCOPE, nQ: "", nOffset: 0,
+  nStatus: NC_DEFAULT_SCOPE, nQ: "", nFrom: "", nTo: "", nOffset: 0,
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -108,7 +108,7 @@ const URL_KEYS = [
   ["h_material", "hMaterial"], ["h_char", "hChar"], ["h_result", "hResult"],
   ["h_from", "hFrom"], ["h_to", "hTo"],
   ["s_q", "sQ"], ["s_material", "sMaterial"],
-  ["n_q", "nQ"],
+  ["n_q", "nQ"], ["n_from", "nFrom"], ["n_to", "nTo"],
 ];
 
 function readUrl() {
@@ -122,6 +122,8 @@ function readUrl() {
   $("#s-q").value = filters.sQ;
   $("#n-q").value = filters.nQ;
   $("#n-status").value = filters.nStatus;
+  $("#n-from").value = filters.nFrom;
+  $("#n-to").value = filters.nTo;
   $("#h-result").value = filters.hResult;
   $("#h-from").value = filters.hFrom;
   $("#h-to").value = filters.hTo;
@@ -384,15 +386,8 @@ function historyQuery() {
 }
 
 /* The export link follows the filters, and says how many rows it holds
-   before anybody presses it: a file is a list too. */
-function decorateExport(total) {
-  const link = $("#h-export");
-  const p = historyFilters();
-  link.href = `/quality/checks/export.xlsx${p.toString() ? `?${p}` : ""}`;
-  const n = (total || 0).toLocaleString();
-  link.title = `Download these ${n} checks as a spreadsheet`;
-  link.setAttribute("aria-label", `Export ${n} checks as xlsx`);
-}
+   before anybody presses it - the same control as every other list's. */
+const exportChecks = FS.exportXlsx('[data-assist="history-filters"]', "/quality/checks/export.xlsx", "checks");
 
 function drawChecks() {
   const body = $("#checks tbody");
@@ -402,7 +397,7 @@ function drawChecks() {
   const narrowed = Boolean(filters.hMaterial || filters.hChar || filters.hResult
                            || filters.hFrom || filters.hTo);
   $("#h-count").textContent = `— ${page.items.length} of ${(page.total || 0).toLocaleString()}${narrowed ? " matching" : ""}`;
-  decorateExport(page.total);
+  exportChecks(historyFilters(), page.total);
   for (const c of page.items) {
     const row = el("tr");
     row.appendChild(el("td", "muted", stamp(c.ts)));
@@ -539,14 +534,28 @@ function wireDisposition() {
   });
 }
 
-function ncQuery() {
-  const p = new URLSearchParams({ limit: String(NC_PAGE), offset: String(filters.nOffset) });
+/* The non-conformances' filters without the page, for the list and its
+   export alike. From/To are plant days, as on the inspection history. */
+function ncFilters() {
+  const p = new URLSearchParams();
   // Repeatable, one value each - "still open" is three states, and the API
   // answers a comma list with a 422.
   for (const one of filters.nStatus.split(",").filter(Boolean)) p.append("status", one);
   if (filters.nQ) p.set("q", filters.nQ);
+  if (filters.nFrom) p.set("since", filters.nFrom);
+  if (filters.nTo) p.set("until", filters.nTo);
+  return p;
+}
+
+function ncQuery() {
+  const p = ncFilters();
+  p.set("limit", String(NC_PAGE));
+  p.set("offset", String(filters.nOffset));
   return `/quality/nonconformances?${p}`;
 }
+
+const exportNcs = FS.exportXlsx('[data-assist="nc-filters"]', "/quality/nonconformances/export.xlsx",
+                                "non-conformances", { id: "n-export", assist: "nc-export" });
 
 function drawNcs() {
   // The server's page, filtered there: a day of a busy plant is two
@@ -556,9 +565,11 @@ function drawNcs() {
   const page = ncPage;
   filters.nOffset = page.offset;
   const what = NC_SCOPES[filters.nStatus] || "in any status";
-  $("#n-count").textContent = `— ${page.items.length} of ${page.total.toLocaleString()} ${what}${filters.nQ ? " matching" : ""}`;
+  const ncNarrowed = Boolean(filters.nQ || filters.nFrom || filters.nTo);
+  $("#n-count").textContent = `— ${page.items.length} of ${page.total.toLocaleString()} ${what}${ncNarrowed ? " matching" : ""}`;
+  exportNcs(ncFilters(), page.total);
   if (!page.items.length) {
-    list.appendChild(el("li", "muted", filters.nStatus.startsWith("open") && !filters.nQ
+    list.appendChild(el("li", "muted", filters.nStatus.startsWith("open") && !ncNarrowed
       ? "none open — the line is inside spec" : "none match"));
   }
   for (const nc of page.items) {
@@ -756,6 +767,8 @@ $("#h-clear").addEventListener("click", () => {
 });
 
 $("#n-status").addEventListener("change", () => { filters.nStatus = $("#n-status").value; filters.nOffset = 0; writeUrl(); refresh(); });
+$("#n-from").addEventListener("change", () => { filters.nFrom = $("#n-from").value; filters.nOffset = 0; writeUrl(); refresh(); });
+$("#n-to").addEventListener("change", () => { filters.nTo = $("#n-to").value; filters.nOffset = 0; writeUrl(); refresh(); });
 let ncTyping = null;
 $("#n-q").addEventListener("input", () => {
   clearTimeout(ncTyping);

@@ -555,6 +555,10 @@ async function loadMaterials() {
   }
 }
 
+/* Export xlsx, beside the filters: every order they match, not this page. */
+const exportOrders = FS.exportXlsx('[data-assist="order-filters"]', "/workorders/export.xlsx",
+                                   "orders", { id: "order-export", assist: "order-export" });
+
 async function refresh() {
   try {
     const query = new URLSearchParams({ limit: String(pageSize), offset: String(offset) });
@@ -572,6 +576,7 @@ async function refresh() {
     noOrder = unassigned;
     orders = paged.items;
     total = paged.total;
+    exportOrders(query, total);
     hasMore = paged.has_more;
     if (!selected && orders.length) {
       const active = orders.find((o) => ["running", "released"].includes(o.status));
