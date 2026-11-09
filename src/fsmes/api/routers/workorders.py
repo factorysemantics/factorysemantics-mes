@@ -2,11 +2,11 @@
 
 from datetime import datetime
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Response
 from pydantic import BaseModel
 from sqlalchemy import func, select
 
-from fsmes.api import paging
+from fsmes.api import export, paging
 from fsmes.api.deps import ActorDep, DbDep, require
 from fsmes.domain import Material, OperationStatus, OrderStatus, WorkOrder, WorkOrderOperation
 from fsmes.services import masterdata, workorders
@@ -119,6 +119,46 @@ def list_orders(
 
     rows, total = paging.paginate(db, query, limit, offset)
     return paging.page([_out(wo) for wo in rows], total, limit, offset)
+
+
+#: The work orders as a spreadsheet: one row per order.
+ORDER_EXPORT = (
+    export.Column("Order", "code"),
+    export.Column("Material", "material"),
+    export.Column("Status", "status"),
+    export.Column("Quantity", "quantity"),
+    export.Column("Good", "good_qty"),
+    export.Column("Scrap", "scrap_qty"),
+    export.Column("Over", "over_qty"),
+    export.Column("Priority", "priority"),
+    export.Column("Due", "due_date", when=True),
+    export.Column("ERP reference", "erp_reference"),
+    export.Column("Operations", lambda wo: len(wo.operations)),
+)
+
+
+@router.get("/export.xlsx")
+def export_orders(
+    db: DbDep,
+    status: list[OrderStatus] | None = Query(
+        None, description="Repeatable. An order matching any of these is returned."),
+    material: str | None = None,
+    q: str | None = Query(None, description="Match an order code or the code of the material it makes."),
+    due_after: datetime | None = Query(None, description="Due on or after this."),
+    due_before: datetime | None = Query(None, description="Due on or before this."),
+    line: str | None = Query(None, description="Only orders running on this line."),
+) -> Response:
+    """The work orders as a spreadsheet: every order the list would show.
+
+    Same filters as `GET /workorders`, no paging, oldest first. An order with
+    no due date has an empty Due, never a made-up one.
+    """
+    rows = export.every_page(list_orders, db=db, status=status, material=material, q=q,
+                             due_after=due_after, due_before=due_before, line=line)
+    range_ = export.span(due_after.date().isoformat() if due_after else None,
+                         due_before.date().isoformat() if due_before else None)
+    return export.spreadsheet("work-orders", "Work orders", ORDER_EXPORT, reversed(rows),
+                              range_=f"due-{range_}" if range_ != "all" else range_)
 
 
 @router.post("", status_code=201, dependencies=[require("orders.create")])

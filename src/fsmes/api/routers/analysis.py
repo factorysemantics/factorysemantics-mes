@@ -34,9 +34,10 @@ an error.
 
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
+from fsmes.api import export
 from fsmes.api.deps import UserDep, get_read_db, require
 from fsmes.services import analysis
 from fsmes.services import trace_analysis as analysis_trace
@@ -138,6 +139,68 @@ def oee(line: str | None = _LINE, hours: float | None = _HOURS, shift: str | Non
         db: Session = Depends(get_read_db)) -> dict:
     """OEE per station with each loss named in units and seconds."""
     return analysis.oee_breakdown(db, line_code=line, hours=hours, shift=shift)
+
+
+#: OEE by station as a spreadsheet: one row per station, as the panel lists them.
+OEE_EXPORT = (
+    export.Column("Station", "code"),
+    export.Column("Name", "name"),
+    export.Column("OEE", "oee"),
+    export.Column("Availability", "availability"),
+    export.Column("Performance", "performance"),
+    export.Column("Quality", "quality"),
+    export.Column("Good", "good_qty"),
+    export.Column("Scrap", "scrap_qty"),
+    export.Column("Run (s)", "runtime_seconds"),
+    export.Column("Down (s)", "downtime_seconds"),
+    export.Column("Not watched (s)", "unknown_seconds"),
+    export.Column("Coverage", "coverage"),
+    export.Column("Lost to downtime (units)", lambda s: s["loss"]["availability_units"]),
+    export.Column("Lost to slow running (units)", lambda s: s["loss"]["performance_units"]),
+    export.Column("Ideal cycle (s)", "ideal_cycle_seconds"),
+    # Why a figure is empty, in the panel's own words: an empty OEE is "not
+    # rated", never a zero.
+    export.Column("Note", lambda s: s["coverage_note"] or s["performance_note"]),
+)
+
+
+@router.get("/oee/export.xlsx")
+def export_oee(line: str | None = _LINE, hours: float | None = _HOURS, shift: str | None = _SHIFT,
+               db: Session = Depends(get_read_db)) -> Response:
+    """OEE by station as a spreadsheet, for the window the panel shows.
+
+    Same picks as `GET /analysis/oee`. A station the MES cannot rate has its
+    figures empty and the reason in Note, as the panel says it.
+    """
+    out = analysis.oee_breakdown(db, line_code=line, hours=hours, shift=shift)
+    return export.spreadsheet(f"oee-by-station-{out['line']['code']}", "OEE by station",
+                              OEE_EXPORT, out["stations"], range_=export.window_span(out["window"]))
+
+
+#: The stops behind the downtime pareto: one row per stop.
+DOWNTIME_EXPORT = (
+    export.Column("Machine", "machine"),
+    export.Column("Started", "started_at", when=True),
+    export.Column("Ended", lambda e: e["ended_at"] or "still down", when=True),
+    export.Column("Seconds in window", "seconds"),
+    export.Column("Reason", "reason"),
+    export.Column("Code", "code"),
+    export.Column("From the list", lambda e: "yes" if e["from_the_list"] else "no"),
+    export.Column("Named by", lambda e: e["labelled_by"] or "nobody"),
+)
+
+
+@router.get("/downtime/export.xlsx")
+def export_downtime(line: str | None = _LINE, hours: float | None = _HOURS,
+                    shift: str | None = _SHIFT, db: Session = Depends(get_read_db)) -> Response:
+    """Every stop behind the downtime pareto, for the same window, oldest first.
+
+    Same picks as `GET /analysis/downtime`. Seconds in window is the part of
+    each stop the pareto counted, so the column sums to its total.
+    """
+    out = analysis.downtime_events(db, line_code=line, hours=hours, shift=shift)
+    return export.spreadsheet(f"downtime-{out['line']['code']}", "Downtime", DOWNTIME_EXPORT,
+                              out["events"], range_=export.window_span(out["window"]))
 
 
 @router.get("/energy")

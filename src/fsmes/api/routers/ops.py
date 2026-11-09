@@ -16,8 +16,9 @@ import json
 import socket
 from pathlib import Path
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query, Response
 
+from fsmes.api import export
 from fsmes.api.deps import DbDep, require
 from fsmes.config import get_settings
 
@@ -150,14 +151,13 @@ def logs(component: str, lines: int = 120, level: str | None = None) -> dict:
             "log_bytes": path.stat().st_size}
 
 
-@router.get("/activity", dependencies=[require("audit.read")])
-def activity(db: DbDep, limit: int = 60, actor: str | None = None,
-             action: str | None = None) -> dict:
-    """The audit trail, filtered.
+_SINCE = Query(None, description="Written at or after this. " + export.A_DAY_IS_A_PLANT_DAY)
+_UNTIL = Query(None, description="Written at or before this. " + export.A_DAY_IS_A_PLANT_DAY)
 
-    Humans and agents are in the same spine, so actor="AGENT" answers "what
-    has the agent done to my plant" and nothing else has to be built for it.
-    """
+
+def _activity_query(actor: str | None, action: str | None, since: str | None,
+                    until: str | None):
+    """The audit trail's filters, once, for the screen's list and its export."""
     from sqlalchemy import select
 
     from fsmes.domain import AuditLog
@@ -167,8 +167,25 @@ def activity(db: DbDep, limit: int = 60, actor: str | None = None,
         query = query.where(AuditLog.actor == actor)
     if action:
         query = query.where(AuditLog.action.ilike(f"{action}%"))
+    return export.within(query, AuditLog.ts, since, until)
 
-    rows = db.scalars(query.limit(min(limit, 500))).all()
+
+@router.get("/activity", dependencies=[require("audit.read")])
+def activity(db: DbDep, limit: int = 60, actor: str | None = None,
+             action: str | None = None, since: str | None = _SINCE,
+             until: str | None = _UNTIL) -> dict:
+    """The audit trail, filtered.
+
+    Humans and agents are in the same spine, so actor="AGENT" answers "what
+    has the agent done to my plant" and nothing else has to be built for it.
+    Every row of a range, not the last few hundred, is at
+    `/ops/activity/export.xlsx`.
+    """
+    from sqlalchemy import select
+
+    from fsmes.domain import AuditLog
+
+    rows = db.scalars(_activity_query(actor, action, since, until).limit(min(limit, 500))).all()
     actors = sorted({r.actor for r in db.scalars(
         select(AuditLog).order_by(AuditLog.id.desc()).limit(500))})
     return {
@@ -180,6 +197,43 @@ def activity(db: DbDep, limit: int = 60, actor: str | None = None,
         ],
         "actors": actors,
     }
+
+
+def _json(value) -> str | None:
+    return None if value is None else json.dumps(value, default=str, sort_keys=True)
+
+
+#: The audit trail as a spreadsheet: one row per write.
+ACTIVITY_EXPORT = (
+    export.Column("Time", "ts", when=True),
+    export.Column("Who", "actor"),
+    export.Column("On behalf of", "on_behalf_of"),
+    export.Column("Did", "action"),
+    export.Column("To", "entity_type"),
+    export.Column("Which", "entity_id"),
+    # Not attributed is not a shift called nothing (decision 0028).
+    export.Column("Shift", lambda r: r.shift_code or "not attributed"),
+    export.Column("Shift day", "shift_day"),
+    export.Column("Before", lambda r: _json(r.before)),
+    export.Column("After", lambda r: _json(r.after)),
+)
+
+
+@router.get("/activity/export.xlsx", dependencies=[require("audit.read")])
+def export_activity(db: DbDep, actor: str | None = None, action: str | None = None,
+                    since: str | None = _SINCE, until: str | None = _UNTIL) -> Response:
+    """The audit trail as a spreadsheet: every row of the range, oldest first.
+
+    Same filters as `GET /ops/activity` and no cap: the screen shows the
+    latest few, the file holds all of them. Before and After are the record's
+    own JSON, as written.
+    """
+    from fsmes.domain import AuditLog
+
+    query = (_activity_query(actor, action, since, until)
+             .order_by(None).order_by(AuditLog.ts, AuditLog.id))
+    return export.spreadsheet("audit-trail", "Audit trail", ACTIVITY_EXPORT,
+                              db.scalars(query), range_=export.span(since, until))
 
 
 @router.get("/retention")

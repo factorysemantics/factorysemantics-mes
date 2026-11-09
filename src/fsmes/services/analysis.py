@@ -780,6 +780,56 @@ def state_timeline(db: Session, line_code: str | None = None, hours: float | Non
     }
 
 
+def _down_states(db: Session, ids: list[int], start: datetime, end: datetime) -> list:
+    """Every stop that touches the window: the pareto's rows and the file's."""
+    return db.scalars(
+        select(EquipmentState).where(
+            EquipmentState.equipment_id.in_(ids),
+            EquipmentState.state == EquipmentStateName.DOWN,
+            EquipmentState.started_at < end,
+            (EquipmentState.ended_at.is_(None)) | (EquipmentState.ended_at > start),
+        ).order_by(EquipmentState.started_at, EquipmentState.id)
+    ).all()
+
+
+def downtime_events(db: Session, line_code: str | None = None, hours: float | None = None,
+                    shift: str | None = None) -> dict:
+    """The stops behind the downtime pareto, one by one, oldest first.
+
+    The same window and the same stops the pareto sums: a supervisor who takes
+    the pareto to Excel wants the rows it was added up from. `seconds` is the
+    part of each stop inside the window, so the column sums to the pareto's
+    total; a stop still going has no end, and says so rather than borrowing
+    the window's. A stop nobody named is `unlabelled`, as on the pareto.
+    """
+    hours = calendar_service.default_report_hours(db) if hours is None else hours
+    centre, units = _line_and_units(db, line_code)
+    the_shift = _shift(db, shift)
+    start, end = _window(db, units, hours, the_shift)
+    by_id = {unit.id: unit.code for unit in units}
+    vocabulary = reasons.labels(db)
+    events = []
+    for state in _down_states(db, [unit.id for unit in units], start, end):
+        seconds = _overlap(state, start, end)
+        if seconds <= 0:
+            continue
+        labelled = bool(state.reason or state.reason_code)
+        events.append({
+            "machine": by_id[state.equipment_id],
+            "started_at": state.started_at,
+            "ended_at": state.ended_at,
+            "seconds": round(seconds, 1),
+            "reason": (vocabulary.get(state.reason_code, state.reason_code)
+                       if state.reason_code else state.reason or UNLABELLED),
+            "code": state.reason_code,
+            "from_the_list": bool(state.reason_code),
+            "labelled_by": (state.reason_source or "here") if labelled else None,
+        })
+    return {"line": {"code": centre.code, "name": centre.name},
+            "window": _window_json(start, end, hours, the_shift),
+            "events": events}
+
+
 def downtime_pareto(db: Session, line_code: str | None = None, hours: float | None = None,
                     shift: str | None = None) -> dict:
     """Downtime grouped by reason, worst first, with a running cumulative share.
@@ -823,14 +873,7 @@ def downtime_pareto(db: Session, line_code: str | None = None, hours: float | No
     ids = [unit.id for unit in units]
     by_id = {unit.id: unit.code for unit in units}
 
-    states = db.scalars(
-        select(EquipmentState).where(
-            EquipmentState.equipment_id.in_(ids),
-            EquipmentState.state == EquipmentStateName.DOWN,
-            EquipmentState.started_at < end,
-            (EquipmentState.ended_at.is_(None)) | (EquipmentState.ended_at > start),
-        )
-    ).all()
+    states = _down_states(db, ids, start, end)
 
     # What each code is called: every code this plant ever put in force,
     # retired ones included. A retired code still labels the intervals it

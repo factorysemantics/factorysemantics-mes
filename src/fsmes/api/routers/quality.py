@@ -6,7 +6,7 @@ from fastapi import APIRouter, Query, Response
 from pydantic import BaseModel
 from sqlalchemy import func, select
 
-from fsmes.api import paging
+from fsmes.api import export, paging
 from fsmes.api.deps import ActorDep, DbDep, require
 from fsmes.domain import (
     Equipment,
@@ -349,44 +349,9 @@ def record_count(body: CountIn, db: DbDep, actor: ActorDep) -> dict:
     }
 
 
-#: What a date box means when it is the whole of `since` or `until`.
-_A_DAY_IS_A_PLANT_DAY = (
-    "A bare date (2026-09-01) is a day on the plant's own clock: `since` from "
-    "its first moment, `until` to its last. A date and time is an instant in "
-    "UTC, as every timestamp in this API is.")
-
-
-def _instant(text: str | None, *, end: bool) -> tuple[datetime, bool] | None:
-    """`since` or `until` as a naive-UTC bound, and whether it is inclusive.
-
-    A bare date is a plant day, not a day in Greenwich: "to the 3rd" on a
-    Chicago line means to midnight in Chicago, and a range drawn in UTC would
-    move six hours of somebody's night shift into the wrong day of the file.
-    The end of a day is the start of the next one, exclusive, so a reading at
-    23:59:59.6 is still on it.
-    """
-    from datetime import UTC, timedelta
-
-    from fsmes import identity
-    from fsmes.services import Invalid
-
-    if not text:
-        return None
-    text = text.strip()
-    try:
-        if len(text) == 10:
-            day = date.fromisoformat(text)
-            if end:
-                day += timedelta(days=1)
-            local = datetime(day.year, day.month, day.day, tzinfo=identity.clock().tz)
-            return local.astimezone(UTC).replace(tzinfo=None), not end
-        moment = datetime.fromisoformat(text)
-    except ValueError:
-        raise Invalid(f"{text!r} is neither a date (2026-09-01) nor a date and time "
-                      f"(2026-09-01T06:00:00)") from None
-    if moment.tzinfo is not None:
-        moment = moment.astimezone(UTC).replace(tzinfo=None)
-    return moment, True
+#: What a date box means when it is the whole of `since` or `until`; the same
+#: sentence on every list that exports (`fsmes.api.export`).
+_A_DAY_IS_A_PLANT_DAY = export.A_DAY_IS_A_PLANT_DAY
 
 
 def _checks_query(material, characteristic, result, order, since, until):
@@ -398,13 +363,7 @@ def _checks_query(material, characteristic, result, order, since, until):
     query = select(QualityCheck).order_by(QualityCheck.id.desc())
     if result:
         query = query.where(QualityCheck.result == result)
-    start = _instant(since, end=False)
-    if start:
-        query = query.where(QualityCheck.ts >= start[0])
-    stop = _instant(until, end=True)
-    if stop:
-        moment, inclusive = stop
-        query = query.where(QualityCheck.ts <= moment if inclusive else QualityCheck.ts < moment)
+    query = export.within(query, QualityCheck.ts, since, until)
     if order:
         query = query.where(QualityCheck.work_order_id.in_(
             select(WorkOrder.id).where(WorkOrder.code == order)))
@@ -615,6 +574,8 @@ def list_ncs(
     status: list[NcStatus] | None = Query(
         None, description="Repeatable. A non-conformance in any of these states is returned."),
     q: str | None = Query(None, description="Match a code or a description."),
+    since: str | None = Query(None, description="Raised at or after this. " + _A_DAY_IS_A_PLANT_DAY),
+    until: str | None = Query(None, description="Raised at or before this. " + _A_DAY_IS_A_PLANT_DAY),
     limit: int = paging.LimitQuery,
     offset: int = paging.OffsetQuery,
 ) -> dict:
@@ -635,6 +596,7 @@ def list_ncs(
     if q:
         like = f"%{q}%"
         query = query.where(NonConformance.code.ilike(like) | NonConformance.description.ilike(like))
+    query = export.within(query, NonConformance.created_at, since, until)
     rows, total = paging.paginate(db, query, limit, offset)
     order_ids = {nc.work_order_id for nc in rows if nc.work_order_id}
     orders = {}
@@ -642,6 +604,46 @@ def list_ncs(
         orders = {wo.id: wo.code for wo in db.scalars(select(WorkOrder).where(WorkOrder.id.in_(order_ids)))}
     return paging.page([_nc_out(nc, orders.get(nc.work_order_id)) for nc in rows],
                        total, limit, offset)
+
+
+#: The non-conformances as a spreadsheet: one row per hold, its whole course.
+NC_EXPORT = (
+    export.Column("Code", "code"),
+    export.Column("Raised", "created_at", when=True),
+    export.Column("Severity", "severity"),
+    export.Column("Status", "status"),
+    export.Column("Description", "description"),
+    export.Column("Order", lambda nc: nc["order"] or "no order"),
+    export.Column("Raised by", lambda nc: nc["raised_by"] or "not recorded"),
+    export.Column("Reviewed by", "reviewed_by"),
+    export.Column("Reviewed", "reviewed_at", when=True),
+    export.Column("Disposition", "disposition"),
+    export.Column("Reason", "disposition_reason"),
+    export.Column("Decided by", "disposition_by"),
+    export.Column("Decided", "disposition_at", when=True),
+    export.Column("Closed by", "closed_by"),
+    export.Column("Closed", "closed_at", when=True),
+)
+
+
+@router.get("/nonconformances/export.xlsx")
+def export_ncs(
+    db: DbDep,
+    status: list[NcStatus] | None = Query(
+        None, description="Repeatable. A non-conformance in any of these states is returned."),
+    q: str | None = Query(None, description="Match a code or a description."),
+    since: str | None = Query(None, description="Raised at or after this. " + _A_DAY_IS_A_PLANT_DAY),
+    until: str | None = Query(None, description="Raised at or before this. " + _A_DAY_IS_A_PLANT_DAY),
+) -> Response:
+    """The non-conformances as a spreadsheet: every one the list would show.
+
+    Same filters as `GET /quality/nonconformances`, no paging, oldest first.
+    An empty cell is a step not taken yet - a hold nobody has reviewed has
+    no reviewer - and never a guess at one.
+    """
+    rows = export.every_page(list_ncs, db=db, status=status, q=q, since=since, until=until)
+    return export.spreadsheet("non-conformances", "Non-conformances", NC_EXPORT,
+                              reversed(rows), range_=export.span(since, until))
 
 
 def _nc_out(nc: NonConformance, order: str | None = None) -> dict:

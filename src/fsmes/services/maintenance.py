@@ -483,8 +483,12 @@ def create_plan(session: Session, *, code: str, name: str, equipment_code: str,
 
 def history(session: Session, equipment_code: str | None = None, limit: int = 50, *,
             status: list[str] | None = None, kind: str | None = None, q: str | None = None,
-            offset: int = 0) -> tuple[list[MaintenanceOrder], int]:
-    """One page of maintenance orders, newest first, and how many match."""
+            offset: int = 0, narrow=None) -> tuple[list[MaintenanceOrder], int]:
+    """One page of maintenance orders, newest first, and how many match.
+
+    `narrow`, when given, is the caller's own last word on the query - the
+    API's date range, which is parsed where every other date range is.
+    """
     query = select(MaintenanceOrder).order_by(MaintenanceOrder.id.desc())
     if equipment_code:
         equipment = masterdata.get_equipment(session, equipment_code)
@@ -497,6 +501,8 @@ def history(session: Session, equipment_code: str | None = None, limit: int = 50
         like = f"%{q}%"
         query = query.where(MaintenanceOrder.code.ilike(like) | MaintenanceOrder.summary.ilike(like)
                             | MaintenanceOrder.findings.ilike(like))
+    if narrow is not None:
+        query = narrow(query)
     total = session.scalar(select(func.count()).select_from(query.order_by(None).subquery())) or 0
     return list(session.scalars(query.limit(limit).offset(offset))), total
 

@@ -1,10 +1,10 @@
 """Execution endpoints: lots, consumption, production reporting, genealogy."""
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Response
 from pydantic import BaseModel
 from sqlalchemy import select
 
-from fsmes.api import paging
+from fsmes.api import export, paging
 from fsmes.api.deps import ActorDep, DbDep, require
 from fsmes.domain import LotStatus, Material, MaterialLot, ProductionSource
 from fsmes.services import execution
@@ -63,6 +63,33 @@ def list_lots(
 
     rows, total = paging.paginate(db, query, limit, offset)
     return paging.page([_lot_out(db, lot) for lot in rows], total, limit, offset)
+
+
+#: The lots as a spreadsheet: one row per lot, in code order as the list is.
+LOT_EXPORT = (
+    export.Column("Lot", "code"),
+    export.Column("Material", "material"),
+    export.Column("Status", "status"),
+    export.Column("Quantity", "quantity"),
+    export.Column("Original quantity", "original_quantity"),
+    export.Column("Made by order", lambda lot: lot.produced_by_order or "not made here"),
+)
+
+
+@router.get("/lots/export.xlsx")
+def export_lots(
+    db: DbDep,
+    material: str | None = None,
+    status: LotStatus | None = None,
+    q: str | None = Query(None, description="Match a lot code."),
+) -> Response:
+    """The lots as a spreadsheet: every lot the list would show, same filters.
+
+    A lot booked in from outside was not made by any order here, and says so
+    rather than leaving the cell to be read as a missing link.
+    """
+    rows = export.every_page(list_lots, db=db, material=material, status=status, q=q)
+    return export.spreadsheet("lots", "Lots", LOT_EXPORT, rows)
 
 
 @router.post("/lots", status_code=201, dependencies=[require("production.consume")])
