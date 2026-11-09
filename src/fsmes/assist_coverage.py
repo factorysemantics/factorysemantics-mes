@@ -443,7 +443,9 @@ def screen_pattern(path: str) -> re.Pattern:
     parts = []
     for segment in path.strip("/").split("/"):
         if segment.startswith("{"):
-            parts.append(r"[^/\"'`?\s]+")
+            # A file a list serves (`/quality/nonconformances/export.xlsx`)
+            # is not a call to the route for one of its items.
+            parts.append(r"(?![^/\"'`?\s]*\.xlsx)[^/\"'`?\s]+")
         else:
             parts.append("(?:" + re.escape(segment) + "|X)")
     return re.compile(r"[\"'`]/" + "/".join(parts) + r"(?=[\"'`?\sX])")
