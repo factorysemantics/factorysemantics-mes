@@ -239,6 +239,20 @@ def test_a_filtered_floor_never_makes_the_plant_look_smaller(client, megaplant, 
     assert down["plant"]["oee"] == whole["plant"]["oee"]
 
 
+def test_the_floor_plant_oee_tile_says_which_window_it_covers(client, megaplant, session):
+    from fsmes.services import calendar as calendar_service
+
+    # Without an explicit oee_hours the plant returns its own default.
+    resp = client.get("/dashboard/summary?machine_limit=1").json()
+    default = calendar_service.default_report_hours(session)
+    assert resp["plant"]["oee_hours"] == default, (
+        f"expected default {default}, got {resp['plant']['oee_hours']}")
+
+    # With an explicit oee_hours the plant returns that value.
+    resp8 = client.get("/dashboard/summary?machine_limit=1&oee_hours=8").json()
+    assert resp8["plant"]["oee_hours"] == 8
+
+
 def test_a_machine_that_never_reported_a_state_is_unknown_and_findable(client, megaplant):
     """Unknown is an answer, not a gap: the seeded demo machines have no open
     state here, and the filter can name them."""

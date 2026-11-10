@@ -202,6 +202,7 @@ def _matching(machines: list[Equipment], open_states: dict, q: str | None,
 def _build_summary(db: Session, oee_hours: float | None, line: str | None = None,
                    machine_q: str | None = None, machine_state: str | None = None,
                    machine_limit: int | None = None, machine_offset: int = 0) -> dict:
+    from fsmes.services import calendar as calendar_service
     scope = _machines(db, line)
     # The open state of every machine in scope, in one query. It is what the
     # "machines running" tile counts and what the state filter matches on, so
@@ -346,6 +347,11 @@ def _build_summary(db: Session, oee_hours: float | None, line: str | None = None
             # counts outrun their run time, which is the one a reader of a
             # replayed plant most needs pointed at.
             "oee_counts_outrun": len(outrun),
+            # Which window the OEE was computed over, in hours: the one the
+            # caller asked for, or the plant's own `[process]
+            # default_report_hours` when nobody asked. Never left out, so the
+            # Floor's tile can say which stretch its mean covers.
+            "oee_hours": oee_hours if oee_hours is not None else calendar_service.default_report_hours(db),
             # Which clock the figures on this screen were computed on. `None`
             # on a plant whose clock is the line's, which is every real one.
             "clock": line_clock.summary(),
