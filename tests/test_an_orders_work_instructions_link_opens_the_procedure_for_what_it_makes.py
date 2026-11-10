@@ -132,9 +132,13 @@ def test_the_link_on_an_order_opens_the_instructions_for_its_material_route_firs
         assert page.get_attribute("#d-instructions", "href") == "/dashboard/instructions?material=FG-COLA"
         assert page.is_visible("#d-instructions")
 
+        # The check runs on whichever page is loaded; until the Instructions
+        # page is, there is no #doc-title, so wait for its address first and
+        # read the title null-safe.
         page.click("#d-instructions")
+        page.wait_for_url("**/dashboard/instructions?material=FG-COLA", timeout=20000)
         page.wait_for_function(
-            "() => document.querySelector('#doc-title').textContent.trim() === 'Making Cola Syrup'",
+            "() => (document.querySelector('#doc-title')?.textContent || '').trim() === 'Making Cola Syrup'",
             timeout=20000)
         listed = page.eval_on_selector_all(
             "#catalogue tbody tr td.mono", "cells => cells.map((c) => c.textContent.trim())")
