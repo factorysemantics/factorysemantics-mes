@@ -107,6 +107,7 @@ NEEDS: dict[str, str] = {
     "record_check": "quality.record",
     "record_sample": "quality.record",
     "record_count": "quality.record",
+    "raise_nonconformance": "quality.record",
     "close_nonconformance": "quality.close_nc",
     "review_nonconformance": "quality.close_nc",
     "disposition_nonconformance": "quality.close_nc",
