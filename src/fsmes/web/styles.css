@@ -525,6 +525,23 @@ nav.nav { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
 }
 .filter-bar input[type="search"] { flex: 1 1 120px; min-width: 0; }
 
+/* A list a supervisor takes to Excel: From/To in the bar where the list is
+   dated, and the Export xlsx link at its right end (FS.exportXlsx). The same
+   on every tab; a bar that carries them wraps on a phone rather than pushing
+   the page sideways. */
+.filter-bar:has(.export-xlsx) { flex-wrap: wrap; }
+.range-field {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+a.ghost.export-xlsx { padding: 5px 12px; font-size: var(--fs-sm); margin-left: auto; white-space: nowrap; }
+.panel-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.panel-head h2 { flex: 1 1 auto; }
+
+
 .popover-host { position: relative; }
 .popover {
   position: absolute;

@@ -475,8 +475,18 @@ function lastPlayed(start, end) {
 }
 
 /* ---------- load ---------- */
+/* The two tables a supervisor takes to Excel from here: the stations behind
+   the line's figure, and every stop behind the pareto. Same window, same
+   line, as the screen. */
+const exportOee = FS.exportXlsx('[data-assist="oee-tools"]', "/analysis/oee/export.xlsx",
+  "stations", { id: "oee-export", assist: "oee-export" });
+const exportDowntime = FS.exportXlsx('[data-assist="downtime-tools"]', "/analysis/downtime/export.xlsx",
+  "stops", { id: "downtime-export", assist: "downtime-export" });
+
 async function load() {
   const q = query();
+  exportOee(q.slice(1));
+  exportDowntime(q.slice(1));
   const banner = $("#banner");
   banner.classList.add("hidden");
   remember();
@@ -489,6 +499,7 @@ async function load() {
   ]);
 
   $("#kpi-oee").textContent = pct(oee.line_oee);
+  exportOee(q.slice(1), oee.stations.length);
   // The line's figure is drawn from the stations that have one, so the sub
   // line says how many that was out of how many there are. Every list states
   // its total, and this is a list of one number.

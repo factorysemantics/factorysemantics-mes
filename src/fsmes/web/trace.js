@@ -242,8 +242,15 @@ function wire() {
   });
 }
 
+/* Every lot the plant holds, as a spreadsheet. There is no table of lots to
+   put the button over - a lot is looked up here, one at a time - so it sits
+   beside the lookup and says how many lots the file holds. */
+const exportLots = FS.exportXlsx('[data-assist="lots-tools"]', "/execution/lots/export.xlsx",
+  "lots", { id: "lots-export", assist: "lots-export" });
+
 (async function boot() {
   await FS.whoami().catch(() => {});
+  FS.api("/execution/lots?limit=1").then((page) => exportLots({}, page.total)).catch(() => exportLots({}));
   FS.applyCapGates();
   wire();
   const url = new URL(location);

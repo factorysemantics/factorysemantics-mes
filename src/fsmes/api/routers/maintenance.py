@@ -8,7 +8,7 @@ from fastapi import APIRouter, Query, Response
 from pydantic import BaseModel
 from sqlalchemy import func, select
 
-from fsmes.api import paging
+from fsmes.api import export, paging
 from fsmes.api.deps import ActorDep, DbDep, UserDep, require
 from fsmes.domain import DispatchRule, MaintenanceOrder, Person
 from fsmes.services import auth, dispatch, maintenance
@@ -223,6 +223,10 @@ def create_plan(body: PlanIn, db: DbDep, actor: ActorDep) -> dict:
     return maintenance.status_of(db, plan)
 
 
+#: Which moment of an order its date range reads.
+_WHEN = "Completed (or, for work not done yet, raised) "
+
+
 @router.get("/orders")
 def orders(
     db: DbDep,
@@ -231,6 +235,8 @@ def orders(
         None, description="due, assigned, in_progress, done or skipped; repeatable."),
     kind: str | None = Query(None, description="preventive or corrective."),
     q: str | None = Query(None, description="Match an order code, its summary or findings."),
+    since: str | None = Query(None, description=_WHEN + "at or after this. " + export.A_DAY_IS_A_PLANT_DAY),
+    until: str | None = Query(None, description=_WHEN + "at or before this. " + export.A_DAY_IS_A_PLANT_DAY),
     limit: int = paging.LimitQuery,
     offset: int = paging.OffsetQuery,
 ) -> dict:
@@ -240,10 +246,65 @@ def orders(
     the open work is buried under the done work, and a screen that read
     the last two hundred and filtered for "open" showed a plant with no
     open work the day the two hundred were all done.
+
+    The date range reads the last thing that happened to an order: when it
+    was completed, or for work not done yet when it was raised - so "the
+    jobs of October" on Completed work is the jobs finished in October.
     """
-    rows, total = maintenance.history(db, equipment, limit, status=status, kind=kind, q=q, offset=offset)
+    narrow = None
+    if since or until:
+        def narrow(query):
+            return export.within(query, func.coalesce(MaintenanceOrder.completed_at,
+                                                      MaintenanceOrder.raised_at), since, until)
+    rows, total = maintenance.history(db, equipment, limit, status=status, kind=kind, q=q,
+                                      offset=offset, narrow=narrow)
     names = _names(db)
     return paging.page([_order_out(o, names) for o in rows], total, limit, offset)
+
+
+#: The maintenance orders as a spreadsheet: one row per job.
+MAINTENANCE_EXPORT = (
+    export.Column("Order", "code"),
+    export.Column("Machine", "equipment"),
+    export.Column("Kind", "kind"),
+    export.Column("Status", "status"),
+    export.Column("Plan", lambda o: o["plan"] or "no plan"),
+    export.Column("Summary", "summary"),
+    export.Column("Reason", "reason"),
+    export.Column("Raised", "raised_at", when=True),
+    export.Column("Started", "started_at", when=True),
+    export.Column("Completed", "completed_at", when=True),
+    export.Column("Findings", "findings"),
+    export.Column("Down (min)", "downtime_minutes"),
+    export.Column("By", "performed_by"),
+    export.Column("By (name)", "performed_by_name"),
+    export.Column("Assigned to", "assigned_to"),
+    export.Column("Trade", "skill"),
+    export.Column("Priority", "priority"),
+)
+
+
+@router.get("/orders/export.xlsx")
+def export_orders(
+    db: DbDep,
+    equipment: str | None = None,
+    status: list[str] | None = Query(
+        None, description="due, assigned, in_progress, done or skipped; repeatable."),
+    kind: str | None = Query(None, description="preventive or corrective."),
+    q: str | None = Query(None, description="Match an order code, its summary or findings."),
+    since: str | None = Query(None, description=_WHEN + "at or after this. " + export.A_DAY_IS_A_PLANT_DAY),
+    until: str | None = Query(None, description=_WHEN + "at or before this. " + export.A_DAY_IS_A_PLANT_DAY),
+) -> Response:
+    """The maintenance orders as a spreadsheet: every job the list would show.
+
+    Same filters as `GET /maintenance/orders`, no paging, oldest first. A job
+    not started has an empty Started and a job not done an empty Completed:
+    a step not taken, never a time made up for it.
+    """
+    rows = export.every_page(orders, db=db, equipment=equipment, status=status, kind=kind,
+                             q=q, since=since, until=until)
+    return export.spreadsheet("maintenance-work", "Maintenance work", MAINTENANCE_EXPORT,
+                              reversed(rows), range_=export.span(since, until))
 
 
 @router.post("/raise", dependencies=[require("maintenance.perform")])
