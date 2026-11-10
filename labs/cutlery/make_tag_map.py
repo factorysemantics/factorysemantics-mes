@@ -3,8 +3,10 @@ mechanical derivation, unchanged: cycle_seconds = 60 / rate_per_min and the
 same state map every lab plant uses.
 
     python3 labs/cutlery/make_tag_map.py
+    python3 labs/cutlery/make_tag_map.py <dir>     the line.json in <dir>, tag_map.json beside it
 """
 import importlib.util
+import sys
 import json
 from pathlib import Path
 
@@ -25,6 +27,7 @@ def build(line_json: Path) -> dict:
 
 
 if __name__ == "__main__":
-    result = build(HERE / "line.json")
-    (HERE / "tag_map.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
-    print(f"wrote {HERE / 'tag_map.json'} ({len(result['machines'])} machines)")
+    where = Path(sys.argv[1]) if len(sys.argv) > 1 else HERE
+    result = build(where / "line.json")
+    (where / "tag_map.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+    print(f"wrote {where / 'tag_map.json'} ({len(result['machines'])} machines)")
