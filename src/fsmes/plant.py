@@ -122,7 +122,7 @@ LAB_USERS = [
     # "what did the agent do to my plant" already is.
     ("ANALYST", "Plant Analyst",
      os.environ.get("FSMES_ANALYST_PASSWORD", LAB_ONLY_ANALYST_PASSWORD), "analyst"),
-    # The pretend supervisor and operator `fsmes walk` plays (labs/walks/).
+    # The pretend supervisor, operator and engineer `fsmes walk` plays (labs/walks/).
     # Accounts of their own, never the simulator's and never a person's: a
     # walk books output and records checks the way a person would, and the
     # audit trail has to say it was a walk. The roles a person in that job
@@ -131,6 +131,11 @@ LAB_USERS = [
      os.environ.get("FSMES_WALK_PASSWORD", LAB_ONLY_WALK_PASSWORD), "supervisor"),
     ("WALK-OP", "Walker: line operator",
      os.environ.get("FSMES_WALK_PASSWORD", LAB_ONLY_WALK_PASSWORD), "operator"),
+    # The pretend MES engineer (labs/walks/engineer.yaml): admin, because the
+    # engineer who sets up tags and connections holds the keys in a real
+    # plant, and the walk has to reach the same screens that person would.
+    ("WALK-ENG", "Walker: MES engineer",
+     os.environ.get("FSMES_WALK_PASSWORD", LAB_ONLY_WALK_PASSWORD), "admin"),
 ]
 
 

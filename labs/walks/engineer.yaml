@@ -1,0 +1,34 @@
+# A pretend MES engineer, walked through the lab plant by `fsmes walk`.
+#
+# Each task is one sentence, said the way the plant's owner would say it to a
+# new hire; `expect` is what a working MES would have shown at the end. The
+# tasks here come from Scott's own complaints about the job, through pm's
+# complaint desk, and are walked only on his "walk it" (2026-11-10, both).
+#
+# The account is a lab account (plant.LAB_USERS) with the admin role: in a
+# real plant the engineer who sets up tags and connections holds the keys,
+# and this walk has to reach the same screens. Its password comes from the
+# environment variable named here, or the lab-only default when that is
+# unset - never from this file.
+
+persona: engineer
+role: MES engineer
+account: WALK-ENG
+password_env: FSMES_WALK_PASSWORD
+who: >-
+  Looks after the MES for the site. Connects machines, sets up tags, keeps
+  the test plant honest against the live one. Comfortable with screens and
+  files alike, but expects the screens to do the job.
+
+tasks:
+  - slug: set-up-tags-in-ui
+    task: Add the tags for a new machine through the screens, the way you would on your first day.
+    expect: >-
+      Every tag is entered on screens, saved, and shows a live value, with no
+      file edits or database work.
+
+  - slug: replay-real-opc-into-test
+    task: Take yesterday's real machine signals from the live side and play them back into the test side so it behaves the same.
+    expect: >-
+      The test side shows the same stops, counts and reasons the live side
+      showed yesterday, with no hand-built signals.
