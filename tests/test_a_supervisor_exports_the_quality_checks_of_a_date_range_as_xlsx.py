@@ -253,15 +253,18 @@ def test_the_screen_has_a_visible_date_range_and_an_export_beside_the_filters():
 
 
 def test_closing_a_nonconformance_says_it_is_closed_not_close():
+    import re
     from pathlib import Path
 
     web = Path(__file__).resolve().parents[1] / "src" / "fsmes" / "web"
     js = (web / "quality.js").read_text(encoding="utf-8")
-    # The Close button must pass "closed" as the done word
-    assert '"closed"' in js, "Close button must pass 'closed'"
-    # The disposition toast must contain "decided — "
-    assert "decided — " in js, "Disposition toast must contain 'decided — '"
-    # The old expression must be gone
-    assert 'label.toLowerCase().replace("…", "")' not in js, (
-        "Old toast expression must be removed"
-    )
+    # Each button names its own past-tense word; the toast no longer bends
+    # the button's label into "close" or "take under review".
+    close_call = re.search(r'ncButton\(nc, "Close",[^;]*;', js)
+    assert close_call and close_call.group(0).endswith('"closed");')
+    review_call = re.search(r'ncButton\(nc, "Take under review",[^;]*;', js)
+    assert review_call and review_call.group(0).endswith('"taken under review");')
+    assert "toast(`${nc.code}: ${done}`)" in js
+    assert 'label.toLowerCase().replace("…", "")' not in js
+    # A disposition says it was decided, then what was decided.
+    assert "toast(`${code}: decided — ${DISPOSITIONS[" in js
