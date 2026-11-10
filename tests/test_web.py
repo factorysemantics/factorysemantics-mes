@@ -430,3 +430,50 @@ def test_pages_revalidate_too(client):
     got = client.get("/dashboard")
     assert got.status_code == 200
     assert got.headers["cache-control"] == "no-cache"
+
+
+def test_the_quality_page_has_a_raise_non_conformance_form(client):
+    """The Quality screen must contain the Raise non-conformance button and
+    the note input, and the API must accept a hand‑raised NC."""
+    # 1) the HTML has the button and the note field
+    html = (Path(__file__).resolve().parents[1] / "src" / "fsmes" / "web" / "quality.html").read_text(encoding="utf-8")
+    assert "Raise non-conformance" in html
+    assert 'id="n-raise"' in html
+    assert 'id="r-note"' in html
+
+    # 2) POST /quality/nonconformances works for a user with quality.record
+    from fsmes.api.app import create_app
+    from fastapi.testclient import TestClient
+    app = create_app()
+    # We need a session that has the quality.record capability.  The easiest
+    # way is to use the test client and log in as the plant's default user.
+    # The test suite already has a fixture for that, but we are in a
+    # standalone test, so we create a client and log in.
+    c = TestClient(app)
+    # The app uses session‑based auth; we can call /auth/login with the
+    # default credentials (the test config sets them).
+    login = c.post("/auth/login", json={"code": "admin", "password": "admin"})
+    assert login.status_code == 200, f"login failed: {login.text}"
+
+    # POST a hand‑raised NC
+    resp = c.post("/quality/nonconformances", json={
+        "description": "batch of bottles underfilled",
+    })
+    assert resp.status_code == 201, f"expected 201, got {resp.status_code}: {resp.text}"
+    data = resp.json()
+    assert "code" in data
+    # The code should start with the plant's NC prefix (usually "NC‑")
+    assert data["code"].startswith("NC‑") or data["code"].startswith("NC-"), (
+        f"unexpected code prefix: {data['code']}"
+    )
+
+    # 3) GET that NC shows the description
+    nc_resp = c.get(f"/quality/nonconformances/{data['code']}")
+    assert nc_resp.status_code == 200
+    nc_data = nc_resp.json()
+    assert nc_data["description"] == "batch of bottles underfilled"
+
+    # 4) blank description returns 422
+    bad = c.post("/quality/nonconformances", json={"description": "   "})
+    assert bad.status_code == 422
+    assert "say what is wrong" in bad.text.lower()

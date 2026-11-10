@@ -441,6 +441,80 @@ function fillHistoryChars() {
 
 /* ---------- non-conformances: by status, searchable, paged ---------- */
 
+/* ---------- raise by hand ---------- */
+
+async function fillSeverities() {
+  const sel = $("#r-severity");
+  sel.textContent = "";
+  try {
+    const data = await api("/severities");
+    const names = data.names || [];
+    for (const name of names) {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      sel.appendChild(opt);
+    }
+  } catch {
+    // fallback: a few common ones
+    for (const name of ["minor", "major", "critical"]) {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      sel.appendChild(opt);
+    }
+  }
+}
+
+function wireRaiseForm() {
+  const raiseBtn = $("#n-raise");
+  const form = $("#raise-form");
+  const cancelBtn = $("#r-cancel");
+  const saveBtn = $("#r-save");
+  const noteInput = $("#r-note");
+  const orderInput = $("#r-order");
+  const severitySelect = $("#r-severity");
+
+  raiseBtn.addEventListener("click", () => {
+    form.classList.remove("hidden");
+    noteInput.value = "";
+    orderInput.value = "";
+    saveBtn.disabled = true;
+    noteInput.focus();
+  });
+
+  cancelBtn.addEventListener("click", () => {
+    form.classList.add("hidden");
+  });
+
+  noteInput.addEventListener("input", () => {
+    saveBtn.disabled = !noteInput.value.trim();
+  });
+
+  saveBtn.addEventListener("click", async () => {
+    const description = noteInput.value.trim();
+    if (!description) return;
+    saveBtn.disabled = true;
+    try {
+      const body = { description };
+      const order = orderInput.value.trim();
+      if (order) body.order = order;
+      const severity = severitySelect.value;
+      if (severity) body.severity = severity;
+      const result = await api("/quality/nonconformances", {
+        method: "POST",
+        body,
+      });
+      toast(`Raised ${result.code}`);
+      form.classList.add("hidden");
+      await refresh();
+    } catch (err) {
+      toast(err.message, "bad");
+      saveBtn.disabled = false;
+    }
+  });
+}
+
 /* ---------- the life of a non-conformance ----------
    open → under review → a disposition on the material → closed. Each step
    carries who took it and when, and the screen shows that rather than a
@@ -789,6 +863,8 @@ $("#n-q").addEventListener("input", () => {
   // appear one refresh late.
   await FS.whoami().catch(() => {});
   wireDisposition();
+  wireRaiseForm();
+  fillSeverities();
   readUrl();
   await refresh();
   setInterval(refresh, REFRESH_MS);

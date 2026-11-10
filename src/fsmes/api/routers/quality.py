@@ -700,6 +700,36 @@ def get_nc(code: str, db: DbDep) -> dict:
     return _nc_out(nc, order)
 
 
+class OpenNcIn(BaseModel):
+    description: str
+    severity: str | None = None
+    order: str | None = None
+
+
+@router.post("/nonconformances", status_code=201, dependencies=[require("quality.record")])
+def open_nc(body: OpenNcIn, db: DbDep, actor: ActorDep) -> dict:
+    """Raise a non-conformance by hand, without a measurement.
+
+    The description is required and must be non‑empty after stripping.
+    Severity defaults to ``minor`` when left out. An unknown order code
+    raises the same 422 the service already returns.
+    """
+    if not body.description or not body.description.strip():
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=422,
+            detail="say what is wrong, for example how the batch is underfilled",
+        )
+    nc = quality.open_nc(
+        db,
+        description=body.description.strip(),
+        severity=body.severity or "minor",
+        work_order_code=body.order,
+        actor=actor,
+    )
+    return {"code": nc.code, "severity": nc.severity, "order": body.order}
+
+
 @router.post("/nonconformances/{code}/review", dependencies=[require("quality.close_nc")])
 def review_nc(code: str, db: DbDep, actor: ActorDep) -> dict:
     """Somebody has picked it up. Recorded against them, with the time."""
