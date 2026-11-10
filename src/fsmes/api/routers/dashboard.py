@@ -347,8 +347,10 @@ def _build_summary(db: Session, oee_hours: float | None, line: str | None = None
             # counts outrun their run time, which is the one a reader of a
             # replayed plant most needs pointed at.
             "oee_counts_outrun": len(outrun),
-            # Which window the OEE was computed over. `None` when the caller
-            # did not supply one, meaning the plant's own default.
+            # Which window the OEE was computed over, in hours: the one the
+            # caller asked for, or the plant's own `[process]
+            # default_report_hours` when nobody asked. Never left out, so the
+            # Floor's tile can say which stretch its mean covers.
             "oee_hours": oee_hours if oee_hours is not None else calendar_service.default_report_hours(db),
             # Which clock the figures on this screen were computed on. `None`
             # on a plant whose clock is the line's, which is every real one.
