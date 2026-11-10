@@ -245,7 +245,11 @@ function render() {
   // little of the window watched, no rating, nothing counted, or counted work
   // that will not fit inside its run time — and an average that does not say
   // how many it covers turns every one of those reasons into silence.
-  const covered = [`mean of ${plant.oee_machines} of ${plant.oee_machines_total}`];
+  const covered = [];
+  if (typeof plant.oee_hours === "number") {
+    covered.push(`last ${plant.oee_hours} h`);
+  }
+  covered.push(`mean of ${plant.oee_machines} of ${plant.oee_machines_total}`);
   if (plant.oee_counts_outrun) {
     covered.push(`${plant.oee_counts_outrun} counting past its run time`);
   }
