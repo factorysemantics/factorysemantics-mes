@@ -472,14 +472,14 @@ const STEP_WORDS = {
   closed: "closed",
 };
 
-function ncButton(nc, label, run) {
+function ncButton(nc, label, run, done) {
   const button = el("button", "ghost", label);
   button.type = "button";
   button.addEventListener("click", async () => {
     button.disabled = true;
     try {
       await run();
-      toast(`${nc.code}: ${label.toLowerCase().replace("…", "")}`);
+      toast(`${nc.code}: ${done}`);
       await refresh();
     } catch (err) {
       // These are supervisor actions; an operator being refused is the
@@ -528,7 +528,7 @@ function wireDisposition() {
       await api(`/quality/nonconformances/${code}/disposition`, { method: "POST", body: {
         disposition: $("#d-choice").value, reason: $("#d-reason").value.trim(),
       }});
-      toast(`${code}: ${DISPOSITIONS[$("#d-choice").value]}`);
+      toast(`${code}: decided — ${DISPOSITIONS[$("#d-choice").value]}`);
       $("#disposition").classList.add("hidden");
       await refresh();
     } catch (err) {
@@ -630,7 +630,7 @@ function drawNcs() {
     const actions = el("div", "nc-actions");
     if (steps.includes("review")) {
       const review = ncButton(nc, "Take under review", () =>
-        api(`/quality/nonconformances/${nc.code}/review`, { method: "POST" }));
+        api(`/quality/nonconformances/${nc.code}/review`, { method: "POST" }), "taken under review");
       review.dataset.assist = "nc-review";
       actions.appendChild(review);
     }
@@ -643,7 +643,7 @@ function drawNcs() {
     }
     if (steps.includes("close")) {
       const close = ncButton(nc, "Close", () =>
-        api(`/quality/nonconformances/${nc.code}/close`, { method: "POST" }));
+        api(`/quality/nonconformances/${nc.code}/close`, { method: "POST" }), "closed");
       close.dataset.assist = "nc-close";
       actions.appendChild(close);
     }
