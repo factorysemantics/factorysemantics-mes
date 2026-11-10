@@ -10,10 +10,10 @@ regenerates it and fails if this file differs.
 
 There are **80 write routes**; **74** of them a screen calls; **56** write tools send one.
 
-- operator: 18 of 74 screen actions the assistant can propose; 14 with a walk; 16 by written reason.
-- supervisor: 34 of 74 screen actions the assistant can propose; 25 with a walk; 16 by written reason.
-- admin: 58 of 74 screen actions the assistant can propose; 42 with a walk; 16 by written reason.
-- agent: 25 of 74 screen actions the assistant can propose; 21 with a walk; 16 by written reason.
+- operator: 18 of 74 screen actions the assistant can propose; 15 with a walk; 16 by written reason.
+- supervisor: 34 of 74 screen actions the assistant can propose; 26 with a walk; 16 by written reason.
+- admin: 58 of 74 screen actions the assistant can propose; 43 with a walk; 16 by written reason.
+- agent: 25 of 74 screen actions the assistant can propose; 22 with a walk; 16 by written reason.
 
 A *screen action* is a write route some page script calls: the things a
 person can do by pointing at them. The route's own capability gate says
@@ -75,7 +75,7 @@ control is.
 | POST | `/quality/counts` | — | `record_count` | `quality.record` | no |
 | POST | `/quality/gauges` | `gauges.js` | `register_gauge` | `masterdata.write` | no |
 | POST | `/quality/gauges/{code}/calibrate` | `gauges.js` | `calibrate_gauge` | `quality.close_nc` | no |
-| POST | `/quality/nonconformances` | `quality.js` | `raise_nonconformance` | `quality.record` | no |
+| POST | `/quality/nonconformances` | `quality.js` | `raise_nonconformance` | `quality.record` | yes |
 | POST | `/quality/nonconformances/{code}/close` | `quality.js` | `close_nonconformance` | `quality.close_nc` | yes |
 | POST | `/quality/nonconformances/{code}/disposition` | `quality.js` | `disposition_nonconformance` | `quality.close_nc` | yes |
 | POST | `/quality/nonconformances/{code}/review` | `quality.js` | `review_nonconformance` | `quality.close_nc` | yes |

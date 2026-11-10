@@ -410,6 +410,20 @@ requires = ["material:FG-COLA", "sampled_spec:FG-COLA/fill_height"]
 note = "five readings are one sample, not five checks: the chart's point is their mean, so record_sample is the tool and record_check would be refused"
 
 [[case]]
+id = "operator-raises-a-nonconformance-nobody-measured"
+request = "a batch of bottles on WO-EVAL-1 came off underfilled, you can see it by eye. raise a non-conformance for it"
+screen = "/dashboard/quality"
+expect = "propose"
+tool = "raise_nonconformance"
+args = { description = "batch of bottles underfilled", order = "WO-EVAL-1" }
+loose = ["description"]
+requires = ["order:WO-EVAL-1"]
+note = """somebody saw it and nobody measured it, so this is a hand-raised
+non-conformance and not a quality check: record_check would need a value
+nobody has, and making one up is inventing a reading. The description is the
+person's own words, so it is matched loosely; the order is not."""
+
+[[case]]
 id = "operator-records-a-count-of-rejects"
 request = "we looked at 100 bottles on lot 4711-Q10 at the inspection station and sent 20 back, 16 of them short fills. log the count"
 screen = "/dashboard/quality"

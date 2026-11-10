@@ -1354,6 +1354,36 @@ SURFACES: dict[str, dict] = {
                      "title": "The decision is on the record",
                      "body": "The row carries the disposition and your reason under it."},
     },
+    "raise_nonconformance": {
+        "title": "Raise a non-conformance by hand",
+        "needs": "quality.record",
+        "pages": ["/dashboard/quality"],
+        "example": "Raise a non-conformance: batch of bottles underfilled",
+        "steps": [
+            {"page": "/dashboard/quality", "anchor": "nc-raise",
+             "needs": "quality.record",
+             "title": "Press Raise non-conformance",
+             "body": (
+                 "For something wrong that no reading shows. Nothing is measured "
+                 "here and nothing is made up: what you write is the record."
+             )},
+            {"page": "/dashboard/quality", "anchor": "nc-raise-note",
+             "open": "nc-raise", "needs": "quality.record",
+             "fill": {"value": "{description}"},
+             "title": "What is wrong",
+             "body": (
+                 "{description}. Typed in for you; change it to what you saw. The "
+                 "order and the severity are beside it, and both may stay as they are."
+             )},
+            {"page": "/dashboard/quality", "anchor": "nc-raise-save",
+             "open": "nc-raise", "needs": "quality.record",
+             "title": "Press Raise it",
+             "body": "You press it, not me - it is raised under your own name."},
+        ],
+        "evidence": {"page": "/dashboard/quality", "anchor": "nc-list",
+                     "title": "It is on the list, open",
+                     "body": "The new row reads open, with your name and the time."},
+    },
     "close_nonconformance": {
         "title": "Close a non-conformance",
         "needs": "quality.close_nc",
@@ -2535,8 +2565,11 @@ def suggestions(screen: str | None, capabilities: set[str], names: dict) -> list
         text = surface["example"].format_map(_Blank({**fallback, **values}))
         if text not in out:
             out.append(text)
+    # Four at most, and the question anybody may ask keeps its place at the
+    # end: a person who can do many things should still be offered the one
+    # that changes nothing.
     if "plant.read" in capabilities:
-        out.append("What is running right now, and is anything down?")
+        return [*out[:3], "What is running right now, and is anything down?"]
     return out[:4]
 
 
