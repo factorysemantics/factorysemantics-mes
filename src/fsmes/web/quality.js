@@ -443,26 +443,41 @@ function fillHistoryChars() {
 
 /* ---------- raise by hand ---------- */
 
+// The plant's own words, never a list written here. A plant that has put no
+// severity in force raises at the product's default, and the select says so.
 async function fillSeverities() {
   const sel = $("#r-severity");
   sel.textContent = "";
-  try {
-    const data = await api("/severities");
-    const names = data.names || [];
-    for (const name of names) {
-      const opt = document.createElement("option");
-      opt.value = name;
-      opt.textContent = name;
-      sel.appendChild(opt);
-    }
-  } catch {
-    // fallback: a few common ones
-    for (const name of ["minor", "major", "critical"]) {
-      const opt = document.createElement("option");
-      opt.value = name;
-      opt.textContent = name;
-      sel.appendChild(opt);
-    }
+  const data = await api("/severities").catch(() => null);
+  const names = (data && data.names) || {};
+  const codes = Object.keys(names);
+  if (!codes.length) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "The plant's default";
+    sel.appendChild(opt);
+    return;
+  }
+  for (const code of codes) {
+    const opt = document.createElement("option");
+    opt.value = code;
+    opt.textContent = names[code];
+    sel.appendChild(opt);
+  }
+  if (codes.includes("minor")) sel.value = "minor";
+}
+
+// The orders a supervisor is most likely to mean: the ones in flight.
+async function fillOrders() {
+  const list = $("#r-orders");
+  list.textContent = "";
+  const q = "status=released&status=running&status=on_hold&limit=200";
+  const data = await api(`/workorders?${q}`).catch(() => null);
+  for (const wo of (data && data.items) || []) {
+    const opt = document.createElement("option");
+    opt.value = wo.code;
+    if (wo.material) opt.label = `${wo.code} · ${wo.material}`;
+    list.appendChild(opt);
   }
 }
 
@@ -475,8 +490,15 @@ function wireRaiseForm() {
   const orderInput = $("#r-order");
   const severitySelect = $("#r-severity");
 
+  // Shown only to somebody who may raise one: a button that will 403 is
+  // worse than none.
+  if (!window.FS || !FS.can("quality.record")) return;
+  raiseBtn.classList.remove("hidden");
+
   raiseBtn.addEventListener("click", () => {
     form.classList.remove("hidden");
+    fillSeverities();
+    fillOrders();
     noteInput.value = "";
     orderInput.value = "";
     saveBtn.disabled = true;
@@ -864,7 +886,6 @@ $("#n-q").addEventListener("input", () => {
   await FS.whoami().catch(() => {});
   wireDisposition();
   wireRaiseForm();
-  fillSeverities();
   readUrl();
   await refresh();
   setInterval(refresh, REFRESH_MS);

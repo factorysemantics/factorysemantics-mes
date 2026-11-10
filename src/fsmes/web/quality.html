@@ -77,11 +77,12 @@
         reading shows, and then worked: taken under review, decided about (use as is,
         rework, scrap, return) and only then closed. Each step is a supervisor
         action recorded against the person who took it.</p>
-      <button id="n-raise" type="button" class="ghost">Raise non-conformance</button>
+      <button id="n-raise" type="button" class="ghost hidden" data-assist="nc-raise">Raise non-conformance</button>
       <div id="raise-form" class="hidden" data-assist="raise-form">
         <div class="field">
-          <label for="r-order">Order or batch (optional)</label>
-          <input id="r-order" type="text" placeholder="e.g. WO‑12345">
+          <label for="r-order">Order (optional)</label>
+          <input id="r-order" type="text" list="r-orders" autocomplete="off">
+          <datalist id="r-orders"></datalist>
         </div>
         <div class="field">
           <label for="r-severity">Severity</label>
