@@ -34,20 +34,27 @@ def isolated(tmp_path, monkeypatch):
 
 # ------------------------------------------------------------------ personas
 
-def test_there_are_two_personas_with_five_tasks_each_and_the_first_is_the_xlsx_export():
+def test_there_are_three_personas_and_the_supervisors_first_task_is_the_xlsx_export():
     names = walk.personas()
-    assert names == ["operator", "supervisor"], f"{len(names)} persona(s): {names}"
-    loaded = [walk.load(n) for n in names]
-    assert [len(p.tasks) for p in loaded] == [5, 5]
-    supervisor = walk.load("supervisor")
+    assert names == ["engineer", "operator", "supervisor"], f"{len(names)} persona(s): {names}"
+    loaded = {n: walk.load(n) for n in names}
+    # The supervisor and the operator walk five tasks each; the engineer walks
+    # the ones Scott said "walk it" to from his own complaints (2026-11-10).
+    assert [len(loaded[n].tasks) for n in ("operator", "supervisor")] == [5, 5]
+    assert [t.slug for t in loaded["engineer"].tasks] == ["set-up-tags-in-ui", "replay-real-opc-into-test"]
+    supervisor = loaded["supervisor"]
     assert supervisor.tasks[0].slug == "export-quality-xlsx"
     assert supervisor.tasks[0].task == "Export the last two months of quality checks as an xlsx file."
 
 
-def test_each_persona_signs_in_as_its_own_lab_account_and_never_as_an_admin():
+def test_each_persona_signs_in_as_its_own_lab_account_with_the_role_that_job_holds():
     roles = {code: role for code, _name, _password, role in plant.LAB_USERS}
     assert roles[walk.load("supervisor").account] == "supervisor"
     assert roles[walk.load("operator").account] == "operator"
+    # The engineer who sets up tags and connections holds the keys in a real
+    # plant; the walk has to reach the same screens that person would.
+    assert roles[walk.load("engineer").account] == "admin"
+    assert len({walk.load(n).account for n in walk.personas()}) == 3
 
 
 def test_a_persona_file_missing_a_field_is_refused_and_the_field_is_named(tmp_path):
@@ -59,7 +66,7 @@ def test_a_persona_file_missing_a_field_is_refused_and_the_field_is_named(tmp_pa
 
 
 def test_an_unknown_persona_is_refused_with_the_ones_there_are():
-    with pytest.raises(walk.WalkError, match="2 known: operator, supervisor"):
+    with pytest.raises(walk.WalkError, match="3 known: engineer, operator, supervisor"):
         walk.load("plant-manager")
 
 

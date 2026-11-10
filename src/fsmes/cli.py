@@ -4222,7 +4222,7 @@ def autoloop_cmd(
 
 @app.command("walk")
 def walk_cmd(
-    persona: str = typer.Argument(..., help="A persona in labs/walks/: supervisor, operator."),
+    persona: str = typer.Argument(..., help="A persona in labs/walks/: supervisor, operator, engineer."),
     base: str = typer.Option(..., "--base", help="The lab plant to walk, e.g. http://127.0.0.1:8110."),
     out: Path = typer.Option(..., "--out", help="Where the cards go; screenshots in shots/, logs in logs/."),
     task: str = typer.Option(None, "--task", help="One task's slug. Default: all the persona's tasks."),
