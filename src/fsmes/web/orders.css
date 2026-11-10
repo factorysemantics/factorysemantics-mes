@@ -128,3 +128,8 @@ td.due.late { color: var(--down); font-weight: 600; }
 
 #staging .short { color: var(--down); font-weight: 600; }
 #staging td.station { font-family: var(--mono); font-size: var(--fs-xs); color: var(--muted); }
+
+/* The way from an order to its procedures: the theme's accent, so it reads
+   on the dark panel as a link and not as a dark-blue smudge. */
+#d-instructions { color: var(--accent); font-weight: 600; text-decoration: none; }
+#d-instructions:hover { text-decoration: underline; }

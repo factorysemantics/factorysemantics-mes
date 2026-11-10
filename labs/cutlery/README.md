@@ -118,6 +118,48 @@ runs as a user service on port 5433; a scored run makes its own database
 
   `fsmes pack check labs/cutlery` reads the pack offline, before any of that.
 
+## At a teaching pace
+
+At the customer's rate the plant makes 347 pieces a second, too fast to
+watch. `build_config.py --scale 0.01 --out <dir>` writes the same plant -
+the same 83 stations, attributes, limits, stops and changeovers - with every
+rate a hundredth: 100,000 pieces of each utensil a day, 416 pallets, a fork
+line marking about 23 a minute. The scale goes into `_plant.scale` in that
+`line.json`; `make_tag_map.py <dir>` and `init.py <dir>` then work on that
+folder. The committed `line.json`, `tag_map.json` and the scored runs stay at
+scale 1 (`CUTLERY_SCALE` says the same as `--scale`).
+
+## For a 3D model
+
+Everything a model of this plant needs is in `line.json` (the stations) and
+`tag_map.json` (what each station's tags mean); both are generated, so read
+them rather than copy this list. 83 stations in all:
+
+| Stations | Count | Order, upstream first | Equipment codes |
+|----------|------:|-----------------------|-----------------|
+| moulding lines FORK1-3, SPOON1-3, KNIFE1-3 | 27 | Mold, then Degate, then Mark (the vision station) | `FORK1_Mold`, `FORK1_Degate`, `FORK1_Mark`, ... |
+| stackers STACK01-STACK32 | 32 | after Mark: each takes a fork, a spoon and a knife | `STACK01_Stacker`, ... |
+| wrappers WRAP01-WRAP16 | 16 | after two stackers each (STACK01 and 02 feed WRAP01) | `WRAP01_Wrapper`, ... |
+| palletizers PAL1-PAL4 | 8 | Palletizer, then StretchWrap; four wrappers feed each | `PAL1_Palletizer`, `PAL1_StretchWrap`, ... |
+
+**Which tag says a station is running.** Each station is an OPC UA object
+named by its equipment code, with a `State` variable, `GoodCount` and
+`ScrapCount` (Int64, counting up) and one analog (`MeltTemp` on a mould).
+`State` is a number; `state_map` in `tag_map.json` reads it: `1` is
+running, `4` down, `5` setup (a changeover), `0`, `2` and `3` idle. A
+station is moving when `State` is 1 and `GoodCount` is climbing. The MES
+holds the same as equipment states (`GET /api/equipment`) and the Floor
+screen and the 3D line view (`/dashboard/line`) draw from it, so a model can
+read the API instead of OPC.
+
+**Where walk recordings are.** `fsmes walk <persona> --out <dir>` leaves,
+per task, a card `<dir>/<date>-<task>.md` (what was asked, what was found),
+screenshots `<dir>/shots/<date>-<task>-before-<n>.png` and `-after.png`, and
+under `<dir>/logs/` the step log `<date>-<task>-steps.jsonl` (one line per
+step: what the walker looked at or did, what the page said, which shot), the
+run `<date>-<task>-run.json` and the verdict `<date>-<task>-result.json`.
+The personas and their tasks are `labs/walks/*.yaml`.
+
 ## Measured
 
 Eleven scored runs on the night of 2026-09-06, each an hour of line time on its own

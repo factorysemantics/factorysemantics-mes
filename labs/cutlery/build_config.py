@@ -32,15 +32,29 @@ stack only ever contains pieces a marker judged good.
 
 Each line's `_meta` block and each station's `inspection` block are data for
 init.py, the replay and the agent; underscore keys are not simulation input.
+
+The same plant at a slower pace (the crew's lab, 2026-11-10: one cutlery a
+person can watch, with a database that stays small):
+
+    python3 labs/cutlery/build_config.py --scale 0.01 --out <dir>
+
+`--scale` multiplies every rate - pieces, stacks, wraps, pallets - and leaves
+the plant itself alone: the same 83 stations, attributes, stops and
+changeover. The default is 1, the customer's rate, so a scored run and
+`line.json` in this folder are unchanged. `CUTLERY_SCALE` in the environment
+does the same for a caller that cannot pass the flag.
 """
 from __future__ import annotations
 
+import argparse
 import json
+import os
 from pathlib import Path
 
 DURATION_S = 3600
 SEED = 9200
 
+# The customer's rate. A slower plant is this times --scale, never a second number.
 PIECES_PER_TYPE_PER_DAY = 10_000_000
 UTENSILS = ("FORK", "SPOON", "KNIFE")
 LINES_PER_TYPE = 3
@@ -50,11 +64,30 @@ PALLETIZERS = 4                    # four wrappers feed one palletizer
 WRAPS_PER_PALLET = 240
 
 MINUTES_PER_DAY = 24 * 60
-PIECES_PER_MIN_PER_LINE = PIECES_PER_TYPE_PER_DAY / LINES_PER_TYPE / MINUTES_PER_DAY   # 2,314.8
-STACKS_PER_DAY = PIECES_PER_TYPE_PER_DAY                                              # one of each per stack
-STACKS_PER_MIN_PER_STACKER = STACKS_PER_DAY / STACKERS / MINUTES_PER_DAY               # 217.0  (0.28 s)
-WRAPS_PER_MIN_PER_WRAPPER = STACKS_PER_DAY / WRAPPERS / MINUTES_PER_DAY                # 434.0  (0.14 s)
-PALLETS_PER_MIN_PER_PALLETIZER = STACKS_PER_DAY / WRAPS_PER_PALLET / PALLETIZERS / MINUTES_PER_DAY  # 7.2
+
+
+class Rates:
+    """Every rate in the plant, from how many of each utensil it makes a day.
+
+    At the customer's rate (the default) these are the numbers in the
+    comments; at a scale they are those numbers times the scale."""
+
+    def __init__(self, pieces_per_type_per_day: float) -> None:
+        self.pieces_per_type_per_day = pieces_per_type_per_day
+        self.pieces_per_min_per_line = pieces_per_type_per_day / LINES_PER_TYPE / MINUTES_PER_DAY   # 2,314.8
+        self.stacks_per_day = pieces_per_type_per_day  # one of each per stack
+        self.stacks_per_min_per_stacker = self.stacks_per_day / STACKERS / MINUTES_PER_DAY          # 217.0  (0.28 s)
+        self.wraps_per_min_per_wrapper = self.stacks_per_day / WRAPPERS / MINUTES_PER_DAY           # 434.0  (0.14 s)
+        self.pallets_per_min_per_palletizer = (self.stacks_per_day / WRAPS_PER_PALLET / PALLETIZERS
+                                               / MINUTES_PER_DAY)                                   # 7.2
+
+
+FULL_RATE = Rates(PIECES_PER_TYPE_PER_DAY)
+PIECES_PER_MIN_PER_LINE = FULL_RATE.pieces_per_min_per_line
+STACKS_PER_DAY = FULL_RATE.stacks_per_day
+STACKS_PER_MIN_PER_STACKER = FULL_RATE.stacks_per_min_per_stacker
+WRAPS_PER_MIN_PER_WRAPPER = FULL_RATE.wraps_per_min_per_wrapper
+PALLETS_PER_MIN_PER_PALLETIZER = FULL_RATE.pallets_per_min_per_palletizer
 
 # One plant-wide changeover window on every line: the scorer binds a
 # changeover to every machine in the timeline, so lines must share it.
@@ -124,18 +157,21 @@ def _sp(name: str, lo: float, hi: float, lag_s: float) -> dict:
 
 
 def _station(name: str, rate: float, scrap: float, analogs: list[dict], inspection: dict | None = None) -> dict:
-    station = {"name": name, "rate_per_min": round(rate, 2), "scrap_pct": scrap, "analogs": analogs}
+    # Two decimals at the customer's rate (every rate there is above 1); a
+    # slowed palletizer makes 0.07 a minute, where two decimals would be 5 % off.
+    station = {"name": name, "rate_per_min": round(rate, 2 if rate >= 1 else 4), "scrap_pct": scrap,
+               "analogs": analogs}
     if inspection:
         station["inspection"] = inspection
     return station
 
 
-def moulding_line(utensil: str, k: int, index: int) -> dict:
+def moulding_line(utensil: str, k: int, index: int, rates: Rates = FULL_RATE) -> dict:
     """Line k of a utensil's three. Mold runs a little faster than the marker
     and Degate a little slower, so the buffer after Mold drains and the one
     before the marker fills - buffers that do something, on purpose."""
     name = f"{utensil}{k}"
-    r = PIECES_PER_MIN_PER_LINE
+    r = rates.pieces_per_min_per_line
     melt = {"FORK": 214.0, "SPOON": 218.0, "KNIFE": 222.0}[utensil]
     down_at = 600 + index * 240
     return {
@@ -164,7 +200,7 @@ def moulding_line(utensil: str, k: int, index: int) -> dict:
     }
 
 
-def stacker_line(i: int) -> dict:
+def stacker_line(i: int, rates: Rates = FULL_RATE) -> dict:
     name = f"STACK{i:02d}"
     cell = (i - 1) // 2 + 1
     events = [CHANGEOVER]
@@ -175,7 +211,7 @@ def stacker_line(i: int) -> dict:
     return {
         "name": name, "seed": SEED + 100 + i, "duration_s": DURATION_S,
         "stations": [
-            _station("Stacker", STACKS_PER_MIN_PER_STACKER, 0.3,
+            _station("Stacker", rates.stacks_per_min_per_stacker, 0.3,
                      [_a("GripForce", 9.0, 0.4, "N"), _a("VisionScore", 0.98, 0.01, "")],
                      inspection={"kind": "stack", "prefix": f"ST{i:02d}", "material": "STACK-3",
                                  "takes": ["UT-FORK", "UT-SPOON", "UT-KNIFE"], "members": 3, "cell": cell,
@@ -188,7 +224,7 @@ def stacker_line(i: int) -> dict:
     }
 
 
-def wrapper_line(i: int) -> dict:
+def wrapper_line(i: int, rates: Rates = FULL_RATE) -> dict:
     name = f"WRAP{i:02d}"
     group = (i - 1) // 4 + 1
     events = [{"type": "micro_stops", "station": "Wrapper", "every_s": [200, 400], "duration_s": [4, 10]}, CHANGEOVER]
@@ -197,7 +233,7 @@ def wrapper_line(i: int) -> dict:
     return {
         "name": name, "seed": SEED + 200 + i, "duration_s": DURATION_S,
         "stations": [
-            _station("Wrapper", WRAPS_PER_MIN_PER_WRAPPER, 0.5,
+            _station("Wrapper", rates.wraps_per_min_per_wrapper, 0.5,
                      [_a("SealTemp", 138.0, 1.5, "C", **_sp("SealTempSP", 120.0, 160.0, 60.0)),
                       _a("FilmTension", 2.6, 0.12, "N")],
                      inspection={"kind": "wrap", "prefix": f"W{i:02d}", "material": "WRAP", "members": 1,
@@ -213,16 +249,18 @@ def wrapper_line(i: int) -> dict:
     }
 
 
-def pallet_line(g: int) -> dict:
+def pallet_line(g: int, rates: Rates = FULL_RATE) -> dict:
     name = f"PAL{g}"
     return {
         "name": name, "seed": SEED + 300 + g, "duration_s": DURATION_S,
         "buffers": {"capacity": 8, "initial": 2},
         "stations": [
-            _station("Palletizer", PALLETS_PER_MIN_PER_PALLETIZER * 1.02, 0.0, [_a("StackHeight", 1.6, 0.03, "m")],
+            _station("Palletizer", rates.pallets_per_min_per_palletizer * 1.02, 0.0,
+                     [_a("StackHeight", 1.6, 0.03, "m")],
                      inspection={"kind": "pallet", "prefix": f"PL{g}", "material": "PALLET",
                                  "members": WRAPS_PER_PALLET, "group": g, "attributes": []}),
-            _station("StretchWrap", PALLETS_PER_MIN_PER_PALLETIZER * 1.02, 0.0, [_a("FilmTension", 3.1, 0.1, "N")]),
+            _station("StretchWrap", rates.pallets_per_min_per_palletizer * 1.02, 0.0,
+                     [_a("FilmTension", 3.1, 0.1, "N")]),
         ],
         "events": [CHANGEOVER],
         "_meta": {"kind": "palletizer", "area": "Palletizing", "group": g,
@@ -231,43 +269,77 @@ def pallet_line(g: int) -> dict:
     }
 
 
-def build() -> dict:
+def scale_from_environment() -> float:
+    """CUTLERY_SCALE, or 1 when it is unset. Refuses what is not a rate."""
+    return _scale(os.environ.get("CUTLERY_SCALE", "1"))
+
+
+def _scale(text: str) -> float:
+    try:
+        scale = float(text)
+    except ValueError:
+        raise SystemExit(f"a scale is a number such as 0.01, not {text!r}") from None
+    if not 0 < scale <= 1:
+        raise SystemExit(f"a scale is above 0 and at most 1 (the customer's rate), not {scale:g}")
+    return scale
+
+
+def build(scale: float = 1.0) -> dict:
+    """The plant at `scale` times the customer's rate (1, the default, is the customer's)."""
+    rates = Rates(PIECES_PER_TYPE_PER_DAY * scale)
+    per_type = round(rates.pieces_per_type_per_day)
+    stacks = round(rates.stacks_per_day)
     lines = []
     index = 0
     for utensil in UTENSILS:
         for k in range(1, LINES_PER_TYPE + 1):
-            lines.append(moulding_line(utensil, k, index))
+            lines.append(moulding_line(utensil, k, index, rates))
             index += 1
-    lines += [stacker_line(i) for i in range(1, STACKERS + 1)]
-    lines += [wrapper_line(i) for i in range(1, WRAPPERS + 1)]
-    lines += [pallet_line(g) for g in range(1, PALLETIZERS + 1)]
-    ids_per_day = PIECES_PER_TYPE_PER_DAY * 3 + STACKS_PER_DAY * 3 + STACKS_PER_DAY // WRAPS_PER_PALLET
+    lines += [stacker_line(i, rates) for i in range(1, STACKERS + 1)]
+    lines += [wrapper_line(i, rates) for i in range(1, WRAPPERS + 1)]
+    lines += [pallet_line(g, rates) for g in range(1, PALLETIZERS + 1)]
+    ids_per_day = per_type * 3 + stacks * 3 + stacks // WRAPS_PER_PALLET
     return {
         "_what": (f"A cutlery plant giving {ids_per_day:,} things a day their own id, each judged by a vision "
                   f"station: {len(UTENSILS) * LINES_PER_TYPE} moulding lines, {STACKERS} stackers, {WRAPPERS} "
                   f"wrappers, {PALLETIZERS} palletizers. Built by build_config.py; the flow between lines is "
                   "carried by the replay's inspection groups."),
         "_plant": {
-            "pieces_per_type_per_day": PIECES_PER_TYPE_PER_DAY,
-            "pieces_per_day": PIECES_PER_TYPE_PER_DAY * 3,
-            "stacks_per_day": STACKS_PER_DAY,
-            "plates_per_day": STACKS_PER_DAY,
-            "wraps_per_day": STACKS_PER_DAY,
-            "pallets_per_day": STACKS_PER_DAY // WRAPS_PER_PALLET,
+            "pieces_per_type_per_day": per_type,
+            "pieces_per_day": per_type * 3,
+            "stacks_per_day": stacks,
+            "plates_per_day": stacks,
+            "wraps_per_day": stacks,
+            "pallets_per_day": stacks // WRAPS_PER_PALLET,
             "ids_per_day": ids_per_day,
-            "inspection_events_per_day": PIECES_PER_TYPE_PER_DAY * 3 + STACKS_PER_DAY * 2,
+            "inspection_events_per_day": per_type * 3 + stacks * 2,
             "wraps_per_pallet": WRAPS_PER_PALLET,
-            "stacker_cycle_s": round(60 / STACKS_PER_MIN_PER_STACKER, 3),
-            "wrapper_cycle_s": round(60 / WRAPS_PER_MIN_PER_WRAPPER, 3),
-            "pallet_cycle_s": round(60 / PALLETS_PER_MIN_PER_PALLETIZER, 1),
+            "stacker_cycle_s": round(60 / rates.stacks_per_min_per_stacker, 3),
+            "wrapper_cycle_s": round(60 / rates.wraps_per_min_per_wrapper, 3),
+            "pallet_cycle_s": round(60 / rates.pallets_per_min_per_palletizer, 1),
+            # Said only when it is not the customer's rate, so line.json here is unchanged.
+            **({"scale": scale} if scale != 1 else {}),
         },
         "lines": lines,
     }
 
 
-if __name__ == "__main__":
-    here = Path(__file__).parent
-    config = build()
-    (here / "line.json").write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+def main(argv: list[str] | None = None) -> Path:
+    parser = argparse.ArgumentParser(description="Write the cutlery plant's line.json.")
+    parser.add_argument("--scale", type=_scale, default=None,
+                        help="every rate times this, above 0 and at most 1 (default: CUTLERY_SCALE, else 1)")
+    parser.add_argument("--out", type=Path, default=Path(__file__).parent,
+                        help="the folder to write line.json into (default: this one)")
+    args = parser.parse_args(argv)
+    scale = args.scale if args.scale is not None else scale_from_environment()
+    config = build(scale)
+    args.out.mkdir(parents=True, exist_ok=True)
+    target = args.out / "line.json"
+    target.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
     stations = sum(len(ln["stations"]) for ln in config["lines"])
-    print(f"wrote {here / 'line.json'}: {len(config['lines'])} lines, {stations} stations; {config['_plant']}")
+    print(f"wrote {target}: {len(config['lines'])} lines, {stations} stations, scale {scale:g}; {config['_plant']}")
+    return target
+
+
+if __name__ == "__main__":
+    main()

@@ -79,3 +79,7 @@
 .walk-steps { padding-left: 22px; display: flex; flex-direction: column; gap: 10px; }
 .walk-steps li p { margin: 2px 0 4px; color: var(--muted); }
 .walk-steps li code { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+/* "Documents for material X · show all documents", after an order's link. */
+#doc-for a { color: var(--accent); text-decoration: none; }
+#doc-for a:hover { text-decoration: underline; }

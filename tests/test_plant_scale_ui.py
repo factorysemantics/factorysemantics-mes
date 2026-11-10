@@ -105,6 +105,13 @@ def test_the_schedule_screen_asks_for_statuses_the_api_accepts(client):
     assert client.get(match.group(1)).status_code == 200
 
 
+def test_an_open_order_has_a_link_to_its_work_instructions():
+    html = _read("orders.html")
+    assert 'id="d-instructions"' in html
+    assert 'href="/dashboard/instructions"' in html
+    assert "Work instructions" in html
+
+
 def test_a_nonconformance_names_its_order_and_can_be_capped(client, session):
     from sqlalchemy import select
 

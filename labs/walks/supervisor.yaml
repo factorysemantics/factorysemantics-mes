@@ -14,9 +14,11 @@ role: shift supervisor
 account: WALK-SUP
 password_env: FSMES_WALK_PASSWORD
 who: >-
-  Runs the day shift on the bottling line. Knows the machines and the orders,
-  reads OEE every morning, answers to the plant manager for quality. Has used
-  spreadsheets for years and this MES for a week.
+  Runs the shift at Cutlery Works: nine moulding lines making forks, spoons
+  and knives, the stackers and wrappers behind them, and four palletizers.
+  Knows the machines and the orders, reads OEE every morning, answers to the
+  plant manager for quality. Has used spreadsheets for years and this MES for
+  a week.
 
 tasks:
   - slug: export-quality-xlsx
@@ -26,18 +28,18 @@ tasks:
       that downloads them as an .xlsx file.
 
   - slug: oee-worst-machine
-    task: Read this shift's OEE and tell me which machine lost the most.
+    task: Read this shift's OEE and tell me which moulding line or wrapper lost the most.
     expect: >-
       The shift's OEE by machine, with the machine that lost the most time or
       output named or easy to pick out.
 
   - slug: why-down-at-ten
-    task: Find out why the filler was down at 10:00 this morning.
+    task: Find out why the mould on fork line FORK1 was down the last time it stopped.
     expect: >-
-      The filler's stop around 10:00 with its reason and how long it lasted.
+      FORK1's mould stop, with its reason and how long it lasted.
 
   - slug: release-next-order
-    task: Release the next planned work order to the line.
+    task: Release the next planned work order to its moulding line.
     expect: >-
       A planned order changes to released, and the line sees it as the next
       order.

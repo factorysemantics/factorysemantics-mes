@@ -14,26 +14,27 @@ role: line operator
 account: WALK-OP
 password_env: FSMES_WALK_PASSWORD
 who: >-
-  Runs the filler on the bottling line. Knows the machine well, books what
+  Runs fork line FORK1 at Cutlery Works: the mould, the degater and the
+  marker whose camera judges every fork. Knows the machine well, books what
   the line made at the end of a run, and is not a computer person.
 
 tasks:
   - slug: book-output
-    task: We counted 120 good and 3 scrap at the filler; book them on the order that is running.
+    task: We counted 120 good forks and 3 scrap on FORK1; book them on the order that is running.
     expect: >-
-      The running order on the filler, a place to enter 120 good and 3 scrap,
+      The running order on FORK1, a place to enter 120 good and 3 scrap,
       and the booking confirmed on the order.
 
   - slug: record-quality-check
-    task: I measured the fill height on a bottle from the filler at 141 mm; record that check.
+    task: I measured the length of a fork from FORK1 at 165.2 mm; record that check.
     expect: >-
-      A form for the filler's quality check, 141 mm entered for fill height,
-      and the check saved with pass or fail shown.
+      A form for the fork's quality check, 165.2 mm entered for length, and
+      the check saved with pass or fail shown.
 
   - slug: raise-nonconformance
-    task: Raise a nonconformance for a batch of underfilled bottles.
+    task: Raise a nonconformance for a batch of forks from FORK1 with flash left on the tines.
     expect: >-
-      A nonconformance created against the filler or its order, with a
+      A nonconformance created against FORK1 or its order, with a
       description, and it shows as open.
 
   - slug: read-work-instruction
@@ -43,7 +44,7 @@ tasks:
       readable.
 
   - slug: say-why-stopped
-    task: The filler just stopped; tell the system why.
+    task: The mould on FORK1 just stopped; tell the system why.
     expect: >-
-      The filler's current stop, a list of reasons, and the chosen reason
-      saved on the stop.
+      FORK1's current stop, a list of reasons, and the chosen reason saved
+      on the stop.
