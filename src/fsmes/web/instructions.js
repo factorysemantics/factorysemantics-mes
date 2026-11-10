@@ -98,6 +98,25 @@ function renderMarkdown(text, into) {
 const DOC_PAGE = 25;
 let docOffset = 0;
 
+/* Arriving from an order, the link names the order's material: the list is
+   the documents anchored to it, the route's own instruction opens first (it
+   is anchored to the material alone, a specification's also names a
+   characteristic), and one click brings the whole catalogue back. */
+const forMaterial = new URLSearchParams(window.location.search).get("material") || "";
+const forThisMaterial = (d) => !forMaterial || (d.anchors || {}).material === forMaterial;
+
+function firstForMaterial() {
+  const mine = catalogue.filter((d) => forMaterial && forThisMaterial(d));
+  const inForce = mine.filter((d) => d.approved_revision);
+  const pick = inForce.find((d) => !(d.anchors || {}).characteristic) || inForce[0] || mine[0];
+  return pick ? pick.code : null;
+}
+
+function showMaterialFilter() {
+  $("#doc-for").classList.toggle("hidden", !forMaterial);
+  $("#doc-for-material").textContent = forMaterial;
+}
+
 function renderCatalogue() {
   const body = $("#catalogue tbody");
   body.textContent = "";
@@ -108,7 +127,8 @@ function renderCatalogue() {
   const q = ($("#doc-q").value || "").trim().toLowerCase();
   const state = $("#doc-state").value;
   const matching = catalogue.filter((d) =>
-    (!state || (state === "in_force" ? !!d.approved_revision : !d.approved_revision))
+    forThisMaterial(d)
+    && (!state || (state === "in_force" ? !!d.approved_revision : !d.approved_revision))
     && (!q || `${d.code} ${d.title}`.toLowerCase().includes(q)));
   const page = window.FS.clientPage(matching, docOffset, DOC_PAGE);
   docOffset = page.offset;
@@ -277,6 +297,7 @@ async function openDoc() {
 async function refresh() {
   try {
     catalogue = await api("/documents");
+    if (!selected && forMaterial) selected = firstForMaterial();
     if (!selected && catalogue.length) selected = catalogue[0].code;
     renderCatalogue();
     FS.live(true);
@@ -285,6 +306,7 @@ async function refresh() {
 
 (async function boot() {
   me = await api("/auth/me");
+  showMaterialFilter();
   for (const id of ["doc-q", "doc-state"]) $(`#${id}`).addEventListener("input", () => { docOffset = 0; renderCatalogue(); });
   await refresh();
   if (selected) await openDoc();
