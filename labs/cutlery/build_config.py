@@ -75,7 +75,7 @@ class Rates:
     def __init__(self, pieces_per_type_per_day: float) -> None:
         self.pieces_per_type_per_day = pieces_per_type_per_day
         self.pieces_per_min_per_line = pieces_per_type_per_day / LINES_PER_TYPE / MINUTES_PER_DAY   # 2,314.8
-        self.stacks_per_day = pieces_per_type_per_day                                              # one of each per stack
+        self.stacks_per_day = pieces_per_type_per_day  # one of each per stack
         self.stacks_per_min_per_stacker = self.stacks_per_day / STACKERS / MINUTES_PER_DAY          # 217.0  (0.28 s)
         self.wraps_per_min_per_wrapper = self.stacks_per_day / WRAPPERS / MINUTES_PER_DAY           # 434.0  (0.14 s)
         self.pallets_per_min_per_palletizer = (self.stacks_per_day / WRAPS_PER_PALLET / PALLETIZERS
@@ -255,10 +255,12 @@ def pallet_line(g: int, rates: Rates = FULL_RATE) -> dict:
         "name": name, "seed": SEED + 300 + g, "duration_s": DURATION_S,
         "buffers": {"capacity": 8, "initial": 2},
         "stations": [
-            _station("Palletizer", rates.pallets_per_min_per_palletizer * 1.02, 0.0, [_a("StackHeight", 1.6, 0.03, "m")],
+            _station("Palletizer", rates.pallets_per_min_per_palletizer * 1.02, 0.0,
+                     [_a("StackHeight", 1.6, 0.03, "m")],
                      inspection={"kind": "pallet", "prefix": f"PL{g}", "material": "PALLET",
                                  "members": WRAPS_PER_PALLET, "group": g, "attributes": []}),
-            _station("StretchWrap", rates.pallets_per_min_per_palletizer * 1.02, 0.0, [_a("FilmTension", 3.1, 0.1, "N")]),
+            _station("StretchWrap", rates.pallets_per_min_per_palletizer * 1.02, 0.0,
+                     [_a("FilmTension", 3.1, 0.1, "N")]),
         ],
         "events": [CHANGEOVER],
         "_meta": {"kind": "palletizer", "area": "Palletizing", "group": g,

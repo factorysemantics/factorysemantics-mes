@@ -6,8 +6,8 @@ same state map every lab plant uses.
     python3 labs/cutlery/make_tag_map.py <dir>     the line.json in <dir>, tag_map.json beside it
 """
 import importlib.util
-import sys
 import json
+import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
