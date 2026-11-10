@@ -420,6 +420,9 @@ async function loadDetail() {
   $("#detail").classList.remove("hidden");
   $("#detail-code").textContent = order.code;
   $("#d-material").textContent = order.material;
+  // The link names what this order makes, so the Instructions page opens on
+  // the procedures anchored to that material rather than the whole catalogue.
+  $("#d-instructions").href = `/dashboard/instructions?material=${encodeURIComponent(order.material)}`;
   $("#d-qty").textContent = fmt.qty(order.quantity);
   $("#d-good").textContent = fmt.qty(order.good_qty);
   const over = order.over_qty || 0;
