@@ -15,6 +15,8 @@ the line that generated the data.
 
     FSMES_PLANT_REGISTRY=labs/cutlery/registry.toml fsmes plant cutlery init
     python3 labs/cutlery/init.py          (with MES_DATABASE_URL already set)
+    python3 labs/cutlery/init.py <dir>    the line.json and tag_map.json in <dir>
+                                          (a plant built with build_config.py --out)
 
 One product gap is worked around here and recorded as a finding: an order's
 operations are resolved from the routing's material, first routing wins, so
@@ -196,4 +198,6 @@ def main(scenario_dir: Path = HERE) -> None:
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+
+    main(Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else HERE)
