@@ -3,7 +3,7 @@
 # Each task is one sentence, said the way the plant's owner would say it to a
 # new hire; `expect` is what a working MES would have shown at the end. The
 # tasks here come from Scott's own complaints about the job, through pm's
-# complaint desk, and are walked only on his "walk it" (2026-11-10, both).
+# complaint desk, and are walked only on his "walk it" (2026-11-10, all four).
 #
 # The account is a lab account (plant.LAB_USERS) with the admin role: in a
 # real plant the engineer who sets up tags and connections holds the keys,
@@ -32,3 +32,15 @@ tasks:
     expect: >-
       The test side shows the same stops, counts and reasons the live side
       showed yesterday, with no hand-built signals.
+
+  - slug: routing-to-cost-centers
+    task: Create a new routing for a product and tie each step to a cost center.
+    expect: >-
+      One routing saved, each step shows its cost center, and the cost per
+      step rolls up for that product.
+
+  - slug: new-user-groups-shifts
+    task: Add a new maintenance person and put him in the right groups so he gets the right shift schedule.
+    expect: >-
+      One screen shows the new person, his groups, and the shift he ends up
+      on, with no guessing which group does what.
