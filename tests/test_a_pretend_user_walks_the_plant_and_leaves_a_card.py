@@ -41,7 +41,11 @@ def test_there_are_three_personas_and_the_supervisors_first_task_is_the_xlsx_exp
     # The supervisor and the operator walk five tasks each; the engineer walks
     # the ones Scott said "walk it" to from his own complaints (2026-11-10).
     assert [len(loaded[n].tasks) for n in ("operator", "supervisor")] == [5, 5]
-    assert [t.slug for t in loaded["engineer"].tasks] == ["set-up-tags-in-ui", "replay-real-opc-into-test", "routing-to-cost-centers"]
+    assert [t.slug for t in loaded["engineer"].tasks] == [
+        "set-up-tags-in-ui",
+        "replay-real-opc-into-test",
+        "routing-to-cost-centers",
+    ]
     supervisor = loaded["supervisor"]
     assert supervisor.tasks[0].slug == "export-quality-xlsx"
     assert supervisor.tasks[0].task == "Export the last two months of quality checks as an xlsx file."
