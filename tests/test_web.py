@@ -385,6 +385,24 @@ def test_orders_stays_on_the_shared_helpers():
     assert "window.FS" in text
 
 
+def test_the_floor_quality_check_can_say_which_machine_it_was_taken_on():
+    """The Quality check form on the Floor screen must have a machine field,
+    and the submit handler must send it."""
+    html = (WEB / "index.html").read_text(encoding="utf-8")
+    js = (WEB / "app.js").read_text(encoding="utf-8")
+
+    # Slice the form out of the HTML
+    start = html.index('id="form-quality"')
+    end = html.index("</form>", start)
+    form_slice = html[start:end]
+
+    assert 'name="equipment"' in form_slice
+    assert 'list="machine-options"' in form_slice
+    assert 'aria-label="Machine the check was taken on"' in form_slice
+
+    assert 'equipment: equipment || null' in js
+
+
 def test_the_orders_tiles_admit_to_being_selected():
     """The old tiles were clickable filters that gave no sign they had been
     clicked - the 'unintuitive' half of the complaint that started the
