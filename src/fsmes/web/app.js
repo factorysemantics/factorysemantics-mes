@@ -73,19 +73,20 @@ function toast(message, kind = "good") {
    on FILL2's down machines, which is what a supervisor sends a fitter. */
 
 const filters = {
-  q: "", line: "", state: "", offset: 0,
+  q: "", line: "", state: "", sort: "", offset: 0,
   oq: "", ostatus: "released,running", ooffset: 0,
 };
 
 function readFilters() {
   const params = new URL(window.location).searchParams;
-  for (const key of ["q", "line", "state", "oq"]) filters[key] = params.get(key) || "";
+  for (const key of ["q", "line", "state", "sort", "oq"]) filters[key] = params.get(key) || "";
   if (params.has("ostatus")) filters.ostatus = params.get("ostatus");
   filters.offset = Math.max(0, parseInt(params.get("offset") || "0", 10) || 0);
   filters.ooffset = Math.max(0, parseInt(params.get("ooffset") || "0", 10) || 0);
   $("#m-q").value = filters.q;
   $("#m-state").value = filters.state;
   $("#m-line").value = filters.line;
+  $("#m-sort").value = filters.sort;
   $("#o-q").value = filters.oq;
   $("#o-status").value = filters.ostatus;
 }
@@ -97,6 +98,7 @@ function writeFilters() {
     else url.searchParams.set(key, String(value));
   };
   set("q", filters.q, ""); set("line", filters.line, ""); set("state", filters.state, "");
+  set("sort", filters.sort, "");
   set("offset", filters.offset, 0);
   set("oq", filters.oq, ""); set("ooffset", filters.ooffset, 0);
   if (filters.ostatus === "released,running") url.searchParams.delete("ostatus");
@@ -207,6 +209,7 @@ function summaryQuery() {
   if (filters.line) params.set("line", filters.line);
   if (filters.q) params.set("machine_q", filters.q);
   if (filters.state) params.set("machine_state", filters.state);
+  if (filters.sort) params.set("machine_sort", filters.sort);
   return `/dashboard/summary?${params}`;
 }
 
@@ -580,6 +583,7 @@ function applyMachineFilters() {
   filters.q = $("#m-q").value.trim();
   filters.line = $("#m-line").value;
   filters.state = $("#m-state").value;
+  filters.sort = $("#m-sort").value;
   filters.offset = 0;
   writeFilters();
   refresh();
@@ -595,8 +599,9 @@ $("#m-q").addEventListener("input", () => {
 });
 $("#m-line").addEventListener("change", applyMachineFilters);
 $("#m-state").addEventListener("change", applyMachineFilters);
+$("#m-sort").addEventListener("change", applyMachineFilters);
 $("#m-clear").addEventListener("click", () => {
-  $("#m-q").value = ""; $("#m-line").value = ""; $("#m-state").value = "";
+  $("#m-q").value = ""; $("#m-line").value = ""; $("#m-state").value = ""; $("#m-sort").value = "";
   applyMachineFilters();
 });
 
