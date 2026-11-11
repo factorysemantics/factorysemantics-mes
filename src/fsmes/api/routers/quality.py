@@ -2,7 +2,7 @@
 
 from datetime import date, datetime
 
-from fastapi import APIRouter, Query, Response
+from fastapi import APIRouter, HTTPException, Query, Response
 from pydantic import BaseModel
 from sqlalchemy import func, select
 
@@ -698,6 +698,37 @@ def get_nc(code: str, db: DbDep) -> dict:
         wo = db.get(WorkOrder, nc.work_order_id)
         order = wo.code if wo else None
     return _nc_out(nc, order)
+
+
+class RaiseNcIn(BaseModel):
+    description: str
+    severity: str | None = None
+    order: str | None = None
+
+
+@router.post("/nonconformances", status_code=201, dependencies=[require("quality.record")])
+def raise_nc(body: RaiseNcIn, db: DbDep, actor: ActorDep) -> dict:
+    """Raise a non-conformance by hand, when something is wrong that no reading shows.
+
+    The person says what is wrong; nothing is measured and no evidence is
+    written for them. Severity is checked against the plant's own list, and
+    is `minor` when not given. An order code that does not exist is a 404,
+    never a record raised against nothing.
+    """
+    description = body.description.strip()
+    if not description:
+        raise HTTPException(
+            status_code=422,
+            detail="Say what is wrong, for example how the batch is underfilled.")
+    order = (body.order or "").strip() or None
+    nc = quality.open_nc(
+        db,
+        description=description,
+        severity=(body.severity or "").strip() or "minor",
+        work_order_code=order,
+        actor=actor,
+    )
+    return {"code": nc.code, "severity": nc.severity, "order": order}
 
 
 @router.post("/nonconformances/{code}/review", dependencies=[require("quality.close_nc")])

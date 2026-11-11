@@ -576,6 +576,25 @@ def nonconformance(plant: str, code: str) -> dict:
 
 
 @mcp.tool()
+def raise_nonconformance(plant: str, description: str, severity: str | None = None,
+                 order: str | None = None, dry_run: bool = False,
+                 on_behalf_of: str | None = None, client_ref: str | None = None) -> dict:
+    """Raise a non-conformance by hand, when something is wrong that no reading
+    shows - an underfilled batch somebody saw, a bad label. The description is
+    what is wrong and is required; nothing is measured and no evidence is made
+    up. Severity is one of the plant's own (`minor` when left out); `order` is
+    the work order it is about, if any."""
+    _identity.set((on_behalf_of.upper() if on_behalf_of else None, client_ref))
+    body: dict = {"description": description}
+    if severity:
+        body["severity"] = severity
+    if order:
+        body["order"] = order
+    return _write(plant, "/quality/nonconformances", body, dry_run,
+                  f"raise a non-conformance{f' on {order}' if order else ''}: {description}")
+
+
+@mcp.tool()
 def review_nonconformance(plant: str, code: str, dry_run: bool = False,
                  on_behalf_of: str | None = None, client_ref: str | None = None) -> dict:
     """Take a non-conformance under review - a supervisor action saying somebody

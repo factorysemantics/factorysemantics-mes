@@ -71,6 +71,7 @@ PROPOSED: dict[str, dict] = {
                                    "reason": "Out of specification on brix."},
     # The one that has been decided; nothing is closed before that.
     "close_nonconformance": {"code": "NC-00002"},
+    "raise_nonconformance": {"description": "batch of bottles underfilled"},
     "perform_maintenance": {"order": "CM-00001", "action": "complete",
                             "findings": "Belt replaced, tension set."},
     "raise_due_maintenance": {},

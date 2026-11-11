@@ -209,3 +209,46 @@ def test_recording_a_check_from_the_station_names_the_non_conformance_it_raised(
         "material": "FG-COLA", "characteristic": "brix", "value": 99.0}).json()
     assert out["result"] == "fail"
     assert out["non_conformance"], "an out-of-spec reading must name the record it opened"
+
+
+# ------------------------------------------- raised by hand, nothing measured
+
+def test_the_quality_page_offers_raise_non_conformance_with_a_note_field(supervisor):
+    page = supervisor.get("/dashboard/quality")
+    assert page.status_code == 200
+    assert "Raise non-conformance" in page.text
+    assert 'id="n-raise"' in page.text and 'id="r-note"' in page.text
+
+
+def test_a_supervisor_raises_a_non_conformance_by_hand_and_it_reads_back(supervisor, session):
+    made = supervisor.post("/quality/nonconformances",
+                           json={"description": "batch of bottles underfilled"})
+    assert made.status_code == 201, made.text
+    code = made.json()["code"]
+    assert code.startswith(f"{quality.nc_code_prefix(session)}-")
+    assert made.json()["severity"] == "minor"
+
+    one = supervisor.get(f"/quality/nonconformances/{code}").json()
+    assert one["description"] == "batch of bottles underfilled"
+    assert one["status"] == "open"
+    # A person said so; nothing was measured, and no evidence is made up for it.
+    assert one.get("evidence") is None
+    assert one["raised_by"] == "SUPER"
+
+
+def test_a_non_conformance_with_a_blank_description_is_refused_in_a_sentence(supervisor):
+    refused = supervisor.post("/quality/nonconformances", json={"description": "   "})
+    assert refused.status_code == 422
+    assert refused.json()["detail"].startswith("Say what is wrong")
+
+
+def test_a_non_conformance_against_an_order_that_does_not_exist_is_a_404(supervisor):
+    refused = supervisor.post("/quality/nonconformances",
+                              json={"description": "underfilled", "order": "WO-NOPE"})
+    assert refused.status_code == 404
+
+
+def test_somebody_who_may_not_record_quality_cannot_raise_a_non_conformance(sign_in):
+    viewer = sign_in("VIEW", role="viewer")
+    refused = viewer.post("/quality/nonconformances", json={"description": "underfilled"})
+    assert refused.status_code == 403

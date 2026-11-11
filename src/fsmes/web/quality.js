@@ -441,6 +441,102 @@ function fillHistoryChars() {
 
 /* ---------- non-conformances: by status, searchable, paged ---------- */
 
+/* ---------- raise by hand ---------- */
+
+// The plant's own words, never a list written here. A plant that has put no
+// severity in force raises at the product's default, and the select says so.
+async function fillSeverities() {
+  const sel = $("#r-severity");
+  sel.textContent = "";
+  const data = await api("/severities").catch(() => null);
+  const names = (data && data.names) || {};
+  const codes = Object.keys(names);
+  if (!codes.length) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "The plant's default";
+    sel.appendChild(opt);
+    return;
+  }
+  for (const code of codes) {
+    const opt = document.createElement("option");
+    opt.value = code;
+    opt.textContent = names[code];
+    sel.appendChild(opt);
+  }
+  if (codes.includes("minor")) sel.value = "minor";
+}
+
+// The orders a supervisor is most likely to mean: the ones in flight.
+async function fillOrders() {
+  const list = $("#r-orders");
+  list.textContent = "";
+  const q = "status=released&status=running&status=on_hold&limit=200";
+  const data = await api(`/workorders?${q}`).catch(() => null);
+  for (const wo of (data && data.items) || []) {
+    const opt = document.createElement("option");
+    opt.value = wo.code;
+    if (wo.material) opt.label = `${wo.code} · ${wo.material}`;
+    list.appendChild(opt);
+  }
+}
+
+function wireRaiseForm() {
+  const raiseBtn = $("#n-raise");
+  const form = $("#raise-form");
+  const cancelBtn = $("#r-cancel");
+  const saveBtn = $("#r-save");
+  const noteInput = $("#r-note");
+  const orderInput = $("#r-order");
+  const severitySelect = $("#r-severity");
+
+  // Shown only to somebody who may raise one: a button that will 403 is
+  // worse than none.
+  if (!window.FS || !FS.can("quality.record")) return;
+  raiseBtn.classList.remove("hidden");
+
+  raiseBtn.addEventListener("click", () => {
+    form.classList.remove("hidden");
+    fillSeverities();
+    fillOrders();
+    noteInput.value = "";
+    orderInput.value = "";
+    saveBtn.disabled = true;
+    noteInput.focus();
+  });
+
+  cancelBtn.addEventListener("click", () => {
+    form.classList.add("hidden");
+  });
+
+  noteInput.addEventListener("input", () => {
+    saveBtn.disabled = !noteInput.value.trim();
+  });
+
+  saveBtn.addEventListener("click", async () => {
+    const description = noteInput.value.trim();
+    if (!description) return;
+    saveBtn.disabled = true;
+    try {
+      const body = { description };
+      const order = orderInput.value.trim();
+      if (order) body.order = order;
+      const severity = severitySelect.value;
+      if (severity) body.severity = severity;
+      const result = await api("/quality/nonconformances", {
+        method: "POST",
+        body,
+      });
+      toast(`Raised ${result.code}`);
+      form.classList.add("hidden");
+      await refresh();
+    } catch (err) {
+      toast(err.message, "bad");
+      saveBtn.disabled = false;
+    }
+  });
+}
+
 /* ---------- the life of a non-conformance ----------
    open → under review → a disposition on the material → closed. Each step
    carries who took it and when, and the screen shows that rather than a
@@ -789,6 +885,7 @@ $("#n-q").addEventListener("input", () => {
   // appear one refresh late.
   await FS.whoami().catch(() => {});
   wireDisposition();
+  wireRaiseForm();
   readUrl();
   await refresh();
   setInterval(refresh, REFRESH_MS);
