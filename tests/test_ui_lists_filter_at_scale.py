@@ -261,15 +261,18 @@ def test_the_floor_can_list_its_machines_lowest_oee_first(client, megaplant, ses
     no OEE yet come after all three - unknown, not counted as zero."""
     machines, orders = megaplant["machines"], megaplant["orders"]
     now = megaplant["now"]
-    # Machines 0, 1 and 5 run (STATES rotates two running in five), each for
-    # the last two hours at one unit a second ideal: 7200 units would be 100 %.
-    made = {machines[0]: 3600, machines[1]: 1800, machines[5]: 5400}
+    # Machines 0, 1 and 5 run (STATES rotates two running in five) at one unit
+    # a second ideal; over the one-hour window read below, 3600 units is 100 %.
+    made = {machines[0]: 1800, machines[1]: 900, machines[5]: 2700}
     for eq, good in made.items():
         session.add(ProductionLog(work_order_id=orders[0].id, equipment_id=eq.id,
                                   good_qty=good, scrap_qty=0, ts=now - timedelta(minutes=30)))
     session.flush()
 
-    resp = client.get("/dashboard/summary?machine_limit=50&machine_sort=oee").json()
+    # A one-hour window the three watched end to end: their OEE is then rated
+    # whatever coverage floor the plant sets.
+    page = "/dashboard/summary?oee_hours=1&machine_limit=50&machine_sort=oee"
+    resp = client.get(page).json()
     assert resp["machines_page"]["sort"] == "oee"
     listed = resp["machines"]
     rated = [m for m in listed if m["oee"]["oee"] is not None]
@@ -280,11 +283,11 @@ def test_the_floor_can_list_its_machines_lowest_oee_first(client, megaplant, ses
     assert len(listed) == 50 and resp["machines_page"]["total"] > MACHINES
 
     # The order holds across pages: the next page carries on with unknowns.
-    after = client.get("/dashboard/summary?machine_limit=50&machine_offset=50&machine_sort=oee").json()
+    after = client.get(page + "&machine_offset=50").json()
     assert all(m["oee"]["oee"] is None for m in after["machines"])
 
     # Left out, the list is in code order as before.
-    plain = client.get("/dashboard/summary?machine_limit=50").json()
+    plain = client.get("/dashboard/summary?oee_hours=1&machine_limit=50").json()
     assert plain["machines_page"]["sort"] is None
     codes = [m["code"] for m in plain["machines"]]
     assert codes != [m["code"] for m in listed]
