@@ -45,6 +45,7 @@ def test_there_are_three_personas_and_the_supervisors_first_task_is_the_xlsx_exp
         "set-up-tags-in-ui",
         "replay-real-opc-into-test",
         "routing-to-cost-centers",
+        "new-user-groups-shifts",
     ]
     supervisor = loaded["supervisor"]
     assert supervisor.tasks[0].slug == "export-quality-xlsx"
