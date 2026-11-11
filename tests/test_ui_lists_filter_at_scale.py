@@ -253,6 +253,27 @@ def test_the_floor_plant_oee_tile_says_which_window_it_covers(client, megaplant,
     assert resp8["plant"]["oee_hours"] == 8
 
 
+def test_the_floor_can_list_its_machines_lowest_oee_first(client, megaplant):
+    """The sort parameter returns machines in ascending OEE order, with
+    machines that have no OEE at the end."""
+    resp = client.get("/dashboard/summary?machine_limit=50&machine_sort=oee").json()
+    assert resp["machines_page"]["sort"] == "oee"
+    machines = resp["machines"]
+    oee_values = [m["oee"]["oee"] for m in machines]
+    # Every machine with a non‑null OEE must be in ascending order.
+    non_null = [v for v in oee_values if v is not None]
+    for i in range(1, len(non_null)):
+        assert non_null[i - 1] <= non_null[i], (
+            f"OEE values not sorted: {non_null[i-1]} > {non_null[i]}")
+    # All null OEE machines must come after the last non‑null one.
+    seen_null = False
+    for v in oee_values:
+        if v is None:
+            seen_null = True
+        else:
+            assert not seen_null, "null OEE machine appears before a non‑null one"
+
+
 def test_a_machine_that_never_reported_a_state_is_unknown_and_findable(client, megaplant):
     """Unknown is an answer, not a gap: the seeded demo machines have no open
     state here, and the filter can name them."""
@@ -271,6 +292,15 @@ def test_the_floor_filters_by_name_and_scopes_to_a_line(client, megaplant):
     # A line is a scope, so the tiles follow it.
     assert line["plant"]["machines_total"] == MACHINES // LINES
     assert all(m["line"]["code"] == "SCALE03LINE" for m in line["machines"])
+
+
+def test_the_floor_html_contains_sort_select(client, megaplant):
+    """The index.html must contain the sort select element."""
+    from pathlib import Path
+    WEB = Path(__file__).resolve().parents[1] / "src" / "fsmes" / "web"
+    html = (WEB / "index.html").read_text(encoding="utf-8")
+    assert 'id="m-sort"' in html
+    assert "Lowest OEE first" in html
 
 
 def test_the_floor_refuses_a_page_bigger_than_any_other_list_allows(client, megaplant):

@@ -96,6 +96,8 @@ def summary(
     machine_q: str | None = Query(None, description="Match a machine code or name."),
     machine_state: str | None = Query(
         None, description="running, idle, down, setup - or unknown, for a machine that has never reported one."),
+    machine_sort: str | None = Query(
+        None, description="oee: lowest OEE first, machines with no OEE last"),
     machine_limit: int | None = Query(
         None, ge=1, le=MACHINE_MAX_LIMIT,
         description="How many machines to return. Left out, the answer is every machine in scope, "
@@ -115,14 +117,14 @@ def summary(
     """
     now = time.monotonic()
     version = _plant_version(db)
-    key = (oee_hours, line, machine_q, machine_state, machine_limit, machine_offset)
+    key = (oee_hours, line, machine_q, machine_state, machine_sort, machine_limit, machine_offset)
     with _cache_lock:
         cached = _cache.get(key)
         if cached and cached[1] == version and now - cached[0] < _CACHE_TTL_SECONDS:
             return cached[2]
 
     computed = _build_summary(db, oee_hours, line, machine_q, machine_state,
-                              machine_limit, machine_offset)
+                              machine_sort, machine_limit, machine_offset)
     with _cache_lock:
         # One screen, one filter, one entry. Without this a wall of tablets on
         # different filters would grow the cache without limit.
@@ -201,6 +203,7 @@ def _matching(machines: list[Equipment], open_states: dict, q: str | None,
 
 def _build_summary(db: Session, oee_hours: float | None, line: str | None = None,
                    machine_q: str | None = None, machine_state: str | None = None,
+                   machine_sort: str | None = None,
                    machine_limit: int | None = None, machine_offset: int = 0) -> dict:
     from fsmes.services import calendar as calendar_service
     scope = _machines(db, line)
@@ -210,16 +213,23 @@ def _build_summary(db: Session, oee_hours: float | None, line: str | None = None
     open_states = _open_states(db, [eq.id for eq in scope])
     matching = _matching(scope, open_states, machine_q, machine_state)
 
-    limit = machine_limit if machine_limit is not None else max(len(matching), 1)
-    offset = machine_offset if machine_offset < len(matching) else 0
-    wanted = matching[offset:offset + limit]
-
     # OEE is three grouped queries whatever the count, so it is computed for
     # the whole scope: the plant tile has to be the plant's OEE and not the
     # page's. The analog value is one query per machine, so THAT happens for
     # the page only — at 24 machines that is 24 queries and at a thousand it
     # was a thousand, every second, for every screen watching.
     oees = equipment_service.oee_many(db, scope, oee_hours)
+
+    if machine_sort == "oee":
+        matching = sorted(matching, key=lambda eq: (
+            oees[eq.code]["oee"] is None,
+            oees[eq.code]["oee"] or 0,
+            eq.code,
+        ))
+
+    limit = machine_limit if machine_limit is not None else max(len(matching), 1)
+    offset = machine_offset if machine_offset < len(matching) else 0
+    wanted = matching[offset:offset + limit]
     # Whether the MES can still see each machine, in one query for the
     # whole page. A tile that says `unknown` and cannot say why is the
     # thing this answers.
@@ -366,6 +376,7 @@ def _build_summary(db: Session, oee_hours: float | None, line: str | None = None
             "offset": offset,
             "has_more": offset + len(wanted) < len(matching),
             "filtered": bool(machine_q or machine_state),
+            "sort": machine_sort if machine_sort == "oee" else None,
         },
         "orders": orders,
         "audit": audit,
