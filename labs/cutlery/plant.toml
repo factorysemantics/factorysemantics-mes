@@ -44,6 +44,10 @@ replay_dir = "out"
 # pack should carry - six lines a person reads - so it is declared rather than
 # generated, and `fsmes pack apply` seeds it.
 masterdata = "masterdata"
+# What the simulated floor does that the generators do not say: one planned
+# order kept behind every line, each line's book continued on its own line.
+# Read only by `fsmes run-operations`.
+floor      = "floor.json"
 
 [floor]
 # The quality plan: every dimensional specification, every fifteen minutes.

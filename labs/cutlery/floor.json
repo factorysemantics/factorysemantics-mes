@@ -1,0 +1,7 @@
+{
+  "planning": {
+    "keep_planned": 1,
+    "each_line": true,
+    "_why": "One planned order behind every line, for as long as the plant runs. Sixty-one lines each keep a sequence of their own (WO-FORK1-0001, WO-STACK07-0001, ...), so each is a book of its own: FLOOR-PLAN continues every line's sequence on that line, copying its material, quantity and priority, and the simulated shift supervisor releases the next order on any line that has none and issues it the line's lot, pro rata to what the order before it was issued. Without this the seed's one order per line was done within four hours at the lab's teaching pace and the plant made nothing on order after that (2026-11-11)."
+  }
+}
