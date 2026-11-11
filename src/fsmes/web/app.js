@@ -862,10 +862,11 @@ $("#form-quality").addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = new FormData(event.target);
   const [material, characteristic] = String(form.get("spec")).split("::");
+  const equipment = String(form.get("equipment") || "").trim();
   try {
     const result = await api("/quality/checks", {
       method: "POST",
-      body: { material, characteristic, value: Number(form.get("value")), order: null },
+      body: { material, characteristic, value: Number(form.get("value")), order: null, equipment: equipment || null },
     });
     toast(
       result.result === "pass" ? "Check passed." : `Out of spec — ${result.non_conformance} opened.`,
