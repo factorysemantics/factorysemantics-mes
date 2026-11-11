@@ -57,6 +57,7 @@ class WorkOrder(Base):
     closed_at: Mapped[datetime | None]
 
     material: Mapped[Material] = relationship()
+    work_center: Mapped[Equipment | None] = relationship(foreign_keys=[work_center_id])
     operations: Mapped[list[WorkOrderOperation]] = relationship(
         back_populates="order", order_by="WorkOrderOperation.seq", cascade="all, delete-orphan"
     )

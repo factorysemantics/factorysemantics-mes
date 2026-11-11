@@ -20,6 +20,9 @@ class WorkOrderIn(BaseModel):
     quantity: float
     due_date: datetime | None = None
     priority: int = 50
+    # The line that makes it, for a material several lines make. Left out,
+    # the order goes to the material's first routing, as it always has.
+    line: str | None = None
 
 
 class OperationOut(BaseModel):
@@ -39,6 +42,9 @@ class WorkOrderOut(BaseModel):
     priority: int
     due_date: datetime | None
     erp_reference: str | None
+    # The line it runs on: where its route starts. None for an order whose
+    # route starts on no line.
+    line: str | None = None
     good_qty: float
     scrap_qty: float
     # Zero unless the line ran past the order. See WorkOrder.over_qty.
@@ -55,6 +61,7 @@ def _out(wo: WorkOrder) -> WorkOrderOut:
         priority=wo.priority,
         due_date=wo.due_date,
         erp_reference=wo.erp_reference,
+        line=wo.work_center.code if wo.work_center is not None else None,
         good_qty=wo.good_qty,
         scrap_qty=wo.scrap_qty,
         over_qty=wo.over_qty,
@@ -170,6 +177,7 @@ def create_order(body: WorkOrderIn, db: DbDep, actor: ActorDep) -> WorkOrderOut:
         quantity=body.quantity,
         due_date=body.due_date,
         priority=body.priority,
+        line_code=body.line,
         actor=actor,
     )
     return _out(wo)
