@@ -38,6 +38,7 @@ from fsmes.domain import (
     EquipmentStateName,
     Material,
     MaterialType,
+    ProductionLog,
     QualityCheck,
     QualitySpec,
     Routing,
@@ -253,25 +254,45 @@ def test_the_floor_plant_oee_tile_says_which_window_it_covers(client, megaplant,
     assert resp8["plant"]["oee_hours"] == 8
 
 
-def test_the_floor_can_list_its_machines_lowest_oee_first(client, megaplant):
-    """The sort parameter returns machines in ascending OEE order, with
-    machines that have no OEE at the end."""
+def test_the_floor_can_list_its_machines_lowest_oee_first(client, megaplant, session):
+    """The supervisor's question, "which machine lost the most this shift",
+    is answered by the top of the list. Three running machines make units at
+    three paces; the slowest heads the list, and the thousand machines with
+    no OEE yet come after all three - unknown, not counted as zero."""
+    machines, orders = megaplant["machines"], megaplant["orders"]
+    now = megaplant["now"]
+    # Machines 0, 1 and 5 run (STATES rotates two running in five), each for
+    # the last two hours at one unit a second ideal: 7200 units would be 100 %.
+    made = {machines[0]: 3600, machines[1]: 1800, machines[5]: 5400}
+    for eq, good in made.items():
+        session.add(ProductionLog(work_order_id=orders[0].id, equipment_id=eq.id,
+                                  good_qty=good, scrap_qty=0, ts=now - timedelta(minutes=30)))
+    session.flush()
+
     resp = client.get("/dashboard/summary?machine_limit=50&machine_sort=oee").json()
     assert resp["machines_page"]["sort"] == "oee"
-    machines = resp["machines"]
-    oee_values = [m["oee"]["oee"] for m in machines]
-    # Every machine with a non‑null OEE must be in ascending order.
-    non_null = [v for v in oee_values if v is not None]
-    for i in range(1, len(non_null)):
-        assert non_null[i - 1] <= non_null[i], (
-            f"OEE values not sorted: {non_null[i-1]} > {non_null[i]}")
-    # All null OEE machines must come after the last non‑null one.
-    seen_null = False
-    for v in oee_values:
-        if v is None:
-            seen_null = True
-        else:
-            assert not seen_null, "null OEE machine appears before a non‑null one"
+    listed = resp["machines"]
+    rated = [m for m in listed if m["oee"]["oee"] is not None]
+    assert [m["code"] for m in rated] == [machines[1].code, machines[0].code, machines[5].code]
+    assert rated[0]["oee"]["oee"] < rated[1]["oee"]["oee"] < rated[2]["oee"]["oee"]
+    # Rated first, then the unknowns: none of them slipped in as a zero.
+    assert [m["oee"]["oee"] is None for m in listed] == [False] * 3 + [True] * (len(listed) - 3)
+    assert len(listed) == 50 and resp["machines_page"]["total"] > MACHINES
+
+    # The order holds across pages: the next page carries on with unknowns.
+    after = client.get("/dashboard/summary?machine_limit=50&machine_offset=50&machine_sort=oee").json()
+    assert all(m["oee"]["oee"] is None for m in after["machines"])
+
+    # Left out, the list is in code order as before.
+    plain = client.get("/dashboard/summary?machine_limit=50").json()
+    assert plain["machines_page"]["sort"] is None
+    codes = [m["code"] for m in plain["machines"]]
+    assert codes != [m["code"] for m in listed]
+
+    # And the Floor offers it, by those words, in the machine filters.
+    html = (WEB / "index.html").read_text(encoding="utf-8")
+    assert 'id="m-sort"' in html and 'aria-label="Sort"' in html
+    assert '<option value="oee">Lowest OEE first</option>' in html
 
 
 def test_a_machine_that_never_reported_a_state_is_unknown_and_findable(client, megaplant):
@@ -292,15 +313,6 @@ def test_the_floor_filters_by_name_and_scopes_to_a_line(client, megaplant):
     # A line is a scope, so the tiles follow it.
     assert line["plant"]["machines_total"] == MACHINES // LINES
     assert all(m["line"]["code"] == "SCALE03LINE" for m in line["machines"])
-
-
-def test_the_floor_html_contains_sort_select(client, megaplant):
-    """The index.html must contain the sort select element."""
-    from pathlib import Path
-    WEB = Path(__file__).resolve().parents[1] / "src" / "fsmes" / "web"
-    html = (WEB / "index.html").read_text(encoding="utf-8")
-    assert 'id="m-sort"' in html
-    assert "Lowest OEE first" in html
 
 
 def test_the_floor_refuses_a_page_bigger_than_any_other_list_allows(client, megaplant):
