@@ -157,7 +157,7 @@
         "page": "/dashboard/orders",
         "anchor": "order-filters",
         "title": "Find the order",
-        "body": "Filter by code or status. WO-PAL1 is the first palletizer's order; WO-FORK1 the first moulding line's."
+        "body": "Filter by code or status. WO-PAL1-0001 is the first palletizer's first order; WO-FORK1-0001 the first moulding line's. Every line keeps a planned order behind the one it is running."
       },
       {
         "page": "/dashboard/orders",

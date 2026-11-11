@@ -64,10 +64,10 @@ def test_the_plant_is_the_one_the_customer_described(build_config, plant):
     assert len(lines) == 61 and sum(len(c["stations"]) for _, c in lines) == 83
 
 
-def test_the_seed_points_every_order_at_its_own_machine_with_its_lot_issued(session, plant, tmp_path):
-    """Eight stackers make the same STACK-24; the routing chosen for an
-    order is the first for the material, so each order is pointed at its
-    own stacker afterwards - the late-binding dispatch the product lacks."""
+def test_the_seed_puts_every_order_on_its_own_line_one_released_with_its_lot_and_one_planned(session, plant, tmp_path):
+    """Thirty-two stackers make the same STACK-24, so each order names its
+    line and is built from that line's routing; the first on every line is
+    released with its lot issued and the second waits planned behind it."""
     make_tag_map = _load(LAB / "make_tag_map.py", "cutlery_make_tag_map")
     init = _load(LAB / "init.py", "cutlery_init")
     (tmp_path / "line.json").write_text(json.dumps(plant), encoding="utf-8")
@@ -76,12 +76,15 @@ def test_the_seed_points_every_order_at_its_own_machine_with_its_lot_issued(sess
     init.release_orders(session, made["orders"])
     session.flush()
     orders = {wo.code: wo for wo in session.scalars(select(WorkOrder).where(WorkOrder.code.like("WO-%")))}
+    assert len(orders) == 2 * 61, f"{len(orders)} orders for 61 lines"
     for i in range(1, 33):
-        wo = orders[f"WO-STACK{i:02d}"]
-        assert [session.get(Equipment, op.equipment_id).code for op in wo.operations] == [f"STACK{i:02d}_Stacker"]
-        assert wo.status.value == "released"
+        for n, status in ((1, "released"), (2, "planned")):
+            wo = orders[f"WO-STACK{i:02d}-{n:04d}"]
+            assert [session.get(Equipment, op.equipment_id).code for op in wo.operations] == [f"STACK{i:02d}_Stacker"]
+            assert wo.status.value == status
     for line in ("FORK1", "SPOON2", "KNIFE3"):
-        assert session.scalar(select(LotConsumption).where(LotConsumption.work_order_id == orders[f"WO-{line}"].id))
+        assert session.scalar(select(LotConsumption).where(
+            LotConsumption.work_order_id == orders[f"WO-{line}-0001"].id))
     # The dimensional checks the certificate states a Cpk for: five per utensil.
     from fsmes.domain import Material, QualitySpec
     for material in ("UT-FORK", "UT-SPOON", "UT-KNIFE"):

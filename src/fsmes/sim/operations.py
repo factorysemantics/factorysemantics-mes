@@ -228,6 +228,9 @@ class Book:
     #: The latest due date in the book, which is what the next one is spaced
     #: from. None when no order in the book has one.
     latest_due: datetime | None
+    #: The line every order in this sequence ran on, when they all ran on the
+    #: same one; None when they did not, or the plant does not say.
+    line: str | None = None
 
     def code_for(self, number: int) -> str:
         return f"{self.prefix}{number:0{self.width}d}"
@@ -265,6 +268,28 @@ class Book:
         # order with no material, no quantity, or a code with no number on the
         # end of it is one this reader cannot continue, so it is left out of
         # the pattern rather than filled in.
+        numbered = cls._numbered(orders)
+        if not numbered:
+            return None
+        # The prefix most of this plant's orders share. A plant migrated from
+        # somewhere else carries a few codes in another shape, and the
+        # sequence to continue is the one it is actually running.
+        prefix = max(sorted(numbered), key=lambda p: len(numbered[p]))
+        return cls._of_sequence(prefix, numbered[prefix])
+
+    @classmethod
+    def read_each(cls, orders: list[dict]) -> list[Book]:
+        """Every sequence in a plant's book, one `Book` each, by prefix.
+
+        For a plant whose lines each keep a sequence of their own - the
+        cutlery plant's `WO-FORK1-0001` and `WO-STACK07-0001` are sixty-one
+        books, not one - where `read` would continue only the longest.
+        """
+        return [cls._of_sequence(prefix, run)
+                for prefix, run in sorted(cls._numbered(orders).items())]
+
+    @staticmethod
+    def _numbered(orders: list[dict]) -> dict[str, list[tuple[int, int, dict]]]:
         numbered: dict[str, list[tuple[int, int, dict]]] = {}
         for order in orders:
             found = _SEQUENCE.match(str(order.get("code") or ""))
@@ -275,13 +300,11 @@ class Book:
             digits = found.group("number")
             numbered.setdefault(found.group("prefix"), []).append(
                 (int(digits), len(digits), order))
-        if not numbered:
-            return None
-        # The prefix most of this plant's orders share. A plant migrated from
-        # somewhere else carries a few codes in another shape, and the
-        # sequence to continue is the one it is actually running.
-        prefix = max(sorted(numbered), key=lambda p: len(numbered[p]))
-        run = sorted(numbered[prefix], key=lambda row: row[0])
+        return numbered
+
+    @classmethod
+    def _of_sequence(cls, prefix: str, numbered: list[tuple[int, int, dict]]) -> Book:
+        run = sorted(numbered, key=lambda row: row[0])
         rows: list[tuple[str, float, int]] = []
         for _n, _w, order in run:
             row = (str(order["material"]), float(order["quantity"]),
@@ -293,6 +316,9 @@ class Book:
                       if moment is not None)
         gaps = [(later - earlier).total_seconds() / 3600.0
                 for earlier, later in pairwise(dues)]
+        lines = sorted({str(order.get("line")) for _n, _w, order in run if order.get("line")})
+        if any(not order.get("line") for _n, _w, order in run):
+            lines = []
         return cls(
             prefix=prefix,
             width=max(width for _n, width, _order in run),
@@ -301,6 +327,7 @@ class Book:
             rows=tuple(rows),
             due_spacing_hours=(sum(gaps) / len(gaps)) if gaps else None,
             latest_due=dues[-1] if dues else None,
+            line=lines[0] if len(lines) == 1 else None,
         )
 
 
@@ -319,6 +346,20 @@ def keep_planned(script: dict) -> int:
         log.warning("`planning.keep_planned` is not a whole number of orders; "
                     "planning nothing", value=planning.get("keep_planned"))
         return 0
+
+
+def plans_each_line(script: dict) -> bool:
+    """Whether this plant's planner keeps a book for each line, not one.
+
+    **Off by default**, and off is what every pack that says nothing gets: one
+    book, continued in the sequence most of its orders share, and released one
+    order at a time - bottling's, unchanged. On, every numbered sequence in the
+    book is a line's own: the planner keeps `keep_planned` behind each, and the
+    supervisor puts the next one on any line that has none, with the material
+    its last order was issued. The cutlery plant runs sixty-one lines, and one
+    book released one order at a time left sixty of them idle.
+    """
+    return bool((script.get("planning") or {}).get("each_line"))
 
 
 #: How many stops one turn through a plant's reason mix stands for. The mix
@@ -592,6 +633,16 @@ class Floor:
         # A planner on a plant whose book has never had an order in it has
         # nothing to plan from, and saying so every minute would bury it.
         self._said_there_is_no_pattern = False
+        # A book for each line (`planning.each_line`), and what has been said
+        # about it, once each: a sequence that ran on more than one line, a
+        # line whose book has emptied, an order whose material could not be
+        # issued. And which orders have been looked at for their material, so
+        # a line's lot is issued to its order once and not every pass.
+        self.each_line = plans_each_line(self.script)
+        self._said_no_line: set[str] = set()
+        self._said_the_line_is_empty: set[str] = set()
+        self._lines_seen: set[str] = set()
+        self._issue_looked_at: set[str] = set()
         # That the login will not come back is said once, not once a step: a
         # password that has changed under a running floor is a thing to fix,
         # and ten thousand identical lines is how it stays unfound. Cleared by
@@ -2120,6 +2171,8 @@ class Floor:
         """
         if keep <= 0:
             return []
+        if self.each_line:
+            return await self._plan_each_line(keep)
         try:
             waiting = await self.get("/workorders", status=["planned"], limit=1)
             short = keep - int(waiting.get("total") or 0)
@@ -2175,6 +2228,187 @@ class Floor:
                      keeping_planned=keep, by="the simulated planner")
         return planned
 
+    async def _plan_each_line(self, keep: int) -> list[str]:
+        """`keep` planned behind every line's own sequence. Returns what it planned.
+
+        The same planner as `plan_the_book`, once per sequence: each line's
+        book is read back from its own orders, continued from its own highest
+        number, and planned *on that line* - `line` in the body, because three
+        moulding lines make the same fork and an order for forks would
+        otherwise go to the first of them. A sequence whose orders ran on more
+        than one line is not a line's book, and is left alone and said once.
+        """
+        try:
+            planned = (await self.get("/workorders", status=["planned"], limit=_BOOK_WINDOW))["items"]
+            # The newest orders, and every open one whatever its age: a line
+            # whose current order is older than the plant's last five hundred
+            # still has a book, and its highest number is in one of the two.
+            active = (await self.get("/workorders", status=["released", "running", "on_hold"],
+                                     limit=_BOOK_WINDOW))["items"]
+            recent = (await self.get("/workorders", limit=_BOOK_WINDOW))["items"]
+        except httpx.HTTPError as exc:
+            log.warning("could not read the order book to plan from", error=str(exc)[:160])
+            return []
+        known = {o["code"]: o for o in (*recent, *active, *planned)}
+        books = Book.read_each(list(known.values()))
+        if not books:
+            if not self._said_there_is_no_pattern:
+                self._said_there_is_no_pattern = True
+                log.warning("nothing in this plant's book to continue; planning nothing",
+                            orders_read=len(known), each_line=True)
+            return []
+        self._said_there_is_no_pattern = False
+        waiting = {prefix: len(run) for prefix, run in Book._numbered(planned).items()}
+        now = _utcnow()
+        made: list[str] = []
+        for book in books:
+            if book.line is None:
+                if book.prefix not in self._said_no_line:
+                    self._said_no_line.add(book.prefix)
+                    log.warning("a sequence in the book ran on more than one line, or on none; "
+                                "not planning it as a line's own", sequence=book.prefix)
+                continue
+            for step in range(keep - waiting.get(book.prefix, 0)):
+                number = book.last + 1 + step
+                code = book.code_for(number)
+                material, quantity, priority = book.row_for(number)
+                due = book.due_for(number, now=now)
+                body: dict = {"code": code, "material": material, "quantity": quantity,
+                              "priority": priority, "line": book.line}
+                if due is not None:
+                    body["due_date"] = due.isoformat()
+                try:
+                    response = await self.post("/workorders", json=body)
+                    response.raise_for_status()
+                except httpx.HTTPStatusError as exc:
+                    log.warning("could not plan an order", order=code, line=book.line,
+                                status=exc.response.status_code, detail=exc.response.text[:160])
+                    break
+                except httpx.HTTPError as exc:
+                    log.warning("could not plan an order", order=code, error=str(exc)[:160])
+                    break
+                made.append(code)
+                log.info("planned the next order", order=code, line=book.line, material=material,
+                         quantity=quantity, priority=priority,
+                         due=due.isoformat() if due else None,
+                         keeping_planned=keep, by="the simulated planner")
+        return made
+
+    async def release_each_idle_line(self) -> list[str]:
+        """Put the next planned order on every line that has none. Returns them.
+
+        The supervisor's `release_next`, once per line: a line with an order
+        released, running or on hold is left alone - a held order is expected
+        back, and a second one behind it would be two orders on one line. A
+        line whose book has emptied is said once, and nothing is invented.
+        """
+        try:
+            planned = (await self.get("/workorders", status=["planned"], limit=_BOOK_WINDOW))["items"]
+            active = (await self.get("/workorders", status=["released", "running", "on_hold"],
+                                     limit=_BOOK_WINDOW))["items"]
+        except httpx.HTTPError as exc:
+            log.warning("could not read the order book", error=str(exc)[:160])
+            return []
+        busy = {o.get("line") for o in active}
+        waiting: dict[str, list[dict]] = {}
+        for o in planned:
+            if o.get("line"):
+                waiting.setdefault(o["line"], []).append(o)
+        self._lines_seen |= busy | set(waiting)
+        self._lines_seen.discard(None)
+        released: list[str] = []
+        for line in sorted(self._lines_seen):
+            if line in busy:
+                continue
+            if line not in waiting:
+                if line not in self._said_the_line_is_empty:
+                    self._said_the_line_is_empty.add(line)
+                    log.warning("the order book for this line is empty", line=line, planned=0,
+                                note="what this line counts from here is unassigned production, "
+                                     "not an order")
+                continue
+            nxt = sorted(waiting[line], key=_book_position)[0]
+            try:
+                response = await self.post(f"/workorders/{nxt['code']}/release")
+                response.raise_for_status()
+            except httpx.HTTPStatusError as exc:
+                log.warning("release refused", order=nxt["code"], line=line,
+                            status=exc.response.status_code, detail=exc.response.text[:160])
+                continue
+            self._said_the_line_is_empty.discard(line)
+            released.append(nxt["code"])
+            log.info("released the next order in the book", order=nxt["code"], line=line,
+                     material=nxt.get("material"), quantity=nxt.get("quantity"),
+                     remaining_on_this_line=len(waiting[line]) - 1,
+                     by="the simulated shift supervisor")
+        return released
+
+    async def issue_like_the_last(self) -> list[str]:
+        """Issue each open order what the order before it on its line was issued.
+
+        Pro rata to the order's quantity, from the same lot, at the same step:
+        the moulding line's resin lot stays in its hopper from one order to the
+        next, and every piece of the new order traces to it. An order already
+        issued something is left alone, whoever released it - a person on the
+        Orders screen included. A line whose last order was issued nothing (a
+        stacker takes pieces, not a lot) is issued nothing. A lot that has run
+        short is refused by the plant and said, and nothing else is issued in
+        its place: a shortage is a fact to see, not one to paper over.
+        Returns the orders it issued to.
+        """
+        try:
+            active = (await self.get("/workorders", status=list(ACTIVE_STATUSES),
+                                     limit=_BOOK_WINDOW))["items"]
+        except httpx.HTTPError as exc:
+            log.warning("could not read the order book", error=str(exc)[:160])
+            return []
+        issued: list[str] = []
+        for order in active:
+            code = order["code"]
+            found = _SEQUENCE.match(code)
+            if code in self._issue_looked_at or not found or int(found.group("number")) <= 1:
+                continue
+            digits = found.group("number")
+            before = f"{found.group('prefix')}{int(digits) - 1:0{len(digits)}d}"
+            try:
+                mine = await self.get(f"/execution/genealogy/{code}")
+                theirs = await self.get(f"/execution/genealogy/{before}")
+                last = await self.get(f"/workorders/{before}")
+            except httpx.HTTPStatusError as exc:
+                # No order before it under that code: nothing to copy, and
+                # nothing to look at again.
+                self._issue_looked_at.add(code)
+                log.info("no order before this one to copy its material from", order=code,
+                         before=before, status=exc.response.status_code)
+                continue
+            except httpx.HTTPError as exc:
+                log.warning("could not read what the last order was issued", order=code,
+                            error=str(exc)[:160])
+                continue
+            self._issue_looked_at.add(code)
+            if mine.get("consumed") or not theirs.get("consumed"):
+                continue
+            share = float(order.get("quantity") or 0) / float(last.get("quantity") or 1)
+            for c in theirs["consumed"]:
+                body: dict = {"order": code, "lot": c["lot"],
+                              "quantity": round(float(c["quantity"]) * share, 1)}
+                if c.get("seq") is not None:
+                    body["seq"] = c["seq"]
+                try:
+                    response = await self.post("/execution/consume", json=body)
+                    response.raise_for_status()
+                except httpx.HTTPStatusError as exc:
+                    log.warning("could not issue this line's material to its next order", order=code,
+                                lot=c["lot"], quantity=body["quantity"],
+                                status=exc.response.status_code, detail=exc.response.text[:160])
+                    continue
+                if code not in issued:
+                    issued.append(code)
+                log.info("issued the line's material to its next order", order=code, lot=c["lot"],
+                         quantity=body["quantity"], seq=c.get("seq"), like=before,
+                         by="the simulated shift supervisor")
+        return issued
+
     async def work_the_book(self, orders: list[dict], *, finish: bool = True) -> None:
         """One pass of what a supervisor does with the schedule.
 
@@ -2187,6 +2421,13 @@ class Floor:
         it says so in its plan rather than being an accident of cadence.
         """
         finished = await self.finish_orders(orders) if finish else 0
+        if self.each_line:
+            # Every pass rather than only after a finish: sixty-one lines do
+            # not finish together, and an order a person released on the
+            # screen wants its material as much as one released here.
+            await self.release_each_idle_line()
+            await self.issue_like_the_last()
+            return
         active = [o for o in orders if o.get("status") in ACTIVE_STATUSES]
         if finished or not active:
             await self.release_next()

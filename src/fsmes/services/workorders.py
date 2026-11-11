@@ -71,14 +71,30 @@ def create(
     due_date: datetime | None = None,
     priority: int = 50,
     erp_reference: str | None = None,
+    line_code: str | None = None,
     actor: str = "system",
 ) -> WorkOrder:
+    """Plan an order, its operations copied from the material's routing.
+
+    `line_code` says which line makes it, for a material more than one line
+    can make: three moulding lines all make the fork, and an order for forks
+    with no line named goes to the first routing for the material, as it
+    always has. Named, the routing used is the one whose route starts on that
+    line, and a line with no routing for the material is refused rather than
+    quietly given to another.
+    """
     if quantity <= 0:
         raise Invalid("order quantity must be positive")
     if session.scalar(select(WorkOrder).where(WorkOrder.code == code)):
         raise Conflict(f"work order {code!r} already exists")
     material = masterdata.get_material(session, material_code)
-    routing = session.scalar(select(Routing).where(Routing.material_id == material.id))
+    if line_code:
+        routing = _routing_on(session, material, masterdata.get_equipment(session, line_code))
+        if routing is None:
+            raise Invalid(f"material {material_code!r} has no routing on line {line_code!r}")
+    else:
+        routing = session.scalar(select(Routing).where(Routing.material_id == material.id)
+                                 .order_by(Routing.id))
     if routing is None:
         raise Invalid(f"material {material_code!r} has no routing — cannot build order operations")
 
@@ -128,6 +144,17 @@ def create(
         after={"material": material_code, "quantity": quantity, "routing": routing.code},
     )
     return wo
+
+
+def _routing_on(session: Session, material, line: Equipment) -> Routing | None:
+    """The material's routing whose route starts on this line, first by id."""
+    for routing in session.scalars(select(Routing).where(Routing.material_id == material.id)
+                                   .order_by(Routing.id)):
+        first = min(routing.operations, key=lambda o: o.seq, default=None)
+        where = (first.equipment or first.work_center) if first is not None else None
+        if where is not None and masterdata.work_center_of(session, where) is line:
+            return routing
+    return None
 
 
 def release(session: Session, code: str, actor: str = "system") -> WorkOrder:
