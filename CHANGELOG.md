@@ -10,7 +10,118 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-11-12
+
 ### Added
+
+- **The Floor's machine list can sort lowest OEE first.** A **Sort** box
+  beside the line and state filters offers "By code" (as before) and "Lowest
+  OEE first". A machine with no OEE yet comes after every machine that has
+  one; it is not counted as zero. The sort runs on the server over the whole
+  filtered list before the page is cut, so page 2 carries on in the same
+  order. `GET /dashboard/summary` takes `machine_sort=oee` and says the order
+  in `machines_page.sort`; the screen keeps it in the URL (`?sort=oee`). (#238)
+
+- **Raise a non-conformance by hand from the Quality page.** Something seen by
+  eye - an underfilled batch, a bad label - no longer needs a made-up
+  measurement. **Raise non-conformance** takes what is wrong, an order if
+  there is one, and a severity from the plant's own list, and the record
+  shows as open under your name. `POST /quality/nonconformances` needs
+  `quality.record`; a blank description is refused with a sentence, an
+  unknown order is a 404, and the button is shown only to people who hold
+  the capability. The assistant can do it too (`raise_nonconformance`). No
+  schema change. (#235)
+
+- **An open order links to the work instructions for what it makes.** The
+  Orders page's **Work instructions** link opens the Instructions page on the
+  documents anchored to the order's material, with the route's own
+  instruction already open, and the count still states the plant's total
+  ("2 of 2 matching, 3 in the plant"). "Show all documents" brings back the
+  whole list. No schema or API change. (#232)
+
+- **The Floor's quality check can say which machine it was taken on.** The
+  quality-check box gains an optional **Machine** field. Left empty, the check
+  is saved with no machine, as before; an unknown code is refused in the
+  toast. The API already took `equipment`; the screen never sent it. (#239)
+
+- **An order can be made for a named line.** `POST /workorders` takes an
+  optional `line`, builds the order from the material's routing on that line,
+  and refuses a line with no such routing; the answer says which line the
+  order is on. Without `line`, nothing changes. A floor script's
+  `planning.each_line` (off by default) keeps one order book per line, and the
+  cutlery lab uses it so none of its 61 lines runs out of work. (#237)
+
+- **`fsmes scenario`: play a product through a line by writing tags into an
+  OPC UA server.** `play` writes each value of a JSON scenario at its time, as
+  the node's own type; `check` names the line of each mistake in the file
+  and, connected, reports every tag's type and access while writing nothing;
+  `serve` holds the file's tags in a rehearsal server, so it can be tried
+  without a real one. Before anything is written every target is read, and a
+  tag on a channel that is not declared `Simulator` or `Memory Based` is
+  refused, as is a channel a Kepware server shows signs of a real device on.
+  There is no override flag, and shadow mode refuses `play` outright. No real
+  KEPServerEX has been on the other end yet. See `docs/operate/scenarios.md`.
+  (#222)
+
+- **A floor drawn in a CAD program becomes the 3D line view.** `fsmes layout
+  from-freecad <positions.json>` writes each cell's place, turn and model into
+  `line_layout.json` and changes nothing else in the file; a file in
+  millimetres or in another frame is refused, never flipped, and `--check`
+  writes nothing. The 3D view now fits the whole line in the window on first
+  load, on a desk screen and an upright phone, with labels the same size near
+  and far, lighter pads under dark machines, belts that follow a turned
+  machine, and a `cell` kind for a fenced robot cell. What rides the belts
+  follows `unit_label`: bottles as before, a plain slab for anything else.
+  (#220)
+
+- **The 3D line view can draw a machine from the plant's own model.** A pack's
+  optional `models/` folder holds `<kind>.glb`, `<CODE>.glb` or a file the
+  layout names; `GET /line/layout` carries each station's `model`, and
+  `GET /line/models/<name>` serves only that folder, only `.glb`, only up to
+  8 MB, to signed-in users. The built-in shapes are drawn first and stay when
+  a model is missing, broken or late. Nothing is fetched from a CDN. (#218)
+
+- **A machine can be part of another machine.** `EquipmentLevel.EQUIPMENT_MODULE`
+  puts a robot under its cell; the Floor, OEE, the timeline and the 3D line
+  read work units only, so robots stay off them. The line generator gains
+  `units` with their own state, fault number and `service` interval, and the
+  tag map gains `counts: false`, `reason_tag` and `reason_map`, so a cell is
+  down with its robot's reason. `labs/multiplant/bodyshop` is a fourth lab
+  plant built on them: a simulated body-in-white line for an invented
+  carmaker, eight cells and twenty robots. Every existing line generates
+  byte-identical output; no migration. (#219)
+
+- **A Satisfactory game, read as a plant.** `fsmes run-satisfactory` reads the
+  day files a poller writes from the game's Ficsit Remote Monitoring mod and
+  turns them into machines, states and production, through the same services
+  the OPC agent uses; it only reads. A tripped fuse is down for every building
+  on that circuit. A paused or closed game, or a gap in the polls, is **not
+  observed**, never down, with the cause written on the interval. Every
+  screen says the plant is a game and that quality is 100 % because the game
+  has no scrap. `fsmes satisfactory-pack` writes a pack's master data from a
+  day file; the pack is `labs/satisfactory`. New pack keys: `[plant]
+  source_note`, and `satisfactory_feed`, `satisfactory_poll_seconds`,
+  `satisfactory_area` under `[inbound]`. (#211)
+
+- **`fsmes walk`: a pretend user walks a lab plant and leaves a card.** One
+  headless model run per task, through a small browser server that holds the
+  20-step cap and refuses `/admin` and other sites in code, ending in "done"
+  or "stuck, here" with a before shot and a where-it-stopped shot. Three
+  personas in `labs/walks/` - a shift supervisor, a line operator and an MES
+  engineer - with lab accounts `WALK-SUP`, `WALK-OP` and `WALK-ENG`. A kill
+  switch, one walk a task a day, and the password only in the environment.
+  It needs a checkout and the Claude Code login, not an API key; nothing on
+  a plant PC needs it. (#224, #229, #230, #236)
+
+- **The cutlery lab at a teaching pace.** `labs/cutlery/build_config.py
+  --scale S --out DIR` writes the same 83-station plant with every rate times
+  S, so at 0.01 a person can watch a fork line; the default writes the
+  committed files byte for byte. The lab's walks speak cutlery's words, and
+  its README says how to drive a 3D model from it. (#233)
+
+- Scripts that film a lesson of the course into a course tree, and the scene
+  for lesson 1.2, *Never invent production*. Scripts only; nothing in the
+  plant. (#208, #210)
 
 - **The cutlery plant ships in the wheel: `fsmes demo cutlery`.** The
   lab's 83-machine cutlery plant - four kinds of line, every piece judged by
@@ -19,7 +130,8 @@ goes under Honesty with a migration line, so plant people can find it.
   with no checkout. `labs/cutlery/masterdata/` is generated by
   `init.py --write-masterdata` and a test holds it to what init.py builds.
   Work orders in a pack can now name their `line` and the raw lot they are
-  `issue`d on release (`docs/operate/packs.md`).
+  `issue`d on release (`docs/operate/packs.md`). (#244)
+
 - **Export xlsx on every list a supervisor would take to Excel.** Work
   orders, non-conformances, completed maintenance, the audit trail, lots,
   OEE by station and the stops behind the downtime pareto each have an
@@ -35,7 +147,7 @@ goes under Honesty with a migration line, so plant people can find it.
   From and To in their bars (`since`/`until` on their lists), read as plant
   days; for maintenance the date is when a job was completed, or for work
   not done yet when it was raised. One step writes them all
-  (`fsmes.api.export`); nothing new to install.
+  (`fsmes.api.export`); nothing new to install. (#227)
 
 - **Export the quality checks of a date range as an xlsx file.** Inspection
   History on the Quality screen has From and To in its filter bar (they used
@@ -47,7 +159,7 @@ goes under Honesty with a migration line, so plant people can find it.
   order, machine, gauge, non-conformance. An empty range is a file with the
   header and no rows. A limit the specification does not have is an empty
   cell, never 0. Gated on `plant.read`. The writer is the standard library's
-  `zipfile` (`fsmes.xlsx`); nothing new to install.
+  `zipfile` (`fsmes.xlsx`); nothing new to install. (#225)
 - **`fsmes tagmap from-kepware`: a draft tag map from a KEPServerEX project
   export.** Save the project as JSON, name the channel, and the command
   writes one machine per device with every tag at its Kepware node id. The
@@ -56,7 +168,7 @@ goes under Honesty with a migration line, so plant people can find it.
   says why under `_guess`, every tag it could not place is listed under
   `_unmapped`, and placed plus unmapped is the export's own count. It works
   on the file alone and touches no server. The last line it prints points to
-  `fsmes opc-verify`. See `docs/operate/kepware-export.md`.
+  `fsmes opc-verify`. See `docs/operate/kepware-export.md`. (#223)
 - **A machine can count on several tags, and a machine with no state word can
   still say when it is down.** A tag map entry's `counters` names the tags
   that count good and the tags that count scrap -
@@ -70,7 +182,7 @@ goes under Honesty with a migration line, so plant people can find it.
   know (no starved, no blocked). A `counters` entry that names an unknown
   role, lists a tag twice, names none, or sits on a machine with `counts:
   false` is refused when the map loads. A map without these fields reads
-  exactly as before.
+  exactly as before. (#221)
 
 - **The line generator can describe machines side by side, machines with two
   sides, defect counters and identifiers.** A station's `stage` puts it beside
@@ -83,7 +195,7 @@ goes under Honesty with a migration line, so plant people can find it.
   every `every_s` seconds. The replay serves text as String, and serves a
   machine that the tag map addresses by `nodes` at those node ids, so a map
   written in a vendor's addressing can be proved against the replay before
-  the PLC exists. Every existing line generates byte-identical output.
+  the PLC exists. Every existing line generates byte-identical output. (#221)
 
 - **A machine that stopped on a downtime code says why in the plant's words.**
   The machine page used to print the raw value the machine gave
@@ -91,7 +203,7 @@ goes under Honesty with a migration line, so plant people can find it.
   plant's codes, the page now reads `Tool A crash (FaultCode 41)`, and
   `GET /equipment/{code}` carries `reason_code` and `reason_name` beside
   `reason`. A code the map does not know still shows only what the machine
-  said.
+  said. (#221)
 
 - **A machine can hold where it stands, and the 3D line view lays it out
   there.** Equipment gains `pos_x`, `pos_y`, `pos_z` (metres; z is height)
@@ -103,7 +215,7 @@ goes under Honesty with a migration line, so plant people can find it.
   a line with held positions is drawn as a floor plan, height in the label.
   An area whose machines hold positions is offered in the 3D view's picker
   ("FACTORY — every machine"). A plant whose machines hold no position lays
-  out exactly as before.
+  out exactly as before. (#216)
 
 - **Parts mix against a standing rate order on a Satisfactory plant.** A rate
   order - a name and a target rate per item in units a minute, no quantity,
@@ -119,7 +231,7 @@ goes under Honesty with a migration line, so plant people can find it.
   played** (`shift=last_play`), named with its times. A building left out of
   five unpaused lists of the same save is retired "torn down"
   (`MES_SATISFACTORY_TORN_DOWN_POLLS`) and comes back when listed again; a
-  session answer a second after its poll is read with that poll.
+  session answer a second after its poll is read with that poll. (#214)
 
 - **Energy beside OEE on a Satisfactory plant.** Shift analysis gains an
   Energy panel - MW drawn against circuit capacity with the peak marked,
@@ -129,7 +241,7 @@ goes under Honesty with a migration line, so plant people can find it.
   energy line. Generators are equipment with their output and fuel as
   readings. The figures ride in `/analysis/oee` as `energy` (so the AI's
   `oee_breakdown` has them) and alone at `/analysis/energy`. A plant with no
-  power readings has no panel. Energy never enters an OEE figure.
+  power readings has no panel. Energy never enters an OEE figure. (#213)
 
 - **The trace page answers "where did this lot go" on a line that books by
   the lot.** Asked about a lot, Quality › Trace now lists the orders that
@@ -138,21 +250,63 @@ goes under Honesty with a migration line, so plant people can find it.
   packages it listed before. A bottling line that serialises nothing used
   to get "nothing serialised carries LOT-CAP-001" and an empty table.
   `GET /trace/where-used/{lot}` and the MCP `where_used` tool carry the same
-  list as `orders`, with `orders_total`.
+  list as `orders`, with `orders_total`. (#206)
 - **A machine can be retired: off the floor, history kept.** Equipment has
   `retired_at` and `retired_reason` (migration `a9c4e1f7b2d3`). A retired
   machine keeps its states, production and connections, and leaves the
   Floor, the line lists and `/health`'s `watching` count. Nothing retires a
-  machine yet except the Satisfactory reader (below).
+  machine yet except the Satisfactory reader (above). (#212)
+
+### Changed
+
+- **Book output says what it moved.** After a booking the Floor keeps a line
+  under the form: what went onto which step, that step's new counts, and why
+  the order's Good did or did not move - it counts finished output from the
+  last step, while Scrap is counted at every step. The reply to
+  `POST /execution/report` gains `operation`, `booked_good`, `booked_scrap`,
+  `order_good_qty`, `order_scrap_qty`, `final_seq` and `final_operation`;
+  none removed. The form's machine box is now "Machine to book on". (#226)
+
+- **The Floor's Plant OEE tile says which hours it covers**: "last 8 h · mean
+  of 7 of 9". `/dashboard/summary` gains `plant.oee_hours`, the window asked
+  for or the pack's `[process] default_report_hours`. (#234)
+
+- Dependencies brought forward: SQLAlchemy 2.1.8, FastAPI 0.162.2, typer
+  0.28.0, alembic 1.20.1 and others, and `anthropic` - the library the AI
+  tab's chat talks through - from 1.15 to 2.6, a major version. (#207, #241)
 
 ### Fixed
 
+- **`fsmes demo <plant>` brings a database an older version made up to
+  date before it starts.** A bottling plant made on 0.3.0 or 0.4.2, started
+  under the new code, answered every screen with an error (`no such column:
+  equipment.retired_at`). The start now reads the schema first: behind, it
+  copies the SQLite file beside itself, runs the migrations and says so in
+  one line (`bottling: database backed up to ..., schema 2c6e817b9faf ->
+  c8e2f4a6d1b7`); at the current schema it says nothing; a database a newer
+  version wrote, or a migration that fails, and the plant does not start,
+  with the backup's path in the sentence. (#243)
 - **The audit trail's "anyone" no longer filters for a person called
   anyone.** On the Ops screen the option had no value, so a browser sent its
   text: once the list of people had been filled, any reload of the trail
-  with "anyone" picked asked for `actor=anyone` and came back empty.
+  with "anyone" picked asked for `actor=anyone` and came back empty. (#227)
+- **After Close, the Quality page says the non-conformance is closed.** It
+  said "NC-00041: close", which reads like an order. Close now says
+  "closed", Take under review says "taken under review", and a disposition
+  says "decided — rework". (#231)
 
 ### Honesty
+
+- **The cutlery lab rates every machine from its own speed, 1 % above it.**
+  Its tag map gave all three stations of a moulding line the line's cycle,
+  rounded up, and the mould runs 1.2 % faster than the line on purpose, so
+  every mould counted past its rating and its Performance was withheld: the
+  lab's Floor said "mean of 73 of 83 · 10 counting past its run time". Each
+  station's rated cycle is now 0.99 of its own, Performance reads about 99 %,
+  and every one of the 83 gets an OEE. Lab files only; the OEE rule is
+  unchanged. The start-up gap behind the last of it - the first counts
+  arriving before the MES has recorded the machine running - is real and not
+  fixed here. *Migration:* none. (#240)
 
 - **A date in the inspection history's range is a day on the plant's clock.**
   The Quality screen sent "from the 3rd" as midnight in UTC, so a Chicago
@@ -160,7 +314,7 @@ goes under Honesty with a migration line, so plant people can find it.
   on `GET /quality/checks` (and the export) now also take a bare date, meaning
   that plant day from its first moment to its last; a date and time is still
   a UTC instant, as before. *Migration:* none; a saved screen link with dates
-  now reads the plant's days.
+  now reads the plant's days. (#225)
 
 - **A Satisfactory building that ran at full rate all evening gets a figure,
   and one placed in the last minutes says "too new to rate".** The reader
@@ -175,7 +329,7 @@ goes under Honesty with a migration line, so plant people can find it.
   count says "9 of 15 stations · 6 too new"; `oee_breakdown` and the
   machine OEE tab carry `too_new`, `first_seen` and `stations_too_new`. The
   floor is unchanged. *Migration:* replay the poll files into a fresh plant
-  to restate bookings made by an earlier reader.
+  to restate bookings made by an earlier reader. (#215)
 
 - **The Satisfactory plant books production only for time it holds as
   running, and shows only the save being played.** The game's `CurrentProd`
@@ -190,7 +344,7 @@ goes under Honesty with a migration line, so plant people can find it.
   in save <name>", a building listed again comes back, and the bar on
   every page starts with the save: "save fsmes · ...".
   *Migration:* production booked by an earlier reader stays as it was;
-  replay the poll files into a fresh plant to restate it.
+  replay the poll files into a fresh plant to restate it. (#212)
 
 ## [0.4.2] — 2026-10-26
 
@@ -5320,7 +5474,8 @@ number in it comes from a simulated plant.
   MES was not watching. Unlabelled downtime is reported as unlabelled. These
   are the house rules and they are tested.
 
-[Unreleased]: https://github.com/factorysemantics/factorysemantics-mes/compare/v0.4.2...HEAD
+[Unreleased]: https://github.com/factorysemantics/factorysemantics-mes/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/factorysemantics/factorysemantics-mes/releases/tag/v0.5.0
 [0.4.2]: https://github.com/factorysemantics/factorysemantics-mes/releases/tag/v0.4.2
 [0.4.1]: https://github.com/factorysemantics/factorysemantics-mes/releases/tag/v0.4.1
 [0.4.0]: https://github.com/factorysemantics/factorysemantics-mes/releases/tag/v0.4.0

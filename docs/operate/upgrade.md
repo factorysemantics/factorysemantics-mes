@@ -10,6 +10,81 @@ carries an **Honesty** section for anything that changed what a number
 before upgrading a plant that anyone reads numbers off, because a number that
 changes meaning without anyone noticing is worse than one that breaks.
 
+## 0.4.2 to 0.5.0
+
+**Three migrations** — 0.4.2's head was `2c6e817b9faf`; 0.5.0's is
+`c8e2f4a6d1b7`. Each one adds columns or tables. None of them changes or
+removes a row, and every new column is empty until something writes to it:
+
+| Migration | What it adds |
+|---|---|
+| `a9c4e1f7b2d3` | two columns on `equipment`: `retired_at`, `retired_reason`. Empty means the machine is on the floor, which every machine you have is |
+| `b3d7e2a9c514` | two tables: `rate_orders` and `rate_order_lines`, a standing order for a mix of parts (used by the Satisfactory plant). A plant with no rate order has nothing in them |
+| `c8e2f4a6d1b7` | four columns on `equipment`: `pos_x`, `pos_y`, `pos_z`, `heading`. Empty means nobody placed the machine, and the 3D view lays it out as before |
+
+```bash
+pg_dump -Fc -d yourplantdb -f before-0.5.0.dump  # first, always (on SQLite: fsmes backup)
+py -m pip install --upgrade factorysemantics-mes  # or: pipx upgrade factorysemantics-mes
+fsmes --version                                   # 0.5.0
+fsmes db-status --pack packs/yourplant            # behind: 2c6e817b9faf, head c8e2f4a6d1b7
+fsmes init-db   --pack packs/yourplant            # 2c6e817b9faf -> c8e2f4a6d1b7
+fsmes db-status --pack packs/yourplant            # should now agree; it exits non-zero if not
+```
+
+For a plant in a fleet, `--plant yourplant` instead of `--pack`;
+`fsmes plant <name> migrate` does the same and refuses a running plant.
+
+One thing reads differently on any plant: a date in Inspection History's
+From and To is now a day on the plant's clock, not midnight UTC, so a saved
+link with dates in it reads the plant's days. The changelog's other
+**Honesty** entries are about the cutlery lab's ratings and the Satisfactory
+plant; no OEE, count or state rule changed for a plant of your own.
+
+**A plant made by `fsmes demo bottling`: start it.** The first start under
+0.5.0 copies the database beside itself (`bottling.db.pre-migrate-<time>`),
+brings it up to date and says so in one line; at the current schema it says
+nothing. A database a newer version wrote, or a migration that fails, and the
+plant does not start, with the copy's path in the sentence.
+
+**Tried, and how far.** On 2026-11-12, all on Linux:
+
+- *PostgreSQL.* A schema made by the 0.4.2 wheel (`init-db`, then `seed`) on
+  an empty PostgreSQL 18.6, then the 0.5.0 wheel:
+
+  ```text
+  $ fsmes db-status
+  Current: 2c6e817b9faf
+  Head:    c8e2f4a6d1b7
+  The database is behind. Bring it up with `fsmes init-db`.
+  $ fsmes init-db
+  Database schema upgraded: 2c6e817b9faf -> c8e2f4a6d1b7.
+  $ fsmes db-status
+  Current: c8e2f4a6d1b7
+  Head:    c8e2f4a6d1b7
+  The database is at the current schema.
+  ```
+
+  Served by 0.5.0, `/health`, `/masterdata/equipment`, `/analysis/oee` and
+  `/dashboard/summary` answered 200.
+- *The demo plant.* `fsmes demo bottling` from the 0.3.0 wheel off PyPI in an
+  empty venv, stopped; then a wheel of the 0.5.0 code in a second empty venv,
+  `fsmes demo bottling`, nothing else typed:
+
+  ```text
+  bottling: database backed up to .../fsmes/data/bottling.db.pre-migrate-20261112-082838, schema d4e8a1c93b70 -> c8e2f4a6d1b7
+  ```
+
+  `fsmes db-status --plant bottling` said the current schema; every one of
+  the API's 91 read routes and the 22 dashboard pages answered 200. The next
+  start said nothing about the schema. CI's `wheel-plant` job does the same
+  from 0.4.2's schema on Linux and on Windows, on every pull request.
+- *A demo plant on PostgreSQL.* The same start against a scratch PostgreSQL
+  at 0.4.2's schema went to head and said the copy is the server's own
+  (`pg_dump`), not made here.
+
+Nobody has done the upgrade on a real Windows PC yet, or on a plant outside
+this project.
+
 ## 0.4.1 to 0.4.2
 
 **One migration, `2c6e817b9faf`** — 0.4.1's head was `b6f0c2a71d58`. It

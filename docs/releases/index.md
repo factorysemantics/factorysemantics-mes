@@ -10,6 +10,7 @@ anyone reads numbers off. These pages are the summary a person reads first.
 
 | Version | Date | What it is |
 |---|---|---|
+| [0.5.0](0.5.0.md) | 2026-11-12 | the Floor sorts lowest OEE first; Export xlsx on every list; Raise and Close a non-conformance on the Quality page; work instructions from an open order; three additive migrations, applied with `fsmes init-db` |
 | [0.4.2](0.4.2.md) | 2026-10-26 | the Maintenance screen loads on PostgreSQL again, after one `fsmes init-db` (SQLite plants never had the fault); every header dot says live when it is; the Orders page opens with the New-order form closed |
 | [0.4.1](0.4.1.md) | 2026-10-23 | an evening on a Windows PC that goes cleanly: a stop that waits until its own ports are free so the next start works, `stop --force` answered in a sentence instead of refused, and three pages that say how to tell which Python owns the `fsmes` you type |
 | [0.4.0](0.4.0.md) | 2026-10-16 | a plant on two boxes keeps counting when one of them dies: two nodes against one PostgreSQL with the jobs that must run once held by a lease, a `docker compose` demo with a kill test anyone can run, and screens that say which box holds what |
