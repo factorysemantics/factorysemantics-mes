@@ -40,20 +40,11 @@ link with dates in it reads the plant's days. The changelog's other
 **Honesty** entries are about the cutlery lab's ratings and the Satisfactory
 plant; no OEE, count or state rule changed for a plant of your own.
 
-**A plant made by `fsmes demo bottling` needs the same step, and does not
-take it by itself.** `fsmes demo` builds the database once, the first time,
-and after that only starts it; started by 0.5.0 on a 0.4.2 (or 0.3.0)
-database, every screen answers 500 (`no such column: equipment.retired_at`).
-Point `init-db` at the demo's own fleet file first:
-
-```powershell
-fsmes demo bottling stop
-$env:FSMES_PLANT_REGISTRY = "$env:LOCALAPPDATA\fsmes\fleet.toml"   # Linux: ~/.local/share/fsmes/fleet.toml
-fsmes init-db --plant bottling
-fsmes demo bottling
-```
-
-(If you set `FSMES_HOME`, the fleet file is `fleet.toml` in that folder.)
+**A plant made by `fsmes demo bottling`: start it.** The first start under
+0.5.0 copies the database beside itself (`bottling.db.pre-migrate-<time>`),
+brings it up to date and says so in one line; at the current schema it says
+nothing. A database a newer version wrote, or a migration that fails, and the
+plant does not start, with the copy's path in the sentence.
 
 **Tried, and how far.** On 2026-11-12, all on Linux:
 
@@ -75,13 +66,24 @@ fsmes demo bottling
 
   Served by 0.5.0, `/health`, `/masterdata/equipment`, `/analysis/oee` and
   `/dashboard/summary` answered 200.
-- *The demo plant.* `fsmes demo bottling` from the 0.4.2 wheel, stopped, then
-  started by 0.5.0: `/health` answered 500 until the four lines above, 200
-  after. The same from a demo made by the 0.3.0 wheel
-  (`d4e8a1c93b70 -> c8e2f4a6d1b7`): 200 on all four after.
+- *The demo plant.* `fsmes demo bottling` from the 0.3.0 wheel off PyPI in an
+  empty venv, stopped; then a wheel of the 0.5.0 code in a second empty venv,
+  `fsmes demo bottling`, nothing else typed:
 
-Nobody has done it on Windows (the PowerShell lines are untried there) or on
-a plant outside this project.
+  ```text
+  bottling: database backed up to .../fsmes/data/bottling.db.pre-migrate-20261112-082838, schema d4e8a1c93b70 -> c8e2f4a6d1b7
+  ```
+
+  `fsmes db-status --plant bottling` said the current schema; every one of
+  the API's 91 read routes and the 22 dashboard pages answered 200. The next
+  start said nothing about the schema. CI's `wheel-plant` job does the same
+  from 0.4.2's schema on Linux and on Windows, on every pull request.
+- *A demo plant on PostgreSQL.* The same start against a scratch PostgreSQL
+  at 0.4.2's schema went to head and said the copy is the server's own
+  (`pg_dump`), not made here.
+
+Nobody has done the upgrade on a real Windows PC yet, or on a plant outside
+this project.
 
 ## 0.4.1 to 0.4.2
 

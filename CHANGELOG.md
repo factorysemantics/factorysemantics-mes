@@ -268,6 +268,15 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Fixed
 
+- **`fsmes demo <plant>` brings a database an older version made up to
+  date before it starts.** A bottling plant made on 0.3.0 or 0.4.2, started
+  under the new code, answered every screen with an error (`no such column:
+  equipment.retired_at`). The start now reads the schema first: behind, it
+  copies the SQLite file beside itself, runs the migrations and says so in
+  one line (`bottling: database backed up to ..., schema 2c6e817b9faf ->
+  c8e2f4a6d1b7`); at the current schema it says nothing; a database a newer
+  version wrote, or a migration that fails, and the plant does not start,
+  with the backup's path in the sentence. (#243)
 - **The audit trail's "anyone" no longer filters for a person called
   anyone.** On the Ops screen the option had no value, so a browser sent its
   text: once the list of people had been filled, any reload of the trail
