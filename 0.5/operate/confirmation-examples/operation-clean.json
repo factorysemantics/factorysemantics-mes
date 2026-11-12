@@ -1,0 +1,22 @@
+{
+  "kind": "operation_confirmation",
+  "message_key": "WO-2026-0041:op20",
+  "order": "WO-2026-0041",
+  "erp_reference": "4400041",
+  "material": "FG-COLA",
+  "seq": 20,
+  "operation": "Pack",
+  "equipment": "PACK01",
+  "work_center": "LINE1",
+  "cost_center": "CC-PKG-1",
+  "input_qty": 118.0,
+  "good_qty": 118.0,
+  "scrap_qty": 0.0,
+  "wip_qty": 0.0,
+  "setup_seconds": 300.0,
+  "machine_seconds": 2100.0,
+  "labour_seconds": 94.4,
+  "started_at": "2026-03-04T06:45:00",
+  "completed_at": "2026-03-04T07:20:00",
+  "components": []
+}

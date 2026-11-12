@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ProductionPerformance>
+  <ProductionResponse>
+    <MessageKey>WO-2026-0043:completion</MessageKey>
+    <ID>WO-2026-0043</ID>
+    <ERPReference>4400043</ERPReference>
+    <Product>FG-COLA</Product>
+    <OrderedQuantity>4</OrderedQuantity>
+    <GoodQuantity>0</GoodQuantity>
+    <ScrapQuantity>4</ScrapQuantity>
+    <OverQuantity>0</OverQuantity>
+    <StartedAt>2026-03-04T08:00:00</StartedAt>
+    <CompletedAt>2026-03-04T08:10:00</CompletedAt>
+  </ProductionResponse>
+</ProductionPerformance>
