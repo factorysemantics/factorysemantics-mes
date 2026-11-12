@@ -27,7 +27,11 @@ What it asserts, in order, and why each one:
   counted lot has been inspected;
 * `fsmes demo bottling stop` puts the ports back **before it returns**, so
   `fsmes demo bottling start` in the next breath starts the plant instead of
-  refusing on a port that is still closing.
+  refusing on a port that is still closing;
+* a database an older release made - the plant on a PC that ran 0.4.2 and
+  then `pip install --upgrade` - is copied, brought to head and said so in
+  one line by the next start, and the screens answer; the start after that
+  says nothing about the schema.
 
 Facts, never seconds: every wait below is a poll for a state with a generous
 ceiling, and the times it prints are information for the Result, not gates. A
@@ -292,6 +296,99 @@ def and_a_start_in_the_next_breath_works(fsmes: Path, work: Path, environment: d
     the_ports_are_back_already("the second stop")
 
 
+#: The schema 0.4.2's plants are at. Taken back to it with the migrations'
+#: own downgrades, which is a database an older release made, column for column.
+OLDER = "2c6e817b9faf"
+
+
+def an_older_database_is_brought_up_to_date(venv: Path, fsmes: Path, work: Path,
+                                            environment: dict, speed: float) -> None:
+    """The upgrade a person does: an older release's database, then one start.
+
+    On 2026-11-12 a bottling plant made on 0.3.0 or 0.4.2 answered every
+    request 500 under 0.5.0 (`no such column: equipment.retired_at`), because
+    `fsmes demo <plant>` started the new code on whatever schema it found.
+    Here the stopped plant's database is taken back to 0.4.2's schema with the
+    migrations' own downgrades, and the next start must copy it, bring it to
+    head, say so in one line, and serve the equipment screen.
+    """
+    python = venv_bin(venv, "python")
+    say(f"== a database an older release made: back to {OLDER}, then start ==")
+    where = subprocess.run(
+        [str(python), "-c",
+         "import sys; from pathlib import Path; from alembic import command; "
+         "from fsmes import schema, standalone; "
+         "db = standalone.data_dir(Path(sys.argv[1])) / 'bottling.db'; "
+         "command.downgrade(schema.alembic_config(f'sqlite:///{db.as_posix()}'), sys.argv[2]); "
+         "print(db); print(schema.head_revision())",
+         environment["FSMES_HOME"], OLDER],
+        cwd=work, env=environment, capture_output=True, timeout=600, **AS_WORDS)
+    if where.returncode != 0:
+        fail(f"could not take the database back to {OLDER}: {where.stdout}{where.stderr}")
+    db, head = Path(where.stdout.splitlines()[-2]), where.stdout.splitlines()[-1]
+    say(f"  {db} is at {OLDER}; this wheel's head is {head}")
+
+    def start() -> str:
+        run = subprocess.run([str(fsmes), "demo", PLANT, "--speed", str(speed)],
+                             cwd=work, env=environment, capture_output=True,
+                             timeout=2700, **AS_WORDS)
+        said = (run.stdout or "") + (run.stderr or "")
+        say(said)
+        if run.returncode != 0:
+            fail(f"`fsmes demo {PLANT}` exited {run.returncode} on a database at {OLDER}")
+        return said
+
+    def stop(when: str) -> None:
+        run = subprocess.run([str(fsmes), "demo", PLANT, "stop"], cwd=work, env=environment,
+                             capture_output=True, timeout=600, **AS_WORDS)
+        say((run.stdout or "") + (run.stderr or ""))
+        if run.returncode != 0:
+            fail(f"`fsmes demo {PLANT} stop` exited {run.returncode} {when}")
+
+    said = start()
+    try:
+        line = next((ln.strip() for ln in said.splitlines()
+                     if "database backed up to" in ln), None)
+        if line is None or f"schema {OLDER} -> {head}" not in line:
+            fail(f"the start did not say it backed up and migrated the database "
+                 f"({OLDER} -> {head}); it said the above")
+        say(f"  the console line: {line}")
+        copies = sorted(db.parent.glob(f"{db.name}.pre-migrate-*"))
+        if len(copies) != 1:
+            fail(f"expected one backup beside {db}, found {len(copies)}")
+        say(f"  the backup is there: {copies[0].name}, {copies[0].stat().st_size:,} bytes")
+        status = subprocess.run([str(fsmes), "db-status", "--plant", PLANT], cwd=work,
+                                env={**environment, "FSMES_PLANT_REGISTRY":
+                                     str(Path(environment["FSMES_HOME"]) / "fleet.toml")},
+                                capture_output=True, timeout=120, **AS_WORDS)
+        say(status.stdout + status.stderr)
+        if status.returncode != 0 or "at the current schema" not in status.stdout:
+            fail("`fsmes db-status --plant bottling` does not say head after the start")
+        until("the dashboard answers", lambda: ask("/health").get("status") == "ok",
+              ceiling=300)
+        token = str(until("sign-in works",
+                          lambda: tell("/auth/login", SIGN_IN).get("token"), ceiling=120))
+        equipment = ask("/masterdata/equipment", token)
+        items = equipment if isinstance(equipment, list) else equipment.get("items", [])
+        if not items:
+            fail(f"/masterdata/equipment answered with no equipment: {json.dumps(equipment)[:300]}")
+        say(f"  /masterdata/equipment answered 200 with {len(items)} machines")
+    finally:
+        stop("after the migrating start")
+
+    say("== and the start after that says nothing about the schema ==")
+    said = start()
+    try:
+        if "database backed up" in said or f"schema {OLDER}" in said:
+            fail("a start on a database already at head spoke about the schema")
+        until("the dashboard answers", lambda: ask("/health").get("status") == "ok",
+              ceiling=300)
+        say("  nothing said about the schema")
+    finally:
+        stop("after the quiet start")
+    the_ports_are_back_already("the last stop")
+
+
 def the_plant_is_what_the_lab_runs(speed: float) -> None:
     """Every fact the handoff asks for, asked of the running plant."""
     until("the dashboard answers", lambda: ask("/health").get("status") == "ok",
@@ -419,9 +516,11 @@ def main() -> int:
 
     the_ports_are_back_already("the stop")
     and_a_start_in_the_next_breath_works(fsmes, work, environment, args.speed)
+    an_older_database_is_brought_up_to_date(venv, fsmes, work, environment, args.speed)
 
     say(f"\nThe wheel brought {PLANT} up on {sys.platform}, put it back down, and "
-        "started it again in the next breath.")
+        "started it again in the next breath, and brought an older release's database "
+        "up to date on the way.")
     return 0
 
 

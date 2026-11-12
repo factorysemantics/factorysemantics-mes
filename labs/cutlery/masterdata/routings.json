@@ -1,0 +1,844 @@
+[
+  {
+    "code": "RT-FORK1",
+    "name": "FORK1 routing",
+    "material": "UT-FORK",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Mold",
+        "equipment": "FORK1_Mold"
+      },
+      {
+        "seq": 20,
+        "name": "Degate",
+        "equipment": "FORK1_Degate"
+      },
+      {
+        "seq": 30,
+        "name": "Mark",
+        "equipment": "FORK1_Mark"
+      }
+    ]
+  },
+  {
+    "code": "RT-FORK2",
+    "name": "FORK2 routing",
+    "material": "UT-FORK",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Mold",
+        "equipment": "FORK2_Mold"
+      },
+      {
+        "seq": 20,
+        "name": "Degate",
+        "equipment": "FORK2_Degate"
+      },
+      {
+        "seq": 30,
+        "name": "Mark",
+        "equipment": "FORK2_Mark"
+      }
+    ]
+  },
+  {
+    "code": "RT-FORK3",
+    "name": "FORK3 routing",
+    "material": "UT-FORK",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Mold",
+        "equipment": "FORK3_Mold"
+      },
+      {
+        "seq": 20,
+        "name": "Degate",
+        "equipment": "FORK3_Degate"
+      },
+      {
+        "seq": 30,
+        "name": "Mark",
+        "equipment": "FORK3_Mark"
+      }
+    ]
+  },
+  {
+    "code": "RT-SPOON1",
+    "name": "SPOON1 routing",
+    "material": "UT-SPOON",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Mold",
+        "equipment": "SPOON1_Mold"
+      },
+      {
+        "seq": 20,
+        "name": "Degate",
+        "equipment": "SPOON1_Degate"
+      },
+      {
+        "seq": 30,
+        "name": "Mark",
+        "equipment": "SPOON1_Mark"
+      }
+    ]
+  },
+  {
+    "code": "RT-SPOON2",
+    "name": "SPOON2 routing",
+    "material": "UT-SPOON",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Mold",
+        "equipment": "SPOON2_Mold"
+      },
+      {
+        "seq": 20,
+        "name": "Degate",
+        "equipment": "SPOON2_Degate"
+      },
+      {
+        "seq": 30,
+        "name": "Mark",
+        "equipment": "SPOON2_Mark"
+      }
+    ]
+  },
+  {
+    "code": "RT-SPOON3",
+    "name": "SPOON3 routing",
+    "material": "UT-SPOON",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Mold",
+        "equipment": "SPOON3_Mold"
+      },
+      {
+        "seq": 20,
+        "name": "Degate",
+        "equipment": "SPOON3_Degate"
+      },
+      {
+        "seq": 30,
+        "name": "Mark",
+        "equipment": "SPOON3_Mark"
+      }
+    ]
+  },
+  {
+    "code": "RT-KNIFE1",
+    "name": "KNIFE1 routing",
+    "material": "UT-KNIFE",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Mold",
+        "equipment": "KNIFE1_Mold"
+      },
+      {
+        "seq": 20,
+        "name": "Degate",
+        "equipment": "KNIFE1_Degate"
+      },
+      {
+        "seq": 30,
+        "name": "Mark",
+        "equipment": "KNIFE1_Mark"
+      }
+    ]
+  },
+  {
+    "code": "RT-KNIFE2",
+    "name": "KNIFE2 routing",
+    "material": "UT-KNIFE",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Mold",
+        "equipment": "KNIFE2_Mold"
+      },
+      {
+        "seq": 20,
+        "name": "Degate",
+        "equipment": "KNIFE2_Degate"
+      },
+      {
+        "seq": 30,
+        "name": "Mark",
+        "equipment": "KNIFE2_Mark"
+      }
+    ]
+  },
+  {
+    "code": "RT-KNIFE3",
+    "name": "KNIFE3 routing",
+    "material": "UT-KNIFE",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Mold",
+        "equipment": "KNIFE3_Mold"
+      },
+      {
+        "seq": 20,
+        "name": "Degate",
+        "equipment": "KNIFE3_Degate"
+      },
+      {
+        "seq": 30,
+        "name": "Mark",
+        "equipment": "KNIFE3_Mark"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK01",
+    "name": "STACK01 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK01_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK02",
+    "name": "STACK02 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK02_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK03",
+    "name": "STACK03 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK03_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK04",
+    "name": "STACK04 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK04_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK05",
+    "name": "STACK05 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK05_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK06",
+    "name": "STACK06 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK06_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK07",
+    "name": "STACK07 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK07_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK08",
+    "name": "STACK08 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK08_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK09",
+    "name": "STACK09 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK09_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK10",
+    "name": "STACK10 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK10_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK11",
+    "name": "STACK11 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK11_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK12",
+    "name": "STACK12 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK12_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK13",
+    "name": "STACK13 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK13_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK14",
+    "name": "STACK14 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK14_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK15",
+    "name": "STACK15 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK15_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK16",
+    "name": "STACK16 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK16_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK17",
+    "name": "STACK17 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK17_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK18",
+    "name": "STACK18 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK18_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK19",
+    "name": "STACK19 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK19_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK20",
+    "name": "STACK20 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK20_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK21",
+    "name": "STACK21 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK21_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK22",
+    "name": "STACK22 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK22_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK23",
+    "name": "STACK23 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK23_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK24",
+    "name": "STACK24 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK24_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK25",
+    "name": "STACK25 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK25_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK26",
+    "name": "STACK26 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK26_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK27",
+    "name": "STACK27 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK27_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK28",
+    "name": "STACK28 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK28_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK29",
+    "name": "STACK29 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK29_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK30",
+    "name": "STACK30 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK30_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK31",
+    "name": "STACK31 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK31_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-STACK32",
+    "name": "STACK32 routing",
+    "material": "STACK-3",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Stacker",
+        "equipment": "STACK32_Stacker"
+      }
+    ]
+  },
+  {
+    "code": "RT-WRAP01",
+    "name": "WRAP01 routing",
+    "material": "WRAP",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Wrapper",
+        "equipment": "WRAP01_Wrapper"
+      }
+    ]
+  },
+  {
+    "code": "RT-WRAP02",
+    "name": "WRAP02 routing",
+    "material": "WRAP",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Wrapper",
+        "equipment": "WRAP02_Wrapper"
+      }
+    ]
+  },
+  {
+    "code": "RT-WRAP03",
+    "name": "WRAP03 routing",
+    "material": "WRAP",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Wrapper",
+        "equipment": "WRAP03_Wrapper"
+      }
+    ]
+  },
+  {
+    "code": "RT-WRAP04",
+    "name": "WRAP04 routing",
+    "material": "WRAP",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Wrapper",
+        "equipment": "WRAP04_Wrapper"
+      }
+    ]
+  },
+  {
+    "code": "RT-WRAP05",
+    "name": "WRAP05 routing",
+    "material": "WRAP",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Wrapper",
+        "equipment": "WRAP05_Wrapper"
+      }
+    ]
+  },
+  {
+    "code": "RT-WRAP06",
+    "name": "WRAP06 routing",
+    "material": "WRAP",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Wrapper",
+        "equipment": "WRAP06_Wrapper"
+      }
+    ]
+  },
+  {
+    "code": "RT-WRAP07",
+    "name": "WRAP07 routing",
+    "material": "WRAP",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Wrapper",
+        "equipment": "WRAP07_Wrapper"
+      }
+    ]
+  },
+  {
+    "code": "RT-WRAP08",
+    "name": "WRAP08 routing",
+    "material": "WRAP",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Wrapper",
+        "equipment": "WRAP08_Wrapper"
+      }
+    ]
+  },
+  {
+    "code": "RT-WRAP09",
+    "name": "WRAP09 routing",
+    "material": "WRAP",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Wrapper",
+        "equipment": "WRAP09_Wrapper"
+      }
+    ]
+  },
+  {
+    "code": "RT-WRAP10",
+    "name": "WRAP10 routing",
+    "material": "WRAP",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Wrapper",
+        "equipment": "WRAP10_Wrapper"
+      }
+    ]
+  },
+  {
+    "code": "RT-WRAP11",
+    "name": "WRAP11 routing",
+    "material": "WRAP",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Wrapper",
+        "equipment": "WRAP11_Wrapper"
+      }
+    ]
+  },
+  {
+    "code": "RT-WRAP12",
+    "name": "WRAP12 routing",
+    "material": "WRAP",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Wrapper",
+        "equipment": "WRAP12_Wrapper"
+      }
+    ]
+  },
+  {
+    "code": "RT-WRAP13",
+    "name": "WRAP13 routing",
+    "material": "WRAP",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Wrapper",
+        "equipment": "WRAP13_Wrapper"
+      }
+    ]
+  },
+  {
+    "code": "RT-WRAP14",
+    "name": "WRAP14 routing",
+    "material": "WRAP",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Wrapper",
+        "equipment": "WRAP14_Wrapper"
+      }
+    ]
+  },
+  {
+    "code": "RT-WRAP15",
+    "name": "WRAP15 routing",
+    "material": "WRAP",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Wrapper",
+        "equipment": "WRAP15_Wrapper"
+      }
+    ]
+  },
+  {
+    "code": "RT-WRAP16",
+    "name": "WRAP16 routing",
+    "material": "WRAP",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Wrapper",
+        "equipment": "WRAP16_Wrapper"
+      }
+    ]
+  },
+  {
+    "code": "RT-PAL1",
+    "name": "PAL1 routing",
+    "material": "PALLET",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Palletizer",
+        "equipment": "PAL1_Palletizer"
+      },
+      {
+        "seq": 20,
+        "name": "StretchWrap",
+        "equipment": "PAL1_StretchWrap"
+      }
+    ]
+  },
+  {
+    "code": "RT-PAL2",
+    "name": "PAL2 routing",
+    "material": "PALLET",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Palletizer",
+        "equipment": "PAL2_Palletizer"
+      },
+      {
+        "seq": 20,
+        "name": "StretchWrap",
+        "equipment": "PAL2_StretchWrap"
+      }
+    ]
+  },
+  {
+    "code": "RT-PAL3",
+    "name": "PAL3 routing",
+    "material": "PALLET",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Palletizer",
+        "equipment": "PAL3_Palletizer"
+      },
+      {
+        "seq": 20,
+        "name": "StretchWrap",
+        "equipment": "PAL3_StretchWrap"
+      }
+    ]
+  },
+  {
+    "code": "RT-PAL4",
+    "name": "PAL4 routing",
+    "material": "PALLET",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Palletizer",
+        "equipment": "PAL4_Palletizer"
+      },
+      {
+        "seq": 20,
+        "name": "StretchWrap",
+        "equipment": "PAL4_StretchWrap"
+      }
+    ]
+  }
+]

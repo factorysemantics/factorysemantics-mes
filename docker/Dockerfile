@@ -44,6 +44,14 @@ COPY labs/multiplant/machining/plant.toml \
      labs/multiplant/machining/tag_map.json \
      ./labs/multiplant/machining/
 COPY labs/multiplant/machining/masterdata ./labs/multiplant/machining/masterdata
+# The cutlery plant, since it ships in the wheel (2026-11-12): the pack's own
+# five paths, not the lab's scripts beside them.
+COPY labs/cutlery/plant.toml \
+     labs/cutlery/line.json \
+     labs/cutlery/floor.json \
+     labs/cutlery/tag_map.json \
+     ./labs/cutlery/
+COPY labs/cutlery/masterdata ./labs/cutlery/masterdata
 
 # THE ASSISTANT FOLDERS, FOR THE SAME REASON. `pyproject.toml` force-includes
 # every file under `skills/` so that `fsmes skills unpack` works inside the

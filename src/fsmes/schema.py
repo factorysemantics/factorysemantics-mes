@@ -76,6 +76,21 @@ def head_revision() -> str:
     return heads[0]
 
 
+def knows(revision: str) -> bool:
+    """Is this revision one of the shipped migrations?
+
+    A stamp this package does not know was written by a newer one: its
+    database is *ahead*, and running this version's migrations against it
+    would be a guess about tables nobody here has heard of.
+    """
+    from alembic.util import CommandError
+
+    try:
+        return ScriptDirectory.from_config(alembic_config()).get_revision(revision) is not None
+    except (CommandError, KeyError):
+        return False
+
+
 def _database_url(url: str | None = None) -> str:
     if url is not None:
         return url

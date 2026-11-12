@@ -25,6 +25,10 @@ the line that generated the data.
     python3 labs/cutlery/init.py          (with MES_DATABASE_URL already set)
     python3 labs/cutlery/init.py <dir>    the line.json and tag_map.json in <dir>
                                           (a plant built with build_config.py --out)
+    python3 labs/cutlery/init.py --write-masterdata [<dir>]
+                                          no database: the same plant as the pack's
+                                          masterdata/ files, which is how the shipped
+                                          pack's are made (masterdata/README.md)
 
 Thirty-two stackers make the same STACK-24, so every order names the line
 that makes it and the plant builds it from that line's routing. Which member
@@ -177,6 +181,97 @@ def seed(session: Session, scenario_dir: Path = HERE) -> dict | None:
             "stations": sum(len(ln["stations"]) for ln in factory["lines"])}
 
 
+def masterdata_rows(scenario_dir: Path = HERE) -> dict[str, list[dict]]:
+    """What `seed` writes, as the rows of a pack's master-data files.
+
+    The same plant, read off the same line.json, written as data instead of
+    into a database - so `fsmes demo cutlery` on a PC with no checkout builds
+    it with `fsmes pack apply` and runs no script (decision 0022). `seed`
+    stays for the lab; `tests/test_the_cutlery_pack_builds_the_plant_init_py_builds.py`
+    applies one and runs the other and compares the two databases, so they
+    cannot drift. Rated cycle times are left out: `pack apply` reads them from
+    the pack's own tag_map.json, as `seed` does.
+    """
+    factory = json.loads((scenario_dir / "line.json").read_text(encoding="utf-8"))
+    cycles = {m.equipment for m in load_tag_map(scenario_dir / "tag_map.json")}
+    equipment = [{"code": ENTERPRISE[0], "name": ENTERPRISE[1], "level": "enterprise"},
+                 {"code": SITE[0], "name": SITE[1], "level": "site", "parent": ENTERPRISE[0]}]
+    areas: set[str] = set()
+    materials: dict[str, dict] = {}
+    routings, specs, lots, orders = [], [], [], []
+
+    def material(spec: dict, kind: str, counted_in_pieces: bool = False) -> None:
+        materials.setdefault(spec["code"], {"code": spec["code"], "name": spec["name"],
+                                            "unit": spec["unit"], "type": kind,
+                                            **({"counted_in_pieces": True} if counted_in_pieces else {})})
+
+    for line_cfg in factory["lines"]:
+        name, meta = line_cfg["name"], line_cfg["_meta"]
+        area = AREA_CODES[meta["area"]]
+        if area not in areas:
+            areas.add(area)
+            equipment.append({"code": area, "name": meta["area"], "level": "area", "parent": SITE[0]})
+        centre = f"{name}LINE"
+        equipment.append({"code": centre, "name": f"{meta['area']} line {name}",
+                          "level": "work_center", "parent": area})
+        for station in line_cfg["stations"]:
+            code = f"{name}_{station['name']}"
+            if code not in cycles:
+                raise ValueError(f"tag_map.json has no entry for {code}; the seed and the tag map disagree.")
+            equipment.append({"code": code, "name": f"{name} {station['name']}",
+                              "level": "work_unit", "parent": centre})
+        kind = meta["kind"]
+        product = meta["material"]["code"]
+        material(meta["material"], "finished" if kind in ("wrapper", "palletizer") else "intermediate",
+                 counted_in_pieces=(kind == "utensil"))
+        for char, unit, lo, hi, _nominal in meta.get("dimensional_specs", []):
+            if not any(s["material"] == product and s["characteristic"] == char for s in specs):
+                specs.append({"material": product, "characteristic": char, "unit": unit,
+                              "min": lo, "max": hi})
+        routings.append({"code": f"RT-{name}", "name": f"{name} routing", "material": product,
+                         "operations": [{"seq": (i + 1) * 10, "name": station["name"],
+                                         "equipment": f"{name}_{station['name']}"}
+                                        for i, station in enumerate(line_cfg["stations"])]})
+        last = line_cfg["stations"][-1]
+        per_hour = last["rate_per_min"] * 60
+        per_piece = 0.0045 if kind == "utensil" else 1.0
+        lot_qty = round(per_hour * 24 * DAYS_OF_LOT * per_piece)
+        lot = None
+        if kind == "utensil":
+            material(meta["raw"], "raw")
+            lot = {"code": f"LOT-PP-{name}-001", "material": meta["raw"]["code"], "quantity": lot_qty}
+        elif kind == "wrapper":
+            material(meta["plate"], "raw")
+            lot = {"code": f"LOT-PLATE-{name}-001", "material": meta["plate"]["code"], "quantity": lot_qty}
+        if lot is not None:
+            lots.append(lot)
+        for n in range(1, ORDERS_PER_LINE + 1):
+            order = {"code": f"WO-{name}-{n:04d}", "material": product,
+                     "quantity": int(per_hour * HOURS_OF_ORDER), "priority": 10,
+                     "release": n == 1, "line": centre}
+            if n == 1 and lot is not None:
+                order["issue"] = {"lot": lot["code"],
+                                  "quantity": round(per_hour * HOURS_OF_ORDER * per_piece, 1), "seq": 10}
+            orders.append(order)
+    return {"equipment": equipment, "materials": list(materials.values()), "routings": routings,
+            "quality_specs": specs, "lots": lots, "work_orders": orders}
+
+
+#: The files `write_masterdata` owns. The pack's other two - the downtime
+#: words and the severities - are written by a person and left alone.
+GENERATED_KINDS = ("equipment", "materials", "routings", "quality_specs", "lots", "work_orders")
+
+
+def write_masterdata(scenario_dir: Path = HERE, target: Path | None = None) -> dict[str, int]:
+    """Write `masterdata_rows` into `<target>` (default: `<scenario_dir>/masterdata`)."""
+    target = target or scenario_dir / "masterdata"
+    target.mkdir(parents=True, exist_ok=True)
+    rows = masterdata_rows(scenario_dir)
+    for kind in GENERATED_KINDS:
+        (target / f"{kind}.json").write_text(json.dumps(rows[kind], indent=2) + "\n", encoding="utf-8")
+    return {kind: len(rows[kind]) for kind in GENERATED_KINDS}
+
+
 def release_orders(session: Session, orders: list[dict]) -> None:
     """Every order on its own line; the first on each released with its raw
     lot issued, so the counters book and the pieces trace, and the rest left
@@ -210,4 +305,10 @@ def main(scenario_dir: Path = HERE) -> None:
 if __name__ == "__main__":
     import sys
 
-    main(Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else HERE)
+    args = sys.argv[1:]
+    if args[:1] == ["--write-masterdata"]:
+        where = Path(args[1]).resolve() if len(args) > 1 else HERE
+        written = write_masterdata(where)
+        print(f"wrote {where / 'masterdata'}: " + ", ".join(f"{n} {k}" for k, n in written.items()))
+    else:
+        main(Path(args[0]).resolve() if args else HERE)

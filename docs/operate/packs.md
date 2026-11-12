@@ -147,7 +147,7 @@ A severity code is two to **twenty** characters — it is stored on every non-co
 
 ### The order book
 
-`work_orders.json` is the plant's **schedule**, not one order to give the counters somewhere to book. Each entry is a code, a material and a quantity; `priority`, `release` and `due_in_hours` are optional.
+`work_orders.json` is the plant's **schedule**, not one order to give the counters somewhere to book. Each entry is a code, a material and a quantity; `priority`, `release`, `due_in_hours`, `line` and `issue` are optional.
 
 ```json
 [
@@ -157,6 +157,13 @@ A severity code is two to **twenty** characters — it is stored on every non-co
 ```
 
 **`due_in_hours` is relative — hours after the pack is applied — and that is not a convenience.** A pack is seeded whenever somebody builds the plant, so an absolute date written into one is in the past the week after it was written, and every order in the book is late before the line has run a minute. `fsmes pack check` refuses anything that is not a positive number.
+
+**`line` and `issue`, for a plant with more than one line making a thing** (2026-11-12, for the cutlery plant). Thirty-two stackers make the same `STACK-24`, so an order for it has to say which line: `line` names the work centre, and the order is built from the routing for that material that *starts* on that line. `issue` is the raw lot the order is given when it is released - `{"lot": "LOT-PP-FORK1-001", "quantity": 32.4, "seq": 10}` - so a piece traces back to its resin from the first count. `fsmes pack check` refuses a `line` that is not declared equipment or has no routing for the material starting under it, an `issue` whose lot `lots.json` does not declare, a quantity that is not positive, and an issue on an order that is not released.
+
+```json
+{"code": "WO-FORK1-0001", "material": "UT-FORK", "quantity": 72, "priority": 10, "release": true,
+ "line": "FORK1LINE", "issue": {"lot": "LOT-PP-FORK1-001", "quantity": 0.3, "seq": 10}}
+```
 
 **Release one, plan the rest.** A line runs one order at a time, and releasing the whole book puts several released orders on one routing — which leaves the MES choosing between them by priority rather than reading which one the line is running ([decision 0029](../decisions/0029-an-order-does-not-finish-itself.md) names that as still inferred).
 

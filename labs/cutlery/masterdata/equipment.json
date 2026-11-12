@@ -1,0 +1,901 @@
+[
+  {
+    "code": "CUTLERYCO",
+    "name": "Cutlery Co.",
+    "level": "enterprise"
+  },
+  {
+    "code": "CW1",
+    "name": "Cutlery Works",
+    "level": "site",
+    "parent": "CUTLERYCO"
+  },
+  {
+    "code": "MOULD-AREA",
+    "name": "Moulding",
+    "level": "area",
+    "parent": "CW1"
+  },
+  {
+    "code": "FORK1LINE",
+    "name": "Moulding line FORK1",
+    "level": "work_center",
+    "parent": "MOULD-AREA"
+  },
+  {
+    "code": "FORK1_Mold",
+    "name": "FORK1 Mold",
+    "level": "work_unit",
+    "parent": "FORK1LINE"
+  },
+  {
+    "code": "FORK1_Degate",
+    "name": "FORK1 Degate",
+    "level": "work_unit",
+    "parent": "FORK1LINE"
+  },
+  {
+    "code": "FORK1_Mark",
+    "name": "FORK1 Mark",
+    "level": "work_unit",
+    "parent": "FORK1LINE"
+  },
+  {
+    "code": "FORK2LINE",
+    "name": "Moulding line FORK2",
+    "level": "work_center",
+    "parent": "MOULD-AREA"
+  },
+  {
+    "code": "FORK2_Mold",
+    "name": "FORK2 Mold",
+    "level": "work_unit",
+    "parent": "FORK2LINE"
+  },
+  {
+    "code": "FORK2_Degate",
+    "name": "FORK2 Degate",
+    "level": "work_unit",
+    "parent": "FORK2LINE"
+  },
+  {
+    "code": "FORK2_Mark",
+    "name": "FORK2 Mark",
+    "level": "work_unit",
+    "parent": "FORK2LINE"
+  },
+  {
+    "code": "FORK3LINE",
+    "name": "Moulding line FORK3",
+    "level": "work_center",
+    "parent": "MOULD-AREA"
+  },
+  {
+    "code": "FORK3_Mold",
+    "name": "FORK3 Mold",
+    "level": "work_unit",
+    "parent": "FORK3LINE"
+  },
+  {
+    "code": "FORK3_Degate",
+    "name": "FORK3 Degate",
+    "level": "work_unit",
+    "parent": "FORK3LINE"
+  },
+  {
+    "code": "FORK3_Mark",
+    "name": "FORK3 Mark",
+    "level": "work_unit",
+    "parent": "FORK3LINE"
+  },
+  {
+    "code": "SPOON1LINE",
+    "name": "Moulding line SPOON1",
+    "level": "work_center",
+    "parent": "MOULD-AREA"
+  },
+  {
+    "code": "SPOON1_Mold",
+    "name": "SPOON1 Mold",
+    "level": "work_unit",
+    "parent": "SPOON1LINE"
+  },
+  {
+    "code": "SPOON1_Degate",
+    "name": "SPOON1 Degate",
+    "level": "work_unit",
+    "parent": "SPOON1LINE"
+  },
+  {
+    "code": "SPOON1_Mark",
+    "name": "SPOON1 Mark",
+    "level": "work_unit",
+    "parent": "SPOON1LINE"
+  },
+  {
+    "code": "SPOON2LINE",
+    "name": "Moulding line SPOON2",
+    "level": "work_center",
+    "parent": "MOULD-AREA"
+  },
+  {
+    "code": "SPOON2_Mold",
+    "name": "SPOON2 Mold",
+    "level": "work_unit",
+    "parent": "SPOON2LINE"
+  },
+  {
+    "code": "SPOON2_Degate",
+    "name": "SPOON2 Degate",
+    "level": "work_unit",
+    "parent": "SPOON2LINE"
+  },
+  {
+    "code": "SPOON2_Mark",
+    "name": "SPOON2 Mark",
+    "level": "work_unit",
+    "parent": "SPOON2LINE"
+  },
+  {
+    "code": "SPOON3LINE",
+    "name": "Moulding line SPOON3",
+    "level": "work_center",
+    "parent": "MOULD-AREA"
+  },
+  {
+    "code": "SPOON3_Mold",
+    "name": "SPOON3 Mold",
+    "level": "work_unit",
+    "parent": "SPOON3LINE"
+  },
+  {
+    "code": "SPOON3_Degate",
+    "name": "SPOON3 Degate",
+    "level": "work_unit",
+    "parent": "SPOON3LINE"
+  },
+  {
+    "code": "SPOON3_Mark",
+    "name": "SPOON3 Mark",
+    "level": "work_unit",
+    "parent": "SPOON3LINE"
+  },
+  {
+    "code": "KNIFE1LINE",
+    "name": "Moulding line KNIFE1",
+    "level": "work_center",
+    "parent": "MOULD-AREA"
+  },
+  {
+    "code": "KNIFE1_Mold",
+    "name": "KNIFE1 Mold",
+    "level": "work_unit",
+    "parent": "KNIFE1LINE"
+  },
+  {
+    "code": "KNIFE1_Degate",
+    "name": "KNIFE1 Degate",
+    "level": "work_unit",
+    "parent": "KNIFE1LINE"
+  },
+  {
+    "code": "KNIFE1_Mark",
+    "name": "KNIFE1 Mark",
+    "level": "work_unit",
+    "parent": "KNIFE1LINE"
+  },
+  {
+    "code": "KNIFE2LINE",
+    "name": "Moulding line KNIFE2",
+    "level": "work_center",
+    "parent": "MOULD-AREA"
+  },
+  {
+    "code": "KNIFE2_Mold",
+    "name": "KNIFE2 Mold",
+    "level": "work_unit",
+    "parent": "KNIFE2LINE"
+  },
+  {
+    "code": "KNIFE2_Degate",
+    "name": "KNIFE2 Degate",
+    "level": "work_unit",
+    "parent": "KNIFE2LINE"
+  },
+  {
+    "code": "KNIFE2_Mark",
+    "name": "KNIFE2 Mark",
+    "level": "work_unit",
+    "parent": "KNIFE2LINE"
+  },
+  {
+    "code": "KNIFE3LINE",
+    "name": "Moulding line KNIFE3",
+    "level": "work_center",
+    "parent": "MOULD-AREA"
+  },
+  {
+    "code": "KNIFE3_Mold",
+    "name": "KNIFE3 Mold",
+    "level": "work_unit",
+    "parent": "KNIFE3LINE"
+  },
+  {
+    "code": "KNIFE3_Degate",
+    "name": "KNIFE3 Degate",
+    "level": "work_unit",
+    "parent": "KNIFE3LINE"
+  },
+  {
+    "code": "KNIFE3_Mark",
+    "name": "KNIFE3 Mark",
+    "level": "work_unit",
+    "parent": "KNIFE3LINE"
+  },
+  {
+    "code": "STACK-AREA",
+    "name": "Stacking",
+    "level": "area",
+    "parent": "CW1"
+  },
+  {
+    "code": "STACK01LINE",
+    "name": "Stacking line STACK01",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK01_Stacker",
+    "name": "STACK01 Stacker",
+    "level": "work_unit",
+    "parent": "STACK01LINE"
+  },
+  {
+    "code": "STACK02LINE",
+    "name": "Stacking line STACK02",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK02_Stacker",
+    "name": "STACK02 Stacker",
+    "level": "work_unit",
+    "parent": "STACK02LINE"
+  },
+  {
+    "code": "STACK03LINE",
+    "name": "Stacking line STACK03",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK03_Stacker",
+    "name": "STACK03 Stacker",
+    "level": "work_unit",
+    "parent": "STACK03LINE"
+  },
+  {
+    "code": "STACK04LINE",
+    "name": "Stacking line STACK04",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK04_Stacker",
+    "name": "STACK04 Stacker",
+    "level": "work_unit",
+    "parent": "STACK04LINE"
+  },
+  {
+    "code": "STACK05LINE",
+    "name": "Stacking line STACK05",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK05_Stacker",
+    "name": "STACK05 Stacker",
+    "level": "work_unit",
+    "parent": "STACK05LINE"
+  },
+  {
+    "code": "STACK06LINE",
+    "name": "Stacking line STACK06",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK06_Stacker",
+    "name": "STACK06 Stacker",
+    "level": "work_unit",
+    "parent": "STACK06LINE"
+  },
+  {
+    "code": "STACK07LINE",
+    "name": "Stacking line STACK07",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK07_Stacker",
+    "name": "STACK07 Stacker",
+    "level": "work_unit",
+    "parent": "STACK07LINE"
+  },
+  {
+    "code": "STACK08LINE",
+    "name": "Stacking line STACK08",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK08_Stacker",
+    "name": "STACK08 Stacker",
+    "level": "work_unit",
+    "parent": "STACK08LINE"
+  },
+  {
+    "code": "STACK09LINE",
+    "name": "Stacking line STACK09",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK09_Stacker",
+    "name": "STACK09 Stacker",
+    "level": "work_unit",
+    "parent": "STACK09LINE"
+  },
+  {
+    "code": "STACK10LINE",
+    "name": "Stacking line STACK10",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK10_Stacker",
+    "name": "STACK10 Stacker",
+    "level": "work_unit",
+    "parent": "STACK10LINE"
+  },
+  {
+    "code": "STACK11LINE",
+    "name": "Stacking line STACK11",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK11_Stacker",
+    "name": "STACK11 Stacker",
+    "level": "work_unit",
+    "parent": "STACK11LINE"
+  },
+  {
+    "code": "STACK12LINE",
+    "name": "Stacking line STACK12",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK12_Stacker",
+    "name": "STACK12 Stacker",
+    "level": "work_unit",
+    "parent": "STACK12LINE"
+  },
+  {
+    "code": "STACK13LINE",
+    "name": "Stacking line STACK13",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK13_Stacker",
+    "name": "STACK13 Stacker",
+    "level": "work_unit",
+    "parent": "STACK13LINE"
+  },
+  {
+    "code": "STACK14LINE",
+    "name": "Stacking line STACK14",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK14_Stacker",
+    "name": "STACK14 Stacker",
+    "level": "work_unit",
+    "parent": "STACK14LINE"
+  },
+  {
+    "code": "STACK15LINE",
+    "name": "Stacking line STACK15",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK15_Stacker",
+    "name": "STACK15 Stacker",
+    "level": "work_unit",
+    "parent": "STACK15LINE"
+  },
+  {
+    "code": "STACK16LINE",
+    "name": "Stacking line STACK16",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK16_Stacker",
+    "name": "STACK16 Stacker",
+    "level": "work_unit",
+    "parent": "STACK16LINE"
+  },
+  {
+    "code": "STACK17LINE",
+    "name": "Stacking line STACK17",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK17_Stacker",
+    "name": "STACK17 Stacker",
+    "level": "work_unit",
+    "parent": "STACK17LINE"
+  },
+  {
+    "code": "STACK18LINE",
+    "name": "Stacking line STACK18",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK18_Stacker",
+    "name": "STACK18 Stacker",
+    "level": "work_unit",
+    "parent": "STACK18LINE"
+  },
+  {
+    "code": "STACK19LINE",
+    "name": "Stacking line STACK19",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK19_Stacker",
+    "name": "STACK19 Stacker",
+    "level": "work_unit",
+    "parent": "STACK19LINE"
+  },
+  {
+    "code": "STACK20LINE",
+    "name": "Stacking line STACK20",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK20_Stacker",
+    "name": "STACK20 Stacker",
+    "level": "work_unit",
+    "parent": "STACK20LINE"
+  },
+  {
+    "code": "STACK21LINE",
+    "name": "Stacking line STACK21",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK21_Stacker",
+    "name": "STACK21 Stacker",
+    "level": "work_unit",
+    "parent": "STACK21LINE"
+  },
+  {
+    "code": "STACK22LINE",
+    "name": "Stacking line STACK22",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK22_Stacker",
+    "name": "STACK22 Stacker",
+    "level": "work_unit",
+    "parent": "STACK22LINE"
+  },
+  {
+    "code": "STACK23LINE",
+    "name": "Stacking line STACK23",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK23_Stacker",
+    "name": "STACK23 Stacker",
+    "level": "work_unit",
+    "parent": "STACK23LINE"
+  },
+  {
+    "code": "STACK24LINE",
+    "name": "Stacking line STACK24",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK24_Stacker",
+    "name": "STACK24 Stacker",
+    "level": "work_unit",
+    "parent": "STACK24LINE"
+  },
+  {
+    "code": "STACK25LINE",
+    "name": "Stacking line STACK25",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK25_Stacker",
+    "name": "STACK25 Stacker",
+    "level": "work_unit",
+    "parent": "STACK25LINE"
+  },
+  {
+    "code": "STACK26LINE",
+    "name": "Stacking line STACK26",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK26_Stacker",
+    "name": "STACK26 Stacker",
+    "level": "work_unit",
+    "parent": "STACK26LINE"
+  },
+  {
+    "code": "STACK27LINE",
+    "name": "Stacking line STACK27",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK27_Stacker",
+    "name": "STACK27 Stacker",
+    "level": "work_unit",
+    "parent": "STACK27LINE"
+  },
+  {
+    "code": "STACK28LINE",
+    "name": "Stacking line STACK28",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK28_Stacker",
+    "name": "STACK28 Stacker",
+    "level": "work_unit",
+    "parent": "STACK28LINE"
+  },
+  {
+    "code": "STACK29LINE",
+    "name": "Stacking line STACK29",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK29_Stacker",
+    "name": "STACK29 Stacker",
+    "level": "work_unit",
+    "parent": "STACK29LINE"
+  },
+  {
+    "code": "STACK30LINE",
+    "name": "Stacking line STACK30",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK30_Stacker",
+    "name": "STACK30 Stacker",
+    "level": "work_unit",
+    "parent": "STACK30LINE"
+  },
+  {
+    "code": "STACK31LINE",
+    "name": "Stacking line STACK31",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK31_Stacker",
+    "name": "STACK31 Stacker",
+    "level": "work_unit",
+    "parent": "STACK31LINE"
+  },
+  {
+    "code": "STACK32LINE",
+    "name": "Stacking line STACK32",
+    "level": "work_center",
+    "parent": "STACK-AREA"
+  },
+  {
+    "code": "STACK32_Stacker",
+    "name": "STACK32 Stacker",
+    "level": "work_unit",
+    "parent": "STACK32LINE"
+  },
+  {
+    "code": "WRAP-AREA",
+    "name": "Wrapping",
+    "level": "area",
+    "parent": "CW1"
+  },
+  {
+    "code": "WRAP01LINE",
+    "name": "Wrapping line WRAP01",
+    "level": "work_center",
+    "parent": "WRAP-AREA"
+  },
+  {
+    "code": "WRAP01_Wrapper",
+    "name": "WRAP01 Wrapper",
+    "level": "work_unit",
+    "parent": "WRAP01LINE"
+  },
+  {
+    "code": "WRAP02LINE",
+    "name": "Wrapping line WRAP02",
+    "level": "work_center",
+    "parent": "WRAP-AREA"
+  },
+  {
+    "code": "WRAP02_Wrapper",
+    "name": "WRAP02 Wrapper",
+    "level": "work_unit",
+    "parent": "WRAP02LINE"
+  },
+  {
+    "code": "WRAP03LINE",
+    "name": "Wrapping line WRAP03",
+    "level": "work_center",
+    "parent": "WRAP-AREA"
+  },
+  {
+    "code": "WRAP03_Wrapper",
+    "name": "WRAP03 Wrapper",
+    "level": "work_unit",
+    "parent": "WRAP03LINE"
+  },
+  {
+    "code": "WRAP04LINE",
+    "name": "Wrapping line WRAP04",
+    "level": "work_center",
+    "parent": "WRAP-AREA"
+  },
+  {
+    "code": "WRAP04_Wrapper",
+    "name": "WRAP04 Wrapper",
+    "level": "work_unit",
+    "parent": "WRAP04LINE"
+  },
+  {
+    "code": "WRAP05LINE",
+    "name": "Wrapping line WRAP05",
+    "level": "work_center",
+    "parent": "WRAP-AREA"
+  },
+  {
+    "code": "WRAP05_Wrapper",
+    "name": "WRAP05 Wrapper",
+    "level": "work_unit",
+    "parent": "WRAP05LINE"
+  },
+  {
+    "code": "WRAP06LINE",
+    "name": "Wrapping line WRAP06",
+    "level": "work_center",
+    "parent": "WRAP-AREA"
+  },
+  {
+    "code": "WRAP06_Wrapper",
+    "name": "WRAP06 Wrapper",
+    "level": "work_unit",
+    "parent": "WRAP06LINE"
+  },
+  {
+    "code": "WRAP07LINE",
+    "name": "Wrapping line WRAP07",
+    "level": "work_center",
+    "parent": "WRAP-AREA"
+  },
+  {
+    "code": "WRAP07_Wrapper",
+    "name": "WRAP07 Wrapper",
+    "level": "work_unit",
+    "parent": "WRAP07LINE"
+  },
+  {
+    "code": "WRAP08LINE",
+    "name": "Wrapping line WRAP08",
+    "level": "work_center",
+    "parent": "WRAP-AREA"
+  },
+  {
+    "code": "WRAP08_Wrapper",
+    "name": "WRAP08 Wrapper",
+    "level": "work_unit",
+    "parent": "WRAP08LINE"
+  },
+  {
+    "code": "WRAP09LINE",
+    "name": "Wrapping line WRAP09",
+    "level": "work_center",
+    "parent": "WRAP-AREA"
+  },
+  {
+    "code": "WRAP09_Wrapper",
+    "name": "WRAP09 Wrapper",
+    "level": "work_unit",
+    "parent": "WRAP09LINE"
+  },
+  {
+    "code": "WRAP10LINE",
+    "name": "Wrapping line WRAP10",
+    "level": "work_center",
+    "parent": "WRAP-AREA"
+  },
+  {
+    "code": "WRAP10_Wrapper",
+    "name": "WRAP10 Wrapper",
+    "level": "work_unit",
+    "parent": "WRAP10LINE"
+  },
+  {
+    "code": "WRAP11LINE",
+    "name": "Wrapping line WRAP11",
+    "level": "work_center",
+    "parent": "WRAP-AREA"
+  },
+  {
+    "code": "WRAP11_Wrapper",
+    "name": "WRAP11 Wrapper",
+    "level": "work_unit",
+    "parent": "WRAP11LINE"
+  },
+  {
+    "code": "WRAP12LINE",
+    "name": "Wrapping line WRAP12",
+    "level": "work_center",
+    "parent": "WRAP-AREA"
+  },
+  {
+    "code": "WRAP12_Wrapper",
+    "name": "WRAP12 Wrapper",
+    "level": "work_unit",
+    "parent": "WRAP12LINE"
+  },
+  {
+    "code": "WRAP13LINE",
+    "name": "Wrapping line WRAP13",
+    "level": "work_center",
+    "parent": "WRAP-AREA"
+  },
+  {
+    "code": "WRAP13_Wrapper",
+    "name": "WRAP13 Wrapper",
+    "level": "work_unit",
+    "parent": "WRAP13LINE"
+  },
+  {
+    "code": "WRAP14LINE",
+    "name": "Wrapping line WRAP14",
+    "level": "work_center",
+    "parent": "WRAP-AREA"
+  },
+  {
+    "code": "WRAP14_Wrapper",
+    "name": "WRAP14 Wrapper",
+    "level": "work_unit",
+    "parent": "WRAP14LINE"
+  },
+  {
+    "code": "WRAP15LINE",
+    "name": "Wrapping line WRAP15",
+    "level": "work_center",
+    "parent": "WRAP-AREA"
+  },
+  {
+    "code": "WRAP15_Wrapper",
+    "name": "WRAP15 Wrapper",
+    "level": "work_unit",
+    "parent": "WRAP15LINE"
+  },
+  {
+    "code": "WRAP16LINE",
+    "name": "Wrapping line WRAP16",
+    "level": "work_center",
+    "parent": "WRAP-AREA"
+  },
+  {
+    "code": "WRAP16_Wrapper",
+    "name": "WRAP16 Wrapper",
+    "level": "work_unit",
+    "parent": "WRAP16LINE"
+  },
+  {
+    "code": "PALLET-AREA",
+    "name": "Palletizing",
+    "level": "area",
+    "parent": "CW1"
+  },
+  {
+    "code": "PAL1LINE",
+    "name": "Palletizing line PAL1",
+    "level": "work_center",
+    "parent": "PALLET-AREA"
+  },
+  {
+    "code": "PAL1_Palletizer",
+    "name": "PAL1 Palletizer",
+    "level": "work_unit",
+    "parent": "PAL1LINE"
+  },
+  {
+    "code": "PAL1_StretchWrap",
+    "name": "PAL1 StretchWrap",
+    "level": "work_unit",
+    "parent": "PAL1LINE"
+  },
+  {
+    "code": "PAL2LINE",
+    "name": "Palletizing line PAL2",
+    "level": "work_center",
+    "parent": "PALLET-AREA"
+  },
+  {
+    "code": "PAL2_Palletizer",
+    "name": "PAL2 Palletizer",
+    "level": "work_unit",
+    "parent": "PAL2LINE"
+  },
+  {
+    "code": "PAL2_StretchWrap",
+    "name": "PAL2 StretchWrap",
+    "level": "work_unit",
+    "parent": "PAL2LINE"
+  },
+  {
+    "code": "PAL3LINE",
+    "name": "Palletizing line PAL3",
+    "level": "work_center",
+    "parent": "PALLET-AREA"
+  },
+  {
+    "code": "PAL3_Palletizer",
+    "name": "PAL3 Palletizer",
+    "level": "work_unit",
+    "parent": "PAL3LINE"
+  },
+  {
+    "code": "PAL3_StretchWrap",
+    "name": "PAL3 StretchWrap",
+    "level": "work_unit",
+    "parent": "PAL3LINE"
+  },
+  {
+    "code": "PAL4LINE",
+    "name": "Palletizing line PAL4",
+    "level": "work_center",
+    "parent": "PALLET-AREA"
+  },
+  {
+    "code": "PAL4_Palletizer",
+    "name": "PAL4 Palletizer",
+    "level": "work_unit",
+    "parent": "PAL4LINE"
+  },
+  {
+    "code": "PAL4_StretchWrap",
+    "name": "PAL4 StretchWrap",
+    "level": "work_unit",
+    "parent": "PAL4LINE"
+  }
+]
