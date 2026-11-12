@@ -141,7 +141,7 @@ packages = ["src/fsmes"]
 "config/inbound_mapping.json" = "fsmes/data/config/inbound_mapping.json"
 "config/inbound_sql.json" = "fsmes/data/config/inbound_sql.json"
 
-# THE TWO LAB PLANTS, AS PACKS. So that `pip install factorysemantics-mes` and
+# THE LAB PLANTS, AS PACKS. So that `pip install factorysemantics-mes` and
 # then `fsmes demo bottling` brings the bottling plant up on a machine with no
 # checkout anywhere - which is what a customer's site is. Before this, the
 # 0.2.0 wheel carried no file under `labs/`, `fsmes plant` wanted a repository
@@ -151,7 +151,8 @@ packages = ["src/fsmes"]
 # These are copies at build time and never a second source of truth. Two things
 # keep them honest: `tests/test_the_wheel_ships_the_lab_packs.py` fails when a
 # file is added to either pack and not listed here, and the `wheel-plant` CI job
-# diffs the shipped tree against `labs/multiplant/<name>` byte for byte.
+# diffs the shipped tree against `labs/multiplant/<name>` (and `labs/cutlery`)
+# byte for byte.
 #
 # Listed file by file rather than as two directories because hatchling's
 # force-include copies whatever is on disk and honours neither `exclude` nor
@@ -168,6 +169,15 @@ packages = ["src/fsmes"]
 "labs/multiplant/machining/floor.json" = "fsmes/data/packs/machining/floor.json"
 "labs/multiplant/machining/tag_map.json" = "fsmes/data/packs/machining/tag_map.json"
 "labs/multiplant/machining/masterdata" = "fsmes/data/packs/machining/masterdata"
+# The cutlery plant (2026-11-12): 83 machines at the lab's teaching pace. It
+# lives at labs/cutlery beside its generators, which do not ship - only the
+# pack's own files do, and its masterdata/ is generated once by init.py and
+# committed, never written into at run time.
+"labs/cutlery/plant.toml" = "fsmes/data/packs/cutlery/plant.toml"
+"labs/cutlery/line.json" = "fsmes/data/packs/cutlery/line.json"
+"labs/cutlery/floor.json" = "fsmes/data/packs/cutlery/floor.json"
+"labs/cutlery/tag_map.json" = "fsmes/data/packs/cutlery/tag_map.json"
+"labs/cutlery/masterdata" = "fsmes/data/packs/cutlery/masterdata"
 
 # THE ASSISTANT FOLDER, INSIDE THE WHEEL. `fsmes skills unpack plant-from-your-mes
 # <dir>` writes it out on a machine with no checkout and no internet, which is
