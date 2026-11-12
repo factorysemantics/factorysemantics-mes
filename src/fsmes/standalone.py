@@ -43,6 +43,7 @@ import shutil
 import subprocess
 import sys
 import time
+from datetime import datetime
 from importlib import resources
 from pathlib import Path
 
@@ -344,6 +345,94 @@ def is_built(name: str, where: Path) -> bool:
     return owned.load(data_dir(where)).entry(name) is not None
 
 
+def bring_up_to_date(name: str, where: Path, *, echo=print) -> int:
+    """Bring a plant this home already built to the schema this version runs.
+
+    Until 2026-11-12 `fsmes demo <plant>` started whatever database it found.
+    A bottling plant made on 0.3.0 or 0.4.2, started under 0.5.0, then
+    answered every request 500 (`no such column: equipment.retired_at`): the
+    upgrade a person does with `pip install --upgrade` left them a plant with
+    a dead screen and a four-line workaround on a release page.
+
+    So before any process starts, the database is read against the head the
+    package ships, and:
+
+    - at head: nothing is said and nothing is done;
+    - behind (or made before the migrations shipped): a SQLite file is copied
+      first, through SQLite's own backup as `fsmes backup` copies it, then
+      `fsmes init-db --plant <name>` runs, and one line says where the copy is
+      and which schema went to which. A server database is not copied here -
+      PostgreSQL has `pg_dump` - and the line says so;
+    - ahead (a newer package wrote it): refused, with the version to install;
+    - a migration that fails, or a database that does not answer: refused,
+      and the plant does not start. Unknown is not "fine".
+
+    A plant that is already answering is not migrated underneath its own
+    processes; the line says how to stop it and start it again.
+
+    Returns 0 when the plant may start, non-zero when it may not.
+    """
+    from fsmes import __version__, schema, storage
+    from fsmes import backup as backups
+    from fsmes.pack import fleet as packs
+
+    cfg = packs.load(where)[name]
+    url = plants.database_url(name, cfg, where)
+    reading = storage.look(url, f"{name}'s database")
+    if not reading.answered:
+        echo(f"  not starting {name}: {reading.sentence()}")
+        return 1
+    if reading.head is None:
+        echo(f"  not starting {name}: this package cannot read its own migrations, so "
+             "nothing can say whether its database is at the current schema. Reinstall it: "
+             "py -m pip install --force-reinstall factorysemantics-mes")
+        return 1
+    if reading.at_head:
+        return 0
+    if reading.revision is not None and not schema.knows(reading.revision):
+        echo(f"  not starting {name}: its database is at schema {reading.revision}, which "
+             f"version {__version__} of FactorySemantics MES does not know - a newer version "
+             "made it. Install that newer version again (py -m pip install --upgrade "
+             "factorysemantics-mes) and start it with that; this version would read the "
+             "database wrongly.")
+        return 1
+    if plants.answers(str(cfg.get("api_host") or "127.0.0.1"), int(cfg["api_port"])):
+        echo(f"  {name} is running on a database behind this version, and is not migrated "
+             f"underneath its own processes. `fsmes demo {name} stop`, then `fsmes demo "
+             f"{name}`: the start brings it up to date and says so.")
+        return 0
+
+    was = reading.revision or ("empty" if reading.empty else "unstamped")
+    # What is printed comes from the pack, never from `url`: that one carries
+    # the password `database_password_file` put back.
+    named = cfg.get("database_url")
+    db = None if named else data_dir(where) / f"{name}.db"
+    copy: Path | None = None
+    if db is not None:
+        copy = db.with_name(f"{db.name}.pre-migrate-{datetime.now().strftime('%Y%m%d-%H%M%S')}")
+        backups._copy_sqlite(db, copy)
+    code, said = _through([*plants.fsmes_command(), "init-db", "--plant", name], cwd=where,
+                          env={**os.environ, plants.REGISTRY_ENV: str(fleet_file(where))},
+                          echo=lambda _line: None)
+    after = storage.look(url, f"{name}'s database")
+    if code != 0 or not after.at_head:
+        kept = (f"The database before the attempt is kept at {copy}." if copy else
+                "Nothing was copied here, because it is on a database server: restore it "
+                "from that server's own backup if it needs one.")
+        echo(f"  not starting {name}: its database could not be brought from schema {was} "
+             f"to {reading.head}. {kept} What `fsmes init-db` said:")
+        for line in said.splitlines():
+            if line.strip():
+                echo(f"      {line.rstrip()}")
+        return code or 1
+    if copy is not None:
+        echo(f"  {name}: database backed up to {copy}, schema {was} -> {after.revision}")
+    else:
+        echo(f"  {name}: database on {storage.redacted(str(named))} not copied here (a server "
+             f"database's backup is its own, pg_dump), schema {was} -> {after.revision}")
+    return 0
+
+
 def start(name: str, *, where: Path | None = None, speed: float | None = None,
           refresh: bool = False, echo=print) -> int:
     """Bring a packaged plant up, building it first if this home has not got it."""
@@ -372,6 +461,8 @@ def build_and_start(name: str, where: Path, pack: Path, *, speed: float | None =
         if (code := _fsmes(where, "fleet", "create", str(pack), "--root", str(where),
                            echo=echo)):
             return code
+    elif (code := bring_up_to_date(name, where, echo=echo)):
+        return code
     args = ["fleet", "start", name, "--root", str(where)]
     if speed is not None:
         args += ["--speed", str(speed)]
