@@ -1,0 +1,107 @@
+[
+  {
+    "material": "UT-FORK",
+    "characteristic": "length_mm",
+    "unit": "mm",
+    "min": 164.0,
+    "max": 166.0
+  },
+  {
+    "material": "UT-FORK",
+    "characteristic": "width_mm",
+    "unit": "mm",
+    "min": 24.0,
+    "max": 26.0
+  },
+  {
+    "material": "UT-FORK",
+    "characteristic": "thickness_mm",
+    "unit": "mm",
+    "min": 1.9,
+    "max": 2.3
+  },
+  {
+    "material": "UT-FORK",
+    "characteristic": "weight_g",
+    "unit": "g",
+    "min": 3.6,
+    "max": 4.2
+  },
+  {
+    "material": "UT-FORK",
+    "characteristic": "tine_gap_mm",
+    "unit": "mm",
+    "min": 2.9,
+    "max": 3.5
+  },
+  {
+    "material": "UT-SPOON",
+    "characteristic": "length_mm",
+    "unit": "mm",
+    "min": 159.0,
+    "max": 161.0
+  },
+  {
+    "material": "UT-SPOON",
+    "characteristic": "width_mm",
+    "unit": "mm",
+    "min": 33.0,
+    "max": 35.0
+  },
+  {
+    "material": "UT-SPOON",
+    "characteristic": "thickness_mm",
+    "unit": "mm",
+    "min": 1.9,
+    "max": 2.3
+  },
+  {
+    "material": "UT-SPOON",
+    "characteristic": "weight_g",
+    "unit": "g",
+    "min": 4.4,
+    "max": 5.0
+  },
+  {
+    "material": "UT-SPOON",
+    "characteristic": "bowl_depth_mm",
+    "unit": "mm",
+    "min": 8.5,
+    "max": 9.5
+  },
+  {
+    "material": "UT-KNIFE",
+    "characteristic": "length_mm",
+    "unit": "mm",
+    "min": 174.0,
+    "max": 176.0
+  },
+  {
+    "material": "UT-KNIFE",
+    "characteristic": "width_mm",
+    "unit": "mm",
+    "min": 17.0,
+    "max": 19.0
+  },
+  {
+    "material": "UT-KNIFE",
+    "characteristic": "thickness_mm",
+    "unit": "mm",
+    "min": 1.9,
+    "max": 2.3
+  },
+  {
+    "material": "UT-KNIFE",
+    "characteristic": "weight_g",
+    "unit": "g",
+    "min": 4.0,
+    "max": 4.6
+  },
+  {
+    "material": "UT-KNIFE",
+    "characteristic": "edge_straightness_mm",
+    "unit": "mm",
+    "min": 0.0,
+    "max": 0.4
+  }
+]

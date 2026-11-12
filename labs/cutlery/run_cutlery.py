@@ -6,8 +6,10 @@ piece, and measure what ten million a day costs the MES.
 
 In order:
 
-1. rebuilds line.json and tag_map.json (derived, never hand-edited) and
-   regenerates the plant's CSVs;
+1. rebuilds line.json and tag_map.json at the customer's full rate into
+   out/full/ (derived, never hand-edited) and regenerates the plant's CSVs.
+   Not over the committed ones: those are the hundredth-scale plant the
+   wheel ships as `fsmes demo cutlery` (masterdata/README.md, 2026-11-12);
 2. runs the same ephemeral scored run every plant uses - fresh database,
    ports from the reserved ranges, the registry's `post_boot` script
    (trace_driver.py) serialising through the API while the hour plays;
@@ -219,9 +221,11 @@ def main() -> None:
 
     timings: dict = {}
     config = build_config.build()
-    (HERE / "line.json").write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
-    tag_map = make_tag_map.build(HERE / "line.json")
-    (HERE / "tag_map.json").write_text(json.dumps(tag_map, indent=2) + "\n", encoding="utf-8")
+    full = HERE / "out" / "full"
+    full.mkdir(parents=True, exist_ok=True)
+    (full / "line.json").write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+    tag_map = make_tag_map.build(full / "line.json")
+    (full / "tag_map.json").write_text(json.dumps(tag_map, indent=2) + "\n", encoding="utf-8")
     n_lines = len(config["lines"])
     n_stations = sum(len(ln["stations"]) for ln in config["lines"])
     print(f"plant: {n_lines} lines, {n_stations} stations; {config['_plant']}")
@@ -229,12 +233,12 @@ def main() -> None:
     out_dir = HERE / "out"
     if not args.skip_generate:
         t = time.perf_counter()
-        generate(HERE / "line.json", out_dir)
+        generate(full / "line.json", out_dir)
         timings["generate_s"] = round(time.perf_counter() - t, 1)
 
     cfg = {
         "replay_dir": str(out_dir),
-        "tag_map": str(HERE / "tag_map.json"),
+        "tag_map": str(full / "tag_map.json"),
         "init": str(HERE / "init.py"),
         "api_port": 0,
         "opc_port": 0,
