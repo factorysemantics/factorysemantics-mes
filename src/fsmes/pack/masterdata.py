@@ -17,7 +17,7 @@ written by `fsmes pack apply`:
       quality_specs.json       what a characteristic must measure
       gauges.json              the instruments that take the measurements
       lots.json                material on hand at the start
-      work_orders.json         the order book: what to make, in what order, what is released
+      work_orders.json         the order book: what to make, on which line, what is released and issued
       maintenance_plans.json   the recurring jobs, and what makes each due
       shifts.json              the patterns this plant works
       downtime_reasons.json    the reasons an operator picks from when it stops
@@ -151,7 +151,13 @@ OPTIONAL: dict[str, tuple[str, ...]] = {
     "gauges": ("kind", "location", "interval_days", "warn_days", "resolution",
                "calibrated_days_ago"),
     "lots": (),
-    "work_orders": ("priority", "release", "due_in_hours"),
+    # `line` and `issue` arrived with the cutlery plant (2026-11-12): sixty-one
+    # lines, three of which make the same fork, so an order has to say which
+    # line makes it - and the resin it is made from is issued to it when it is
+    # released, so every piece traces back to a lot through the order. Left
+    # out, an order goes to the first routing for its material and is issued
+    # nothing, which is what every pack written before them says.
+    "work_orders": ("priority", "release", "due_in_hours", "line", "issue"),
     # `skill` and `priority` arrived with the maintenance crew. A plan that
     # says neither is work anybody on shift can take, at routine - which is
     # the honest reading of a plan nobody has classified, and why every pack
@@ -346,6 +352,62 @@ def problems(directory: Path) -> list[str]:
                        "is a positive number of hours after the pack is applied. A pack is "
                        "seeded whenever somebody builds the plant, so a due date in one is "
                        "relative or it is wrong the week after it was written.")
+    # Which line makes an order, and what is issued to it, offline: a line
+    # with no routing for the order's material, or a lot nobody declared,
+    # would otherwise be found by the first `fsmes pack apply` - half way
+    # through writing the book.
+    known_lots = {row.get("code"): row for row in data.rows("lots")}
+    parent_of = {row.get("code"): row.get("parent") for row in data.rows("equipment")}
+
+    def above(code, seen=()):
+        """This equipment and everything it hangs under, nearest first."""
+        while code and code not in seen:
+            yield code
+            seen = (*seen, code)
+            code = parent_of.get(code)
+
+    # Where each routing starts - its lowest-numbered operation - which is
+    # how `workorders.create` picks the routing for an order on a line.
+    routed_on = set()
+    for row in data.rows("routings"):
+        steps = [step for step in (row.get("operations") or []) if isinstance(step, dict)]
+        if steps:
+            first = min(enumerate(steps), key=lambda pair: pair[1].get("seq", (pair[0] + 1) * 10))[1]
+            routed_on.add((row.get("material"), first.get("equipment")))
+    for index, row in enumerate(data.rows("work_orders"), start=1):
+        where = f"work_orders.json #{index}"
+        line = row.get("line")
+        if line is not None:
+            if line not in known_equipment:
+                out.append(f"{where} is made on line {line!r}, which equipment.json "
+                           "does not declare.")
+            elif not any(material == row.get("material") and line in above(first)
+                         for material, first in routed_on):
+                out.append(f"{where} is made on line {line!r}, and no routing for "
+                           f"{row.get('material')!r} starts on that line.")
+        issue = row.get("issue")
+        if issue is None:
+            continue
+        if not isinstance(issue, dict) or not issue.get("lot"):
+            out.append(f"{where} has an issue with no lot; `issue` is "
+                       '{"lot": ..., "quantity": ..., "seq": ...}.')
+            continue
+        if issue["lot"] not in known_lots:
+            out.append(f"{where} is issued lot {issue['lot']!r}, which lots.json "
+                       "does not declare.")
+        quantity = issue.get("quantity")
+        if isinstance(quantity, bool) or not isinstance(quantity, (int, float)) or quantity <= 0:
+            out.append(f"{where} is issued {quantity!r} of {issue['lot']!r}; the quantity "
+                       "is a positive number in the lot's own unit.")
+        if row.get("release", True) is False:
+            out.append(f"{where} is planned and carries an issue. Material is issued to "
+                       "a released order; a planned one is issued its lot when it is "
+                       "released.")
+        unknown = sorted(k for k in issue if k not in ("lot", "quantity", "seq")
+                         and not k.startswith("_"))
+        if unknown:
+            out.append(f"{where}'s issue carries {', '.join(map(repr, unknown))}; it "
+                       "takes lot, quantity and seq.")
     for index, row in enumerate(data.rows("routings"), start=1):
         for step in row.get("operations") or []:
             if not isinstance(step, dict) or not step.get("equipment"):
@@ -629,7 +691,7 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
     )
     from fsmes.domain.common import VocabularyStatus
     from fsmes.services import calendar as calendar_service
-    from fsmes.services import maintenance, masterdata, rate_orders, workorders
+    from fsmes.services import execution, maintenance, masterdata, rate_orders, workorders
 
     data = read(directory)
     cycles = cycles or {}
@@ -813,9 +875,17 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
                           quantity=row["quantity"], priority=row.get("priority", 10),
                           due_date=(applied_at + timedelta(hours=float(due))
                                     if due is not None else None),
+                          line_code=row.get("line"),
                           actor="pack-apply")
         if row.get("release", True):
             workorders.release(session, code, actor="pack-apply")
+            if issue := row.get("issue"):
+                # Through the service a person's issue goes through, so the
+                # lot is drawn down and the genealogy recorded exactly as if
+                # the first shift's storeman had done it.
+                execution.consume(session, order_code=code, lot_code=issue["lot"],
+                                  quantity=float(issue["quantity"]), seq=issue.get("seq"),
+                                  actor="pack-apply")
         count("work_orders", made=True)
 
     for row in data.rows("maintenance_plans"):

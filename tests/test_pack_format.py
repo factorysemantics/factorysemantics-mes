@@ -568,6 +568,45 @@ def test_master_data_that_names_something_it_does_not_declare_is_refused(tmp_pat
     assert any("FG-B" in line and "does not declare" in line for line in found), found
 
 
+def _a_line_that_makes_forks(where: Path, order: dict) -> list[str]:
+    """Two lines, one routing on line A, a lot, and the order under test."""
+    files = {
+        "equipment": [{"code": "SITE", "name": "Site", "level": "site"},
+                      {"code": "ALINE", "name": "A", "level": "work_center", "parent": "SITE"},
+                      {"code": "A_Press", "name": "A press", "level": "work_unit", "parent": "ALINE"},
+                      {"code": "BLINE", "name": "B", "level": "work_center", "parent": "SITE"}],
+        "materials": [{"code": "FORK", "name": "Fork"}, {"code": "RESIN", "name": "Resin", "type": "raw"}],
+        "routings": [{"code": "RT-A", "name": "A", "material": "FORK",
+                      "operations": [{"seq": 10, "name": "Press", "equipment": "A_Press"}]}],
+        "lots": [{"code": "LOT-1", "material": "RESIN", "quantity": 100}],
+        "work_orders": [{"code": "WO-1", "material": "FORK", "quantity": 5, **order}],
+    }
+    for kind, rows in files.items():
+        (where / f"{kind}.json").write_text(json.dumps(rows), encoding="utf-8")
+    return masterdata.problems(where)
+
+
+def test_an_order_on_a_line_with_a_routing_for_its_material_and_a_declared_lot_checks_clean(tmp_path):
+    found = _a_line_that_makes_forks(tmp_path, {"line": "ALINE", "release": True,
+                                                "issue": {"lot": "LOT-1", "quantity": 2.5, "seq": 10}})
+    assert found == []
+
+
+@pytest.mark.parametrize(("order", "said"), [
+    ({"line": "CLINE"}, "does not declare"),
+    ({"line": "BLINE"}, "no routing for 'FORK' starts on that line"),
+    ({"issue": {"lot": "LOT-9", "quantity": 1}}, "lots.json does not declare"),
+    ({"issue": {"lot": "LOT-1", "quantity": 0}}, "positive number"),
+    ({"issue": {"quantity": 1}}, "no lot"),
+    ({"release": False, "issue": {"lot": "LOT-1", "quantity": 1}}, "planned and carries an issue"),
+    ({"issue": {"lot": "LOT-1", "quantity": 1, "station": "A_Press"}}, "takes lot, quantity and seq"),
+])
+def test_an_order_on_a_line_that_cannot_make_it_or_issued_a_lot_nobody_declared_is_refused(
+        tmp_path, order, said):
+    found = _a_line_that_makes_forks(tmp_path, order)
+    assert any(said in line for line in found), found
+
+
 def test_a_master_data_file_nobody_reads_is_refused(tmp_path):
     """Master data nobody reads is master data somebody thinks is loaded.
 

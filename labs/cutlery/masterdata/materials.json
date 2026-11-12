@@ -1,0 +1,53 @@
+[
+  {
+    "code": "UT-FORK",
+    "name": "Fork (PP)",
+    "unit": "ea",
+    "type": "intermediate",
+    "counted_in_pieces": true
+  },
+  {
+    "code": "RAW-PP",
+    "name": "Polypropylene resin",
+    "unit": "kg",
+    "type": "raw"
+  },
+  {
+    "code": "UT-SPOON",
+    "name": "Spoon (PP)",
+    "unit": "ea",
+    "type": "intermediate",
+    "counted_in_pieces": true
+  },
+  {
+    "code": "UT-KNIFE",
+    "name": "Knife (PP)",
+    "unit": "ea",
+    "type": "intermediate",
+    "counted_in_pieces": true
+  },
+  {
+    "code": "STACK-3",
+    "name": "Fork, spoon and knife stack",
+    "unit": "ea",
+    "type": "intermediate"
+  },
+  {
+    "code": "WRAP",
+    "name": "Wrapped cutlery set on a plate",
+    "unit": "ea",
+    "type": "finished"
+  },
+  {
+    "code": "RAW-PLATE",
+    "name": "Paper plate",
+    "unit": "ea",
+    "type": "raw"
+  },
+  {
+    "code": "PALLET",
+    "name": "Outbound pallet of wrapped sets",
+    "unit": "ea",
+    "type": "finished"
+  }
+]

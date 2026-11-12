@@ -66,6 +66,12 @@ NOT_TENANT: dict[str, str] = {
     "FG-BOTTLE":
         "the demo plant's finished material, for the same reason: seeded by "
         "src/fsmes/seed_kepsim.py, borrowed by the lab, not owned by a plant.",
+    "PALLET":
+        "the product's word for the unit a pallet certificate covers - the "
+        "`COA-PALLET-` prefix in src/fsmes/services/coa.py, there since the "
+        "certificate was built. The cutlery plant's finished material happens to be "
+        "coded PALLET too, and is collected since its master data became a pack "
+        "(2026-11-12); the product did not learn the word from the plant.",
     "ADMIN":
         "the built-in administrator account. Product vocabulary that every plant "
         "gets; it is collected only because a lab seed passes it as a `code=`.",
