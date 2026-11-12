@@ -68,7 +68,7 @@ Then, in one PowerShell window you keep open:
 $env:MES_DEMO_SIGNER = "any-long-phrase-both-servers-share"
 cd C:\fsmes-demo
 fsmes pack check cutlery                      # says the pack is sound, names two nodes
-fsmes sim-generate cutlery\line.json --out cutlery\out   # the shift the 83 machines will play
+fsmes sim-generate cutlery\line.json --out cutlery\out   # the shift the 83 machines will play (seconds)
 fsmes fleet create cutlery --root C:\fsmes-demo           # builds the plant, once
 fsmes fleet start cutlery --root C:\fsmes-demo            # the machines, then server a, then server b
 fsmes fleet status cutlery --root C:\fsmes-demo           # 2 nodes, 2 answered, who holds what
@@ -86,7 +86,7 @@ no OEE until the first pallet has gone by.
 |---|---|---|
 | 0–1 | `fleet status` in the window | Two servers, one plant. Each of the three jobs (reading the machines, running the floor, housekeeping) is held by exactly one of them. |
 | 1–3 | **Floor**, *lowest OEE first* | 83 machines on 61 lines — moulders, stackers, wrappers, palletizers — the worst on top, and why: availability, performance, quality, and the hours the Plant OEE tile covers. |
-| 3–4 | A machine's card → its stop | A machine that stopped says why in the plant's own words. |
+| 3–4 | A machine's card → its stop | A machine that stopped says why in the plant's own words. (In the first twenty minutes of a fresh shift none may have stopped yet: open any stacker and show its eighteen live tags instead.) |
 | 4–5 | **Orders** | Two orders on every line: one running with its raw lot issued, one planned behind it. Open one: what it makes, its route, how far along. (The Work Instructions list is empty on a fresh plant; the lab's were written over weeks.) |
 | 5–7 | **Quality** | Record a check on a machine (it names the machine); raise a non-conformance by hand; **Export xlsx** — the file opens in Excel. |
 | 7–8 | **Engineering** → shift analysis | OEE by station for the shift, and the stops behind the downtime. |
@@ -109,7 +109,7 @@ fsmes fleet stop cutlery --root C:\fsmes-demo    # both servers, then the machin
 
 The database keeps the shift; the next `fleet start` carries on from it. To
 start over from nothing: `DROP DATABASE demo; CREATE DATABASE demo;` in
-psql, delete `C:\fsmes-demo\data`, and `fleet create` again.
+psql, delete `C:\fsmes-demo\labs\multiplant\.data`, and `fleet create` again.
 
 ## See also
 
