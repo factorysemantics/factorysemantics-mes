@@ -403,7 +403,10 @@ def bring_up_to_date(name: str, where: Path, *, echo=print) -> int:
         return 0
 
     was = reading.revision or ("empty" if reading.empty else "unstamped")
-    db = backups.sqlite_path(url)
+    # What is printed comes from the pack, never from `url`: that one carries
+    # the password `database_password_file` put back.
+    named = cfg.get("database_url")
+    db = None if named else data_dir(where) / f"{name}.db"
     copy: Path | None = None
     if db is not None:
         copy = db.with_name(f"{db.name}.pre-migrate-{datetime.now().strftime('%Y%m%d-%H%M%S')}")
@@ -425,7 +428,7 @@ def bring_up_to_date(name: str, where: Path, *, echo=print) -> int:
     if copy is not None:
         echo(f"  {name}: database backed up to {copy}, schema {was} -> {after.revision}")
     else:
-        echo(f"  {name}: database on {storage.redacted(url)} not copied here (a server "
+        echo(f"  {name}: database on {storage.redacted(str(named))} not copied here (a server "
              f"database's backup is its own, pg_dump), schema {was} -> {after.revision}")
     return 0
 
