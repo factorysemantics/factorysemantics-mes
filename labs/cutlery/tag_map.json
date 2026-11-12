@@ -5,7 +5,7 @@
     {
       "equipment": "FORK1_Mold",
       "object": "FORK1_Mold",
-      "cycle_seconds": 0.025356,
+      "cycle_seconds": 2.5352,
       "analog": "MeltTemp",
       "order_tag": null,
       "state_map": {
@@ -20,7 +20,7 @@
     {
       "equipment": "FORK1_Degate",
       "object": "FORK1_Degate",
-      "cycle_seconds": 0.025712,
+      "cycle_seconds": 2.5714,
       "analog": "BladeWear",
       "order_tag": null,
       "state_map": {
@@ -35,7 +35,7 @@
     {
       "equipment": "FORK1_Mark",
       "object": "FORK1_Mark",
-      "cycle_seconds": 0.02566,
+      "cycle_seconds": 2.5658,
       "analog": "LaserPower",
       "order_tag": null,
       "state_map": {
@@ -50,7 +50,7 @@
     {
       "equipment": "FORK2_Mold",
       "object": "FORK2_Mold",
-      "cycle_seconds": 0.025356,
+      "cycle_seconds": 2.5352,
       "analog": "MeltTemp",
       "order_tag": null,
       "state_map": {
@@ -65,7 +65,7 @@
     {
       "equipment": "FORK2_Degate",
       "object": "FORK2_Degate",
-      "cycle_seconds": 0.025712,
+      "cycle_seconds": 2.5714,
       "analog": "BladeWear",
       "order_tag": null,
       "state_map": {
@@ -80,7 +80,7 @@
     {
       "equipment": "FORK2_Mark",
       "object": "FORK2_Mark",
-      "cycle_seconds": 0.02566,
+      "cycle_seconds": 2.5658,
       "analog": "LaserPower",
       "order_tag": null,
       "state_map": {
@@ -95,7 +95,7 @@
     {
       "equipment": "FORK3_Mold",
       "object": "FORK3_Mold",
-      "cycle_seconds": 0.025356,
+      "cycle_seconds": 2.5352,
       "analog": "MeltTemp",
       "order_tag": null,
       "state_map": {
@@ -110,7 +110,7 @@
     {
       "equipment": "FORK3_Degate",
       "object": "FORK3_Degate",
-      "cycle_seconds": 0.025712,
+      "cycle_seconds": 2.5714,
       "analog": "BladeWear",
       "order_tag": null,
       "state_map": {
@@ -125,7 +125,7 @@
     {
       "equipment": "FORK3_Mark",
       "object": "FORK3_Mark",
-      "cycle_seconds": 0.02566,
+      "cycle_seconds": 2.5658,
       "analog": "LaserPower",
       "order_tag": null,
       "state_map": {
@@ -140,7 +140,7 @@
     {
       "equipment": "SPOON1_Mold",
       "object": "SPOON1_Mold",
-      "cycle_seconds": 0.025356,
+      "cycle_seconds": 2.5352,
       "analog": "MeltTemp",
       "order_tag": null,
       "state_map": {
@@ -155,7 +155,7 @@
     {
       "equipment": "SPOON1_Degate",
       "object": "SPOON1_Degate",
-      "cycle_seconds": 0.025712,
+      "cycle_seconds": 2.5714,
       "analog": "BladeWear",
       "order_tag": null,
       "state_map": {
@@ -170,7 +170,7 @@
     {
       "equipment": "SPOON1_Mark",
       "object": "SPOON1_Mark",
-      "cycle_seconds": 0.02566,
+      "cycle_seconds": 2.5658,
       "analog": "LaserPower",
       "order_tag": null,
       "state_map": {
@@ -185,7 +185,7 @@
     {
       "equipment": "SPOON2_Mold",
       "object": "SPOON2_Mold",
-      "cycle_seconds": 0.025356,
+      "cycle_seconds": 2.5352,
       "analog": "MeltTemp",
       "order_tag": null,
       "state_map": {
@@ -200,7 +200,7 @@
     {
       "equipment": "SPOON2_Degate",
       "object": "SPOON2_Degate",
-      "cycle_seconds": 0.025712,
+      "cycle_seconds": 2.5714,
       "analog": "BladeWear",
       "order_tag": null,
       "state_map": {
@@ -215,7 +215,7 @@
     {
       "equipment": "SPOON2_Mark",
       "object": "SPOON2_Mark",
-      "cycle_seconds": 0.02566,
+      "cycle_seconds": 2.5658,
       "analog": "LaserPower",
       "order_tag": null,
       "state_map": {
@@ -230,7 +230,7 @@
     {
       "equipment": "SPOON3_Mold",
       "object": "SPOON3_Mold",
-      "cycle_seconds": 0.025356,
+      "cycle_seconds": 2.5352,
       "analog": "MeltTemp",
       "order_tag": null,
       "state_map": {
@@ -245,7 +245,7 @@
     {
       "equipment": "SPOON3_Degate",
       "object": "SPOON3_Degate",
-      "cycle_seconds": 0.025712,
+      "cycle_seconds": 2.5714,
       "analog": "BladeWear",
       "order_tag": null,
       "state_map": {
@@ -260,7 +260,7 @@
     {
       "equipment": "SPOON3_Mark",
       "object": "SPOON3_Mark",
-      "cycle_seconds": 0.02566,
+      "cycle_seconds": 2.5658,
       "analog": "LaserPower",
       "order_tag": null,
       "state_map": {
@@ -275,7 +275,7 @@
     {
       "equipment": "KNIFE1_Mold",
       "object": "KNIFE1_Mold",
-      "cycle_seconds": 0.025356,
+      "cycle_seconds": 2.5352,
       "analog": "MeltTemp",
       "order_tag": null,
       "state_map": {
@@ -290,7 +290,7 @@
     {
       "equipment": "KNIFE1_Degate",
       "object": "KNIFE1_Degate",
-      "cycle_seconds": 0.025712,
+      "cycle_seconds": 2.5714,
       "analog": "BladeWear",
       "order_tag": null,
       "state_map": {
@@ -305,7 +305,7 @@
     {
       "equipment": "KNIFE1_Mark",
       "object": "KNIFE1_Mark",
-      "cycle_seconds": 0.02566,
+      "cycle_seconds": 2.5658,
       "analog": "LaserPower",
       "order_tag": null,
       "state_map": {
@@ -320,7 +320,7 @@
     {
       "equipment": "KNIFE2_Mold",
       "object": "KNIFE2_Mold",
-      "cycle_seconds": 0.025356,
+      "cycle_seconds": 2.5352,
       "analog": "MeltTemp",
       "order_tag": null,
       "state_map": {
@@ -335,7 +335,7 @@
     {
       "equipment": "KNIFE2_Degate",
       "object": "KNIFE2_Degate",
-      "cycle_seconds": 0.025712,
+      "cycle_seconds": 2.5714,
       "analog": "BladeWear",
       "order_tag": null,
       "state_map": {
@@ -350,7 +350,7 @@
     {
       "equipment": "KNIFE2_Mark",
       "object": "KNIFE2_Mark",
-      "cycle_seconds": 0.02566,
+      "cycle_seconds": 2.5658,
       "analog": "LaserPower",
       "order_tag": null,
       "state_map": {
@@ -365,7 +365,7 @@
     {
       "equipment": "KNIFE3_Mold",
       "object": "KNIFE3_Mold",
-      "cycle_seconds": 0.025356,
+      "cycle_seconds": 2.5352,
       "analog": "MeltTemp",
       "order_tag": null,
       "state_map": {
@@ -380,7 +380,7 @@
     {
       "equipment": "KNIFE3_Degate",
       "object": "KNIFE3_Degate",
-      "cycle_seconds": 0.025712,
+      "cycle_seconds": 2.5714,
       "analog": "BladeWear",
       "order_tag": null,
       "state_map": {
@@ -395,7 +395,7 @@
     {
       "equipment": "KNIFE3_Mark",
       "object": "KNIFE3_Mark",
-      "cycle_seconds": 0.02566,
+      "cycle_seconds": 2.5658,
       "analog": "LaserPower",
       "order_tag": null,
       "state_map": {
@@ -410,7 +410,7 @@
     {
       "equipment": "STACK01_Stacker",
       "object": "STACK01_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -425,7 +425,7 @@
     {
       "equipment": "STACK02_Stacker",
       "object": "STACK02_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -440,7 +440,7 @@
     {
       "equipment": "STACK03_Stacker",
       "object": "STACK03_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -455,7 +455,7 @@
     {
       "equipment": "STACK04_Stacker",
       "object": "STACK04_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -470,7 +470,7 @@
     {
       "equipment": "STACK05_Stacker",
       "object": "STACK05_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -485,7 +485,7 @@
     {
       "equipment": "STACK06_Stacker",
       "object": "STACK06_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -500,7 +500,7 @@
     {
       "equipment": "STACK07_Stacker",
       "object": "STACK07_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -515,7 +515,7 @@
     {
       "equipment": "STACK08_Stacker",
       "object": "STACK08_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -530,7 +530,7 @@
     {
       "equipment": "STACK09_Stacker",
       "object": "STACK09_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -545,7 +545,7 @@
     {
       "equipment": "STACK10_Stacker",
       "object": "STACK10_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -560,7 +560,7 @@
     {
       "equipment": "STACK11_Stacker",
       "object": "STACK11_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -575,7 +575,7 @@
     {
       "equipment": "STACK12_Stacker",
       "object": "STACK12_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -590,7 +590,7 @@
     {
       "equipment": "STACK13_Stacker",
       "object": "STACK13_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -605,7 +605,7 @@
     {
       "equipment": "STACK14_Stacker",
       "object": "STACK14_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -620,7 +620,7 @@
     {
       "equipment": "STACK15_Stacker",
       "object": "STACK15_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -635,7 +635,7 @@
     {
       "equipment": "STACK16_Stacker",
       "object": "STACK16_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -650,7 +650,7 @@
     {
       "equipment": "STACK17_Stacker",
       "object": "STACK17_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -665,7 +665,7 @@
     {
       "equipment": "STACK18_Stacker",
       "object": "STACK18_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -680,7 +680,7 @@
     {
       "equipment": "STACK19_Stacker",
       "object": "STACK19_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -695,7 +695,7 @@
     {
       "equipment": "STACK20_Stacker",
       "object": "STACK20_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -710,7 +710,7 @@
     {
       "equipment": "STACK21_Stacker",
       "object": "STACK21_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -725,7 +725,7 @@
     {
       "equipment": "STACK22_Stacker",
       "object": "STACK22_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -740,7 +740,7 @@
     {
       "equipment": "STACK23_Stacker",
       "object": "STACK23_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -755,7 +755,7 @@
     {
       "equipment": "STACK24_Stacker",
       "object": "STACK24_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -770,7 +770,7 @@
     {
       "equipment": "STACK25_Stacker",
       "object": "STACK25_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -785,7 +785,7 @@
     {
       "equipment": "STACK26_Stacker",
       "object": "STACK26_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -800,7 +800,7 @@
     {
       "equipment": "STACK27_Stacker",
       "object": "STACK27_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -815,7 +815,7 @@
     {
       "equipment": "STACK28_Stacker",
       "object": "STACK28_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -830,7 +830,7 @@
     {
       "equipment": "STACK29_Stacker",
       "object": "STACK29_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -845,7 +845,7 @@
     {
       "equipment": "STACK30_Stacker",
       "object": "STACK30_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -860,7 +860,7 @@
     {
       "equipment": "STACK31_Stacker",
       "object": "STACK31_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -875,7 +875,7 @@
     {
       "equipment": "STACK32_Stacker",
       "object": "STACK32_Stacker",
-      "cycle_seconds": 0.27372,
+      "cycle_seconds": 27.373,
       "analog": "GripForce",
       "order_tag": null,
       "state_map": {
@@ -890,7 +890,7 @@
     {
       "equipment": "WRAP01_Wrapper",
       "object": "WRAP01_Wrapper",
-      "cycle_seconds": 0.13685,
+      "cycle_seconds": 13.686,
       "analog": "SealTemp",
       "order_tag": null,
       "state_map": {
@@ -905,7 +905,7 @@
     {
       "equipment": "WRAP02_Wrapper",
       "object": "WRAP02_Wrapper",
-      "cycle_seconds": 0.13685,
+      "cycle_seconds": 13.686,
       "analog": "SealTemp",
       "order_tag": null,
       "state_map": {
@@ -920,7 +920,7 @@
     {
       "equipment": "WRAP03_Wrapper",
       "object": "WRAP03_Wrapper",
-      "cycle_seconds": 0.13685,
+      "cycle_seconds": 13.686,
       "analog": "SealTemp",
       "order_tag": null,
       "state_map": {
@@ -935,7 +935,7 @@
     {
       "equipment": "WRAP04_Wrapper",
       "object": "WRAP04_Wrapper",
-      "cycle_seconds": 0.13685,
+      "cycle_seconds": 13.686,
       "analog": "SealTemp",
       "order_tag": null,
       "state_map": {
@@ -950,7 +950,7 @@
     {
       "equipment": "WRAP05_Wrapper",
       "object": "WRAP05_Wrapper",
-      "cycle_seconds": 0.13685,
+      "cycle_seconds": 13.686,
       "analog": "SealTemp",
       "order_tag": null,
       "state_map": {
@@ -965,7 +965,7 @@
     {
       "equipment": "WRAP06_Wrapper",
       "object": "WRAP06_Wrapper",
-      "cycle_seconds": 0.13685,
+      "cycle_seconds": 13.686,
       "analog": "SealTemp",
       "order_tag": null,
       "state_map": {
@@ -980,7 +980,7 @@
     {
       "equipment": "WRAP07_Wrapper",
       "object": "WRAP07_Wrapper",
-      "cycle_seconds": 0.13685,
+      "cycle_seconds": 13.686,
       "analog": "SealTemp",
       "order_tag": null,
       "state_map": {
@@ -995,7 +995,7 @@
     {
       "equipment": "WRAP08_Wrapper",
       "object": "WRAP08_Wrapper",
-      "cycle_seconds": 0.13685,
+      "cycle_seconds": 13.686,
       "analog": "SealTemp",
       "order_tag": null,
       "state_map": {
@@ -1010,7 +1010,7 @@
     {
       "equipment": "WRAP09_Wrapper",
       "object": "WRAP09_Wrapper",
-      "cycle_seconds": 0.13685,
+      "cycle_seconds": 13.686,
       "analog": "SealTemp",
       "order_tag": null,
       "state_map": {
@@ -1025,7 +1025,7 @@
     {
       "equipment": "WRAP10_Wrapper",
       "object": "WRAP10_Wrapper",
-      "cycle_seconds": 0.13685,
+      "cycle_seconds": 13.686,
       "analog": "SealTemp",
       "order_tag": null,
       "state_map": {
@@ -1040,7 +1040,7 @@
     {
       "equipment": "WRAP11_Wrapper",
       "object": "WRAP11_Wrapper",
-      "cycle_seconds": 0.13685,
+      "cycle_seconds": 13.686,
       "analog": "SealTemp",
       "order_tag": null,
       "state_map": {
@@ -1055,7 +1055,7 @@
     {
       "equipment": "WRAP12_Wrapper",
       "object": "WRAP12_Wrapper",
-      "cycle_seconds": 0.13685,
+      "cycle_seconds": 13.686,
       "analog": "SealTemp",
       "order_tag": null,
       "state_map": {
@@ -1070,7 +1070,7 @@
     {
       "equipment": "WRAP13_Wrapper",
       "object": "WRAP13_Wrapper",
-      "cycle_seconds": 0.13685,
+      "cycle_seconds": 13.686,
       "analog": "SealTemp",
       "order_tag": null,
       "state_map": {
@@ -1085,7 +1085,7 @@
     {
       "equipment": "WRAP14_Wrapper",
       "object": "WRAP14_Wrapper",
-      "cycle_seconds": 0.13685,
+      "cycle_seconds": 13.686,
       "analog": "SealTemp",
       "order_tag": null,
       "state_map": {
@@ -1100,7 +1100,7 @@
     {
       "equipment": "WRAP15_Wrapper",
       "object": "WRAP15_Wrapper",
-      "cycle_seconds": 0.13685,
+      "cycle_seconds": 13.686,
       "analog": "SealTemp",
       "order_tag": null,
       "state_map": {
@@ -1115,7 +1115,7 @@
     {
       "equipment": "WRAP16_Wrapper",
       "object": "WRAP16_Wrapper",
-      "cycle_seconds": 0.13685,
+      "cycle_seconds": 13.686,
       "analog": "SealTemp",
       "order_tag": null,
       "state_map": {
@@ -1130,7 +1130,7 @@
     {
       "equipment": "PAL1_Palletizer",
       "object": "PAL1_Palletizer",
-      "cycle_seconds": 8.0487,
+      "cycle_seconds": 804.87,
       "analog": "StackHeight",
       "order_tag": null,
       "state_map": {
@@ -1145,7 +1145,7 @@
     {
       "equipment": "PAL1_StretchWrap",
       "object": "PAL1_StretchWrap",
-      "cycle_seconds": 8.0487,
+      "cycle_seconds": 804.87,
       "analog": "FilmTension",
       "order_tag": null,
       "state_map": {
@@ -1160,7 +1160,7 @@
     {
       "equipment": "PAL2_Palletizer",
       "object": "PAL2_Palletizer",
-      "cycle_seconds": 8.0487,
+      "cycle_seconds": 804.87,
       "analog": "StackHeight",
       "order_tag": null,
       "state_map": {
@@ -1175,7 +1175,7 @@
     {
       "equipment": "PAL2_StretchWrap",
       "object": "PAL2_StretchWrap",
-      "cycle_seconds": 8.0487,
+      "cycle_seconds": 804.87,
       "analog": "FilmTension",
       "order_tag": null,
       "state_map": {
@@ -1190,7 +1190,7 @@
     {
       "equipment": "PAL3_Palletizer",
       "object": "PAL3_Palletizer",
-      "cycle_seconds": 8.0487,
+      "cycle_seconds": 804.87,
       "analog": "StackHeight",
       "order_tag": null,
       "state_map": {
@@ -1205,7 +1205,7 @@
     {
       "equipment": "PAL3_StretchWrap",
       "object": "PAL3_StretchWrap",
-      "cycle_seconds": 8.0487,
+      "cycle_seconds": 804.87,
       "analog": "FilmTension",
       "order_tag": null,
       "state_map": {
@@ -1220,7 +1220,7 @@
     {
       "equipment": "PAL4_Palletizer",
       "object": "PAL4_Palletizer",
-      "cycle_seconds": 8.0487,
+      "cycle_seconds": 804.87,
       "analog": "StackHeight",
       "order_tag": null,
       "state_map": {
@@ -1235,7 +1235,7 @@
     {
       "equipment": "PAL4_StretchWrap",
       "object": "PAL4_StretchWrap",
-      "cycle_seconds": 8.0487,
+      "cycle_seconds": 804.87,
       "analog": "FilmTension",
       "order_tag": null,
       "state_map": {

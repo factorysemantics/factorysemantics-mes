@@ -2,8 +2,12 @@
 
 `labs/cutlery/build_config.py --scale 0.01` is the same plant - every station,
 attribute, stop and changeover - with every rate a hundredth of the
-customer's. The scale is a knob the lab turns; the default is 1, so the
-committed `line.json` and a scored run are exactly what they were.
+customer's. The scale is a knob the lab turns; the default is 1, so a scored
+run builds the full-rate plant exactly as it did.
+
+Since 2026-11-12 the committed `line.json` and `tag_map.json` are the
+hundredth-scale build: they ship in the wheel as `fsmes demo cutlery`, the
+plant a person can watch (`masterdata/README.md`).
 """
 from __future__ import annotations
 
@@ -33,9 +37,9 @@ def _rates(config: dict) -> dict[str, float]:
             for line in config["lines"] for s in line["stations"]}
 
 
-def test_the_default_build_is_the_committed_line_json_byte_for_byte():
+def test_the_committed_line_json_is_the_hundredth_scale_build_byte_for_byte():
     committed = (CUTLERY / "line.json").read_text(encoding="utf-8")
-    assert json.dumps(build_config.build(), indent=2) + "\n" == committed
+    assert json.dumps(build_config.build(0.01), indent=2) + "\n" == committed
 
 
 def test_a_hundredth_scale_is_the_same_plant_with_every_rate_a_hundredth():
@@ -56,20 +60,26 @@ def test_a_hundredth_scale_is_the_same_plant_with_every_rate_a_hundredth():
     assert "scale" not in full["_plant"]
 
 
+def _build(where: Path, *scale: str) -> subprocess.CompletedProcess:
+    made = subprocess.run([sys.executable, str(CUTLERY / "build_config.py"), *scale, "--out", str(where)],
+                          capture_output=True, text=True, encoding="utf-8", check=True)
+    subprocess.run([sys.executable, str(CUTLERY / "make_tag_map.py"), str(where)],
+                   capture_output=True, text=True, encoding="utf-8", check=True)
+    return made
+
+
 def test_the_lab_builds_its_slow_plant_into_its_own_folder_and_leaves_the_checkout_alone(tmp_path):
     before = (CUTLERY / "line.json").read_bytes(), (CUTLERY / "tag_map.json").read_bytes()
-    made = subprocess.run([sys.executable, str(CUTLERY / "build_config.py"), "--scale", "0.01", "--out", str(tmp_path)],
-                          capture_output=True, text=True, encoding="utf-8", check=True)
+    made = _build(tmp_path, "--scale", "0.01")
     assert "scale 0.01" in made.stdout
-    subprocess.run([sys.executable, str(CUTLERY / "make_tag_map.py"), str(tmp_path)],
-                   capture_output=True, text=True, encoding="utf-8", check=True)
+    _build(tmp_path / "full")
     line = json.loads((tmp_path / "line.json").read_text(encoding="utf-8"))
     tags = json.loads((tmp_path / "tag_map.json").read_text(encoding="utf-8"))
     assert line["_plant"]["scale"] == 0.01
     assert len(tags["machines"]) == 83
     # A slower station takes longer per piece: the tag map's ideal cycle follows the rate.
     full = {m["equipment"]: m["cycle_seconds"]
-            for m in json.loads((CUTLERY / "tag_map.json").read_text(encoding="utf-8"))["machines"]}
+            for m in json.loads((tmp_path / "full" / "tag_map.json").read_text(encoding="utf-8"))["machines"]}
     slow = {m["equipment"]: m["cycle_seconds"] for m in tags["machines"]}
     assert slow["FORK1_Mark"] == pytest.approx(full["FORK1_Mark"] * 100, rel=0.01)
     assert ((CUTLERY / "line.json").read_bytes(), (CUTLERY / "tag_map.json").read_bytes()) == before

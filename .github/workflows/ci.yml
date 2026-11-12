@@ -269,9 +269,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     # First start generates the shift (seconds), builds the plant and replays
-    # until a lot has been counted. Generous on purpose: a runner that is
-    # merely slow should not look like a plant that does not come up.
-    timeout-minutes: 30
+    # until a lot has been counted, then the same for cutlery. Generous on
+    # purpose: a runner that is merely slow should not look like a plant that
+    # does not come up.
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -285,6 +286,11 @@ jobs:
       - name: The wheel brings the bottling plant up, and puts it down
         shell: bash
         run: python .github/scripts/plant_from_wheel.py --wheel "$(ls dist/*.whl)" --speed 60
+      # The 83-machine cutlery plant Scott shows from his own PC (2026-11-12),
+      # after bottling is down: one plant at a time on a runner.
+      - name: The wheel brings the cutlery plant up, and puts it down
+        shell: bash
+        run: python .github/scripts/cutlery_from_wheel.py --wheel "$(ls dist/*.whl)" --speed 60
 
   half-dead-plant:
     # The state a first-time Windows user was stuck in on 2026-10-13: a plant

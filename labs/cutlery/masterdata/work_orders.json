@@ -1,0 +1,1103 @@
+[
+  {
+    "code": "WO-FORK1-0001",
+    "material": "UT-FORK",
+    "quantity": 2778,
+    "priority": 10,
+    "release": true,
+    "line": "FORK1LINE",
+    "issue": {
+      "lot": "LOT-PP-FORK1-001",
+      "quantity": 12.5,
+      "seq": 10
+    }
+  },
+  {
+    "code": "WO-FORK1-0002",
+    "material": "UT-FORK",
+    "quantity": 2778,
+    "priority": 10,
+    "release": false,
+    "line": "FORK1LINE"
+  },
+  {
+    "code": "WO-FORK2-0001",
+    "material": "UT-FORK",
+    "quantity": 2778,
+    "priority": 10,
+    "release": true,
+    "line": "FORK2LINE",
+    "issue": {
+      "lot": "LOT-PP-FORK2-001",
+      "quantity": 12.5,
+      "seq": 10
+    }
+  },
+  {
+    "code": "WO-FORK2-0002",
+    "material": "UT-FORK",
+    "quantity": 2778,
+    "priority": 10,
+    "release": false,
+    "line": "FORK2LINE"
+  },
+  {
+    "code": "WO-FORK3-0001",
+    "material": "UT-FORK",
+    "quantity": 2778,
+    "priority": 10,
+    "release": true,
+    "line": "FORK3LINE",
+    "issue": {
+      "lot": "LOT-PP-FORK3-001",
+      "quantity": 12.5,
+      "seq": 10
+    }
+  },
+  {
+    "code": "WO-FORK3-0002",
+    "material": "UT-FORK",
+    "quantity": 2778,
+    "priority": 10,
+    "release": false,
+    "line": "FORK3LINE"
+  },
+  {
+    "code": "WO-SPOON1-0001",
+    "material": "UT-SPOON",
+    "quantity": 2778,
+    "priority": 10,
+    "release": true,
+    "line": "SPOON1LINE",
+    "issue": {
+      "lot": "LOT-PP-SPOON1-001",
+      "quantity": 12.5,
+      "seq": 10
+    }
+  },
+  {
+    "code": "WO-SPOON1-0002",
+    "material": "UT-SPOON",
+    "quantity": 2778,
+    "priority": 10,
+    "release": false,
+    "line": "SPOON1LINE"
+  },
+  {
+    "code": "WO-SPOON2-0001",
+    "material": "UT-SPOON",
+    "quantity": 2778,
+    "priority": 10,
+    "release": true,
+    "line": "SPOON2LINE",
+    "issue": {
+      "lot": "LOT-PP-SPOON2-001",
+      "quantity": 12.5,
+      "seq": 10
+    }
+  },
+  {
+    "code": "WO-SPOON2-0002",
+    "material": "UT-SPOON",
+    "quantity": 2778,
+    "priority": 10,
+    "release": false,
+    "line": "SPOON2LINE"
+  },
+  {
+    "code": "WO-SPOON3-0001",
+    "material": "UT-SPOON",
+    "quantity": 2778,
+    "priority": 10,
+    "release": true,
+    "line": "SPOON3LINE",
+    "issue": {
+      "lot": "LOT-PP-SPOON3-001",
+      "quantity": 12.5,
+      "seq": 10
+    }
+  },
+  {
+    "code": "WO-SPOON3-0002",
+    "material": "UT-SPOON",
+    "quantity": 2778,
+    "priority": 10,
+    "release": false,
+    "line": "SPOON3LINE"
+  },
+  {
+    "code": "WO-KNIFE1-0001",
+    "material": "UT-KNIFE",
+    "quantity": 2778,
+    "priority": 10,
+    "release": true,
+    "line": "KNIFE1LINE",
+    "issue": {
+      "lot": "LOT-PP-KNIFE1-001",
+      "quantity": 12.5,
+      "seq": 10
+    }
+  },
+  {
+    "code": "WO-KNIFE1-0002",
+    "material": "UT-KNIFE",
+    "quantity": 2778,
+    "priority": 10,
+    "release": false,
+    "line": "KNIFE1LINE"
+  },
+  {
+    "code": "WO-KNIFE2-0001",
+    "material": "UT-KNIFE",
+    "quantity": 2778,
+    "priority": 10,
+    "release": true,
+    "line": "KNIFE2LINE",
+    "issue": {
+      "lot": "LOT-PP-KNIFE2-001",
+      "quantity": 12.5,
+      "seq": 10
+    }
+  },
+  {
+    "code": "WO-KNIFE2-0002",
+    "material": "UT-KNIFE",
+    "quantity": 2778,
+    "priority": 10,
+    "release": false,
+    "line": "KNIFE2LINE"
+  },
+  {
+    "code": "WO-KNIFE3-0001",
+    "material": "UT-KNIFE",
+    "quantity": 2778,
+    "priority": 10,
+    "release": true,
+    "line": "KNIFE3LINE",
+    "issue": {
+      "lot": "LOT-PP-KNIFE3-001",
+      "quantity": 12.5,
+      "seq": 10
+    }
+  },
+  {
+    "code": "WO-KNIFE3-0002",
+    "material": "UT-KNIFE",
+    "quantity": 2778,
+    "priority": 10,
+    "release": false,
+    "line": "KNIFE3LINE"
+  },
+  {
+    "code": "WO-STACK01-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK01LINE"
+  },
+  {
+    "code": "WO-STACK01-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK01LINE"
+  },
+  {
+    "code": "WO-STACK02-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK02LINE"
+  },
+  {
+    "code": "WO-STACK02-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK02LINE"
+  },
+  {
+    "code": "WO-STACK03-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK03LINE"
+  },
+  {
+    "code": "WO-STACK03-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK03LINE"
+  },
+  {
+    "code": "WO-STACK04-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK04LINE"
+  },
+  {
+    "code": "WO-STACK04-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK04LINE"
+  },
+  {
+    "code": "WO-STACK05-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK05LINE"
+  },
+  {
+    "code": "WO-STACK05-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK05LINE"
+  },
+  {
+    "code": "WO-STACK06-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK06LINE"
+  },
+  {
+    "code": "WO-STACK06-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK06LINE"
+  },
+  {
+    "code": "WO-STACK07-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK07LINE"
+  },
+  {
+    "code": "WO-STACK07-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK07LINE"
+  },
+  {
+    "code": "WO-STACK08-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK08LINE"
+  },
+  {
+    "code": "WO-STACK08-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK08LINE"
+  },
+  {
+    "code": "WO-STACK09-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK09LINE"
+  },
+  {
+    "code": "WO-STACK09-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK09LINE"
+  },
+  {
+    "code": "WO-STACK10-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK10LINE"
+  },
+  {
+    "code": "WO-STACK10-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK10LINE"
+  },
+  {
+    "code": "WO-STACK11-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK11LINE"
+  },
+  {
+    "code": "WO-STACK11-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK11LINE"
+  },
+  {
+    "code": "WO-STACK12-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK12LINE"
+  },
+  {
+    "code": "WO-STACK12-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK12LINE"
+  },
+  {
+    "code": "WO-STACK13-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK13LINE"
+  },
+  {
+    "code": "WO-STACK13-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK13LINE"
+  },
+  {
+    "code": "WO-STACK14-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK14LINE"
+  },
+  {
+    "code": "WO-STACK14-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK14LINE"
+  },
+  {
+    "code": "WO-STACK15-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK15LINE"
+  },
+  {
+    "code": "WO-STACK15-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK15LINE"
+  },
+  {
+    "code": "WO-STACK16-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK16LINE"
+  },
+  {
+    "code": "WO-STACK16-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK16LINE"
+  },
+  {
+    "code": "WO-STACK17-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK17LINE"
+  },
+  {
+    "code": "WO-STACK17-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK17LINE"
+  },
+  {
+    "code": "WO-STACK18-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK18LINE"
+  },
+  {
+    "code": "WO-STACK18-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK18LINE"
+  },
+  {
+    "code": "WO-STACK19-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK19LINE"
+  },
+  {
+    "code": "WO-STACK19-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK19LINE"
+  },
+  {
+    "code": "WO-STACK20-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK20LINE"
+  },
+  {
+    "code": "WO-STACK20-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK20LINE"
+  },
+  {
+    "code": "WO-STACK21-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK21LINE"
+  },
+  {
+    "code": "WO-STACK21-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK21LINE"
+  },
+  {
+    "code": "WO-STACK22-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK22LINE"
+  },
+  {
+    "code": "WO-STACK22-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK22LINE"
+  },
+  {
+    "code": "WO-STACK23-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK23LINE"
+  },
+  {
+    "code": "WO-STACK23-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK23LINE"
+  },
+  {
+    "code": "WO-STACK24-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK24LINE"
+  },
+  {
+    "code": "WO-STACK24-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK24LINE"
+  },
+  {
+    "code": "WO-STACK25-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK25LINE"
+  },
+  {
+    "code": "WO-STACK25-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK25LINE"
+  },
+  {
+    "code": "WO-STACK26-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK26LINE"
+  },
+  {
+    "code": "WO-STACK26-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK26LINE"
+  },
+  {
+    "code": "WO-STACK27-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK27LINE"
+  },
+  {
+    "code": "WO-STACK27-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK27LINE"
+  },
+  {
+    "code": "WO-STACK28-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK28LINE"
+  },
+  {
+    "code": "WO-STACK28-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK28LINE"
+  },
+  {
+    "code": "WO-STACK29-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK29LINE"
+  },
+  {
+    "code": "WO-STACK29-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK29LINE"
+  },
+  {
+    "code": "WO-STACK30-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK30LINE"
+  },
+  {
+    "code": "WO-STACK30-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK30LINE"
+  },
+  {
+    "code": "WO-STACK31-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK31LINE"
+  },
+  {
+    "code": "WO-STACK31-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK31LINE"
+  },
+  {
+    "code": "WO-STACK32-0001",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": true,
+    "line": "STACK32LINE"
+  },
+  {
+    "code": "WO-STACK32-0002",
+    "material": "STACK-3",
+    "quantity": 260,
+    "priority": 10,
+    "release": false,
+    "line": "STACK32LINE"
+  },
+  {
+    "code": "WO-WRAP01-0001",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": true,
+    "line": "WRAP01LINE",
+    "issue": {
+      "lot": "LOT-PLATE-WRAP01-001",
+      "quantity": 520.8,
+      "seq": 10
+    }
+  },
+  {
+    "code": "WO-WRAP01-0002",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": false,
+    "line": "WRAP01LINE"
+  },
+  {
+    "code": "WO-WRAP02-0001",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": true,
+    "line": "WRAP02LINE",
+    "issue": {
+      "lot": "LOT-PLATE-WRAP02-001",
+      "quantity": 520.8,
+      "seq": 10
+    }
+  },
+  {
+    "code": "WO-WRAP02-0002",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": false,
+    "line": "WRAP02LINE"
+  },
+  {
+    "code": "WO-WRAP03-0001",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": true,
+    "line": "WRAP03LINE",
+    "issue": {
+      "lot": "LOT-PLATE-WRAP03-001",
+      "quantity": 520.8,
+      "seq": 10
+    }
+  },
+  {
+    "code": "WO-WRAP03-0002",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": false,
+    "line": "WRAP03LINE"
+  },
+  {
+    "code": "WO-WRAP04-0001",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": true,
+    "line": "WRAP04LINE",
+    "issue": {
+      "lot": "LOT-PLATE-WRAP04-001",
+      "quantity": 520.8,
+      "seq": 10
+    }
+  },
+  {
+    "code": "WO-WRAP04-0002",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": false,
+    "line": "WRAP04LINE"
+  },
+  {
+    "code": "WO-WRAP05-0001",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": true,
+    "line": "WRAP05LINE",
+    "issue": {
+      "lot": "LOT-PLATE-WRAP05-001",
+      "quantity": 520.8,
+      "seq": 10
+    }
+  },
+  {
+    "code": "WO-WRAP05-0002",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": false,
+    "line": "WRAP05LINE"
+  },
+  {
+    "code": "WO-WRAP06-0001",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": true,
+    "line": "WRAP06LINE",
+    "issue": {
+      "lot": "LOT-PLATE-WRAP06-001",
+      "quantity": 520.8,
+      "seq": 10
+    }
+  },
+  {
+    "code": "WO-WRAP06-0002",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": false,
+    "line": "WRAP06LINE"
+  },
+  {
+    "code": "WO-WRAP07-0001",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": true,
+    "line": "WRAP07LINE",
+    "issue": {
+      "lot": "LOT-PLATE-WRAP07-001",
+      "quantity": 520.8,
+      "seq": 10
+    }
+  },
+  {
+    "code": "WO-WRAP07-0002",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": false,
+    "line": "WRAP07LINE"
+  },
+  {
+    "code": "WO-WRAP08-0001",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": true,
+    "line": "WRAP08LINE",
+    "issue": {
+      "lot": "LOT-PLATE-WRAP08-001",
+      "quantity": 520.8,
+      "seq": 10
+    }
+  },
+  {
+    "code": "WO-WRAP08-0002",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": false,
+    "line": "WRAP08LINE"
+  },
+  {
+    "code": "WO-WRAP09-0001",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": true,
+    "line": "WRAP09LINE",
+    "issue": {
+      "lot": "LOT-PLATE-WRAP09-001",
+      "quantity": 520.8,
+      "seq": 10
+    }
+  },
+  {
+    "code": "WO-WRAP09-0002",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": false,
+    "line": "WRAP09LINE"
+  },
+  {
+    "code": "WO-WRAP10-0001",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": true,
+    "line": "WRAP10LINE",
+    "issue": {
+      "lot": "LOT-PLATE-WRAP10-001",
+      "quantity": 520.8,
+      "seq": 10
+    }
+  },
+  {
+    "code": "WO-WRAP10-0002",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": false,
+    "line": "WRAP10LINE"
+  },
+  {
+    "code": "WO-WRAP11-0001",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": true,
+    "line": "WRAP11LINE",
+    "issue": {
+      "lot": "LOT-PLATE-WRAP11-001",
+      "quantity": 520.8,
+      "seq": 10
+    }
+  },
+  {
+    "code": "WO-WRAP11-0002",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": false,
+    "line": "WRAP11LINE"
+  },
+  {
+    "code": "WO-WRAP12-0001",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": true,
+    "line": "WRAP12LINE",
+    "issue": {
+      "lot": "LOT-PLATE-WRAP12-001",
+      "quantity": 520.8,
+      "seq": 10
+    }
+  },
+  {
+    "code": "WO-WRAP12-0002",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": false,
+    "line": "WRAP12LINE"
+  },
+  {
+    "code": "WO-WRAP13-0001",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": true,
+    "line": "WRAP13LINE",
+    "issue": {
+      "lot": "LOT-PLATE-WRAP13-001",
+      "quantity": 520.8,
+      "seq": 10
+    }
+  },
+  {
+    "code": "WO-WRAP13-0002",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": false,
+    "line": "WRAP13LINE"
+  },
+  {
+    "code": "WO-WRAP14-0001",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": true,
+    "line": "WRAP14LINE",
+    "issue": {
+      "lot": "LOT-PLATE-WRAP14-001",
+      "quantity": 520.8,
+      "seq": 10
+    }
+  },
+  {
+    "code": "WO-WRAP14-0002",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": false,
+    "line": "WRAP14LINE"
+  },
+  {
+    "code": "WO-WRAP15-0001",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": true,
+    "line": "WRAP15LINE",
+    "issue": {
+      "lot": "LOT-PLATE-WRAP15-001",
+      "quantity": 520.8,
+      "seq": 10
+    }
+  },
+  {
+    "code": "WO-WRAP15-0002",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": false,
+    "line": "WRAP15LINE"
+  },
+  {
+    "code": "WO-WRAP16-0001",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": true,
+    "line": "WRAP16LINE",
+    "issue": {
+      "lot": "LOT-PLATE-WRAP16-001",
+      "quantity": 520.8,
+      "seq": 10
+    }
+  },
+  {
+    "code": "WO-WRAP16-0002",
+    "material": "WRAP",
+    "quantity": 520,
+    "priority": 10,
+    "release": false,
+    "line": "WRAP16LINE"
+  },
+  {
+    "code": "WO-PAL1-0001",
+    "material": "PALLET",
+    "quantity": 8,
+    "priority": 10,
+    "release": true,
+    "line": "PAL1LINE"
+  },
+  {
+    "code": "WO-PAL1-0002",
+    "material": "PALLET",
+    "quantity": 8,
+    "priority": 10,
+    "release": false,
+    "line": "PAL1LINE"
+  },
+  {
+    "code": "WO-PAL2-0001",
+    "material": "PALLET",
+    "quantity": 8,
+    "priority": 10,
+    "release": true,
+    "line": "PAL2LINE"
+  },
+  {
+    "code": "WO-PAL2-0002",
+    "material": "PALLET",
+    "quantity": 8,
+    "priority": 10,
+    "release": false,
+    "line": "PAL2LINE"
+  },
+  {
+    "code": "WO-PAL3-0001",
+    "material": "PALLET",
+    "quantity": 8,
+    "priority": 10,
+    "release": true,
+    "line": "PAL3LINE"
+  },
+  {
+    "code": "WO-PAL3-0002",
+    "material": "PALLET",
+    "quantity": 8,
+    "priority": 10,
+    "release": false,
+    "line": "PAL3LINE"
+  },
+  {
+    "code": "WO-PAL4-0001",
+    "material": "PALLET",
+    "quantity": 8,
+    "priority": 10,
+    "release": true,
+    "line": "PAL4LINE"
+  },
+  {
+    "code": "WO-PAL4-0002",
+    "material": "PALLET",
+    "quantity": 8,
+    "priority": 10,
+    "release": false,
+    "line": "PAL4LINE"
+  }
+]

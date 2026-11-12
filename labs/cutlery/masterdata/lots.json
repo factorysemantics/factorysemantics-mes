@@ -1,0 +1,127 @@
+[
+  {
+    "code": "LOT-PP-FORK1-001",
+    "material": "RAW-PP",
+    "quantity": 4500
+  },
+  {
+    "code": "LOT-PP-FORK2-001",
+    "material": "RAW-PP",
+    "quantity": 4500
+  },
+  {
+    "code": "LOT-PP-FORK3-001",
+    "material": "RAW-PP",
+    "quantity": 4500
+  },
+  {
+    "code": "LOT-PP-SPOON1-001",
+    "material": "RAW-PP",
+    "quantity": 4500
+  },
+  {
+    "code": "LOT-PP-SPOON2-001",
+    "material": "RAW-PP",
+    "quantity": 4500
+  },
+  {
+    "code": "LOT-PP-SPOON3-001",
+    "material": "RAW-PP",
+    "quantity": 4500
+  },
+  {
+    "code": "LOT-PP-KNIFE1-001",
+    "material": "RAW-PP",
+    "quantity": 4500
+  },
+  {
+    "code": "LOT-PP-KNIFE2-001",
+    "material": "RAW-PP",
+    "quantity": 4500
+  },
+  {
+    "code": "LOT-PP-KNIFE3-001",
+    "material": "RAW-PP",
+    "quantity": 4500
+  },
+  {
+    "code": "LOT-PLATE-WRAP01-001",
+    "material": "RAW-PLATE",
+    "quantity": 187488
+  },
+  {
+    "code": "LOT-PLATE-WRAP02-001",
+    "material": "RAW-PLATE",
+    "quantity": 187488
+  },
+  {
+    "code": "LOT-PLATE-WRAP03-001",
+    "material": "RAW-PLATE",
+    "quantity": 187488
+  },
+  {
+    "code": "LOT-PLATE-WRAP04-001",
+    "material": "RAW-PLATE",
+    "quantity": 187488
+  },
+  {
+    "code": "LOT-PLATE-WRAP05-001",
+    "material": "RAW-PLATE",
+    "quantity": 187488
+  },
+  {
+    "code": "LOT-PLATE-WRAP06-001",
+    "material": "RAW-PLATE",
+    "quantity": 187488
+  },
+  {
+    "code": "LOT-PLATE-WRAP07-001",
+    "material": "RAW-PLATE",
+    "quantity": 187488
+  },
+  {
+    "code": "LOT-PLATE-WRAP08-001",
+    "material": "RAW-PLATE",
+    "quantity": 187488
+  },
+  {
+    "code": "LOT-PLATE-WRAP09-001",
+    "material": "RAW-PLATE",
+    "quantity": 187488
+  },
+  {
+    "code": "LOT-PLATE-WRAP10-001",
+    "material": "RAW-PLATE",
+    "quantity": 187488
+  },
+  {
+    "code": "LOT-PLATE-WRAP11-001",
+    "material": "RAW-PLATE",
+    "quantity": 187488
+  },
+  {
+    "code": "LOT-PLATE-WRAP12-001",
+    "material": "RAW-PLATE",
+    "quantity": 187488
+  },
+  {
+    "code": "LOT-PLATE-WRAP13-001",
+    "material": "RAW-PLATE",
+    "quantity": 187488
+  },
+  {
+    "code": "LOT-PLATE-WRAP14-001",
+    "material": "RAW-PLATE",
+    "quantity": 187488
+  },
+  {
+    "code": "LOT-PLATE-WRAP15-001",
+    "material": "RAW-PLATE",
+    "quantity": 187488
+  },
+  {
+    "code": "LOT-PLATE-WRAP16-001",
+    "material": "RAW-PLATE",
+    "quantity": 187488
+  }
+]
