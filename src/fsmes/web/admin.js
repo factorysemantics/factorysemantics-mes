@@ -224,7 +224,10 @@ function renderRoutings() {
     row.appendChild(el("td", null, r.name));
     row.appendChild(el("td", null, r.material));
     row.appendChild(el("td", "muted",
-      r.operations.map((o) => `${o.seq} ${o.name} @ ${o.equipment}`).join("  →  ")));
+      r.operations.map((o) => {
+        const cc = equipment.find((e) => e.code === o.equipment)?.cost_center;
+        return `${o.seq} ${o.name} @ ${o.equipment} (cost center ${cc || "unknown"})`;
+      }).join("  →  ")));
     body.appendChild(row);
   }
   $("#routing-count").textContent = window.FS.countText(page, routings.length);
@@ -240,7 +243,7 @@ function addOperationRow(seq) {
   const machine = el("select");
   machine.name = "op-equipment";
   for (const e of equipment) {
-    const opt = el("option", null, `${e.code} — ${e.name}`);
+    const opt = el("option", null, `${e.code} — ${e.name} · cost center ${e.cost_center || "unknown"}`);
     opt.value = e.code;
     machine.appendChild(opt);
   }
@@ -373,12 +376,19 @@ async function refresh() {
   $("#admin-main").classList.toggle("hidden", !allowed);
   if (!allowed) { FS.live(true); return; }
 
-  const [caps, mats, equip] = await Promise.all([
-    api("/admin/capabilities"), api("/masterdata/materials"), api("/masterdata/equipment"),
-  ]);
-  capabilities = caps.capabilities;
-  materials = mats;
-  equipment = equip;
+  let caps, mats, equip;
+  try {
+    [caps, mats, equip] = await Promise.all([
+      api("/admin/capabilities"), api("/masterdata/materials"), api("/masterdata/equipment"),
+    ]);
+    capabilities = caps.capabilities;
+    materials = mats;
+    equipment = equip;
+  } catch (err) {
+    FS.live(false);
+    toast("Could not load materials and machines — reload the page, or ask an admin to check the plant is running.", "bad");
+    return;
+  }
 
   renderCapabilityChecks();
   const select = $("#routing-material");

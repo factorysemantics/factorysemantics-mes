@@ -255,3 +255,20 @@ def test_the_new_order_button_still_opens_the_form_the_gate_left_closed(browser,
             timeout=WITHIN_MS)
     finally:
         page.close()
+
+
+def test_the_routing_form_names_each_machines_cost_center_in_its_drop_down(browser, plant):
+    page = browser.new_page()
+    try:
+        page.goto(f"{plant}/dashboard/admin", wait_until="load", timeout=30000)
+        page.wait_for_function(
+            "() => document.querySelector('select[name=\"op-equipment\"] option')",
+            timeout=WITHIN_MS)
+        options = page.eval_on_selector_all(
+            "select[name=\"op-equipment\"] option",
+            "els => els.map(e => e.textContent)")
+        assert len(options) >= 1, "no machine options found"
+        for text in options:
+            assert "cost center" in text, f"option text missing 'cost center': {text!r}"
+    finally:
+        page.close()
