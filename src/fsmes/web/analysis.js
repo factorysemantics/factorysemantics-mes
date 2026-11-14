@@ -48,10 +48,30 @@ const pct = (v) => (v === null || v === undefined ? "—" : Math.round(v * 100) 
 const num = (v) => (v === null || v === undefined ? "—" : Math.round(v).toLocaleString());
 
 /* ---------- OEE by station ---------- */
+/* The `line=` that means every machine in the plant. */
+const ALL_LINES = "*";
+
 function renderOee(data) {
   const host = $("#oee");
   host.replaceChildren();
+  // Plant-wide, the list is a ranking across lines, so each row says which
+  // line it is on - a Line column, and a head over the columns to say so.
+  const plantWide = data.line.code === ALL_LINES;
+  host.classList.toggle("plant-wide", plantWide);
   if (!data.stations.length) return empty(host, "No machines on this line.");
+
+  if (plantWide) {
+    const head = document.createElement("div");
+    head.className = "oee-row oee-head";
+    for (const [text, cls] of [["Machine", "who"], ["Line", "line"],
+                               ["Where the shift went", "bar-head"], ["OEE", "score"]]) {
+      const h = document.createElement("div");
+      h.className = cls;
+      h.textContent = text;
+      head.appendChild(h);
+    }
+    host.appendChild(head);
+  }
 
   for (const s of data.stations) {
     const row = document.createElement("div");
@@ -124,7 +144,20 @@ function renderOee(data) {
       (s.performance_note ? `\nPerformance: ${s.performance_note}` : "") +
       `\nWatched ${pct(s.coverage)} of the window`;
 
-    row.append(who, bar, score);
+    if (plantWide) {
+      const line = document.createElement("div");
+      line.className = "line";
+      const lineCode = document.createElement("span");
+      lineCode.className = "code";
+      lineCode.textContent = s.line_code;
+      const lineName = document.createElement("span");
+      lineName.className = "name";
+      lineName.textContent = s.line_name;
+      line.append(lineCode, lineName);
+      row.append(who, line, bar, score);
+    } else {
+      row.append(who, bar, score);
+    }
     // How much of the window anybody watched, on the row itself and not only
     // in a tooltip. A waterfall drawn over eleven observed minutes of a shift
     // is not a smaller waterfall, and nothing else on this row says so.
@@ -159,6 +192,15 @@ function renderOee(data) {
       row.appendChild(flag);
     }
     host.appendChild(row);
+  }
+  if (plantWide) {
+    // Every list states its total, and a ranking says how it is ordered.
+    const foot = document.createElement("p");
+    foot.className = "oee-total muted";
+    const unrated = data.stations.length - data.stations_rated;
+    foot.textContent = `${data.machines_total} machines across every line, worst OEE first` +
+      (unrated ? ` · ${unrated} with no figure, listed last` : "");
+    host.appendChild(foot);
   }
 }
 
@@ -603,12 +645,18 @@ async function boot() {
   await FS.whoami().catch(() => {});
   const lines = await api("/analysis/lines");
   const select = $("#line");
-  select.replaceChildren(
-    ...lines.map((l) => new Option(`${l.code} — ${l.name} (${l.stations})`, l.code))
-  );
+  // "All machines" first: every machine in the plant ranked worst OEE first,
+  // the question a supervisor asks before the one about any single line. Not
+  // the default - a screen handed over with no line still opens on the first
+  // line, as it always has.
+  const total = lines.reduce((n, l) => n + l.stations, 0);
+  const options = lines.map((l) => new Option(`${l.code} — ${l.name} (${l.stations})`, l.code));
+  if (lines.length) options.unshift(new Option(`All machines (${total})`, ALL_LINES));
+  select.replaceChildren(...options);
   const params = new URL(window.location).searchParams;
   const wanted = params.get("line");
-  state.line = lines.some((l) => l.code === wanted) ? wanted : (lines.length ? lines[0].code : null);
+  state.line = (wanted === ALL_LINES && lines.length) || lines.some((l) => l.code === wanted)
+    ? wanted : (lines.length ? lines[0].code : null);
   if (state.line) select.value = state.line;
 
   const askedHours = parseFloat(params.get("hours"));
