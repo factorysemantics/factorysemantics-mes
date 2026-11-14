@@ -1,0 +1,23 @@
+{
+  "units": "m",
+  "frame": {
+    "x": "FreeCAD X",
+    "z": "-FreeCAD Y",
+    "y": "up",
+    "front": "-Z",
+    "rot": "degrees about vertical, CCW from above"
+  },
+  "source": "studio's cutlery plant design (layout.json), delivered 2026-11-12; frame x = plant X, z = -plant Y",
+  "line": "WRAP16",
+  "cells": [
+    {
+      "code": "WRAP16_Wrapper",
+      "line": "WRAP16",
+      "x": 48.4,
+      "z": -59.5,
+      "rot": 0.0,
+      "model": "wrapper.glb",
+      "kind": "Wrapper"
+    }
+  ]
+}

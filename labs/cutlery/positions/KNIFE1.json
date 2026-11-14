@@ -1,0 +1,41 @@
+{
+  "units": "m",
+  "frame": {
+    "x": "FreeCAD X",
+    "z": "-FreeCAD Y",
+    "y": "up",
+    "front": "-Z",
+    "rot": "degrees about vertical, CCW from above"
+  },
+  "source": "studio's cutlery plant design (layout.json), delivered 2026-11-12; frame x = plant X, z = -plant Y",
+  "line": "KNIFE1",
+  "cells": [
+    {
+      "code": "KNIFE1_Mold",
+      "line": "KNIFE1",
+      "x": 13.8,
+      "z": -53.6,
+      "rot": 0.0,
+      "model": "mold.glb",
+      "kind": "Mold"
+    },
+    {
+      "code": "KNIFE1_Degate",
+      "line": "KNIFE1",
+      "x": 20.2,
+      "z": -51.6,
+      "rot": 0.0,
+      "model": "degate.glb",
+      "kind": "Degate"
+    },
+    {
+      "code": "KNIFE1_Mark",
+      "line": "KNIFE1",
+      "x": 24.0,
+      "z": -51.6,
+      "rot": 0.0,
+      "model": "mark.glb",
+      "kind": "Mark"
+    }
+  ]
+}
