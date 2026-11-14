@@ -220,6 +220,8 @@ Finally, `maintenance_plans.json` gains two optional fields of its own, `skill` 
 
 Rated cycle times are not repeated in the master data: leave `ideal_cycle_seconds` out and it is read from the pack's own tag map. OEE performance is ideal cycle × count ÷ runtime, so a rate that drifted from the line it describes produces a number that means nothing.
 
+**`cost_center` on an equipment entry** (2026-11-13) is where that node's work is billed. Set it once on a line and every machine under it inherits it — the routing rows, the ERP payload and the tag tree all read it through `services.masterdata.cost_center`. `fsmes pack check` refuses one that is not a code of 1 to 40 characters. Left out, the node inherits from above, and a tree that sets none says "cost center unknown".
+
 Applying is idempotent. Run it again and it makes nothing twice.
 
 ## `fsmes pack status`
