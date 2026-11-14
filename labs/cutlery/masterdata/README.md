@@ -50,6 +50,12 @@ and which are released. It also regenerates these files from the committed
   Stacking, Wrapping, Palletizing), 61 lines and **83 machines**. Rated cycle
   times are left out; they are read from `tag_map.json`, so OEE performance
   is measured against the same rate the line was generated at.
+- **61 cost centers**, one per line, set on the line and inherited by its
+  machines: `CC-<area><nn>`, the area `MOULD`, `STACK`, `WRAP` or `PAL` and
+  the line's place in that area in `line.json`'s order - `CC-MOULD01` is
+  FORK1, `CC-MOULD09` is KNIFE3, then `CC-STACK01` to `CC-STACK32`,
+  `CC-WRAP01` to `CC-WRAP16`, `CC-PAL01` to `CC-PAL04`. The routing rows on Setup > Admin > Routings
+  name them. `init.py`'s `COST_CENTER_PREFIX` is the scheme.
 - **8 materials**: the three utensils, the stack, the wrap, the pallet, and
   the two things consumed - polypropylene resin and paper plates.
 - **61 routings**, one per line, each a line's own stations in order.

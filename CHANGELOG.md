@@ -10,6 +10,15 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ## [Unreleased]
 
+### Added
+
+- **Every cutlery line bills to a cost center of its own.** The cutlery pack
+  sets one per line (`CC-MOULD01` ... `CC-PAL04`, scheme in
+  `labs/cutlery/masterdata/README.md`), so the routing rows on Setup > Admin
+  > Routings name a real one instead of "cost center unknown". A pack's
+  `equipment.json` may now carry `cost_center`; `fsmes pack apply` sets it and
+  `fsmes pack check` refuses one that is not a code of 1 to 40 characters.
+
 ## [0.5.0] — 2026-11-12
 
 ### Added

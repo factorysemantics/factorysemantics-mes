@@ -20,7 +20,8 @@
     "code": "FORK1LINE",
     "name": "Moulding line FORK1",
     "level": "work_center",
-    "parent": "MOULD-AREA"
+    "parent": "MOULD-AREA",
+    "cost_center": "CC-MOULD01"
   },
   {
     "code": "FORK1_Mold",
@@ -44,7 +45,8 @@
     "code": "FORK2LINE",
     "name": "Moulding line FORK2",
     "level": "work_center",
-    "parent": "MOULD-AREA"
+    "parent": "MOULD-AREA",
+    "cost_center": "CC-MOULD02"
   },
   {
     "code": "FORK2_Mold",
@@ -68,7 +70,8 @@
     "code": "FORK3LINE",
     "name": "Moulding line FORK3",
     "level": "work_center",
-    "parent": "MOULD-AREA"
+    "parent": "MOULD-AREA",
+    "cost_center": "CC-MOULD03"
   },
   {
     "code": "FORK3_Mold",
@@ -92,7 +95,8 @@
     "code": "SPOON1LINE",
     "name": "Moulding line SPOON1",
     "level": "work_center",
-    "parent": "MOULD-AREA"
+    "parent": "MOULD-AREA",
+    "cost_center": "CC-MOULD04"
   },
   {
     "code": "SPOON1_Mold",
@@ -116,7 +120,8 @@
     "code": "SPOON2LINE",
     "name": "Moulding line SPOON2",
     "level": "work_center",
-    "parent": "MOULD-AREA"
+    "parent": "MOULD-AREA",
+    "cost_center": "CC-MOULD05"
   },
   {
     "code": "SPOON2_Mold",
@@ -140,7 +145,8 @@
     "code": "SPOON3LINE",
     "name": "Moulding line SPOON3",
     "level": "work_center",
-    "parent": "MOULD-AREA"
+    "parent": "MOULD-AREA",
+    "cost_center": "CC-MOULD06"
   },
   {
     "code": "SPOON3_Mold",
@@ -164,7 +170,8 @@
     "code": "KNIFE1LINE",
     "name": "Moulding line KNIFE1",
     "level": "work_center",
-    "parent": "MOULD-AREA"
+    "parent": "MOULD-AREA",
+    "cost_center": "CC-MOULD07"
   },
   {
     "code": "KNIFE1_Mold",
@@ -188,7 +195,8 @@
     "code": "KNIFE2LINE",
     "name": "Moulding line KNIFE2",
     "level": "work_center",
-    "parent": "MOULD-AREA"
+    "parent": "MOULD-AREA",
+    "cost_center": "CC-MOULD08"
   },
   {
     "code": "KNIFE2_Mold",
@@ -212,7 +220,8 @@
     "code": "KNIFE3LINE",
     "name": "Moulding line KNIFE3",
     "level": "work_center",
-    "parent": "MOULD-AREA"
+    "parent": "MOULD-AREA",
+    "cost_center": "CC-MOULD09"
   },
   {
     "code": "KNIFE3_Mold",
@@ -242,7 +251,8 @@
     "code": "STACK01LINE",
     "name": "Stacking line STACK01",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK01"
   },
   {
     "code": "STACK01_Stacker",
@@ -254,7 +264,8 @@
     "code": "STACK02LINE",
     "name": "Stacking line STACK02",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK02"
   },
   {
     "code": "STACK02_Stacker",
@@ -266,7 +277,8 @@
     "code": "STACK03LINE",
     "name": "Stacking line STACK03",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK03"
   },
   {
     "code": "STACK03_Stacker",
@@ -278,7 +290,8 @@
     "code": "STACK04LINE",
     "name": "Stacking line STACK04",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK04"
   },
   {
     "code": "STACK04_Stacker",
@@ -290,7 +303,8 @@
     "code": "STACK05LINE",
     "name": "Stacking line STACK05",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK05"
   },
   {
     "code": "STACK05_Stacker",
@@ -302,7 +316,8 @@
     "code": "STACK06LINE",
     "name": "Stacking line STACK06",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK06"
   },
   {
     "code": "STACK06_Stacker",
@@ -314,7 +329,8 @@
     "code": "STACK07LINE",
     "name": "Stacking line STACK07",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK07"
   },
   {
     "code": "STACK07_Stacker",
@@ -326,7 +342,8 @@
     "code": "STACK08LINE",
     "name": "Stacking line STACK08",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK08"
   },
   {
     "code": "STACK08_Stacker",
@@ -338,7 +355,8 @@
     "code": "STACK09LINE",
     "name": "Stacking line STACK09",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK09"
   },
   {
     "code": "STACK09_Stacker",
@@ -350,7 +368,8 @@
     "code": "STACK10LINE",
     "name": "Stacking line STACK10",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK10"
   },
   {
     "code": "STACK10_Stacker",
@@ -362,7 +381,8 @@
     "code": "STACK11LINE",
     "name": "Stacking line STACK11",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK11"
   },
   {
     "code": "STACK11_Stacker",
@@ -374,7 +394,8 @@
     "code": "STACK12LINE",
     "name": "Stacking line STACK12",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK12"
   },
   {
     "code": "STACK12_Stacker",
@@ -386,7 +407,8 @@
     "code": "STACK13LINE",
     "name": "Stacking line STACK13",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK13"
   },
   {
     "code": "STACK13_Stacker",
@@ -398,7 +420,8 @@
     "code": "STACK14LINE",
     "name": "Stacking line STACK14",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK14"
   },
   {
     "code": "STACK14_Stacker",
@@ -410,7 +433,8 @@
     "code": "STACK15LINE",
     "name": "Stacking line STACK15",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK15"
   },
   {
     "code": "STACK15_Stacker",
@@ -422,7 +446,8 @@
     "code": "STACK16LINE",
     "name": "Stacking line STACK16",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK16"
   },
   {
     "code": "STACK16_Stacker",
@@ -434,7 +459,8 @@
     "code": "STACK17LINE",
     "name": "Stacking line STACK17",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK17"
   },
   {
     "code": "STACK17_Stacker",
@@ -446,7 +472,8 @@
     "code": "STACK18LINE",
     "name": "Stacking line STACK18",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK18"
   },
   {
     "code": "STACK18_Stacker",
@@ -458,7 +485,8 @@
     "code": "STACK19LINE",
     "name": "Stacking line STACK19",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK19"
   },
   {
     "code": "STACK19_Stacker",
@@ -470,7 +498,8 @@
     "code": "STACK20LINE",
     "name": "Stacking line STACK20",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK20"
   },
   {
     "code": "STACK20_Stacker",
@@ -482,7 +511,8 @@
     "code": "STACK21LINE",
     "name": "Stacking line STACK21",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK21"
   },
   {
     "code": "STACK21_Stacker",
@@ -494,7 +524,8 @@
     "code": "STACK22LINE",
     "name": "Stacking line STACK22",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK22"
   },
   {
     "code": "STACK22_Stacker",
@@ -506,7 +537,8 @@
     "code": "STACK23LINE",
     "name": "Stacking line STACK23",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK23"
   },
   {
     "code": "STACK23_Stacker",
@@ -518,7 +550,8 @@
     "code": "STACK24LINE",
     "name": "Stacking line STACK24",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK24"
   },
   {
     "code": "STACK24_Stacker",
@@ -530,7 +563,8 @@
     "code": "STACK25LINE",
     "name": "Stacking line STACK25",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK25"
   },
   {
     "code": "STACK25_Stacker",
@@ -542,7 +576,8 @@
     "code": "STACK26LINE",
     "name": "Stacking line STACK26",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK26"
   },
   {
     "code": "STACK26_Stacker",
@@ -554,7 +589,8 @@
     "code": "STACK27LINE",
     "name": "Stacking line STACK27",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK27"
   },
   {
     "code": "STACK27_Stacker",
@@ -566,7 +602,8 @@
     "code": "STACK28LINE",
     "name": "Stacking line STACK28",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK28"
   },
   {
     "code": "STACK28_Stacker",
@@ -578,7 +615,8 @@
     "code": "STACK29LINE",
     "name": "Stacking line STACK29",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK29"
   },
   {
     "code": "STACK29_Stacker",
@@ -590,7 +628,8 @@
     "code": "STACK30LINE",
     "name": "Stacking line STACK30",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK30"
   },
   {
     "code": "STACK30_Stacker",
@@ -602,7 +641,8 @@
     "code": "STACK31LINE",
     "name": "Stacking line STACK31",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK31"
   },
   {
     "code": "STACK31_Stacker",
@@ -614,7 +654,8 @@
     "code": "STACK32LINE",
     "name": "Stacking line STACK32",
     "level": "work_center",
-    "parent": "STACK-AREA"
+    "parent": "STACK-AREA",
+    "cost_center": "CC-STACK32"
   },
   {
     "code": "STACK32_Stacker",
@@ -632,7 +673,8 @@
     "code": "WRAP01LINE",
     "name": "Wrapping line WRAP01",
     "level": "work_center",
-    "parent": "WRAP-AREA"
+    "parent": "WRAP-AREA",
+    "cost_center": "CC-WRAP01"
   },
   {
     "code": "WRAP01_Wrapper",
@@ -644,7 +686,8 @@
     "code": "WRAP02LINE",
     "name": "Wrapping line WRAP02",
     "level": "work_center",
-    "parent": "WRAP-AREA"
+    "parent": "WRAP-AREA",
+    "cost_center": "CC-WRAP02"
   },
   {
     "code": "WRAP02_Wrapper",
@@ -656,7 +699,8 @@
     "code": "WRAP03LINE",
     "name": "Wrapping line WRAP03",
     "level": "work_center",
-    "parent": "WRAP-AREA"
+    "parent": "WRAP-AREA",
+    "cost_center": "CC-WRAP03"
   },
   {
     "code": "WRAP03_Wrapper",
@@ -668,7 +712,8 @@
     "code": "WRAP04LINE",
     "name": "Wrapping line WRAP04",
     "level": "work_center",
-    "parent": "WRAP-AREA"
+    "parent": "WRAP-AREA",
+    "cost_center": "CC-WRAP04"
   },
   {
     "code": "WRAP04_Wrapper",
@@ -680,7 +725,8 @@
     "code": "WRAP05LINE",
     "name": "Wrapping line WRAP05",
     "level": "work_center",
-    "parent": "WRAP-AREA"
+    "parent": "WRAP-AREA",
+    "cost_center": "CC-WRAP05"
   },
   {
     "code": "WRAP05_Wrapper",
@@ -692,7 +738,8 @@
     "code": "WRAP06LINE",
     "name": "Wrapping line WRAP06",
     "level": "work_center",
-    "parent": "WRAP-AREA"
+    "parent": "WRAP-AREA",
+    "cost_center": "CC-WRAP06"
   },
   {
     "code": "WRAP06_Wrapper",
@@ -704,7 +751,8 @@
     "code": "WRAP07LINE",
     "name": "Wrapping line WRAP07",
     "level": "work_center",
-    "parent": "WRAP-AREA"
+    "parent": "WRAP-AREA",
+    "cost_center": "CC-WRAP07"
   },
   {
     "code": "WRAP07_Wrapper",
@@ -716,7 +764,8 @@
     "code": "WRAP08LINE",
     "name": "Wrapping line WRAP08",
     "level": "work_center",
-    "parent": "WRAP-AREA"
+    "parent": "WRAP-AREA",
+    "cost_center": "CC-WRAP08"
   },
   {
     "code": "WRAP08_Wrapper",
@@ -728,7 +777,8 @@
     "code": "WRAP09LINE",
     "name": "Wrapping line WRAP09",
     "level": "work_center",
-    "parent": "WRAP-AREA"
+    "parent": "WRAP-AREA",
+    "cost_center": "CC-WRAP09"
   },
   {
     "code": "WRAP09_Wrapper",
@@ -740,7 +790,8 @@
     "code": "WRAP10LINE",
     "name": "Wrapping line WRAP10",
     "level": "work_center",
-    "parent": "WRAP-AREA"
+    "parent": "WRAP-AREA",
+    "cost_center": "CC-WRAP10"
   },
   {
     "code": "WRAP10_Wrapper",
@@ -752,7 +803,8 @@
     "code": "WRAP11LINE",
     "name": "Wrapping line WRAP11",
     "level": "work_center",
-    "parent": "WRAP-AREA"
+    "parent": "WRAP-AREA",
+    "cost_center": "CC-WRAP11"
   },
   {
     "code": "WRAP11_Wrapper",
@@ -764,7 +816,8 @@
     "code": "WRAP12LINE",
     "name": "Wrapping line WRAP12",
     "level": "work_center",
-    "parent": "WRAP-AREA"
+    "parent": "WRAP-AREA",
+    "cost_center": "CC-WRAP12"
   },
   {
     "code": "WRAP12_Wrapper",
@@ -776,7 +829,8 @@
     "code": "WRAP13LINE",
     "name": "Wrapping line WRAP13",
     "level": "work_center",
-    "parent": "WRAP-AREA"
+    "parent": "WRAP-AREA",
+    "cost_center": "CC-WRAP13"
   },
   {
     "code": "WRAP13_Wrapper",
@@ -788,7 +842,8 @@
     "code": "WRAP14LINE",
     "name": "Wrapping line WRAP14",
     "level": "work_center",
-    "parent": "WRAP-AREA"
+    "parent": "WRAP-AREA",
+    "cost_center": "CC-WRAP14"
   },
   {
     "code": "WRAP14_Wrapper",
@@ -800,7 +855,8 @@
     "code": "WRAP15LINE",
     "name": "Wrapping line WRAP15",
     "level": "work_center",
-    "parent": "WRAP-AREA"
+    "parent": "WRAP-AREA",
+    "cost_center": "CC-WRAP15"
   },
   {
     "code": "WRAP15_Wrapper",
@@ -812,7 +868,8 @@
     "code": "WRAP16LINE",
     "name": "Wrapping line WRAP16",
     "level": "work_center",
-    "parent": "WRAP-AREA"
+    "parent": "WRAP-AREA",
+    "cost_center": "CC-WRAP16"
   },
   {
     "code": "WRAP16_Wrapper",
@@ -830,7 +887,8 @@
     "code": "PAL1LINE",
     "name": "Palletizing line PAL1",
     "level": "work_center",
-    "parent": "PALLET-AREA"
+    "parent": "PALLET-AREA",
+    "cost_center": "CC-PAL01"
   },
   {
     "code": "PAL1_Palletizer",
@@ -848,7 +906,8 @@
     "code": "PAL2LINE",
     "name": "Palletizing line PAL2",
     "level": "work_center",
-    "parent": "PALLET-AREA"
+    "parent": "PALLET-AREA",
+    "cost_center": "CC-PAL02"
   },
   {
     "code": "PAL2_Palletizer",
@@ -866,7 +925,8 @@
     "code": "PAL3LINE",
     "name": "Palletizing line PAL3",
     "level": "work_center",
-    "parent": "PALLET-AREA"
+    "parent": "PALLET-AREA",
+    "cost_center": "CC-PAL03"
   },
   {
     "code": "PAL3_Palletizer",
@@ -884,7 +944,8 @@
     "code": "PAL4LINE",
     "name": "Palletizing line PAL4",
     "level": "work_center",
-    "parent": "PALLET-AREA"
+    "parent": "PALLET-AREA",
+    "cost_center": "CC-PAL04"
   },
   {
     "code": "PAL4_Palletizer",

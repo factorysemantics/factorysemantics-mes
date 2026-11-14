@@ -114,7 +114,7 @@ def shape(session: Session) -> dict:
     """Everything about the plant either seeder is responsible for, as plain
     values, without ids (they say which row was written first, nothing more)."""
     equipment = {e.code: (e.name, e.level.value, e.parent.code if e.parent else None,
-                          e.ideal_cycle_seconds)
+                          e.ideal_cycle_seconds, e.cost_center)
                  for e in session.scalars(select(Equipment))}
     materials = {m.code: (m.name, m.unit, m.type.value, m.counted_in_pieces)
                  for m in session.scalars(select(Material))}

@@ -135,7 +135,10 @@ REQUIRED: dict[str, tuple[str, ...]] = {
 }
 
 OPTIONAL: dict[str, tuple[str, ...]] = {
-    "equipment": ("parent", "ideal_cycle_seconds"),
+    # `cost_center` is where this node's work is billed; everything under it
+    # inherits it (`services.masterdata.cost_center`), so a pack sets it once
+    # per line.
+    "equipment": ("parent", "ideal_cycle_seconds", "cost_center"),
     "materials": ("unit", "type", "counted_in_pieces"),
     "bom": ("operation_seq",),
     "routings": (),
@@ -420,6 +423,11 @@ def problems(directory: Path) -> list[str]:
         if parent and parent not in known_equipment:
             out.append(f"equipment.json #{index} hangs under {parent!r}, which "
                        "equipment.json does not declare.")
+        cost_center = row.get("cost_center")
+        if cost_center is not None and not (isinstance(cost_center, str)
+                                            and 0 < len(cost_center.strip()) <= 40):
+            out.append(f"equipment.json #{index} bills to {cost_center!r}; a cost center "
+                       "is a code of 1 to 40 characters.")
     for index, row in enumerate(data.rows("maintenance_plans"), start=1):
         machine = row.get("equipment")
         if machine and machine not in known_equipment:
@@ -726,6 +734,7 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
             level=EquipmentLevel(row["level"]),
             parent=equipment.get(row.get("parent")),
             ideal_cycle_seconds=row.get("ideal_cycle_seconds", cycles.get(code)),
+            cost_center=row.get("cost_center"),
         )
         session.add(made)
         equipment[code] = made
