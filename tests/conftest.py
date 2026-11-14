@@ -233,3 +233,126 @@ def admin(sign_in):
 @pytest.fixture()
 def supervisor(sign_in):
     return sign_in("SUPER", role="supervisor")
+
+
+# ------------------------------------------------------- the shared live plant
+#
+# A browser test needs a plant answering over HTTP, which the in-memory
+# database above cannot give it: the server answers on its own threads and
+# must open the same rows. Thirty-five test files each grew their own copy of
+# the code below (`tests/test_browser_tests_share_one_server.py` holds the
+# list). New browser tests use `live_server`, or `serve_plant` when they need
+# rows of their own; neither starts anything a person is running.
+
+
+class LiveServer:
+    """A plant served on a loopback port of the operating system's choosing.
+
+    `base` is its address, `engine` its database (a file under the run's
+    temporary directory), and `sign_in(context)` signs a Playwright browser
+    context in, as the seeded ADMIN unless told otherwise, the way a person's
+    browser is: the login sets an HttpOnly cookie that Playwright shares
+    between its request jar and its pages.
+    """
+
+    def __init__(self, base: str, engine: Engine) -> None:
+        self.base = base
+        self.engine = engine
+
+    def sign_in(self, context, code: str = "ADMIN", password: str = "admin") -> None:
+        import json
+
+        reply = context.request.post(
+            f"{self.base}/auth/login",
+            data=json.dumps({"code": code, "password": password}),
+            headers={"Content-Type": "application/json"})
+        assert reply.ok, f"sign-in as {code} failed: {reply.status}"
+
+
+def _wait_until_answering(base: str, seconds: float = 20.0) -> None:
+    import time
+    import urllib.error
+    import urllib.request
+
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        try:
+            with urllib.request.urlopen(f"{base}/health", timeout=1) as reply:
+                if reply.status == 200:
+                    return
+        except (urllib.error.URLError, OSError):
+            time.sleep(0.1)
+    raise AssertionError(f"the plant at {base} never answered /health")
+
+
+@contextmanager
+def _serve(directory, seed=None):
+    """Seed the demo plant (and `seed(session)`, if given) into a file
+    database under `directory` and serve it until the block ends."""
+    import socket
+    import threading
+
+    import uvicorn
+
+    from fsmes import config, db
+    from fsmes.db import make_engine
+
+    url = f"sqlite:///{directory / 'plant.db'}"
+    with pytest.MonkeyPatch.context() as env:
+        env.setenv("MES_DATABASE_URL", url)
+        config.get_settings.cache_clear()
+        db.get_engine.cache_clear()
+        db.get_sessionmaker.cache_clear()
+
+        engine = make_engine(url)
+        Base.metadata.create_all(engine)
+        with Session(engine, expire_on_commit=False) as s:
+            seed_demo_plant(s)
+            auth.ensure_builtin_roles(s)
+            if seed is not None:
+                seed(s)
+            s.commit()
+
+        sock = socket.socket()
+        sock.bind(("127.0.0.1", 0))
+        server = uvicorn.Server(uvicorn.Config(create_app(), log_level="warning", lifespan="on"))
+        thread = threading.Thread(target=lambda: server.run(sockets=[sock]), daemon=True)
+        thread.start()
+        try:
+            base = f"http://127.0.0.1:{sock.getsockname()[1]}"
+            _wait_until_answering(base)
+            yield LiveServer(base, engine)
+        finally:
+            server.should_exit = True
+            thread.join(timeout=10)
+            engine.dispose()
+
+    config.get_settings.cache_clear()
+    db.get_engine.cache_clear()
+    db.get_sessionmaker.cache_clear()
+
+
+@pytest.fixture(scope="session")
+def live_server(tmp_path_factory):
+    """The demo plant, served once for the whole run. Shared by every test
+    that asks for it, so a test that writes to it writes under codes of its
+    own and asserts only on those; a test that needs a plant shaped its own
+    way uses `serve_plant` instead. `MES_DATABASE_URL` points at it until the
+    run ends, as it did for the length of a module in the copies this
+    replaces; a test that needs it unset sets its own."""
+    with _serve(tmp_path_factory.mktemp("live-server")) as served:
+        yield served
+
+
+@pytest.fixture(scope="session")
+def serve_plant(tmp_path_factory):
+    """`with serve_plant(seed) as plant:` - a plant of this test's own: the
+    demo plant plus whatever `seed(session)` adds, served until the block
+    ends. Call it from a module-scoped fixture."""
+
+    @contextmanager
+    def _serve_plant(seed=None, name: str = "plant"):
+        with _serve(tmp_path_factory.mktemp(name), seed) as served:
+            yield served
+
+    return _serve_plant
