@@ -41,6 +41,7 @@ from sqlalchemy.orm import Session
 pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
 MACHINE = "MIX01"
+LINE_COST_CENTER = "CC-PKG1"
 WEB = Path(__file__).resolve().parent.parent / "src" / "fsmes" / "web"
 #: Longer than the slowest screen's refresh interval (the floor's and the
 #: station's are a few seconds; most screens read once), and well inside the
@@ -82,7 +83,8 @@ def _wait_until_answering(base: str, seconds: float = 20.0) -> None:
 @pytest.fixture(scope="module")
 def plant(tmp_path_factory):
     """The demo plant, with the mixer reporting a state so the station and
-    machine screens have a machine to open."""
+    machine screens have a machine to open, and its line billing to a cost
+    center so the routing form has one to name."""
     import uvicorn
 
     from fsmes import config, db
@@ -107,6 +109,8 @@ def plant(tmp_path_factory):
             seed_demo_plant(session)
             auth.ensure_builtin_roles(session)
             mixer = session.scalar(select(Equipment).where(Equipment.code == MACHINE))
+            # Set once on the line, as a plant does; the mixer inherits it.
+            session.scalar(select(Equipment).where(Equipment.code == "LINE1")).cost_center = LINE_COST_CENTER
             session.add(EquipmentState(
                 equipment_id=mixer.id, state=EquipmentStateName.RUNNING,
                 started_at=utcnow() - timedelta(hours=1)))
@@ -253,5 +257,50 @@ def test_the_new_order_button_still_opens_the_form_the_gate_left_closed(browser,
         page.wait_for_function(
             "() => !document.getElementById('new-order-form').classList.contains('hidden')",
             timeout=WITHIN_MS)
+    finally:
+        page.close()
+
+
+MACHINE_OPTIONS = """
+() => [...document.querySelectorAll('select[name="op-equipment"] option')]
+        .map((o) => [o.value, o.textContent])
+"""
+
+
+def test_the_routing_form_names_each_machines_cost_center_in_its_drop_down(browser, plant):
+    # The engineer's walk, 2026-11-12 and -13: "I saw no cost center field on
+    # the operation row." The mixer has none of its own; its line has one, and
+    # that is the one its work bills to. The site above the line has
+    # none, and says so in words rather than a blank.
+    page = browser.new_page()
+    try:
+        page.goto(f"{plant}/dashboard/admin", wait_until="load", timeout=30000)
+        page.wait_for_function(
+            f"() => ({MACHINE_OPTIONS})().some(([v, t]) => v === {MACHINE!r} && t.includes('cost center'))",
+            timeout=WITHIN_MS)
+        options = dict(page.evaluate(MACHINE_OPTIONS))
+        assert options, "the machine drop-down is empty"
+        assert options[MACHINE].endswith(f"cost center {LINE_COST_CENTER}"), options[MACHINE]
+        assert options["LINE1"].endswith(f"cost center {LINE_COST_CENTER}"), options["LINE1"]
+        assert options["KC1"].endswith("cost center unknown"), options["KC1"]
+        assert all("cost center" in text for text in options.values()), options
+    finally:
+        page.close()
+
+
+@pytest.mark.parametrize("failing", ["/auth/me", "/masterdata/equipment"])
+def test_the_admin_page_says_it_could_not_load_when_the_plant_does_not_answer(browser, plant, failing):
+    # The same walk: the page "stayed on connecting…" with empty pickers and
+    # no word of why. Whichever of boot()'s reads fails, the person is told
+    # what to do next and the header dot stops saying "connecting…".
+    page = browser.new_page()
+    try:
+        page.route(f"**{failing}", lambda route: route.abort())
+        page.goto(f"{plant}/dashboard/admin", wait_until="load", timeout=30000)
+        page.wait_for_function(
+            "() => (document.getElementById('toast') || {}).textContent"
+            "?.startsWith('Could not load materials and machines')",
+            timeout=WITHIN_MS)
+        page.wait_for_function(DOT_SAYS, arg="reconnecting…", timeout=WITHIN_MS)
     finally:
         page.close()
