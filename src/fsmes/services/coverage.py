@@ -785,13 +785,10 @@ def totals_many(session: Session, equipment_ids: list[int], start: datetime,
         equipment_id: (max(start, first_seen[equipment_id]) if equipment_id in first_seen else end)
         for equipment_id in equipment_ids
     }
-    disconnected: dict[int, float] = {}
-    by_start: dict[datetime, list[int]] = defaultdict(list)
-    for equipment_id, from_ in watching_from.items():
-        if from_ < end:
-            by_start[from_].append(equipment_id)
-    for from_, batch in by_start.items():
-        disconnected.update(connection_service.unknown_seconds(session, batch, from_, end))
+    # One read for the plant, not one per first-seen moment: no two machines
+    # were first seen in the same microsecond, so batching by that moment was
+    # a query per machine (2026-11-13, the plant-wide OEE list).
+    disconnected = dict(connection_service.unknown_seconds_from(session, watching_from, end))
 
     for equipment_id in equipment_ids:
         totals = out[equipment_id]

@@ -57,7 +57,8 @@ router = APIRouter()
 _HOURS = Query(None, gt=0, le=720,
                description="Window size in hours (max 30 days). Left out, this "
                            "plant's own default reporting window.")
-_LINE = Query(None, description="Work centre code; omitted means the line with the most machines.")
+_LINE = Query(None, description="Work centre code; omitted means the line with the most machines; "
+                                "`*` means every machine in the plant.")
 _SHIFT = Query(
     None,
     description="Window by shift instead of hours: `current`, `previous`, "
@@ -119,6 +120,12 @@ def _between(start: datetime | None, end: datetime | None,
     return first, last
 
 
+def _file_part(line_code: str) -> str:
+    """A line's code as it goes into a file name: `*` is not a character a
+    Windows file name may hold, so the whole plant is `all-lines`."""
+    return "all-lines" if line_code == analysis.ALL_LINES else line_code
+
+
 @router.get("/lines")
 def lines(db: Session = Depends(get_read_db)) -> list[dict]:
     """Every work centre that has machines on it."""
@@ -137,7 +144,16 @@ def shifts(
 @router.get("/oee")
 def oee(line: str | None = _LINE, hours: float | None = _HOURS, shift: str | None = _SHIFT,
         db: Session = Depends(get_read_db)) -> dict:
-    """OEE per station with each loss named in units and seconds."""
+    """OEE per station with each loss named in units and seconds.
+
+    `line=*` is the whole plant: every machine under any line, each row
+    carrying its `line_code` and `line_name`, ranked worst OEE first with the
+    machines that have no figure listed after every rated one (unknown is not
+    zero, so it is not ranked as one). The rollup's `line` is then
+    `{"code": "*", "name": "All machines"}`. Left out, `line` is still the
+    line with the most machines, as it always was. One pass over the plant's
+    states and production, not one per line.
+    """
     return analysis.oee_breakdown(db, line_code=line, hours=hours, shift=shift)
 
 
@@ -145,6 +161,7 @@ def oee(line: str | None = _LINE, hours: float | None = _HOURS, shift: str | Non
 OEE_EXPORT = (
     export.Column("Station", "code"),
     export.Column("Name", "name"),
+    export.Column("Line", "line_code"),
     export.Column("OEE", "oee"),
     export.Column("Availability", "availability"),
     export.Column("Performance", "performance"),
@@ -169,11 +186,13 @@ def export_oee(line: str | None = _LINE, hours: float | None = _HOURS, shift: st
                db: Session = Depends(get_read_db)) -> Response:
     """OEE by station as a spreadsheet, for the window the panel shows.
 
-    Same picks as `GET /analysis/oee`. A station the MES cannot rate has its
-    figures empty and the reason in Note, as the panel says it.
+    Same picks as `GET /analysis/oee`, `line=*` included: the whole plant in
+    one sheet, worst first, each row's line in the Line column. A station the
+    MES cannot rate has its figures empty and the reason in Note, as the panel
+    says it.
     """
     out = analysis.oee_breakdown(db, line_code=line, hours=hours, shift=shift)
-    return export.spreadsheet(f"oee-by-station-{out['line']['code']}", "OEE by station",
+    return export.spreadsheet(f"oee-by-station-{_file_part(out['line']['code'])}", "OEE by station",
                               OEE_EXPORT, out["stations"], range_=export.window_span(out["window"]))
 
 
@@ -199,7 +218,7 @@ def export_downtime(line: str | None = _LINE, hours: float | None = _HOURS,
     each stop the pareto counted, so the column sums to its total.
     """
     out = analysis.downtime_events(db, line_code=line, hours=hours, shift=shift)
-    return export.spreadsheet(f"downtime-{out['line']['code']}", "Downtime", DOWNTIME_EXPORT,
+    return export.spreadsheet(f"downtime-{_file_part(out['line']['code'])}", "Downtime", DOWNTIME_EXPORT,
                               out["events"], range_=export.window_span(out["window"]))
 
 

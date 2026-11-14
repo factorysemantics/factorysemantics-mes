@@ -61,6 +61,24 @@
   gap: 12px;
 }
 .oee-row .who { display: flex; flex-direction: column; min-width: 0; }
+/* The whole plant: a Line column between the machine and its bar, and a head
+   over the columns, because a ranking across lines has to say whose row is
+   whose. */
+.oee-list.plant-wide .oee-row { grid-template-columns: 230px 150px 1fr 62px; }
+.oee-row .line { display: flex; flex-direction: column; min-width: 0; }
+.oee-row.oee-head {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.oee-row.oee-head .score { font-size: 11px; }
+.oee-total { font-size: 12px; margin: 4px 0 0; }
+@media (max-width: 640px) {
+  .oee-list.plant-wide .oee-row { grid-template-columns: 120px 90px 1fr 48px; gap: 8px; }
+  .oee-list.plant-wide .oee-row.is-constraint .who .code::after { display: block; margin: 2px 0 0; width: max-content; }
+}
 .oee-row .code { font-weight: 600; font-family: var(--mono); font-size: 13px; }
 .oee-row .name {
   font-size: 11px;
@@ -96,7 +114,7 @@
   color: var(--unknown);
 }
 .oee-row .watched.withheld { color: var(--idle); }
-.oee-row.is-constraint .code::after {
+.oee-row.is-constraint .who .code::after {
   content: "constraint";
   margin-left: 8px;
   font-size: 9px;
