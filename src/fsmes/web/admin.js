@@ -224,11 +224,31 @@ function renderRoutings() {
     row.appendChild(el("td", null, r.name));
     row.appendChild(el("td", null, r.material));
     row.appendChild(el("td", "muted",
-      r.operations.map((o) => `${o.seq} ${o.name} @ ${o.equipment}`).join("  →  ")));
+      r.operations.map((o) => `${o.seq} ${o.name} @ ${o.equipment} (cost center ${costCenterOf(o.equipment)})`)
+        .join("  →  ")));
     body.appendChild(row);
   }
   $("#routing-count").textContent = window.FS.countText(page, routings.length);
   window.FS.pager($("#r-pager"), page, (offset) => { routingOffset = offset; renderRoutings(); });
+}
+
+/* The cost center a machine's work bills to, the way the server reads it
+   (`services/masterdata.cost_center`): a machine with none takes its cell's,
+   a cell with none takes its line's. The engineer asked "which cost center
+   does this step bill to" while defining a routing (walk, 2026-11-12/13);
+   the plant sets it once per line, so the machine's own column is blank on
+   most plants and reading only that would say "unknown" for a step that does
+   bill somewhere. "unknown" only when nothing up the tree says. */
+function costCenterOf(code) {
+  const byCode = new Map(equipment.map((e) => [e.code, e]));
+  const seen = new Set();
+  let node = byCode.get(code);
+  while (node && !seen.has(node.code)) {
+    if (node.cost_center) return node.cost_center;
+    seen.add(node.code);
+    node = node.parent ? byCode.get(node.parent) : null;
+  }
+  return "unknown";
 }
 
 function addOperationRow(seq) {
@@ -240,7 +260,7 @@ function addOperationRow(seq) {
   const machine = el("select");
   machine.name = "op-equipment";
   for (const e of equipment) {
-    const opt = el("option", null, `${e.code} — ${e.name}`);
+    const opt = el("option", null, `${e.code} — ${e.name} · cost center ${costCenterOf(e.code)}`);
     opt.value = e.code;
     machine.appendChild(opt);
   }
@@ -363,22 +383,34 @@ async function refresh() {
   }
 }
 
+/* Every read boot() makes is inside the one try: with the plant down, the
+   first call that fails is `/auth/me`, and before this an uncaught rejection
+   there left the header on "connecting…" with empty pickers and no word of
+   why (the engineer's walk, 2026-11-13). Signed out is not a failure - api()
+   has already sent the browser to the sign-in page. */
 (async function boot() {
-  me = await api("/auth/me");
-  // Before any list is paged or any clock started.
-  ui = await window.FS.settings();
-  const allowed = (me.capabilities || []).includes("users.manage");
-  $("#denied-who").textContent = `${me.name} (${me.role})`;
-  $("#denied").classList.toggle("hidden", allowed);
-  $("#admin-main").classList.toggle("hidden", !allowed);
-  if (!allowed) { FS.live(true); return; }
+  try {
+    me = await api("/auth/me");
+    // Before any list is paged or any clock started.
+    ui = await window.FS.settings();
+    const allowed = (me.capabilities || []).includes("users.manage");
+    $("#denied-who").textContent = `${me.name} (${me.role})`;
+    $("#denied").classList.toggle("hidden", allowed);
+    $("#admin-main").classList.toggle("hidden", !allowed);
+    if (!allowed) { FS.live(true); return; }
 
-  const [caps, mats, equip] = await Promise.all([
-    api("/admin/capabilities"), api("/masterdata/materials"), api("/masterdata/equipment"),
-  ]);
-  capabilities = caps.capabilities;
-  materials = mats;
-  equipment = equip;
+    const [caps, mats, equip] = await Promise.all([
+      api("/admin/capabilities"), api("/masterdata/materials"), api("/masterdata/equipment"),
+    ]);
+    capabilities = caps.capabilities;
+    materials = mats;
+    equipment = equip;
+  } catch (err) {
+    if (err && err.message === "signed out") return;
+    FS.live(false);
+    toast("Could not load materials and machines — reload the page, or ask an admin to check the plant is running.", "bad");
+    return;
+  }
 
   renderCapabilityChecks();
   const select = $("#routing-material");
