@@ -65,6 +65,25 @@ SITE = ("CW1", "Cutlery Works")
 AREA_CODES = {"Moulding": "MOULD-AREA", "Stacking": "STACK-AREA",
               "Wrapping": "WRAP-AREA", "Palletizing": "PALLET-AREA"}
 
+# Where each line's work is billed: one cost center per line, named from its
+# area and its place in that area - CC-MOULD01 for the first moulding line,
+# CC-STACK32 for the last stacker. Set on the line; every machine under it
+# inherits it (`services.masterdata.cost_center`). The scheme is in README.md.
+COST_CENTER_PREFIX = {"Moulding": "CC-MOULD", "Stacking": "CC-STACK",
+                      "Wrapping": "CC-WRAP", "Palletizing": "CC-PAL"}
+
+
+def cost_centers(factory: dict) -> dict[str, str]:
+    """Each line's cost center, by line name, numbered in line.json's order."""
+    seen: dict[str, int] = {}
+    out: dict[str, str] = {}
+    for line_cfg in factory["lines"]:
+        area = line_cfg["_meta"]["area"]
+        seen[area] = seen.get(area, 0) + 1
+        out[line_cfg["name"]] = f"{COST_CENTER_PREFIX[area]}{seen[area]:02d}"
+    return out
+
+
 # Sized for a two-hour run at the nominal rate, so a scored hour never runs
 # out of order and a standing instance at 1x has an hour of slack.
 HOURS_OF_ORDER = 2.0
@@ -109,6 +128,7 @@ def seed(session: Session, scenario_dir: Path = HERE) -> dict | None:
 
     factory = json.loads((scenario_dir / "line.json").read_text(encoding="utf-8"))
     cycles = {m.equipment: m.cycle_seconds for m in load_tag_map(scenario_dir / "tag_map.json")}
+    billed_to = cost_centers(factory)
 
     enterprise = _get_or_create(session, ENTERPRISE[0], name=ENTERPRISE[1], level=EquipmentLevel.ENTERPRISE)
     site = _get_or_create(session, SITE[0], name=SITE[1], level=EquipmentLevel.SITE, parent=enterprise)
@@ -119,7 +139,8 @@ def seed(session: Session, scenario_dir: Path = HERE) -> dict | None:
         area = _get_or_create(session, AREA_CODES[meta["area"]], name=meta["area"],
                               level=EquipmentLevel.AREA, parent=site)
         centre = Equipment(code=f"{name}LINE", name=f"{meta['area']} line {name}",
-                           level=EquipmentLevel.WORK_CENTER, parent=area)
+                           level=EquipmentLevel.WORK_CENTER, parent=area,
+                           cost_center=billed_to[name])
         session.add(centre)
         stations: dict[str, Equipment] = {}
         for station in line_cfg["stations"]:
@@ -194,6 +215,7 @@ def masterdata_rows(scenario_dir: Path = HERE) -> dict[str, list[dict]]:
     """
     factory = json.loads((scenario_dir / "line.json").read_text(encoding="utf-8"))
     cycles = {m.equipment for m in load_tag_map(scenario_dir / "tag_map.json")}
+    billed_to = cost_centers(factory)
     equipment = [{"code": ENTERPRISE[0], "name": ENTERPRISE[1], "level": "enterprise"},
                  {"code": SITE[0], "name": SITE[1], "level": "site", "parent": ENTERPRISE[0]}]
     areas: set[str] = set()
@@ -213,7 +235,8 @@ def masterdata_rows(scenario_dir: Path = HERE) -> dict[str, list[dict]]:
             equipment.append({"code": area, "name": meta["area"], "level": "area", "parent": SITE[0]})
         centre = f"{name}LINE"
         equipment.append({"code": centre, "name": f"{meta['area']} line {name}",
-                          "level": "work_center", "parent": area})
+                          "level": "work_center", "parent": area,
+                          "cost_center": billed_to[name]})
         for station in line_cfg["stations"]:
             code = f"{name}_{station['name']}"
             if code not in cycles:
