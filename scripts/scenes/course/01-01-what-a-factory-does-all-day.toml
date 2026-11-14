@@ -171,9 +171,6 @@ settle = 3
 do = "wait_for"
 selector = "#tree"
 text = "CUTLERYCO"
-scroll_to = "#tree-title"
-scroll_block = "start"
-scroll_offset = 20
 
 [[step]]
 do = "say"
@@ -201,7 +198,8 @@ selector = "#tree"
 text = "STACK-AREA"
 scroll_to = "#tree .node"
 scroll_text = "STACK-AREA"
-scroll_offset = 200
+# The page's header stays at the top as it scrolls: 260 px clears it.
+scroll_offset = 260
 
 [[step]]
 do = "say"
@@ -233,9 +231,9 @@ name = "the-mould"
 do = "wait_for"
 selector = "#tags-table"
 text = "GoodCount"
-scroll_to = "#tags-table"
-scroll_block = "start"
-scroll_offset = 120
+scroll_to = "#tags-table tr"
+scroll_text = "GoodCount"
+scroll_offset = 400
 
 [[step]]
 do = "say"
