@@ -363,12 +363,13 @@ def test_oee_exports_one_row_per_station_the_panel_shows(client, session):
     assert re.fullmatch(r"oee-by-station-[A-Z0-9_-]+-\d{4}-\d\d-\d\d-\d{4}-to-\d{4}-\d\d-\d\d-\d{4}\.xlsx",
                         filename(r)), filename(r)
     header, rows = exported(client, "/analysis/oee/export.xlsx?hours=8")
-    assert header[:3] == ["Station", "Name", "OEE"]
+    assert header[:4] == ["Station", "Name", "Line", "OEE"]
     assert [row[0] for row in rows] == [s["code"] for s in panel["stations"]]
+    assert [row[2] for row in rows] == [s["line_code"] for s in panel["stations"]]
     # A station the MES cannot rate is an empty cell, never a zero.
     for row, station in zip(rows, panel["stations"], strict=True):
         if station["oee"] is None:
-            assert row[2] is None
+            assert row[3] is None
 
 
 def test_the_downtime_stops_add_up_to_the_paretos_total(client, session):
