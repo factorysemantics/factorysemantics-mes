@@ -11,7 +11,11 @@
 
 name = "never-invent-production"
 title = "Never invent production"
-lesson = "1.2"
+# Draft 2 of the course (2026-11-14) struck this class: the take filmed from
+# this file is kept on disk as it is and is not re-filmed. The scene names its
+# lesson by slug, which draft 2 does not have, so the recorder refuses to film
+# it rather than film bottling into whichever class now carries the number 1.2.
+lesson = "never-invent-production"
 take_is = "lesson"
 part = "hook"
 base = "http://127.0.0.1:8010"

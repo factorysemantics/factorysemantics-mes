@@ -1,16 +1,24 @@
-# The class: five modules, eighteen lessons, in the order they are taught.
+# The class, draft 2: seven modules, twenty-five classes, in the order they are taught.
 #
 # `scripts/record-scene.py --course` turns this file, and the lesson folders
 # already filmed, into `course.json` and the README at the top of the tree
-# (`out` below). Nobody edits course.json by hand. A lesson's scene names its
-# lesson with `lesson = "2.1"`; the folder it films into is
-# `<out>/NN-<module slug>/NN-<lesson slug>/`, numbered by the order here.
+# (`out` below). Nobody edits course.json by hand.
 #
-# A slug never changes once a lesson is published: studio, the dashboard and
-# the website find a lesson by it. The titles and lines come from the
-# accepted syllabus (2026-10-26); `outcomes` are the "you now know" lines and
-# are written when a lesson is written, not before — an empty list says not
-# yet, not none.
+# Two numbers, never confused:
+#
+# * `order` is position, 1-based. The folder a class films into is
+#   `<out>/NN-<module slug>/NN-<lesson slug>/`, NN being the module's and the
+#   lesson's `order`; course.json's `path` says the same, and readers go by
+#   `path`, never by the label.
+# * `label` is the number people say: "class 0.1", "tier 3". It is what a scene
+#   names its class by (`lesson = "0.1"`), what the README prints, and it may
+#   skip (3.2 was struck, so tier 3 reads 3.1, 3.3, 3.4).
+#
+# A slug never changes once a lesson has work on it: studio, the dashboard and
+# the website find a lesson by it, which is why two classes keep their draft-1
+# slugs below. Titles and lines come from the outline of 2026-11-14 (draft 2);
+# `outcomes` are the "you now know" lines and are written when a class is
+# written, not before — an empty list says not yet, not none.
 
 [course]
 slug = "fsmes-class"
@@ -19,149 +27,252 @@ voice = "Brian"
 status_line = "pre-alpha · simulated plant"
 out = "~/Work/gifs/course"
 
-# ------------------------------------------------------------------ module 1
+# Folders draft 1 filmed, and where each one's class lives now. The recorder
+# moves nothing: it lists these in the tree's README so whoever keeps work
+# beside a folder moves their own side in the same step. A folder whose class
+# is no longer in the course says so in `kept_outside`.
+
+[[moved]]
+from = "01-what-an-mes-is-for/02-never-invent-production"
+kept_outside = "draft 1's bottling take of Never invent production, voiced; kept on disk as it is, outside the course, and nothing reads it"
+
+[[moved]]
+from = "01-what-an-mes-is-for/03-a-work-orders-day"
+slug = "a-work-orders-day"
+
+[[moved]]
+from = "02-quality-on-the-line/01-spc-the-chart-notices-first"
+slug = "spc-the-chart-notices-first"
+
+# ------------------------------------------------------------------ tier 0
 [[module]]
 order = 1
-slug = "what-an-mes-is-for"
-title = "What an MES is for"
+label = "0"
+slug = "before-the-software"
+title = "Before the software"
 
 [[module.lesson]]
 order = 1
-slug = "the-plant-between-erp-and-machines"
-title = "The plant between the ERP and the machines"
-one_line = "What an MES records that neither the ERP nor the machines can."
+label = "0.1"
+slug = "what-a-factory-does-all-day"
+title = "What a factory does all day"
+one_line = "Materials become products through steps on machines, run by people against orders, and someone has to know what actually happened."
+outcomes = [
+  "Name the five things on any plant floor: material, machine, step, order, shift.",
+  "Read a plant as a tree: enterprise, site, area, line, machine.",
+  "Say why the MES knows nothing about a machine until the machine or a person reports it.",
+]
+scene = "scripts/scenes/course/01-01-what-a-factory-does-all-day.toml"
 
 [[module.lesson]]
 order = 2
-slug = "never-invent-production"
-title = "Never invent production"
-one_line = "The MES counts what the machine counted, and says unknown when it did not see."
-outcomes = [
-  "Say what coverage means on any FactorySemantics screen.",
-  "Explain why a figure reads 'unknown' and why that is not a bug.",
-  "Find the coverage number on the shift rollup.",
-]
-knows_before = ["1.1"]
-scene = "scripts/scenes/course/01-02-never-invent-production.toml"
+label = "0.2"
+slug = "what-an-mes-is-and-is-not"
+title = "What an MES is — and what it is not"
+one_line = "The layer between the office that says what to make and the machines that make it; it records what happened and says unknown when it did not see."
+knows_before = ["0.1"]
+
+# ------------------------------------------------------------------ tier 1
+[[module]]
+order = 2
+label = "1"
+slug = "the-core"
+title = "The core: things, places, steps"
+
+[[module.lesson]]
+order = 1
+label = "1.1"
+slug = "equipment-and-cost-centers"
+title = "Equipment — the plant as a tree, and cost centers"
+one_line = "Every machine has one place in the tree, and every place can carry the cost center its time and scrap are charged to."
+
+[[module.lesson]]
+order = 2
+label = "1.2"
+slug = "materials-and-bills-of-material"
+title = "Materials and bills of material"
+one_line = "Anything the plant buys, makes or ships, and what goes into one unit of it."
 
 [[module.lesson]]
 order = 3
+label = "1.3"
+slug = "routings"
+title = "Routings — the path a material takes"
+one_line = "The ordered operations that make a material, each on a named machine."
+
+[[module.lesson]]
+order = 4
+label = "1.4"
 slug = "a-work-orders-day"
-title = "A work order's day"
-one_line = "Release, routing, station to station, finish."
+title = "Work orders — make this many of that, this way"
+one_line = "Released to the floor, station to station; its good count is the last step's, not the sum."
 scene = "scripts/scenes/04-work-orders-and-routings.toml"
 
-# ------------------------------------------------------------------ module 2
+# ------------------------------------------------------------------ tier 2
 [[module]]
-order = 2
-slug = "quality-on-the-line"
-title = "Quality on the line"
+order = 3
+label = "2"
+slug = "the-floor"
+title = "The floor: a shift in the life"
 
 [[module.lesson]]
 order = 1
+label = "2.1"
+slug = "the-station-screen"
+title = "The station screen — one machine at arm's length"
+one_line = "State, queue, booking output, issuing material, a quality check, what maintenance is owed."
+
+[[module.lesson]]
+order = 2
+label = "2.2"
+slug = "downtime-and-reason-codes"
+title = "Downtime and reason codes"
+one_line = "Going down asks why; the reasons are the plant's own words, and an unlabelled stop is not guessed."
+
+[[module.lesson]]
+order = 3
+label = "2.3"
+slug = "lots-genealogy-and-trace"
+title = "Lots, genealogy and trace"
+one_line = "What went into this pallet, and where that bad resin went."
+
+[[module.lesson]]
+order = 4
+label = "2.4"
+slug = "people-roles-and-work-instructions"
+title = "People, roles and work instructions"
+one_line = "Who may do what, and a draft is not an instruction until a person signs it."
+
+# ------------------------------------------------------------------ tier 3
+[[module]]
+order = 4
+label = "3"
+slug = "the-machines-talk"
+title = "The machines talk: OPC and the numbers"
+
+[[module.lesson]]
+order = 1
+label = "3.1"
+slug = "tags-and-opc-ua"
+title = "Tags — how a machine's counters reach the MES"
+one_line = "A machine publishes tags over OPC UA; the MES reads them, read-only, through a tag map."
+
+[[module.lesson]]
+order = 2
+label = "3.3"
+slug = "oee-and-its-three-losses"
+title = "OEE and its three losses"
+one_line = "Availability, performance, quality — and the figure the MES withholds."
+
+[[module.lesson]]
+order = 3
+label = "3.4"
+slug = "the-shift-rollup"
+title = "The shift rollup — from floor data to one page"
+one_line = "Every machine's events rolled into losses, a timeline and a pareto, with the share of the shift it saw."
+
+# ------------------------------------------------------------------ tier 4
+[[module]]
+order = 5
+label = "4"
+slug = "quality"
+title = "Quality"
+
+[[module.lesson]]
+order = 1
+label = "4.1"
+slug = "specifications-and-quality-checks"
+title = "Specifications and quality checks"
+one_line = "What the gauge actually read, against the spec; out of spec is recorded, not rounded."
+
+[[module.lesson]]
+order = 2
+label = "4.2"
+slug = "nonconformances-and-who-decides"
+title = "Non-conformances, severities and who decides"
+one_line = "Review, severity in the plant's own words, disposition and close, each by the role that owns it."
+
+[[module.lesson]]
+order = 3
+label = "4.3"
 slug = "spc-the-chart-notices-first"
-title = "SPC: the chart notices before people do"
-one_line = "A reading drops, the rule fires, and the hold raises itself."
+title = "SPC — the chart notices before people do"
+one_line = "Control limits from the process, rules that fire on patterns, and capability withheld when there is too little data."
 scene = "scripts/scenes/02-spc-on-the-line.toml"
 
 [[module.lesson]]
-order = 2
-slug = "holds-nonconformances-and-who-decides"
-title = "Holds, nonconformances and who decides"
-one_line = "Review, severity, disposition; the severity list is the plant's own."
-
-[[module.lesson]]
-order = 3
-slug = "capability-and-when-it-is-withheld"
-title = "Capability, and why the number is sometimes withheld"
-one_line = "Cp and Cpk, honestly."
-
-[[module.lesson]]
 order = 4
-slug = "trace-the-lot"
-title = "Trace the lot"
-one_line = "From a finished unit back to the material and the machine, and forward to where a bad lot went."
-
-# ------------------------------------------------------------------ module 3
-[[module]]
-order = 3
-slug = "the-machines"
-title = "The machines"
+label = "4.4"
+slug = "gauges-and-calibration"
+title = "Gauges and calibration"
+one_line = "A reading is only as good as the instrument; a failed calibration lists the readings it touched."
 
 [[module.lesson]]
-order = 1
-slug = "reading-a-machine-over-opc-ua"
-title = "Reading a machine over OPC UA, read-only"
-one_line = "Browse, verify, and values landing as events."
-
-[[module.lesson]]
-order = 2
-slug = "losing-sight-of-a-machine"
-title = "Losing sight of a machine"
-one_line = "What the MES shows when the connection drops, and what it refuses to guess."
-
-[[module.lesson]]
-order = 3
-slug = "downtime-and-reason-codes"
-title = "Downtime and reason codes"
-one_line = "The station screen offers the plant's own reasons, and someone approves the list."
-
-[[module.lesson]]
-order = 4
-slug = "oee-and-its-three-losses"
-title = "OEE and its three losses"
-one_line = "Availability, performance, quality, and the one that reads no figure."
-
-# ------------------------------------------------------------------ module 4
-[[module]]
-order = 4
-slug = "the-shift-and-the-business"
-title = "The shift and the business"
-
-[[module.lesson]]
-order = 1
-slug = "from-floor-data-to-a-shift-rollup"
-title = "From floor data to a shift rollup"
-one_line = "The shift picker, and what coverage means for every number on the page."
-
-[[module.lesson]]
-order = 2
-slug = "the-erp-handoff"
-title = "The ERP handoff"
-one_line = "Confirmations going back; the file exchange and the live connector are two different things."
-
-[[module.lesson]]
-order = 3
-slug = "digital-work-instructions"
-title = "Digital work instructions"
-one_line = "The approved revision is in force; a draft is not an instruction until someone signs it."
-
-[[module.lesson]]
-order = 4
-slug = "one-plant-on-two-boxes"
-title = "One plant on two boxes"
-one_line = "Pull the plug on one copy, and nothing is counted twice."
-
-# ------------------------------------------------------------------ module 5
-[[module]]
 order = 5
-slug = "asking-the-plant"
-title = "Asking the plant"
+label = "4.5"
+slug = "the-certificate-of-analysis"
+title = "COA — the certificate of analysis"
+one_line = "The readings that judged a lot, against the spec, signed; a correction is a new certificate."
+
+# ------------------------------------------------------------------ tier 5
+[[module]]
+order = 6
+label = "5"
+slug = "running-the-plant"
+title = "Running the plant"
 
 [[module.lesson]]
 order = 1
-slug = "the-chat-on-the-ai-tab"
-title = "The chat on the AI tab"
-one_line = "Ask a plain question about a chart, and see what it records about who asked."
+label = "5.1"
+slug = "scheduling"
+title = "Scheduling — the board and what the plan promises"
+one_line = "Which order runs where and when, against when the plant works and what the floor has done."
 
 [[module.lesson]]
 order = 2
-slug = "the-mcp-tool-interface"
-title = "The MCP tool interface"
-one_line = "A client connects and asks in plain words; the plant's tools answer, and it never faces the internet."
+label = "5.2"
+slug = "maintenance-due-on-use"
+title = "Maintenance — due on use"
+one_line = "Due on cycles and hours, not only dates, and the operator sees what is owed."
 
 [[module.lesson]]
 order = 3
+label = "5.3"
+slug = "triggers-and-adjustments"
+title = "Triggers and adjustments — the only path to a PLC"
+one_line = "A rule raises a recommended setpoint; nothing reaches a machine until a person approves it."
+
+[[module.lesson]]
+order = 4
+label = "5.4"
+slug = "the-erp-handoff"
+title = "The ERP handoff — confirmations go back up"
+one_line = "Every finished step becomes a confirmation; the file exchange and the live connector are two different things."
+
+# ------------------------------------------------------------------ tier 6
+[[module]]
+order = 7
+label = "6"
+slug = "asking-the-plant"
+title = "Asking the plant, and running it yourself"
+
+[[module.lesson]]
+order = 1
+label = "6.1"
+slug = "the-chat-on-the-ai-tab"
+title = "The AI tab — ask a plain question, and the record of who asked"
+one_line = "The assistant reads the numbers the screens show, and every conversation is kept."
+
+[[module.lesson]]
+order = 2
+label = "6.2"
+slug = "agents-draft-never-approve"
+title = "Agents — draft, never approve"
+one_line = "An agent is a role like any other; it may draft and recommend, and approve nothing."
+
+[[module.lesson]]
+order = 3
+label = "6.3"
 slug = "running-it-on-your-own-box"
-title = "Running it on your own box"
-one_line = "Install it, run the demo, ask the doctor, on Windows and Linux."
+title = "Run it on your own PC"
+one_line = "One pip command, the demo plant, two servers on one PostgreSQL; stop one and the other carries on."
