@@ -501,14 +501,18 @@ def quality(plant: str) -> dict:
 
 @mcp.tool()
 def record_check(plant: str, material: str, characteristic: str, value: float,
-                 order: str | None = None, dry_run: bool = False,
+                 order: str | None = None, equipment: str | None = None,
+                 gauge: str | None = None, dry_run: bool = False,
                  on_behalf_of: str | None = None, client_ref: str | None = None) -> dict:
     """Record a quality measurement. Out-of-spec values automatically open a
-    non-conformance - that is the MES working, not an error."""
+    non-conformance - that is the MES working, not an error. `equipment` is
+    the machine it was taken on and `gauge` the instrument, as the Floor form
+    and the station screen send them; left out, the check says not recorded."""
     _identity.set((on_behalf_of.upper() if on_behalf_of else None, client_ref))
-    body = {"material": material, "characteristic": characteristic, "value": value}
-    if order:
-        body["order"] = order
+    body: dict = {"material": material, "characteristic": characteristic, "value": value}
+    for name, given in (("order", order), ("equipment", equipment), ("gauge", gauge)):
+        if given:
+            body[name] = given
     return _write(plant, "/quality/checks", body, dry_run,
                   f"record {characteristic}={value} on {material}"
                   + (f" against {order}" if order else ""))
