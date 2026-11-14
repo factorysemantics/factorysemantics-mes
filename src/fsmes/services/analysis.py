@@ -89,14 +89,63 @@ def gantt_screenful(db: Session) -> int:
     return int(plant_settings.value(db, "process", "gantt_screenful", GANTT_SCREENFUL))
 
 
+#: The `line=` that means every machine in the plant, each on its own line.
+ALL_LINES = "*"
+ALL_LINES_NAME = "All machines"
+
+
+class _Plant:
+    """What stands in for a work centre when the whole plant is asked for:
+    the two fields every view reads off its line, and nothing else."""
+
+    code = ALL_LINES
+    name = ALL_LINES_NAME
+
+
+def line_of_each(db: Session) -> dict[int, Equipment]:
+    """Every machine on the floor that sits under a line, mapped to that line.
+
+    The nearest work centre above it, at any depth, so a machine on a cell on
+    a line belongs to the line. One read of the equipment tree, walked in
+    Python: the plant-wide view must not cost a query per line, and the tree
+    is a few hundred rows. A machine under no line at all is left out, as the
+    line picker leaves it out - it is on nobody's list of stations.
+    """
+    everything = {e.id: e for e in db.scalars(select(Equipment))}
+    # The floor's own predicate, in SQL: `retired_at` is a deferred column,
+    # and reading it off each row is a query per machine.
+    floor = db.scalars(select(Equipment.id).where(masterdata.on_the_floor())).all()
+    out: dict[int, Equipment] = {}
+    for eq in (everything[i] for i in floor):
+        seen = {eq.id}
+        up = everything.get(eq.parent_id)
+        while up is not None and up.id not in seen:   # a cycle would hang the plant
+            if up.level == EquipmentLevel.WORK_CENTER:
+                out[eq.id] = up
+                break
+            seen.add(up.id)
+            up = everything.get(up.parent_id)
+    return out
+
+
 def _line_and_units(db: Session, line_code: str | None) -> tuple[Equipment, list[Equipment]]:
     """Resolve a work centre and its machines, at any depth beneath it.
+
+    `line_code == ALL_LINES` is the whole plant: every machine under any
+    line, in code order, behind a stand-in whose code is `*`.
 
     Deliberately not imported from services.line: that module is being built
     out for the 3D view and its resolver is private. The overlap is now three
     lines, because the walking itself moved to `masterdata.work_units_under`
     where both callers — and the dashboard — can share it.
     """
+    if line_code == ALL_LINES:
+        lines_of = line_of_each(db)
+        if not lines_of:
+            raise NotFound("no line has any machines on it yet — seed a plant first")
+        units = sorted(db.scalars(select(Equipment).where(Equipment.id.in_(lines_of))),
+                       key=lambda u: u.code)
+        return _Plant(), units
     centres = db.scalars(
         select(Equipment).where(Equipment.level == EquipmentLevel.WORK_CENTER).order_by(Equipment.code)
     ).all()
@@ -320,6 +369,10 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float | None
     # in the signature so a caller gets what the plant is running on now.
     hours = calendar_service.default_report_hours(db) if hours is None else hours
     centre, units = _line_and_units(db, line_code)
+    plant_wide = line_code == ALL_LINES
+    # Which line each row is on: the one asked for, or, plant-wide, each
+    # machine's own - so a row read off a list of 83 says where to walk to.
+    line_by_unit = line_of_each(db) if plant_wide else {u.id: centre for u in units}
     the_shift = _shift(db, shift)
     start, end = _window(db, units, hours, the_shift)
     window_seconds = (end - start).total_seconds()
@@ -416,6 +469,8 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float | None
             {
                 "code": unit.code,
                 "name": unit.name,
+                "line_code": line_by_unit[unit.id].code,
+                "line_name": line_by_unit[unit.id].name,
                 "ideal_cycle_seconds": cycle,
                 "availability": _round(availability),
                 "performance": _round(performance),
@@ -468,6 +523,13 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float | None
 
     # The ones too new to rate go under the rest, not among them.
     stations.sort(key=lambda s: s["too_new"])
+    if plant_wide:
+        # Plant-wide, the list is the ranking: worst OEE first, so the machine
+        # that lost the most this shift is the top row. A machine with no
+        # figure is not ranked as a zero - it goes under every rated one,
+        # still listed, its reason on the row (unknown is not zero).
+        stations.sort(key=lambda s: (s["oee"] is None, s["too_new"],
+                                     s["oee"] if s["oee"] is not None else 0.0, s["code"]))
     produced = sum(s["good_qty"] for s in stations)
     scrapped = sum(s["scrap_qty"] for s in stations)
     rated = [s["oee"] for s in stations if s["oee"] is not None]

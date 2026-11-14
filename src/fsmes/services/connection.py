@@ -154,6 +154,36 @@ def _in_window(start: datetime, end: datetime):
     )
 
 
+def unknown_seconds_from(session: Session, starts: dict[int, datetime],
+                         end: datetime) -> dict[int, float]:
+    """`unknown_seconds` for machines whose windows start at different moments
+    and end together, in one read rather than one per start.
+
+    The coverage ledger clips each machine's disconnections to the moment the
+    MES first saw it, and on a real plant no two machines were first seen in
+    the same microsecond - so a plant-wide call asked the database once per
+    machine. Disconnections are events, not samples: a plant has a handful in
+    a shift, and reading their ends once and clipping each in Python is the
+    same arithmetic `unknown_seconds` does on a database it cannot sum in.
+    """
+    out: dict[int, float] = defaultdict(float)
+    live = {i: s for i, s in starts.items() if s < end}
+    if not live:
+        return out
+    earliest = min(live.values())
+    for equipment_id, started_at, ended_at in session.execute(
+        select(EquipmentConnection.equipment_id, EquipmentConnection.started_at,
+               EquipmentConnection.ended_at).where(
+            EquipmentConnection.equipment_id.in_(list(live)),
+            EquipmentConnection.state == ConnectionStateName.DISCONNECTED,
+            *_in_window(earliest, end))
+    ).all():
+        lo_ = max(started_at, live[equipment_id])
+        hi_ = min(ended_at or end, end)
+        out[equipment_id] += max(0.0, (hi_ - lo_).total_seconds())
+    return out
+
+
 def unknown_seconds(session: Session, equipment_ids: list[int], start: datetime,
                     end: datetime) -> dict[int, float]:
     """Seconds each machine was disconnected inside [start, end], clipped.
