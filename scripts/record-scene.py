@@ -19,7 +19,26 @@ through them, burns the overlay into the picture, and writes, into one folder:
     product's
   * `marks.json`, the seconds each mark landed at and the planned timings, the
     size of the frame and of the GIF, and for every click the pixel on the
-    frame it landed on, so an effect laid over the clip can be put there
+    frame it landed on, so an effect laid over the clip can be put there; for
+    a `say` that points `at` something, the box drawn round it
+
+A viewer sees what is pressed and what is meant, not only the screen. Every
+`click`, `fill` and `choose` moves a drawn cursor to the thing and presses it
+with a ripple; `fill` types about twelve keys a second (a scene may say
+`type_delay_seconds`, slower). A `say` may name the thing its line is about:
+
+    [[step]]
+    do = "say"
+    line = "The cost center comes from the line."
+    at = "#ops tr:first-child .cc"      # a selector, as `click` takes one
+    label = "Cost center: from the line"  # optional: words on the box's tab
+    style = "box"                        # or "spotlight", which dims the rest
+
+and the box is drawn as the caption appears, held for the line, and taken
+away before the next step (a `mark` straight after the line keeps it, so its
+still shows the box). A thing off the frame, or under the page's sticky header
+or the caption bar, is scrolled clear first; a thing not on the page refuses
+the take, naming the step.
 
 A scene that names a `lesson` ("2.1") is filmed into the class's tree instead,
 as `scripts/course/course.toml` lays it out and the lesson hand-off contract
@@ -57,7 +76,7 @@ Two things a scene may say to get out of that, and only together:
     a loopback address and refused everywhere else, before the browser opens,
     because the lab fleet and the public demo answer on this box too.
 
-Two things on screen are this file's and not the product's — three, when a
+Three things on screen are this file's and not the product's — four, when a
 scene starts its own plant — and the README of every folder it writes says so:
 
   1. the caption bar along the bottom — the `say` lines, burnt in — which stops
@@ -65,6 +84,8 @@ scene starts its own plant — and the README of every folder it writes says so:
   2. the badge at the top right, which names the version the plant itself
      reports and says in as many words that the plant is simulated and the
      software is pre-alpha
+  3. the cursor, the ripple of each press, and the box (and its label) round
+     what a `say` points at — drawn under the caption bar and the badge
 
 The bottom-right corner, 240 by 200 pixels, is kept empty of both: the class's
 narrator is drawn there afterwards, and nothing a viewer must read may sit
@@ -222,9 +243,35 @@ WAIT_TIMEOUT_SECONDS = 20.0
 # the planned length has to include them or a scene that fits on paper runs over.
 SMALL_STEP_SECONDS = 0.4
 SCROLL_SECONDS = 0.5
-# How long `fill` waits between the keys it types: slow enough to be seen
-# typed in a 25-frame video, quick enough that a routing code is not a wait.
-TYPE_DELAY_SECONDS = 0.06
+# How long `fill` waits between the keys it types, unless the scene says
+# `type_delay_seconds`: about twelve characters a second, which a viewer reads
+# as it arrives. The first five classes typed at 0.06 s a key, and a routing
+# code went by faster than the eye could follow it (Scott, 2026-11-15). A
+# scene may type slower; never faster than TYPE_DELAY_FLOOR_SECONDS.
+TYPE_DELAY_SECONDS = 0.085
+TYPE_DELAY_FLOOR_SECONDS = 0.05
+
+# The drawn cursor. On every `click`, `fill` and `choose` it glides from where
+# it is to the middle of the thing, rests a moment, and the press is sent as a
+# ring spreads from the point and fades, so the frame and the action agree. A
+# viewer who sees only the screen cannot tell what was pressed, or that
+# anything was (Scott, 2026-11-15: "Just the screen doesn't explain anything").
+CURSOR_GLIDE_SECONDS = 0.5
+CURSOR_REST_SECONDS = 0.15
+RIPPLE_SECONDS = 0.7
+# After a click the cursor follows the thing to where the page settled it.
+CURSOR_FOLLOW_SECONDS = 0.15
+
+# The box a `say` draws round what its line is about (`at`), with its `label`
+# on a tab: a cyan that reads on the dark screens and is none of the state
+# pills' green, amber or red, nor the badge's yellow. `spotlight` dims the
+# rest of the frame instead of only outlining. The box stands this far out
+# from the thing, so the outline does not sit on its text.
+CALLOUT_COLOUR = "#22d3ee"
+CALLOUT_STYLES = ("box", "spotlight")
+CALLOUT_PAD = 6
+#: How long a `say` looks for the thing its `at` names before the take is refused.
+CALLOUT_FIND_SECONDS = 2.0
 
 
 # --------------------------------------------------------------- the scene
@@ -261,6 +308,11 @@ def load_scene(path: Path) -> dict:
         scene["lesson"] = str(scene["lesson"])
     if scene["take_is"] not in ("lesson", "teaser"):
         raise SystemExit(f"{path}: `take_is` is \"lesson\" or \"teaser\"")
+    delay = scene.setdefault("type_delay_seconds", TYPE_DELAY_SECONDS)
+    if isinstance(delay, bool) or not isinstance(delay, (int, float)) or delay < TYPE_DELAY_FLOOR_SECONDS:
+        raise SystemExit(f"{path}: `type_delay_seconds` is the seconds between typed keys, at least"
+                         f" {TYPE_DELAY_FLOOR_SECONDS:g} — faster than that is not read as it is typed")
+    scene["type_delay_seconds"] = float(delay)
 
     part = scene["part"]
     for number, step in enumerate(steps, start=1):
@@ -287,6 +339,7 @@ def load_scene(path: Path) -> dict:
             if not step.get("line"):
                 raise SystemExit(f"{where}: a `say` needs a `line` — it is the sentence on screen")
             step.setdefault("hold", hold_for_words(step["line"]))
+            check_pointer(step, where)
         if verb == "slide":
             if not step.get("name") or not step.get("title"):
                 raise SystemExit(f"{where}: a `slide` needs a `name` (it names the card's file) and a `title`")
@@ -320,6 +373,28 @@ def load_scene(path: Path) -> dict:
 
     scene["step"] = steps
     return scene
+
+
+def check_pointer(step: dict, where: str) -> None:
+    """Refuse a `say`'s `at`, `label` or `style` this script would have to guess at.
+
+    `at` is the selector of the thing the line is about; `label` the few words
+    on the box's tab; `style` `box` (the default) or `spotlight`. A label or a
+    style with nothing to point at is refused: it would be drawn nowhere.
+    """
+    if "at" not in step:
+        for key in ("label", "style"):
+            if key in step:
+                raise SystemExit(f"{where}: `{key}` belongs to a `say` that points `at` something,"
+                                 " and this one does not")
+        return
+    if not isinstance(step["at"], str) or not step["at"].strip():
+        raise SystemExit(f"{where}: `at` is the selector of the thing the line is about")
+    if not isinstance(step.get("label", ""), str):
+        raise SystemExit(f"{where}: `label` is the few words on the box's tab")
+    step.setdefault("style", "box")
+    if step["style"] not in CALLOUT_STYLES:
+        raise SystemExit(f"{where}: `style = {step['style']!r}` is not one of {', '.join(CALLOUT_STYLES)}")
 
 
 def check_command_card(step: dict, where: str, scene: dict) -> None:
@@ -407,7 +482,10 @@ def planned_seconds(scene: dict) -> float:
         if step["do"] == "goto":
             total += float(step["settle"])
         elif step["do"] == "fill":
-            total += len(step["text"]) * TYPE_DELAY_SECONDS + SMALL_STEP_SECONDS
+            total += (len(step["text"]) * float(scene.get("type_delay_seconds", TYPE_DELAY_SECONDS))
+                      + SMALL_STEP_SECONDS + CURSOR_GLIDE_SECONDS + CURSOR_REST_SECONDS)
+        elif step["do"] in ("click", "choose"):
+            total += SMALL_STEP_SECONDS + CURSOR_GLIDE_SECONDS + CURSOR_REST_SECONDS
         elif step["do"] == "say":
             total += float(step["hold"])
         elif step["do"] == "hold":
@@ -450,7 +528,9 @@ def play(scene: dict, stage) -> None:
         elif verb == "wait_for":
             stage.wait_for(step, float(step["timeout"]))
         elif verb == "say":
-            stage.say(step["line"], float(step["hold"]))
+            # A `say` that points at nothing is handed exactly what it always was.
+            pointer = {key: step[key] for key in ("at", "label", "style") if key in step}
+            stage.say(step["line"], float(step["hold"]), **pointer)
         elif verb == "hold":
             stage.hold(float(step["seconds"]))
         elif verb == "mark":
@@ -463,6 +543,14 @@ def play(scene: dict, stage) -> None:
 
 
 # --------------------------------------------------------------- the overlay
+
+
+#: The drawn cursor: a plain arrow, white with a dark edge, its tip at (2, 2).
+CURSOR_SVG = (
+    "<svg xmlns='http://www.w3.org/2000/svg' width='26' height='30' viewBox='0 0 26 30'>"
+    "<path d='M2 2 L2 24 L7.6 18.6 L11.4 27.4 L15.4 25.7 L11.7 17 L19.4 17 Z' fill='#fff'"
+    " stroke='#111' stroke-width='1.6' stroke-linejoin='round'/></svg>"
+)
 
 
 def overlay_script(badge: str, captions: bool = True) -> str:
@@ -488,6 +576,15 @@ def overlay_script(badge: str, captions: bool = True) -> str:
 
     And the product's floating Assistant and Design buttons are hidden, because
     they sit exactly where the caption bar goes.
+
+    It also draws the cursor, the ripple of a press, and the box a `say` puts
+    round what it is about (`__sceneCursorTo`, `__sceneRipple`,
+    `__sceneCallout`). All three sit under the caption bar and the badge, so
+    neither is ever drawn over, and none of them takes a press: the page's own
+    controls are what Playwright presses. The cursor's place is kept in
+    `sessionStorage` like the caption, so a click that leaves the page finds
+    the cursor where it was on the next. A card (a `slide`) is the recorder's
+    own picture and nothing is pressed on it: it has no cursor.
     """
     css = (
         f"#fs-scene-cap{{position:fixed!important;left:0!important;right:{CAPTION_RIGHT_INSET}px!important;"
@@ -504,6 +601,22 @@ def overlay_script(badge: str, captions: bool = True) -> str:
         "padding:0 18px!important;border-radius:8px!important;white-space:nowrap!important;"
         "box-shadow:0 2px 10px rgba(0,0,0,.5)!important}"
         ".assist-launch,.design-launch{display:none!important}"
+        # The cursor's tip is the point, at the element's top left; it moves by transform.
+        "#fs-scene-cursor{position:fixed!important;left:0!important;top:0!important;width:26px!important;"
+        "height:30px!important;margin:-2px 0 0 -2px!important;pointer-events:none!important;"
+        "z-index:2147483645!important;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))!important}"
+        ".fs-scene-ripple{position:fixed!important;width:56px!important;height:56px!important;"
+        f"border:4px solid {CALLOUT_COLOUR}!important;border-radius:50%!important;box-sizing:border-box!important;"
+        "pointer-events:none!important;z-index:2147483645!important;background:rgba(34,211,238,.28)!important;"
+        "box-shadow:0 0 0 1px rgba(0,0,0,.5),0 0 12px rgba(34,211,238,.6)!important}"
+        "#fs-scene-callout{position:fixed!important;box-sizing:border-box!important;pointer-events:none!important;"
+        f"border:3px solid {CALLOUT_COLOUR}!important;border-radius:8px!important;z-index:2147483643!important;"
+        "box-shadow:0 0 0 1px rgba(0,0,0,.55),0 0 14px rgba(34,211,238,.45)!important}"
+        "#fs-scene-callout.fs-spot{box-shadow:0 0 0 1px rgba(0,0,0,.55),0 0 0 200vmax rgba(4,7,11,.62)!important}"
+        "#fs-scene-callout-label{position:fixed!important;pointer-events:none!important;z-index:2147483644!important;"
+        f"background:{CALLOUT_COLOUR}!important;color:#04141a!important;white-space:nowrap!important;"
+        "font:700 17px/1.25 system-ui,-apple-system,Segoe UI,sans-serif!important;padding:4px 11px!important;"
+        "border-radius:7px!important;box-shadow:0 2px 8px rgba(0,0,0,.5)!important}"
         # The product's message after a save sits 22 px off the bottom, under
         # the caption bar; it is lifted above the bar's two lines, where the
         # viewer can read it, and is otherwise drawn as the product draws it.
@@ -525,6 +638,89 @@ def overlay_script(badge: str, captions: bool = True) -> str:
     cap.id = 'fs-scene-cap';
     cap.textContent = remembered();
     root.append(style, badge, cap);
+    if (!location.pathname.startsWith({json.dumps(SLIDE_PATH)})) {{
+      const cursor = document.createElement('div');
+      cursor.id = 'fs-scene-cursor';
+      cursor.innerHTML = {json.dumps(CURSOR_SVG)};
+      const at = cursorAt();
+      cursor.style.transform = `translate(${{at.x}}px, ${{at.y}}px)`;
+      root.append(cursor);
+    }}
+  }};
+  const CURSOR = 'fsSceneCursor';
+  function cursorAt() {{
+    try {{
+      const kept = JSON.parse(sessionStorage.getItem(CURSOR) || 'null');
+      if (kept && Number.isFinite(kept.x) && Number.isFinite(kept.y)) return kept;
+    }} catch (e) {{ /* the middle of the window, then */ }}
+    return {{ x: Math.round(innerWidth / 2), y: Math.round(innerHeight / 2) }};
+  }}
+  // Glide the cursor to (x, y) over `ms`, and answer where it came from once it is there.
+  window.__sceneCursorTo = (x, y, ms) => new Promise((resolve) => {{
+    draw();
+    const from = cursorAt();
+    try {{ sessionStorage.setItem(CURSOR, JSON.stringify({{ x, y }})); }} catch (e) {{ /* not worth a take */ }}
+    const cursor = document.getElementById('fs-scene-cursor');
+    if (!cursor) return resolve(null);
+    cursor.style.transition = ms > 0 ? `transform ${{ms}}ms cubic-bezier(.3,.1,.2,1)` : 'none';
+    cursor.style.transform = `translate(${{x}}px, ${{y}}px)`;
+    setTimeout(() => resolve(from), ms);
+  }});
+  window.__sceneRipple = (x, y) => {{
+    const ring = document.createElement('div');
+    ring.className = 'fs-scene-ripple';
+    ring.style.left = (x - 28) + 'px';
+    ring.style.top = (y - 28) + 'px';
+    document.documentElement.append(ring);
+    // Full and bright for the first frames, so the press is seen; then it spreads and fades.
+    ring.animate([{{ transform: 'scale(.3)', opacity: 1 }}, {{ transform: 'scale(1)', opacity: 1, offset: .35 }},
+                  {{ transform: 'scale(1.6)', opacity: 0 }}],
+                 {{ duration: {int(RIPPLE_SECONDS * 1000)}, easing: 'ease-out' }}).onfinish = () => ring.remove();
+  }};
+  // The box round what a line is about, following it if the page moves it, until cleared.
+  let callout = null;
+  window.__sceneCallout = (el, label, style) => {{
+    window.__sceneCalloutClear();
+    const box = document.createElement('div');
+    box.id = 'fs-scene-callout';
+    if (style === 'spotlight') box.classList.add('fs-spot');
+    const tab = label ? document.createElement('div') : null;
+    if (tab) {{ tab.id = 'fs-scene-callout-label'; tab.textContent = label; }}
+    document.documentElement.append(box, ...(tab ? [tab] : []));
+    const pad = {CALLOUT_PAD};
+    const place = () => {{
+      if (callout === null || callout.box !== box) return;
+      if (el.isConnected) {{
+        const r = el.getBoundingClientRect();
+        box.style.left = (r.left - pad) + 'px';
+        box.style.top = (r.top - pad) + 'px';
+        box.style.width = (r.width + 2 * pad) + 'px';
+        box.style.height = (r.height + 2 * pad) + 'px';
+        if (tab) {{
+          // On the box's top left, outside it; below the box when the box is at
+          // the top; inside its top left when it fills the frame both ways.
+          const high = tab.offsetHeight;
+          const aboveAt = r.top - pad - high - 2;
+          const belowAt = r.bottom + pad + 2;
+          const floor = innerHeight - {CAPTION_HEIGHT};
+          tab.style.left = Math.max(0, r.left - pad) + 'px';
+          tab.style.top = (aboveAt >= 0 ? aboveAt
+            : belowAt + high <= floor ? belowAt : Math.max(0, r.top - pad) + 6) + 'px';
+        }}
+      }}
+      callout.frame = requestAnimationFrame(place);
+    }};
+    callout = {{ box, tab, frame: 0 }};
+    place();
+    const drawn = box.getBoundingClientRect();
+    return {{ x: drawn.left, y: drawn.top, w: drawn.width, h: drawn.height }};
+  }};
+  window.__sceneCalloutClear = () => {{
+    if (!callout) return;
+    cancelAnimationFrame(callout.frame);
+    callout.box.remove();
+    if (callout.tab) callout.tab.remove();
+    callout = null;
   }};
   window.__sceneSay = (text) => {{
     try {{ sessionStorage.setItem(KEY, text); }} catch (e) {{ /* a caption is not worth a failed take */ }}
@@ -552,8 +748,16 @@ class BrowserStage:
     """The page being filmed, and the clock every mark is measured against."""
 
     def __init__(self, page, out: Path, started: float, presses: list | None = None,
-                 base: str = "", slides: dict | None = None, render=None, run_fsmes=None) -> None:
+                 base: str = "", slides: dict | None = None, render=None, run_fsmes=None,
+                 type_delay: float = TYPE_DELAY_SECONDS) -> None:
         self.page = page
+        #: Seconds between typed keys: the scene's `type_delay_seconds`.
+        self.type_delay = type_delay
+        #: Which step is being played, counted from 1 as the scene file's errors count them.
+        self.step_number = 0
+        #: A box a `say` drew and nothing has taken down yet: it stays through the
+        #: `mark`s right after the line, so their stills show what it was about.
+        self.callout_up = False
         #: Runs `fsmes <words>` against the take's own plant and returns what it
         #: printed; a terminal card's command goes through it. None without a plant.
         self.run_fsmes = run_fsmes
@@ -579,8 +783,21 @@ class BrowserStage:
         return round(time.monotonic() - self.started, 2)
 
     def begin(self, step: dict) -> None:
-        """The step about to be played: its part goes on every mark it makes."""
+        """The step about to be played: its part goes on every mark it makes.
+
+        The box a `say` drew is taken down here, before the next step that is
+        not a `mark`: a `mark` takes a still and no time, and a still taken
+        just after a line about something should show the box round it.
+        """
         self.part = step.get("part")
+        self.step_number += 1
+        if step.get("do") != "mark":
+            self.callout_down()
+
+    def callout_down(self) -> None:
+        if self.callout_up:
+            self.page.evaluate("() => window.__sceneCalloutClear()")
+            self.callout_up = False
 
     def note(self, what: str, kind: str, at: float | None = None, **rest: object) -> None:
         mark = {"at": self._at() if at is None else at, "what": what, "kind": kind,
@@ -629,11 +846,14 @@ class BrowserStage:
         # takes itself away, a link that leaves the page) the press is all
         # there is, and the mark says so.
         self.clear_of_caption(selector)
+        # A click's own `x`, `y` is where the thing settled, measured below.
+        pointed = {key: value for key, value in self.point_at(self.page.locator(selector).first).items()
+                   if key not in ("x", "y")}
         heard = len(self.presses)
         # The same element `page.click` will press: the first that matches.
         clicked = self.page.locator(selector).first.element_handle()
         self.page.click(selector)
-        self.note(f"click {selector}", "click", x=None, y=None)
+        self.note(f"click {selector}", "click", x=None, y=None, **pointed)
         mark = self.marks[-1]
         begun = time.monotonic()
         settled = settled_centre(self.page, clicked, selector)
@@ -644,6 +864,10 @@ class BrowserStage:
             self.page.wait_for_timeout(int(rest * 1000))
         press = self.presses[heard] if len(self.presses) > heard else None
         mark.update(click_position(press, settled))
+        if mark["x"] is not None:
+            # The frames after the click show the thing where the page settled
+            # it, and the cursor is drawn on it there.
+            self.cursor_to(mark["x"], mark["y"], CURSOR_FOLLOW_SECONDS)
         if mark["x"] is None:
             mark["what"] += " (where it landed was neither heard from the page nor measured, so it is not given)"
         print(f"         at {mark['x']},{mark['y']}  press {mark.get('press')}"
@@ -654,19 +878,57 @@ class BrowserStage:
         # words arriving rather than a field that was blank and then full.
         self.clear_of_caption(selector)
         field = self.page.locator(selector).first
+        pointed = self.point_at(field)
+        typing = time.monotonic()
         field.fill("")
         if text:
-            field.press_sequentially(text, delay=int(TYPE_DELAY_SECONDS * 1000))
-        self.note(f"fill {selector}: {text!r}", "fill", text=text)
+            # Rounded up: a delay of 84 ms, not 85 truncated to 84 and then some.
+            field.press_sequentially(text, delay=math.ceil(self.type_delay * 1000))
+        typed = round(time.monotonic() - typing, 2)
+        self.note(f"fill {selector}: {text!r}", "fill", text=text, typed_seconds=typed, **pointed)
         self.page.wait_for_timeout(int(SMALL_STEP_SECONDS * 1000))
 
     def choose(self, selector: str, value: str) -> None:
         # The option is picked, not the list opened: an open `<select>` is the
-        # browser's own window and is not in the page's video.
+        # browser's own window and is not in the page's video, and a script
+        # cannot open one. So the cursor goes to the list and presses it, and
+        # the value changes — which is what the frames honestly show.
         self.clear_of_caption(selector)
-        self.page.locator(selector).first.select_option(value)
-        self.note(f"choose {selector}: {value}", "choose", value=value)
+        target = self.page.locator(selector).first
+        pointed = self.point_at(target)
+        target.select_option(value)
+        self.note(f"choose {selector}: {value}", "choose", value=value, **pointed)
         self.page.wait_for_timeout(int(SMALL_STEP_SECONDS * 1000))
+
+    def cursor_to(self, x: int, y: int, seconds: float) -> dict | None:
+        """Glide the drawn cursor to (x, y) over `seconds`; answer where it started."""
+        return self.page.evaluate("([x, y, ms]) => window.__sceneCursorTo(x, y, ms)",
+                                  [int(x), int(y), int(seconds * 1000)])
+
+    def point_at(self, target) -> dict:
+        """Glide the cursor to where the press on `target` will land, rest, and start the ripple.
+
+        The thing is scrolled onto the frame first, as Playwright's press would
+        scroll it, so the cursor goes where the press then goes and the real
+        press is sent as the ripple starts. (Playwright's own trial click is not
+        used to find the point: it sends a real `pointerdown` and `click` that
+        the page's listeners on the window hear, and that is a second press.)
+        Where something sits over the thing and Playwright scrolls again to
+        press it, the cursor follows it after the click to where it settled.
+        Returns the keys the step's mark gains: `cursor_from`, where the glide
+        began, and `ripple_at`, the second the ripple started; and `x`, `y`,
+        the point it went to.
+        """
+        target.scroll_into_view_if_needed()
+        box = target.bounding_box()
+        if box is None:
+            return {}
+        x, y = int(box["x"] + box["width"] / 2), int(box["y"] + box["height"] / 2)
+        start = self.cursor_to(x, y, CURSOR_GLIDE_SECONDS)
+        self.page.wait_for_timeout(int(CURSOR_REST_SECONDS * 1000))
+        ripple_at = self._at()
+        self.page.evaluate("([x, y]) => window.__sceneRipple(x, y)", [x, y])
+        return {"x": x, "y": y, "cursor_from": start, "ripple_at": ripple_at}
 
     def clear_of_caption(self, selector: str) -> None:
         """Bring the thing a step acts on out from under the caption bar.
@@ -706,15 +968,56 @@ class BrowserStage:
         self.page.wait_for_function(wait_expression(step), timeout=timeout * 1000)
         self.note(f"waited {time.monotonic() - waited:.1f}s for {describe_wait(step)}", "wait")
 
-    def say(self, line: str, hold: float) -> None:
+    def say(self, line: str, hold: float, at: str | None = None, label: str = "", style: str = "box") -> None:
         self.caption = line
-        self.page.evaluate("text => window.__sceneSay(text)", line)
+        if at is None:
+            self.page.evaluate("text => window.__sceneSay(text)", line)
+            pointer: dict = {}
+        else:
+            pointer = self.point_out(line, at, label, style)
         self.said.append(line)
         # `at` is when the caption appears; the narrator starts the line then
         # and finishes it inside `hold`.
-        self.note(f"say: {line}", "say", line=line, hold=hold)
+        self.note(f"say: {line}", "say", line=line, hold=hold, **pointer)
         self.check_corner()
         self.page.wait_for_timeout(int(hold * 1000))
+        # The box comes down when the next step that is not a `mark` begins.
+        self.callout_up = at is not None
+
+    def point_out(self, line: str, at: str, label: str, style: str) -> dict:
+        """Put the caption up and the box round `at` in the same frame; answer the mark's keys.
+
+        The thing is looked for for `CALLOUT_FIND_SECONDS`, brought out from
+        under the caption bar at the foot and the page's sticky header at the
+        top, or onto the frame if it is off it, left to go still, and then
+        outlined. Nothing found refuses the take, with the step's
+        number: a line that says "this" over a frame with no box is the very
+        thing the box is for.
+        """
+        target = self.page.locator(at).first
+        try:
+            target.wait_for(state="visible", timeout=CALLOUT_FIND_SECONDS * 1000)
+        except Exception:
+            raise SystemExit(f"step {self.step_number}: the `say` points `at = {at!r}`, and nothing on the page"
+                             f" matches it within {CALLOUT_FIND_SECONDS:g} s; the take is refused rather than"
+                             " filmed without its box") from None
+        self.clear_of_caption(at)
+        target.scroll_into_view_if_needed()
+        handle = target.element_handle()
+        handle.evaluate(CLEAR_OF_HEADER_SCRIPT, CALLOUT_HEADROOM)
+        handle.evaluate(SETTLE_SCRIPT, [STILL_FOR_SECONDS * 1000, STILL_WITHIN_SECONDS * 1000])
+        drawn = handle.evaluate(
+            "(el, [text, label, style]) => {"
+            " window.__sceneSay(text); return window.__sceneCallout(el, label, style); }",
+            [line, label, style],
+        )
+        width, height = self.page.viewport_size["width"], self.page.viewport_size["height"]
+        left, top = max(0, round(drawn["x"])), max(0, round(drawn["y"]))
+        right = min(width, round(drawn["x"] + drawn["w"]))
+        bottom = min(height, round(drawn["y"] + drawn["h"]))
+        box = {"x": left, "y": top, "w": max(0, right - left), "h": max(0, bottom - top)}
+        print(f"         box {box}" + (f"  {label!r}" if label else ""), flush=True)
+        return {"box": box, "label": label, "selector": at, "style": style}
 
     def hold(self, seconds: float) -> None:
         self.note(f"hold {seconds}s", "hold")
@@ -849,7 +1152,7 @@ CORNER_SCRIPT = """
   const into = (r) => r.width > 0 && r.height > 0 && r.right > corner.left && r.bottom > corner.top
                       && r.left < width && r.top < height;
   const found = [];
-  for (const id of ['fs-scene-cap', 'fs-scene-badge']) {
+  for (const id of ['fs-scene-cap', 'fs-scene-badge', 'fs-scene-callout-label']) {
     const el = document.getElementById(id);
     if (!el || getComputedStyle(el).display === 'none') continue;
     const r = el.getBoundingClientRect();
@@ -950,6 +1253,52 @@ REDRAWN_WITHIN_SECONDS = 0.3
 #: A settled point further than this from the press, in either direction, means
 #: the page moved between the press and the frames after it.
 MOVED_PIXELS = 4
+
+#: Room left between the page's sticky top (its header, the replay bar) and a
+#: box's top edge, so the box's label fits above the box and below the header.
+CALLOUT_HEADROOM = 48
+
+#: Bring an element out from under whatever the page keeps stuck to its top.
+#:
+#: Every page's header is `position: sticky`, and under a replay or a shadow
+#: bar it sticks below that bar too: 200 px of the frame on the cutlery plant.
+#: `scrollIntoView` puts a thing at the very top of the window, behind them,
+#: and the proof take of 2026-11-15 drew the box for "4 of 61" there, its
+#: text hidden and its label on the nav bar. The band is the run of fixed
+#: or sticky things stacked down from the top of the window over the
+#: element's width (not the element itself, nor anything holding it, nor the
+#: recorder's own layer); when the element's top is inside it, the element
+#: is scrolled to sit `headroom` below the band. `scroll-margin-top` does the
+#: scrolling so that a thing inside a scrolling panel is moved too.
+CLEAR_OF_HEADER_SCRIPT = """
+(node, headroom) => {
+  const box = node.getBoundingClientRect();
+  const stuck = [];
+  for (const el of document.body.querySelectorAll('*')) {
+    if (el.id && el.id.startsWith('fs-scene')) continue;
+    if (el.contains(node)) continue;
+    const position = getComputedStyle(el).position;
+    if (position !== 'sticky' && position !== 'fixed') continue;
+    const r = el.getBoundingClientRect();
+    if (!r.height || r.bottom > innerHeight / 2) continue;
+    if (r.right <= box.left || r.left >= box.right) continue;
+    stuck.push(r);
+  }
+  let band = 0, grew = true;
+  while (grew) {
+    grew = false;
+    for (const r of stuck) {
+      if (r.top <= band + 2 && r.bottom > band) { band = r.bottom; grew = true; }
+    }
+  }
+  if (!band || box.top >= band + headroom) return band;
+  const was = node.style.scrollMarginTop;
+  node.style.scrollMarginTop = (band + headroom) + 'px';
+  node.scrollIntoView({ block: 'start', behavior: 'instant' });
+  node.style.scrollMarginTop = was;
+  return band;
+}
+"""
 
 SETTLE_SCRIPT = """
 (el, [stillFor, within]) => new Promise((resolve) => {
@@ -1139,6 +1488,11 @@ def readme(scene: dict, facts: dict) -> str:
         " the recording checks that no writing of its own lands there",
         f"- the badge at the top right: `{facts['badge']}`,"
         " in every frame of the GIF and the mp4, which the recording checks before it writes this page",
+        "- the arrow cursor and the ring when it presses: drawn by the recording, moved to each"
+        " thing a step clicks, types into or chooses from, and pressing it as the ring starts",
+        *(["- the cyan box round what a line is about, with its label: drawn by the recording while"
+           " that line is up (`spotlight` dims the rest of the screen instead)"]
+          if any(step.get("at") for step in scene["step"]) else []),
         "- the product's floating Assistant and Design buttons are hidden, because they sit where"
         " the caption bar goes",
         f"- the product's message after a save (its toast) is drawn {TOAST_LIFT} px off the bottom rather"
@@ -1229,8 +1583,10 @@ def readme(scene: dict, facts: dict) -> str:
           if facts.get("slides") else []),
         *(["- `lesson.json` — the lesson this folder is, what it holds, and what it was filmed from"]
           if facts.get("lesson_line") else []),
-        "- `marks.json` — the seconds every step landed at; the frame's size and the GIF's; and, on every"
-        " click, `x` and `y`, the pixel of the mp4's frame the click landed on",
+        "- `marks.json` — the seconds every step landed at; the frame's size and the GIF's; on every"
+        " click, `x` and `y`, the pixel of the mp4's frame the click landed on, and on every click, fill"
+        " and choose `cursor_from` and `ripple_at`; on a line that points at something, `box`"
+        " (`x`, `y`, `w`, `h` in the mp4's pixels), `label`, `selector` and `style`",
         "",
     ]
     return "\n".join(lines)
@@ -1299,7 +1655,13 @@ def marks_document(scene: dict, made: dict, gif: Path, gif_seconds_taken: float)
     them. `frame` is the mp4's size, which is the viewport's; `gif` is the
     published loop's, so a point placed on the mp4 can be scaled onto the GIF.
     Every mark carries `kind` and `part`; a `say` its `line` and `hold`; a
-    `slide` its `image`; a scroll its `from_y`, `to_y` and `took`.
+    `slide` its `image`; a scroll its `from_y`, `to_y` and `took`. Added by
+    addition only, for the drawn cursor and box: a `click`, `fill` or `choose`
+    carries `cursor_from` (`{x, y}` where the cursor's glide began) and
+    `ripple_at` (the second its ripple started, as the press was sent), and a
+    `fill` or `choose` also `x`, `y` (where it pointed) and a `fill`
+    `typed_seconds`; a `say` with `at` carries `box` (`{x, y, w, h}`, integers,
+    in frame pixels, clipped to the frame), `label`, `selector` and `style`.
     """
     return {
         "frame": {"width": int(scene["width"]), "height": int(scene["height"])},
@@ -2371,7 +2733,7 @@ def record(scene: dict, out: Path, run_fsmes=None) -> dict:
 
         stage = BrowserStage(page, out, time.monotonic(), presses, base=base, slides=slides,
                              render=lambda card, path: render_slide(browser, card, path, width, height),
-                             run_fsmes=run_fsmes)
+                             run_fsmes=run_fsmes, type_delay=float(scene["type_delay_seconds"]))
         page.goto(f"{base}/dashboard", wait_until="load")
 
         scene_with_base = dict(scene)
@@ -2380,6 +2742,7 @@ def record(scene: dict, out: Path, run_fsmes=None) -> dict:
             for step in scene["step"]
         ]
         play(scene_with_base, stage)
+        stage.callout_down()
         stage.note("end", "end")
 
         video = Path(page.video.path())
