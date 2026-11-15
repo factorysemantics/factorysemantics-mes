@@ -203,6 +203,14 @@ selector = "#toast"
 text = "Booked 500 good, 3 scrap."
 
 [[step]]
+do = "wait_for"
+selector = "#queue"
+text = "WO-FORK1-0001"
+scroll_to = "#queue"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
 do = "say"
 line = "Booked, against WO-FORK1-0001 step 10, under the name of the person signed in. The queue's count is up by five hundred."
 
