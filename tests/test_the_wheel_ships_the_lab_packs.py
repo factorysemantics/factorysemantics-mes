@@ -35,7 +35,8 @@ PACKS = {"bottling": "labs/multiplant/bottling",
          "cutlery": "labs/cutlery"}
 #: For a pack whose folder holds more than the pack: the files that are the
 #: pack. Everything else in that folder is the lab's tooling and stays home.
-PACK_FILES = {"cutlery": ("plant.toml", "line.json", "floor.json", "tag_map.json", "masterdata")}
+PACK_FILES = {"cutlery": ("plant.toml", "line.json", "floor.json", "tag_map.json", "masterdata",
+                          "line_layout.json", "models")}
 #: Where the packs land inside the wheel.
 UNDER = "fsmes/data/packs"
 

@@ -1,0 +1,23 @@
+{
+  "units": "m",
+  "frame": {
+    "x": "FreeCAD X",
+    "z": "-FreeCAD Y",
+    "y": "up",
+    "front": "-Z",
+    "rot": "degrees about vertical, CCW from above"
+  },
+  "source": "studio's cutlery plant design (layout.json), delivered 2026-11-12; frame x = plant X, z = -plant Y",
+  "line": "STACK04",
+  "cells": [
+    {
+      "code": "STACK04_Stacker",
+      "line": "STACK04",
+      "x": 40.6,
+      "z": -4.6,
+      "rot": 0.0,
+      "model": "stacker.glb",
+      "kind": "Stacker"
+    }
+  ]
+}

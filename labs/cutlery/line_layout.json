@@ -1,0 +1,833 @@
+{
+  "_comment": "Geometry for the 3D line view of the cutlery plant: 83 machines on 61 lines, where studio's plant design puts them (positions/<LINE>.json, metres, x along the plant, z across it). Each machine is drawn with the model named here from models/ beside this file. Written by make_layout.py - edit the positions files or the drawing they came from, not this one.",
+  "defaults": {
+    "unit_label": "unit"
+  },
+  "lines": {
+    "FORK1LINE": {
+      "stations": {
+        "FORK1_Mold": {
+          "kind": "mold",
+          "x": 13.8,
+          "z": -5.6,
+          "rot": 0.0,
+          "model": "mold.glb"
+        },
+        "FORK1_Degate": {
+          "kind": "degate",
+          "x": 20.2,
+          "z": -3.6,
+          "rot": 0.0,
+          "model": "degate.glb"
+        },
+        "FORK1_Mark": {
+          "kind": "mark",
+          "x": 24.0,
+          "z": -3.6,
+          "rot": 0.0,
+          "model": "mark.glb"
+        }
+      }
+    },
+    "FORK2LINE": {
+      "stations": {
+        "FORK2_Mold": {
+          "kind": "mold",
+          "x": 13.8,
+          "z": -11.1,
+          "rot": 0.0,
+          "model": "mold.glb"
+        },
+        "FORK2_Degate": {
+          "kind": "degate",
+          "x": 20.2,
+          "z": -9.1,
+          "rot": 0.0,
+          "model": "degate.glb"
+        },
+        "FORK2_Mark": {
+          "kind": "mark",
+          "x": 24.0,
+          "z": -9.1,
+          "rot": 0.0,
+          "model": "mark.glb"
+        }
+      }
+    },
+    "FORK3LINE": {
+      "stations": {
+        "FORK3_Mold": {
+          "kind": "mold",
+          "x": 13.8,
+          "z": -16.6,
+          "rot": 0.0,
+          "model": "mold.glb"
+        },
+        "FORK3_Degate": {
+          "kind": "degate",
+          "x": 20.2,
+          "z": -14.6,
+          "rot": 0.0,
+          "model": "degate.glb"
+        },
+        "FORK3_Mark": {
+          "kind": "mark",
+          "x": 24.0,
+          "z": -14.6,
+          "rot": 0.0,
+          "model": "mark.glb"
+        }
+      }
+    },
+    "KNIFE1LINE": {
+      "stations": {
+        "KNIFE1_Mold": {
+          "kind": "mold",
+          "x": 13.8,
+          "z": -53.6,
+          "rot": 0.0,
+          "model": "mold.glb"
+        },
+        "KNIFE1_Degate": {
+          "kind": "degate",
+          "x": 20.2,
+          "z": -51.6,
+          "rot": 0.0,
+          "model": "degate.glb"
+        },
+        "KNIFE1_Mark": {
+          "kind": "mark",
+          "x": 24.0,
+          "z": -51.6,
+          "rot": 0.0,
+          "model": "mark.glb"
+        }
+      }
+    },
+    "KNIFE2LINE": {
+      "stations": {
+        "KNIFE2_Mold": {
+          "kind": "mold",
+          "x": 13.8,
+          "z": -59.1,
+          "rot": 0.0,
+          "model": "mold.glb"
+        },
+        "KNIFE2_Degate": {
+          "kind": "degate",
+          "x": 20.2,
+          "z": -57.1,
+          "rot": 0.0,
+          "model": "degate.glb"
+        },
+        "KNIFE2_Mark": {
+          "kind": "mark",
+          "x": 24.0,
+          "z": -57.1,
+          "rot": 0.0,
+          "model": "mark.glb"
+        }
+      }
+    },
+    "KNIFE3LINE": {
+      "stations": {
+        "KNIFE3_Mold": {
+          "kind": "mold",
+          "x": 13.8,
+          "z": -64.6,
+          "rot": 0.0,
+          "model": "mold.glb"
+        },
+        "KNIFE3_Degate": {
+          "kind": "degate",
+          "x": 20.2,
+          "z": -62.6,
+          "rot": 0.0,
+          "model": "degate.glb"
+        },
+        "KNIFE3_Mark": {
+          "kind": "mark",
+          "x": 24.0,
+          "z": -62.6,
+          "rot": 0.0,
+          "model": "mark.glb"
+        }
+      }
+    },
+    "PAL1LINE": {
+      "stations": {
+        "PAL1_Palletizer": {
+          "kind": "palletizer",
+          "x": 61.0,
+          "z": -10.0,
+          "rot": 0.0,
+          "model": "palletizer.glb"
+        },
+        "PAL1_StretchWrap": {
+          "kind": "stretchwrap",
+          "x": 67.6,
+          "z": -11.6,
+          "rot": 90.0,
+          "model": "stretchwrap.glb"
+        }
+      }
+    },
+    "PAL2LINE": {
+      "stations": {
+        "PAL2_Palletizer": {
+          "kind": "palletizer",
+          "x": 61.0,
+          "z": -34.0,
+          "rot": 0.0,
+          "model": "palletizer.glb"
+        },
+        "PAL2_StretchWrap": {
+          "kind": "stretchwrap",
+          "x": 67.6,
+          "z": -35.6,
+          "rot": 90.0,
+          "model": "stretchwrap.glb"
+        }
+      }
+    },
+    "PAL3LINE": {
+      "stations": {
+        "PAL3_Palletizer": {
+          "kind": "palletizer",
+          "x": 61.0,
+          "z": -54.0,
+          "rot": 0.0,
+          "model": "palletizer.glb"
+        },
+        "PAL3_StretchWrap": {
+          "kind": "stretchwrap",
+          "x": 67.6,
+          "z": -55.6,
+          "rot": 90.0,
+          "model": "stretchwrap.glb"
+        }
+      }
+    },
+    "PAL4LINE": {
+      "stations": {
+        "PAL4_Palletizer": {
+          "kind": "palletizer",
+          "x": 61.0,
+          "z": -63.0,
+          "rot": 0.0,
+          "model": "palletizer.glb"
+        },
+        "PAL4_StretchWrap": {
+          "kind": "stretchwrap",
+          "x": 67.6,
+          "z": -64.6,
+          "rot": 90.0,
+          "model": "stretchwrap.glb"
+        }
+      }
+    },
+    "SPOON1LINE": {
+      "stations": {
+        "SPOON1_Mold": {
+          "kind": "mold",
+          "x": 13.8,
+          "z": -29.6,
+          "rot": 0.0,
+          "model": "mold.glb"
+        },
+        "SPOON1_Degate": {
+          "kind": "degate",
+          "x": 20.2,
+          "z": -27.6,
+          "rot": 0.0,
+          "model": "degate.glb"
+        },
+        "SPOON1_Mark": {
+          "kind": "mark",
+          "x": 24.0,
+          "z": -27.6,
+          "rot": 0.0,
+          "model": "mark.glb"
+        }
+      }
+    },
+    "SPOON2LINE": {
+      "stations": {
+        "SPOON2_Mold": {
+          "kind": "mold",
+          "x": 13.8,
+          "z": -35.1,
+          "rot": 0.0,
+          "model": "mold.glb"
+        },
+        "SPOON2_Degate": {
+          "kind": "degate",
+          "x": 20.2,
+          "z": -33.1,
+          "rot": 0.0,
+          "model": "degate.glb"
+        },
+        "SPOON2_Mark": {
+          "kind": "mark",
+          "x": 24.0,
+          "z": -33.1,
+          "rot": 0.0,
+          "model": "mark.glb"
+        }
+      }
+    },
+    "SPOON3LINE": {
+      "stations": {
+        "SPOON3_Mold": {
+          "kind": "mold",
+          "x": 13.8,
+          "z": -40.6,
+          "rot": 0.0,
+          "model": "mold.glb"
+        },
+        "SPOON3_Degate": {
+          "kind": "degate",
+          "x": 20.2,
+          "z": -38.6,
+          "rot": 0.0,
+          "model": "degate.glb"
+        },
+        "SPOON3_Mark": {
+          "kind": "mark",
+          "x": 24.0,
+          "z": -38.6,
+          "rot": 0.0,
+          "model": "mark.glb"
+        }
+      }
+    },
+    "STACK01LINE": {
+      "stations": {
+        "STACK01_Stacker": {
+          "kind": "stacker",
+          "x": 31.6,
+          "z": -4.6,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK02LINE": {
+      "stations": {
+        "STACK02_Stacker": {
+          "kind": "stacker",
+          "x": 34.6,
+          "z": -4.6,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK03LINE": {
+      "stations": {
+        "STACK03_Stacker": {
+          "kind": "stacker",
+          "x": 37.6,
+          "z": -4.6,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK04LINE": {
+      "stations": {
+        "STACK04_Stacker": {
+          "kind": "stacker",
+          "x": 40.6,
+          "z": -4.6,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK05LINE": {
+      "stations": {
+        "STACK05_Stacker": {
+          "kind": "stacker",
+          "x": 31.6,
+          "z": -10.1,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK06LINE": {
+      "stations": {
+        "STACK06_Stacker": {
+          "kind": "stacker",
+          "x": 34.6,
+          "z": -10.1,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK07LINE": {
+      "stations": {
+        "STACK07_Stacker": {
+          "kind": "stacker",
+          "x": 37.6,
+          "z": -10.1,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK08LINE": {
+      "stations": {
+        "STACK08_Stacker": {
+          "kind": "stacker",
+          "x": 40.6,
+          "z": -10.1,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK09LINE": {
+      "stations": {
+        "STACK09_Stacker": {
+          "kind": "stacker",
+          "x": 31.6,
+          "z": -15.6,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK10LINE": {
+      "stations": {
+        "STACK10_Stacker": {
+          "kind": "stacker",
+          "x": 34.6,
+          "z": -15.6,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK11LINE": {
+      "stations": {
+        "STACK11_Stacker": {
+          "kind": "stacker",
+          "x": 37.6,
+          "z": -15.6,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK12LINE": {
+      "stations": {
+        "STACK12_Stacker": {
+          "kind": "stacker",
+          "x": 40.6,
+          "z": -15.6,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK13LINE": {
+      "stations": {
+        "STACK13_Stacker": {
+          "kind": "stacker",
+          "x": 31.6,
+          "z": -28.6,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK14LINE": {
+      "stations": {
+        "STACK14_Stacker": {
+          "kind": "stacker",
+          "x": 34.6,
+          "z": -28.6,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK15LINE": {
+      "stations": {
+        "STACK15_Stacker": {
+          "kind": "stacker",
+          "x": 37.6,
+          "z": -28.6,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK16LINE": {
+      "stations": {
+        "STACK16_Stacker": {
+          "kind": "stacker",
+          "x": 40.6,
+          "z": -28.6,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK17LINE": {
+      "stations": {
+        "STACK17_Stacker": {
+          "kind": "stacker",
+          "x": 31.6,
+          "z": -34.1,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK18LINE": {
+      "stations": {
+        "STACK18_Stacker": {
+          "kind": "stacker",
+          "x": 34.6,
+          "z": -34.1,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK19LINE": {
+      "stations": {
+        "STACK19_Stacker": {
+          "kind": "stacker",
+          "x": 37.6,
+          "z": -34.1,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK20LINE": {
+      "stations": {
+        "STACK20_Stacker": {
+          "kind": "stacker",
+          "x": 40.6,
+          "z": -34.1,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK21LINE": {
+      "stations": {
+        "STACK21_Stacker": {
+          "kind": "stacker",
+          "x": 31.6,
+          "z": -39.6,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK22LINE": {
+      "stations": {
+        "STACK22_Stacker": {
+          "kind": "stacker",
+          "x": 34.6,
+          "z": -39.6,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK23LINE": {
+      "stations": {
+        "STACK23_Stacker": {
+          "kind": "stacker",
+          "x": 37.6,
+          "z": -39.6,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK24LINE": {
+      "stations": {
+        "STACK24_Stacker": {
+          "kind": "stacker",
+          "x": 40.6,
+          "z": -39.6,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK25LINE": {
+      "stations": {
+        "STACK25_Stacker": {
+          "kind": "stacker",
+          "x": 31.6,
+          "z": -52.6,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK26LINE": {
+      "stations": {
+        "STACK26_Stacker": {
+          "kind": "stacker",
+          "x": 34.6,
+          "z": -52.6,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK27LINE": {
+      "stations": {
+        "STACK27_Stacker": {
+          "kind": "stacker",
+          "x": 37.6,
+          "z": -52.6,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK28LINE": {
+      "stations": {
+        "STACK28_Stacker": {
+          "kind": "stacker",
+          "x": 40.6,
+          "z": -52.6,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK29LINE": {
+      "stations": {
+        "STACK29_Stacker": {
+          "kind": "stacker",
+          "x": 31.6,
+          "z": -58.1,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK30LINE": {
+      "stations": {
+        "STACK30_Stacker": {
+          "kind": "stacker",
+          "x": 34.6,
+          "z": -58.1,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK31LINE": {
+      "stations": {
+        "STACK31_Stacker": {
+          "kind": "stacker",
+          "x": 31.6,
+          "z": -63.6,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "STACK32LINE": {
+      "stations": {
+        "STACK32_Stacker": {
+          "kind": "stacker",
+          "x": 34.6,
+          "z": -63.6,
+          "rot": 0.0,
+          "model": "stacker.glb"
+        }
+      }
+    },
+    "WRAP01LINE": {
+      "stations": {
+        "WRAP01_Wrapper": {
+          "kind": "wrapper",
+          "x": 48.4,
+          "z": -3.6,
+          "rot": 0.0,
+          "model": "wrapper.glb"
+        }
+      }
+    },
+    "WRAP02LINE": {
+      "stations": {
+        "WRAP02_Wrapper": {
+          "kind": "wrapper",
+          "x": 48.4,
+          "z": -6.0,
+          "rot": 0.0,
+          "model": "wrapper.glb"
+        }
+      }
+    },
+    "WRAP03LINE": {
+      "stations": {
+        "WRAP03_Wrapper": {
+          "kind": "wrapper",
+          "x": 48.4,
+          "z": -9.1,
+          "rot": 0.0,
+          "model": "wrapper.glb"
+        }
+      }
+    },
+    "WRAP04LINE": {
+      "stations": {
+        "WRAP04_Wrapper": {
+          "kind": "wrapper",
+          "x": 48.4,
+          "z": -11.5,
+          "rot": 0.0,
+          "model": "wrapper.glb"
+        }
+      }
+    },
+    "WRAP05LINE": {
+      "stations": {
+        "WRAP05_Wrapper": {
+          "kind": "wrapper",
+          "x": 48.4,
+          "z": -14.6,
+          "rot": 0.0,
+          "model": "wrapper.glb"
+        }
+      }
+    },
+    "WRAP06LINE": {
+      "stations": {
+        "WRAP06_Wrapper": {
+          "kind": "wrapper",
+          "x": 48.4,
+          "z": -17.0,
+          "rot": 0.0,
+          "model": "wrapper.glb"
+        }
+      }
+    },
+    "WRAP07LINE": {
+      "stations": {
+        "WRAP07_Wrapper": {
+          "kind": "wrapper",
+          "x": 48.4,
+          "z": -27.6,
+          "rot": 0.0,
+          "model": "wrapper.glb"
+        }
+      }
+    },
+    "WRAP08LINE": {
+      "stations": {
+        "WRAP08_Wrapper": {
+          "kind": "wrapper",
+          "x": 48.4,
+          "z": -30.0,
+          "rot": 0.0,
+          "model": "wrapper.glb"
+        }
+      }
+    },
+    "WRAP09LINE": {
+      "stations": {
+        "WRAP09_Wrapper": {
+          "kind": "wrapper",
+          "x": 48.4,
+          "z": -33.1,
+          "rot": 0.0,
+          "model": "wrapper.glb"
+        }
+      }
+    },
+    "WRAP10LINE": {
+      "stations": {
+        "WRAP10_Wrapper": {
+          "kind": "wrapper",
+          "x": 48.4,
+          "z": -35.5,
+          "rot": 0.0,
+          "model": "wrapper.glb"
+        }
+      }
+    },
+    "WRAP11LINE": {
+      "stations": {
+        "WRAP11_Wrapper": {
+          "kind": "wrapper",
+          "x": 48.4,
+          "z": -38.6,
+          "rot": 0.0,
+          "model": "wrapper.glb"
+        }
+      }
+    },
+    "WRAP12LINE": {
+      "stations": {
+        "WRAP12_Wrapper": {
+          "kind": "wrapper",
+          "x": 48.4,
+          "z": -41.0,
+          "rot": 0.0,
+          "model": "wrapper.glb"
+        }
+      }
+    },
+    "WRAP13LINE": {
+      "stations": {
+        "WRAP13_Wrapper": {
+          "kind": "wrapper",
+          "x": 48.4,
+          "z": -51.6,
+          "rot": 0.0,
+          "model": "wrapper.glb"
+        }
+      }
+    },
+    "WRAP14LINE": {
+      "stations": {
+        "WRAP14_Wrapper": {
+          "kind": "wrapper",
+          "x": 48.4,
+          "z": -54.0,
+          "rot": 0.0,
+          "model": "wrapper.glb"
+        }
+      }
+    },
+    "WRAP15LINE": {
+      "stations": {
+        "WRAP15_Wrapper": {
+          "kind": "wrapper",
+          "x": 48.4,
+          "z": -57.1,
+          "rot": 0.0,
+          "model": "wrapper.glb"
+        }
+      }
+    },
+    "WRAP16LINE": {
+      "stations": {
+        "WRAP16_Wrapper": {
+          "kind": "wrapper",
+          "x": 48.4,
+          "z": -59.5,
+          "rot": 0.0,
+          "model": "wrapper.glb"
+        }
+      }
+    }
+  }
+}
