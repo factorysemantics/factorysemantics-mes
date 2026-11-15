@@ -178,6 +178,11 @@ packages = ["src/fsmes"]
 "labs/cutlery/floor.json" = "fsmes/data/packs/cutlery/floor.json"
 "labs/cutlery/tag_map.json" = "fsmes/data/packs/cutlery/tag_map.json"
 "labs/cutlery/masterdata" = "fsmes/data/packs/cutlery/masterdata"
+# The 3D line view's layout and studio's seven machine models (2026-11-14):
+# plant.toml names line_layout.json, so the wheel must carry it, and the
+# models beside it. positions/ and make_layout.py are the generators and stay.
+"labs/cutlery/line_layout.json" = "fsmes/data/packs/cutlery/line_layout.json"
+"labs/cutlery/models" = "fsmes/data/packs/cutlery/models"
 
 # THE ASSISTANT FOLDER, INSIDE THE WHEEL. `fsmes skills unpack plant-from-your-mes
 # <dir>` writes it out on a machine with no checkout and no internet, which is

@@ -51,7 +51,11 @@ base.OPC = ("127.0.0.1", 4844)
 base.PACKS = (PLANT,)
 #: The files that are the pack. The rest of `labs/cutlery` is the lab's
 #: tooling and a pack carries no code (decision 0022).
-PACK_FILES = ("plant.toml", "line.json", "floor.json", "tag_map.json")
+#: line_layout.json and models/ joined on 2026-11-14: where each machine stands
+#: on the 3D line view, and its model. positions/ and make_layout.py generate
+#: the layout and stay in the checkout.
+PACK_FILES = ("plant.toml", "line.json", "floor.json", "tag_map.json", "line_layout.json")
+PACK_DIRS = ("masterdata", "models")
 MACHINES = 83
 
 say, fail, ask, tell, until = base.say, base.fail, base.ask, base.tell, base.until
@@ -64,7 +68,8 @@ def the_copies_are_copies(repo: Path, wheel: Path) -> None:
             zf.extractall(tmp)
         ours = Path(tmp) / base.SHIPPED / PLANT
         wanted = sorted([*PACK_FILES, *(p.relative_to(theirs).as_posix()
-                                        for p in (theirs / "masterdata").rglob("*") if p.is_file())])
+                                        for d in PACK_DIRS
+                                        for p in (theirs / d).rglob("*") if p.is_file())])
         got = sorted(p.relative_to(ours).as_posix() for p in ours.rglob("*") if p.is_file())
         if wanted != got:
             fail(f"{PLANT}: the wheel's copy is not the lab's. In labs/{PLANT} but not the "

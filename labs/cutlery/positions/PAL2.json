@@ -1,0 +1,32 @@
+{
+  "units": "m",
+  "frame": {
+    "x": "FreeCAD X",
+    "z": "-FreeCAD Y",
+    "y": "up",
+    "front": "-Z",
+    "rot": "degrees about vertical, CCW from above"
+  },
+  "source": "studio's cutlery plant design (layout.json), delivered 2026-11-12; frame x = plant X, z = -plant Y",
+  "line": "PAL2",
+  "cells": [
+    {
+      "code": "PAL2_Palletizer",
+      "line": "PAL2",
+      "x": 61.0,
+      "z": -34.0,
+      "rot": 0.0,
+      "model": "palletizer.glb",
+      "kind": "Palletizer"
+    },
+    {
+      "code": "PAL2_StretchWrap",
+      "line": "PAL2",
+      "x": 67.6,
+      "z": -35.6,
+      "rot": 90.0,
+      "model": "stretchwrap.glb",
+      "kind": "StretchWrap"
+    }
+  ]
+}
