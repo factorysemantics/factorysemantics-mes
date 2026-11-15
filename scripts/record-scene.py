@@ -677,11 +677,17 @@ class BrowserStage:
         pressed. When the thing is under the bar, room is added once below the
         page's last row and the thing is put in the middle of the window. A
         thing already clear is left where it is, so no other take moves.
+
+        The thing is found the way the click will find it, by Playwright's
+        own locator: a scene's selector may say `:has-text("Release")`, which
+        `document.querySelector` refuses as no selector at all (the first take
+        of class 1.4 stopped on its Release button for that reason).
         """
-        self.page.evaluate(
-            """([selector, bar]) => {
-                 const node = document.querySelector(selector);
-                 if (!node) return;
+        found = self.page.locator(selector)
+        if not found.count():
+            return
+        found.first.evaluate(
+            """(node, bar) => {
                  const box = node.getBoundingClientRect();
                  if (box.bottom <= window.innerHeight - bar) return;
                  if (!document.getElementById('fs-scene-room')) {
@@ -692,7 +698,7 @@ class BrowserStage:
                  }
                  node.scrollIntoView({ block: 'center', behavior: 'instant' });
                }""",
-            [selector, CAPTION_HEIGHT * 2],
+            CAPTION_HEIGHT * 2,
         )
 
     def wait_for(self, step: dict, timeout: float) -> None:
