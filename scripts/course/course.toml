@@ -138,6 +138,12 @@ label = "2.1"
 slug = "the-station-screen"
 title = "The station screen — one machine at arm's length"
 one_line = "State, queue, booking output, issuing material, a quality check, what maintenance is owed."
+outcomes = [
+  "Read one machine on its station screen: its state, its queue of released work, and what maintenance is owed.",
+  "Book good and scrap against the order at the head of its queue, issue a lot, and record a quality reading.",
+  "Say why only released work can be booked at a station, and why a typed count is the operator's word.",
+]
+scene = "scripts/scenes/course/03-01-the-station-screen.toml"
 
 [[module.lesson]]
 order = 2

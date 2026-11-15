@@ -809,6 +809,29 @@ class BrowserStage:
                }""",
             [selector, block, offset, text],
         )
+        # A row at the very foot of a short page cannot reach its offset, and
+        # can be left under the caption bar: the station screen's "Nothing owed
+        # on this machine" in the second take of class 2.1. Room is added below
+        # the page, as `clear_of_caption` adds it, and the row is lifted clear,
+        # but never higher than the offset the scene asked for, so a row that
+        # reached its offset, or a panel taller than the window, stays put.
+        self.page.evaluate(
+            """([selector, offset, text, bar]) => {
+                 const nodes = [...document.querySelectorAll(selector)];
+                 const node = text ? nodes.find((n) => (n.innerText || '').includes(text)) : nodes[0];
+                 const box = node.getBoundingClientRect();
+                 const lift = Math.min(box.bottom - (window.innerHeight - bar), box.top - offset);
+                 if (lift <= 0) return;
+                 if (!document.getElementById('fs-scene-room')) {
+                   const room = document.createElement('div');
+                   room.id = 'fs-scene-room';
+                   room.style.height = (2 * bar) + 'px';
+                   document.body.appendChild(room);
+                 }
+                 window.scrollBy(0, lift);
+               }""",
+            [selector, offset, text, CAPTION_HEIGHT * 2],
+        )
         self.page.wait_for_timeout(int(SCROLL_SECONDS * 1000))
         to_y = self.page.evaluate("() => Math.round(window.scrollY)")
         # Page pixels, the window's scroll: a box that scrolls inside the page
