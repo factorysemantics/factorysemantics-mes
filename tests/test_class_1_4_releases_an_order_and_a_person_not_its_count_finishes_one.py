@@ -185,20 +185,24 @@ def test_the_order_finished_is_the_packs_own_fork_order_and_the_floor_is_told_no
 def test_what_it_refuses_is_finishing_at_the_count_so_a_person_finishes_every_step_and_the_outbox_has_it(scene):
     refuses = steps_of(scene, "refuses")
     said = " ".join(step["line"] for step in refuses if step["do"] == "say")
-    finished = [step["selector"] for step in refuses if step["do"] == "click"]
+    finished = [step["selector"] for step in refuses if step["do"] == "click" and "Finish step" in step["selector"]]
 
     # It opens on the count past the ordered quantity with the order still open.
     assert refuses[0]["do"] == "wait_for" and "#d-good" in refuses[0]["js"] and "#d-qty" in refuses[0]["js"]
     assert "does not finish itself" in said and "A person closes it" in said
     assert finished == [f'#ops tbody tr:has-text("{op["name"]}") button:has-text("Finish step")'
                         for op in sorted(fork_routing()["operations"], key=lambda op: op["seq"])]
-    waits = [step for step in refuses if step["do"] == "wait_for"]
-    assert {"selector": "#d-status", "text": "completed"}.items() <= waits[-3].items()
-    # The outbox row is waited for, then scrolled to: a step scrolls before it waits.
-    assert [(w["selector"], w["text"], bool(w.get("scroll_to"))) for w in waits[-2:]] == [
+    # The outbox is opened right after the last step is finished, before the
+    # confirmation scrolls off its newest twenty; the row is waited for, then
+    # scrolled to, because a step scrolls before it waits.
+    outbox = next(i for i, step in enumerate(refuses) if step["do"] == "goto" and step["url"] == "/dashboard/ops")
+    assert finished[-1] in [step.get("selector") for step in refuses[outbox - 4 : outbox]]
+    assert [(w["selector"], w["text"], bool(w.get("scroll_to"))) for w in refuses[outbox + 1 : outbox + 3]] == [
         ("#erp-table tbody", "WO-FORK1-0001", False),
         ("#erp-table tbody", "WO-FORK1-0001", True),
     ]
+    # And the order is seen completed afterwards, its over-run beside it.
+    assert any("'completed'" in step.get("js", "") for step in refuses[outbox:])
 
 
 def test_the_you_now_know_card_says_the_classs_own_outcomes_word_for_word(runner, scene):

@@ -353,23 +353,22 @@ scroll_offset = 220
 
 [[step]]
 do = "say"
-line = "Degate, then Mark. With its last step done, the order is completed, at the count it really made."
+line = "Degate, then Mark. Completed."
 
 [[step]]
 do = "mark"
 name = "finished-by-a-person"
 
-[[step]]
-do = "say"
-line = "Look at the over-run beside the ordered number. It is every fork made past 2,778, still attached to the order that made them."
-
+# The outbox draws its newest twenty messages and the machines send about two
+# state changes a second, so it is opened at once, before anything is said
+# about the order: twenty seconds later the confirmation has scrolled off the
+# panel (the third take). A step scrolls before it waits, so the row is waited
+# for first and scrolled to by a second wait that finds it already there.
 [[step]]
 do = "goto"
 url = "/dashboard/ops"
-settle = 1
+settle = 0.5
 
-# A step scrolls before it waits, so the row is waited for first and scrolled
-# to by a second wait that finds it already there.
 [[step]]
 do = "wait_for"
 selector = "#erp-table tbody"
@@ -385,16 +384,40 @@ scroll_text = "WO-FORK1-0001"
 scroll_offset = 300
 
 [[step]]
-do = "say"
-line = "And the news goes up. In the outbox, a confirmation for the office, beside the machines' state changes: WO-FORK1-0001, waiting to be sent."
-
-[[step]]
 do = "mark"
 name = "the-confirmation-in-the-outbox"
 
 [[step]]
 do = "say"
+line = "And the news goes up. In the outbox, a confirmation for the office, among the machines' state changes: WO-FORK1-0001, waiting to be sent."
+
+[[step]]
+do = "say"
 line = "It was written when a person finished the order, not when the count passed the number. So the office hears the number the line really made."
+
+[[step]]
+do = "goto"
+url = "/dashboard/orders?q=WO-FORK1-0001"
+settle = 2
+
+[[step]]
+do = "click"
+selector = "#order-list tbody tr:has-text(\"WO-FORK1-0001\")"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#detail-code').innerText === 'WO-FORK1-0001' && document.querySelector('#d-status').innerText === 'completed'"
+scroll_to = "#detail-panel"
+scroll_block = "start"
+scroll_offset = 220
+
+[[step]]
+do = "say"
+line = "Back on the order: completed. The over-run beside the ordered number is every fork made past 2,778, still on the order that made them."
+
+[[step]]
+do = "mark"
+name = "completed-with-its-over-run"
 
 # ------------------------------------------------------------ you now know
 
