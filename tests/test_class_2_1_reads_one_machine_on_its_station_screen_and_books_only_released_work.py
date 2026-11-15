@@ -11,6 +11,11 @@ not (a Good figure the machine's counter contradicts is taken as typed, and
 the scene says so rather than inventing a refusal). This file holds the scene
 file to what the outline asks of it. No plant and no browser: the scene is
 loaded and walked the way the recorder walks it.
+
+The second filming (Scott, 2026-11-15: "Just the screen doesn't explain
+anything") keeps every caption studio voiced, word for word, and adds a box
+round what each line on the screen is about, and reaches the station and the
+Orders page by the menus instead of by address.
 """
 
 from __future__ import annotations
@@ -19,7 +24,7 @@ import importlib.util
 import json
 import re
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import urlparse
 
 import pytest
 
@@ -30,6 +35,15 @@ RUNNER = REPO / "scripts" / "record-scene.py"
 SCENE = REPO / "scripts" / "scenes" / "course" / "03-01-the-station-screen.toml"
 PACK = REPO / "labs" / "cutlery" / "masterdata"
 MACHINE = "FORK1_Mold"
+# The caption lines of the take studio voiced, as that take's script file
+# wrote them: the second filming says exactly these, in this order.
+VOICED = REPO / "tests" / "fixtures" / "course" / "class-2-1-voiced-script.txt"
+# The one line on the screen that is about nothing drawn there: the audit trail
+# it names is not on the station screen.
+POINTS_AT_NOTHING_ON_SCREEN = {
+    "So a typed figure is the operator's word. The audit trail says who typed it,"
+    " and the counter's own shots stay counted beside it."
+}
 
 # The lab fleet, the public demo and the stock demo ports: a class is never
 # filmed on a plant somebody else is looking at.
@@ -67,6 +81,8 @@ def everything_written(scene: dict) -> list[str]:
     for step in scene["step"]:
         if step["do"] == "say":
             written.append(step["line"])
+            if step.get("label"):
+                written.append(step["label"])
         if step["do"] == "slide":
             written += [step["title"], *step["lines"]]
         if step["do"] == "fill":
@@ -95,7 +111,8 @@ def test_the_scene_is_a_full_take_of_class_2_1_named_by_its_label_that_runs_four
     assert (scene["width"], scene["height"]) == (1280, 720)
     planned = runner.planned_seconds(scene)
     # Page loads and waits add to the plan; the finished take is measured.
-    assert 240 <= planned <= scene["budget_seconds"] <= 360, planned
+    # Half a minute over the first filming's six, for the clicked path, and no more.
+    assert 240 <= planned <= scene["budget_seconds"] <= 390, planned
     print(f"planned {planned} s against a {scene['budget_seconds']} s budget")
 
 
@@ -133,10 +150,52 @@ def test_the_idea_card_names_station_queue_book_and_issue(scene):
 
 def test_the_screen_is_the_fork_moulds_station_and_its_machine_is_the_first_step_of_the_fork_line(scene):
     first = min(fork_routing()["operations"], key=lambda op: op["seq"])["equipment"]
-    stations = [urlparse(step["url"]) for step in scene["step"] if step["do"] == "goto" and "/station" in step["url"]]
 
     assert first == MACHINE
-    assert stations and all(parse_qs(url.query)["m"] == [MACHINE] for url in stations)
+    assert chosen_in(scene, "screen", "#machine") == [MACHINE]
+
+
+def test_the_only_page_opened_by_address_is_the_floor_and_the_station_and_orders_are_reached_by_their_menus(scene):
+    pages = [step for step in scene["step"] if step["do"] == "goto"]
+    clicked = [step["selector"] for step in scene["step"] if step["do"] == "click"]
+    screen = steps_of(scene, "screen")
+
+    assert [urlparse(step["url"]).path for step in pages] == ["/dashboard"]
+    assert pages[0] is screen[0]
+    # Floor's Station chip, then the machine chooser, before anything is read.
+    assert [step["do"] for step in screen[:4]] == ["goto", "click", "wait_for", "choose"]
+    assert screen[1]["selector"] == 'nav.subnav a:text-is("Station")'
+    assert clicked.count('header nav a:text-is("Orders")') == 1
+    # Back from the Orders page the same way: the Floor menu, then Station.
+    back = clicked.index('header nav a:text-is("Floor")')
+    assert clicked[back + 1] == 'nav.subnav a:text-is("Station")'
+
+
+def test_every_caption_is_the_line_studio_voiced_word_for_word_in_the_same_order(runner, scene):
+    voiced = VOICED.read_text(encoding="utf-8").splitlines()
+
+    assert len(voiced) == 30
+    assert runner.script_lines(scene) == voiced
+
+
+def test_every_line_said_over_the_screen_points_at_what_it_is_about_and_no_line_over_a_card_does(scene):
+    on_screen = [s for s in scene["step"] if s["do"] == "say" and s["part"] in ("screen", "refuses")]
+    on_cards = [s for s in scene["step"] if s["do"] == "say" and s["part"] not in ("screen", "refuses")]
+    unpointed = [s["line"] for s in on_screen if not s.get("at") and s["line"] not in POINTS_AT_NOTHING_ON_SCREEN]
+
+    assert unpointed == [], f"{len(unpointed)} of {len(on_screen)} lines over the screen point at nothing: {unpointed}"
+    assert [s["line"] for s in on_cards if s.get("at")] == []
+    # A label is a few words, and the dimmed spotlight is kept for the two refusals.
+    assert all(len(s["label"].split()) <= 3 for s in on_screen if s.get("label"))
+    spotlit = [s for s in on_screen if s.get("style") == "spotlight"]
+    assert len(spotlit) == 2 and all(s["part"] == "refuses" for s in spotlit)
+
+
+def test_what_is_typed_is_typed_at_the_default_pace_and_the_long_lot_is_chosen(runner, scene):
+    assert scene["type_delay_seconds"] == runner.TYPE_DELAY_SECONDS
+    assert chosen_in(scene, "screen", "#issue-lot") == ["LOT-PP-FORK1-001"]
+    typed = [step["text"] for step in scene["step"] if step["do"] == "fill"]
+    assert typed == ["500", "3", "2", "165.1", "WO-FORK1-0002", "5000"]
 
 
 def test_it_reads_the_cards_top_to_bottom_state_queue_book_issue_quality_maintenance(scene):
@@ -193,7 +252,7 @@ def test_what_it_refuses_is_a_planned_order_which_the_against_list_does_not_offe
     said = " ".join(step["line"] for step in refuses if step["do"] == "say")
 
     assert not planned["release"] and planned["line"] == "FORK1LINE"
-    assert "'planned'" in next(step["js"] for step in refuses if "WO-FORK1-0002" in step.get("js", ""))
+    assert "'planned'" in next(step["js"] for step in refuses if "#d-status" in step.get("js", ""))
     # Back at the mould, the list is checked to hold the released order alone.
     assert any("#book-order option" in step.get("js", "") for step in refuses)
     assert "not there to book against" in said
@@ -208,7 +267,7 @@ def test_a_figure_the_counter_contradicts_is_filmed_as_taken_and_owned_up_to_not
     said = " ".join(step["line"] for step in refuses if step["do"] == "say")
 
     # The take checks the mould's count is short of the figure before typing it.
-    fill = next(i for i, step in enumerate(refuses) if step["do"] == "fill")
+    fill = next(i for i, step in enumerate(refuses) if step["do"] == "fill" and step["selector"] == "#book-good")
     assert any(f"< {typed}" in step.get("js", "") for step in refuses[:fill])
     assert "took the figure as typed" in said
     assert "does not refuse a Good figure the machine's own counter contradicts" in honesty
@@ -268,8 +327,10 @@ def test_the_counter_the_absent_order_the_floor_switch_the_lot_list_and_the_repl
 
 def test_no_screen_of_people_is_filmed_and_admin_is_not_opened(scene):
     urls = [step["url"] for step in scene["step"] if step["do"] == "goto"]
+    clicked = " ".join(step["selector"] for step in scene["step"] if step["do"] == "click")
 
     assert not [url for url in urls if "people" in url or "/admin" in url]
+    assert "Setup" not in clicked and "Admin" not in clicked
 
 
 def test_the_recorder_plays_every_step_of_it(runner, scene):
@@ -277,7 +338,7 @@ def test_the_recorder_plays_every_step_of_it(runner, scene):
 
     class Stage:
         def __getattr__(self, verb):
-            return lambda *args: handed.append(verb)
+            return lambda *args, **pointer: handed.append(verb)
 
     runner.play(scene, Stage())
 

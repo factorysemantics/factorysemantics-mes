@@ -924,6 +924,11 @@ class BrowserStage:
         if box is None:
             return {}
         x, y = int(box["x"] + box["width"] / 2), int(box["y"] + box["height"] / 2)
+        width, height = self.page.viewport_size["width"], self.page.viewport_size["height"]
+        if x > width - AVATAR_WIDTH and y > height - AVATAR_HEIGHT:
+            fault = f"at {self._at():.2f}s: the press on step {self.step_number} lands at {x},{y}"
+            self.corner_faults.append(fault)
+            print(f"         CORNER: {fault}", flush=True)
         start = self.cursor_to(x, y, CURSOR_GLIDE_SECONDS)
         self.page.wait_for_timeout(int(CURSOR_REST_SECONDS * 1000))
         ripple_at = self._at()
@@ -938,7 +943,11 @@ class BrowserStage:
         scroll: Playwright cannot press it, and a viewer would not see it
         pressed. When the thing is under the bar, room is added once below the
         page's last row and the thing is put in the middle of the window. A
-        thing already clear is left where it is, so no other take moves.
+        thing that reaches across into the avatar's columns is held above the
+        avatar's corner instead, box padding and all: the right-hand half of
+        the station screen (its Issue card, its queue) sits there once
+        scrolled, and studio draws its narrator over it. A thing already clear
+        is left where it is, so no other take moves.
 
         The thing is found the way the click will find it, by Playwright's
         own locator: a scene's selector may say `:has-text("Release")`, which
@@ -949,9 +958,13 @@ class BrowserStage:
         if not found.count():
             return
         found.first.evaluate(
-            """(node, bar) => {
+            """(node, [bar, cornerWidth, cornerHeight]) => {
                  const box = node.getBoundingClientRect();
-                 if (box.bottom <= window.innerHeight - bar) return;
+                 // A thing that reaches across into the avatar's columns has
+                 // the avatar's corner as its floor, not the caption bar.
+                 const floor = box.right > window.innerWidth - cornerWidth
+                   ? window.innerHeight - cornerHeight : window.innerHeight - bar;
+                 if (box.bottom <= floor) return;
                  if (!document.getElementById('fs-scene-room')) {
                    const room = document.createElement('div');
                    room.id = 'fs-scene-room';
@@ -960,7 +973,7 @@ class BrowserStage:
                  }
                  node.scrollIntoView({ block: 'center', behavior: 'instant' });
                }""",
-            CAPTION_HEIGHT * 2,
+            [CAPTION_HEIGHT * 2, AVATAR_WIDTH, AVATAR_HEIGHT + 2 * CALLOUT_PAD],
         )
 
     def wait_for(self, step: dict, timeout: float) -> None:
@@ -1152,7 +1165,7 @@ CORNER_SCRIPT = """
   const into = (r) => r.width > 0 && r.height > 0 && r.right > corner.left && r.bottom > corner.top
                       && r.left < width && r.top < height;
   const found = [];
-  for (const id of ['fs-scene-cap', 'fs-scene-badge', 'fs-scene-callout-label']) {
+  for (const id of ['fs-scene-cap', 'fs-scene-badge', 'fs-scene-callout', 'fs-scene-callout-label']) {
     const el = document.getElementById(id);
     if (!el || getComputedStyle(el).display === 'none') continue;
     const r = el.getBoundingClientRect();
