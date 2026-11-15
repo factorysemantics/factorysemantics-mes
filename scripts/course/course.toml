@@ -71,6 +71,12 @@ slug = "what-an-mes-is-and-is-not"
 title = "What an MES is — and what it is not"
 one_line = "The layer between the office that says what to make and the machines that make it; it records what happened and says unknown when it did not see."
 knows_before = ["0.1"]
+outcomes = [
+  "Place the MES between the office system that says what to make and the machines that make it.",
+  "Say what it is not: not the ERP, not the historian, not a spreadsheet.",
+  "Read Watched: a figure that says how little it saw is honest, not broken.",
+]
+scene = "scripts/scenes/course/01-02-what-an-mes-is-and-is-not.toml"
 
 # ------------------------------------------------------------------ tier 1
 [[module]]
