@@ -1,0 +1,439 @@
+# Class 1.3 of the course, *Routings — the path a material takes*: the
+# ordered operations that make a material, each on a named machine.
+#
+# The first class of the core. It follows a fork's road through its line in
+# words, names the three words a routing is made of (operation, sequence,
+# routing), reads the plant's routings table, and then defines a new routing
+# in the form at the bottom of Admin, where each machine brings its own cost
+# center with it. Then what the form refuses, and what it cannot be asked.
+# Filmed on a scratch cutlery plant, every screen as the product draws it.
+
+name = "routings"
+title = "Routings — the path a material takes"
+lesson = "1.3"
+take_is = "lesson"
+part = "hook"
+base = "http://127.0.0.1:8040"
+badge = "pre-alpha · simulated plant · v{version}"
+# Four to six minutes, as the outline says this class runs.
+budget_seconds = 360
+gif_skip_seconds = 2.0
+width = 1280
+height = 720
+# Defining a routing is a write: the class presses Create on the form.
+allow_writes = true
+what_is_written = "which is how the class defines its routing: the Create button is a real `POST` to the take's own scratch plant, and RT-PALLET really is one of its routings afterwards. The two refused presses wrote nothing."
+
+notes = [
+  "The plant was started from the cutlery pack, at ten times wall clock, a minute or two before the camera rolled. A routing is master data, so nothing had to run first; the speed only matters to the floor pages the hook passes through.",
+  "The pack already holds a pallet routing for each palletizing line, RT-PAL1 to RT-PAL4, made of the same two steps. The routing typed in the class is RT-PALLET, a code the pack does not have, on material PALLET and line PAL1 as the outline names them: a second routing for a material that has one. Every material the pack makes already has a routing; the two it does not are the raw resin and the paper plate, which are bought, not made, and a routing for either would teach the wrong thing. The class says the pack's own routing is there before it types its new one.",
+  "Every value typed or chosen in the form is one of the plant's own codes: material PALLET, machines PAL1_Palletizer and PAL1_StretchWrap. The cost center CC-PAL01 is not typed: the form shows it beside each machine, read from the machine's line, and the table shows it beside each step.",
+  "The Admin page is opened at its routings table (`#routings`), below the people and roles, which are not filmed.",
+  "The form's machine and material are drop-down lists of the plant's own machines and materials, so it cannot be asked for a step on a machine that does not exist, and it has no blank material to leave. The class says so rather than filming a request the screen cannot make. The two refusals filmed are the ones the form draws: a routing with no operation, and a code already in use.",
+  "The product's message after a save is drawn higher on the screen than the product draws it, so that the recorder's caption bar does not cover it.",
+  "At any speed but 1x every 2D page carries the product's REPLAY 10× banner across its top. It is filmed as the product draws it.",
+  "The opening beat is a plain card with words on it. There is no artwork of a part, a machine or a person.",
+]
+
+honesty = [
+  "the pack already has a pallet routing for line PAL1, RT-PAL1, with the same two steps; the class's RT-PALLET is a second routing for the same material, typed in to show the form, and the class says the first one is there",
+  "the form cannot be asked for a step on a machine that does not exist, nor for a routing with no material: both are drop-down lists of what the plant has, and the material list has no blank, so a routing whose maker forgot to look is filed under whatever the list last said; the class says this instead of filming a refusal it cannot provoke",
+  "the machine list is the plant's whole tree, not only its machines: after a routing is created it starts on the company itself, CUTLERYCO, cost center unknown, and a step left there would be filed on the company; it is in the frame and the class does not dwell on it",
+  "the plant is a scratch plant a few minutes old, replaying at ten times wall clock, which is the banner across the top of the 2D pages",
+]
+
+[plant]
+pack = "labs/cutlery"
+speed = 10
+roll_when_timeout_seconds = 600
+
+# ----------------------------------------------------------------- the hook
+
+[[step]]
+do = "slide"
+name = "a-forks-road"
+title = "One fork, line FORK1"
+lines = [
+  "Out of the mould, on FORK1_Mold",
+  "Into a bin, still joined to its runner",
+  "To the degating press, on FORK1_Degate",
+  "To the laser marker, on FORK1_Mark",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "A fork is moulded, dropped in a bin, cut off its runner, and marked by a laser. Always in that order."
+
+[[step]]
+do = "say"
+line = "Somebody wrote that order down once, so every fork follows it. That written-down road is a routing."
+
+[[step]]
+do = "mark"
+name = "a-forks-road"
+
+[[step]]
+do = "goto"
+url = "/dashboard?line=FORK1LINE"
+settle = 3
+
+[[step]]
+do = "wait_for"
+selector = "#machines"
+text = "FORK1_Mark"
+scroll_to = "#machines"
+scroll_block = "start"
+scroll_offset = 220
+
+[[step]]
+do = "say"
+line = "Here are the three machines of that road, on the floor right now."
+
+[[step]]
+do = "mark"
+name = "the-fork-line"
+
+# ----------------------------------------------------------------- the idea
+
+[[step]]
+part = "idea"
+do = "slide"
+name = "three-words"
+title = "Three words"
+lines = [
+  "Operation: one step, done on one machine (Mold, on FORK1_Mold)",
+  "Sequence: the step's number, 10, 20, 30, which says what comes first",
+  "Routing: the steps in sequence, for one material (RT-FORK1, for UT-FORK)",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Three words. An operation is one step, done on one machine: moulding, on the mould."
+
+[[step]]
+do = "say"
+line = "A sequence is the step's number. Ten comes before twenty, twenty before thirty. The gaps leave room to add a step later."
+
+[[step]]
+do = "say"
+line = "And a routing is the operations in sequence, for one material. The fork's routing is moulding, then degating, then marking."
+
+[[step]]
+do = "mark"
+name = "three-words"
+
+[[step]]
+do = "slide"
+name = "steps-not-ingredients"
+title = "The recipe of steps, not of ingredients"
+lines = [
+  "The bill of materials: what goes in (resin, a plate)",
+  "The routing: what is done, in what order, on which machine",
+  "Every order for a material runs its routing",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "A routing is a recipe, but a recipe of steps, not of ingredients."
+
+[[step]]
+do = "say"
+line = "What goes in, the resin and the plate, is the bill of materials. The routing says what is done to it, in what order, and where."
+
+[[step]]
+do = "say"
+line = "Every order for a material runs that material's routing. So the routing is where the floor's work starts."
+
+[[step]]
+do = "mark"
+name = "steps-not-ingredients"
+
+# ------------------------------------------------------------ on the screen
+
+[[step]]
+part = "screen"
+do = "goto"
+url = "/dashboard/admin#routings"
+settle = 2
+
+[[step]]
+do = "wait_for"
+selector = "#routings tbody"
+text = "RT-FORK1"
+# The section's heading and its count, just below the replay banner and the
+# sticky header, which take the top 205 px.
+scroll_to = "#routing-count"
+scroll_block = "start"
+scroll_offset = 215
+
+[[step]]
+do = "say"
+line = "This is where a plant keeps its routings: Admin, Routings. Sixty-one of them on this plant, one for each line."
+
+[[step]]
+do = "say"
+line = "The first row is the fork line's. Step ten, Mold, on FORK1_Mold. Then twenty, Degate. Then thirty, Mark."
+
+[[step]]
+do = "mark"
+name = "the-routings-table"
+
+[[step]]
+do = "say"
+line = "Beside every step is the cost center it bills to, CC-MOULD01. Nobody typed that into the routing: it comes from the machine's line."
+
+[[step]]
+do = "fill"
+selector = "#r-q"
+text = "RT-PAL"
+
+[[step]]
+do = "wait_for"
+selector = "#routing-count"
+text = "4 of 4 matching, 61 in the plant"
+
+[[step]]
+do = "say"
+line = "The plant already has a pallet routing for each palletizing line. Here they are: RT-PAL1 to RT-PAL4."
+
+[[step]]
+do = "mark"
+name = "the-pallet-routings"
+
+[[step]]
+do = "say"
+line = "Now we define one of our own from scratch, in the form below: RT-PALLET, a second way to make the pallet on line PAL1."
+
+[[step]]
+do = "fill"
+selector = "#form-routing [name=code]"
+text = "RT-PALLET"
+scroll_to = "#form-routing"
+scroll_block = "start"
+scroll_offset = 260
+
+[[step]]
+do = "fill"
+selector = "#form-routing [name=name]"
+text = "Pallet, line PAL1"
+
+[[step]]
+do = "choose"
+selector = "#routing-material"
+value = "PALLET"
+
+[[step]]
+do = "say"
+line = "A code, a name, and the material it makes: PALLET, the outbound pallet of wrapped sets."
+
+[[step]]
+do = "fill"
+selector = "#ops .op-row:nth-child(1) [name=op-name]"
+text = "Palletizer"
+
+[[step]]
+do = "choose"
+selector = "#ops .op-row:nth-child(1) [name=op-equipment]"
+value = "PAL1_Palletizer"
+
+[[step]]
+do = "say"
+line = "Step ten, Palletizer, on the machine PAL1_Palletizer. Watch the end of the machine's line in the form."
+
+[[step]]
+do = "say"
+line = "Cost center CC-PAL01. We did not type it. The form read it from the line the machine is on."
+
+[[step]]
+do = "mark"
+name = "cost-center-fills-itself"
+
+[[step]]
+do = "click"
+selector = "#add-op"
+
+[[step]]
+do = "fill"
+selector = "#ops .op-row:nth-child(2) [name=op-name]"
+text = "StretchWrap"
+
+[[step]]
+do = "choose"
+selector = "#ops .op-row:nth-child(2) [name=op-equipment]"
+value = "PAL1_StretchWrap"
+
+[[step]]
+do = "say"
+line = "Add an operation. It numbers itself twenty. StretchWrap, on PAL1_StretchWrap, the same line, so the same cost center."
+
+[[step]]
+do = "mark"
+name = "the-form-filled"
+
+[[step]]
+do = "say"
+line = "Create the routing."
+
+[[step]]
+do = "click"
+selector = "#form-routing [data-assist=routing-create]"
+
+[[step]]
+do = "wait_for"
+selector = "#toast"
+text = "RT-PALLET created with 2 operation(s)"
+
+[[step]]
+do = "mark"
+name = "created"
+
+[[step]]
+do = "wait_for"
+selector = "#routings tbody"
+text = "RT-PALLET"
+scroll_to = "#routings"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "There it is in the table: RT-PALLET, for PALLET, ten Palletizer then twenty StretchWrap, each with its cost center."
+
+[[step]]
+do = "mark"
+name = "rt-pallet-in-the-table"
+
+[[step]]
+do = "say"
+line = "From now on an order for a pallet can be made this way, and every step knows where it happens and what it bills to."
+
+# -------------------------------------------------------------- it refuses
+
+[[step]]
+part = "refuses"
+do = "say"
+line = "Now the things it refuses. First, a routing with no steps at all: a code, a name, and no operation."
+
+[[step]]
+do = "fill"
+selector = "#form-routing [name=code]"
+text = "RT-EMPTY"
+scroll_to = "#form-routing"
+scroll_block = "start"
+scroll_offset = 260
+
+[[step]]
+do = "fill"
+selector = "#form-routing [name=name]"
+text = "No steps"
+
+[[step]]
+do = "click"
+selector = "#form-routing [data-assist=routing-create]"
+
+[[step]]
+do = "wait_for"
+selector = "#toast"
+text = "A routing needs at least one operation."
+
+# The refusal is said while the product's message is still up (it shows for
+# three and a half seconds), so the still carries both; the hold after it
+# gives the line its reading time.
+[[step]]
+do = "say"
+line = "Refused: a routing needs at least one operation. A material with no steps cannot be made."
+hold = 1.0
+
+[[step]]
+do = "mark"
+name = "refused-no-operation"
+
+[[step]]
+do = "hold"
+seconds = 4.5
+
+[[step]]
+do = "say"
+line = "Second, the same code twice. We type RT-PALLET again, with one step."
+
+[[step]]
+do = "fill"
+selector = "#form-routing [name=code]"
+text = "RT-PALLET"
+
+[[step]]
+do = "fill"
+selector = "#form-routing [name=name]"
+text = "Pallet, again"
+
+[[step]]
+do = "fill"
+selector = "#ops .op-row:nth-child(1) [name=op-name]"
+text = "Palletizer"
+
+[[step]]
+do = "choose"
+selector = "#ops .op-row:nth-child(1) [name=op-equipment]"
+value = "PAL1_Palletizer"
+
+[[step]]
+do = "click"
+selector = "#form-routing [data-assist=routing-create]"
+
+[[step]]
+do = "wait_for"
+selector = "#toast"
+text = "already exists"
+
+[[step]]
+do = "say"
+line = "Refused: that code already exists. A routing's code names one routing, so an order can say which road it takes."
+hold = 1.0
+
+[[step]]
+do = "mark"
+name = "refused-same-code"
+
+[[step]]
+do = "hold"
+seconds = 5.0
+
+[[step]]
+do = "say"
+line = "A step on a machine that does not exist cannot even be asked. The list holds only this plant's own tree, from the company down to each machine."
+
+[[step]]
+do = "say"
+line = "And the material is a list with no blank, so it always says something: here, still PALLET. Check it says what you mean before you press create."
+
+[[step]]
+do = "mark"
+name = "the-lists-it-offers"
+
+# ------------------------------------------------------------ you now know
+
+[[step]]
+part = "know"
+do = "slide"
+name = "you-now-know"
+title = "You now know how to"
+lines = [
+  "Say what a routing is: operations in sequence, each on a named machine, for one material.",
+  "Read a plant's routings in Admin, and the cost center each step bills to, read from its machine's line.",
+  "Define a routing in the form, and say the two things it refuses: no operation, and a code in use.",
+]
+
+[[step]]
+do = "say"
+line = "That is a routing: the road a material takes, step by step, machine by machine. You now know how to do three things."
+
+[[step]]
+do = "mark"
+name = "you-now-know"
+
+[[step]]
+do = "hold"
+seconds = 3
