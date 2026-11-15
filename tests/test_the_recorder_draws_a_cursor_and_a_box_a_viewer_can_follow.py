@@ -216,3 +216,15 @@ def test_the_box_is_gone_before_the_next_step(stage):
 
     assert stage.page.locator("#fs-scene-callout").count() == 0
     assert stage.page.locator("#fs-scene-callout-label").count() == 0
+
+
+def test_the_label_of_a_box_that_fills_the_frame_is_drawn_inside_it_where_it_can_be_read(stage):
+    stage, base = stage
+    stage.goto(f"{base}/dashboard", 0.1)
+    tab = stage.page.evaluate("""() => {
+        window.__sceneCallout(document.body, 'The whole page', 'box');
+        const r = document.getElementById('fs-scene-callout-label').getBoundingClientRect();
+        return {top: r.top, bottom: r.bottom, left: r.left, high: innerHeight};
+    }""")
+
+    assert tab["top"] >= 0 and tab["bottom"] <= tab["high"] - 1, f"the label is off the frame: {tab}"

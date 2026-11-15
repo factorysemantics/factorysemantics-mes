@@ -256,7 +256,7 @@ TYPE_DELAY_FLOOR_SECONDS = 0.05
 # anything was (Scott, 2026-11-15: "Just the screen doesn't explain anything").
 CURSOR_GLIDE_SECONDS = 0.5
 CURSOR_REST_SECONDS = 0.15
-RIPPLE_SECONDS = 0.6
+RIPPLE_SECONDS = 0.7
 # After a click the cursor follows the thing to where the page settled it.
 CURSOR_FOLLOW_SECONDS = 0.15
 
@@ -604,8 +604,9 @@ def overlay_script(badge: str, captions: bool = True) -> str:
         "height:30px!important;margin:-2px 0 0 -2px!important;pointer-events:none!important;"
         "z-index:2147483645!important;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))!important}"
         ".fs-scene-ripple{position:fixed!important;width:56px!important;height:56px!important;"
-        f"border:3px solid {CALLOUT_COLOUR}!important;border-radius:50%!important;box-sizing:border-box!important;"
-        "pointer-events:none!important;z-index:2147483645!important;background:rgba(34,211,238,.18)!important}"
+        f"border:4px solid {CALLOUT_COLOUR}!important;border-radius:50%!important;box-sizing:border-box!important;"
+        "pointer-events:none!important;z-index:2147483645!important;background:rgba(34,211,238,.28)!important;"
+        "box-shadow:0 0 0 1px rgba(0,0,0,.5),0 0 12px rgba(34,211,238,.6)!important}"
         "#fs-scene-callout{position:fixed!important;box-sizing:border-box!important;pointer-events:none!important;"
         f"border:3px solid {CALLOUT_COLOUR}!important;border-radius:8px!important;z-index:2147483643!important;"
         "box-shadow:0 0 0 1px rgba(0,0,0,.55),0 0 14px rgba(34,211,238,.45)!important}"
@@ -669,7 +670,9 @@ def overlay_script(badge: str, captions: bool = True) -> str:
     ring.style.left = (x - 28) + 'px';
     ring.style.top = (y - 28) + 'px';
     document.documentElement.append(ring);
-    ring.animate([{{ transform: 'scale(.25)', opacity: 1 }}, {{ transform: 'scale(1.4)', opacity: 0 }}],
+    // Full and bright for the first frames, so the press is seen; then it spreads and fades.
+    ring.animate([{{ transform: 'scale(.3)', opacity: 1 }}, {{ transform: 'scale(1)', opacity: 1, offset: .35 }},
+                  {{ transform: 'scale(1.6)', opacity: 0 }}],
                  {{ duration: {int(RIPPLE_SECONDS * 1000)}, easing: 'ease-out' }}).onfinish = () => ring.remove();
   }};
   // The box round what a line is about, following it if the page moves it, until cleared.
@@ -692,11 +695,15 @@ def overlay_script(badge: str, captions: bool = True) -> str:
         box.style.width = (r.width + 2 * pad) + 'px';
         box.style.height = (r.height + 2 * pad) + 'px';
         if (tab) {{
-          // On the box's top left, outside it; below the box when the box is at the top.
+          // On the box's top left, outside it; below the box when the box is at
+          // the top; inside its top left when it fills the frame both ways.
           const high = tab.offsetHeight;
-          const above = r.top - pad - high - 2 >= 0;
+          const aboveAt = r.top - pad - high - 2;
+          const belowAt = r.bottom + pad + 2;
+          const floor = innerHeight - {CAPTION_HEIGHT};
           tab.style.left = Math.max(0, r.left - pad) + 'px';
-          tab.style.top = (above ? r.top - pad - high - 2 : r.bottom + pad + 2) + 'px';
+          tab.style.top = (aboveAt >= 0 ? aboveAt
+            : belowAt + high <= floor ? belowAt : Math.max(0, r.top - pad) + 6) + 'px';
         }}
       }}
       callout.frame = requestAnimationFrame(place);
