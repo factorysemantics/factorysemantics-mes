@@ -35,8 +35,10 @@ with a ripple; `fill` types about twelve keys a second (a scene may say
     style = "box"                        # or "spotlight", which dims the rest
 
 and the box is drawn as the caption appears, held for the line, and taken
-away before the next step. A thing off the frame is scrolled onto it first; a
-thing not on the page refuses the take, naming the step.
+away before the next step (a `mark` straight after the line keeps it, so its
+still shows the box). A thing off the frame, or under the page's sticky header
+or the caption bar, is scrolled clear first; a thing not on the page refuses
+the take, naming the step.
 
 A scene that names a `lesson` ("2.1") is filmed into the class's tree instead,
 as `scripts/course/course.toml` lays it out and the lesson hand-off contract
@@ -753,6 +755,9 @@ class BrowserStage:
         self.type_delay = type_delay
         #: Which step is being played, counted from 1 as the scene file's errors count them.
         self.step_number = 0
+        #: A box a `say` drew and nothing has taken down yet: it stays through the
+        #: `mark`s right after the line, so their stills show what it was about.
+        self.callout_up = False
         #: Runs `fsmes <words>` against the take's own plant and returns what it
         #: printed; a terminal card's command goes through it. None without a plant.
         self.run_fsmes = run_fsmes
@@ -778,9 +783,21 @@ class BrowserStage:
         return round(time.monotonic() - self.started, 2)
 
     def begin(self, step: dict) -> None:
-        """The step about to be played: its part goes on every mark it makes."""
+        """The step about to be played: its part goes on every mark it makes.
+
+        The box a `say` drew is taken down here, before the next step that is
+        not a `mark`: a `mark` takes a still and no time, and a still taken
+        just after a line about something should show the box round it.
+        """
         self.part = step.get("part")
         self.step_number += 1
+        if step.get("do") != "mark":
+            self.callout_down()
+
+    def callout_down(self) -> None:
+        if self.callout_up:
+            self.page.evaluate("() => window.__sceneCalloutClear()")
+            self.callout_up = False
 
     def note(self, what: str, kind: str, at: float | None = None, **rest: object) -> None:
         mark = {"at": self._at() if at is None else at, "what": what, "kind": kind,
@@ -964,15 +981,16 @@ class BrowserStage:
         self.note(f"say: {line}", "say", line=line, hold=hold, **pointer)
         self.check_corner()
         self.page.wait_for_timeout(int(hold * 1000))
-        if at is not None:
-            self.page.evaluate("() => window.__sceneCalloutClear()")
+        # The box comes down when the next step that is not a `mark` begins.
+        self.callout_up = at is not None
 
     def point_out(self, line: str, at: str, label: str, style: str) -> dict:
         """Put the caption up and the box round `at` in the same frame; answer the mark's keys.
 
         The thing is looked for for `CALLOUT_FIND_SECONDS`, brought out from
-        under the caption bar or onto the frame if it is off it, and left to go
-        still, and then outlined. Nothing found refuses the take, with the step's
+        under the caption bar at the foot and the page's sticky header at the
+        top, or onto the frame if it is off it, left to go still, and then
+        outlined. Nothing found refuses the take, with the step's
         number: a line that says "this" over a frame with no box is the very
         thing the box is for.
         """
@@ -986,6 +1004,7 @@ class BrowserStage:
         self.clear_of_caption(at)
         target.scroll_into_view_if_needed()
         handle = target.element_handle()
+        handle.evaluate(CLEAR_OF_HEADER_SCRIPT, CALLOUT_HEADROOM)
         handle.evaluate(SETTLE_SCRIPT, [STILL_FOR_SECONDS * 1000, STILL_WITHIN_SECONDS * 1000])
         drawn = handle.evaluate(
             "(el, [text, label, style]) => {"
@@ -1234,6 +1253,52 @@ REDRAWN_WITHIN_SECONDS = 0.3
 #: A settled point further than this from the press, in either direction, means
 #: the page moved between the press and the frames after it.
 MOVED_PIXELS = 4
+
+#: Room left between the page's sticky top (its header, the replay bar) and a
+#: box's top edge, so the box's label fits above the box and below the header.
+CALLOUT_HEADROOM = 48
+
+#: Bring an element out from under whatever the page keeps stuck to its top.
+#:
+#: Every page's header is `position: sticky`, and under a replay or a shadow
+#: bar it sticks below that bar too: 200 px of the frame on the cutlery plant.
+#: `scrollIntoView` puts a thing at the very top of the window, behind them,
+#: and the proof take of 2026-11-15 drew the box for "4 of 61" there, its
+#: text hidden and its label on the nav bar. The band is the run of fixed
+#: or sticky things stacked down from the top of the window over the
+#: element's width (not the element itself, nor anything holding it, nor the
+#: recorder's own layer); when the element's top is inside it, the element
+#: is scrolled to sit `headroom` below the band. `scroll-margin-top` does the
+#: scrolling so that a thing inside a scrolling panel is moved too.
+CLEAR_OF_HEADER_SCRIPT = """
+(node, headroom) => {
+  const box = node.getBoundingClientRect();
+  const stuck = [];
+  for (const el of document.body.querySelectorAll('*')) {
+    if (el.id && el.id.startsWith('fs-scene')) continue;
+    if (el.contains(node)) continue;
+    const position = getComputedStyle(el).position;
+    if (position !== 'sticky' && position !== 'fixed') continue;
+    const r = el.getBoundingClientRect();
+    if (!r.height || r.bottom > innerHeight / 2) continue;
+    if (r.right <= box.left || r.left >= box.right) continue;
+    stuck.push(r);
+  }
+  let band = 0, grew = true;
+  while (grew) {
+    grew = false;
+    for (const r of stuck) {
+      if (r.top <= band + 2 && r.bottom > band) { band = r.bottom; grew = true; }
+    }
+  }
+  if (!band || box.top >= band + headroom) return band;
+  const was = node.style.scrollMarginTop;
+  node.style.scrollMarginTop = (band + headroom) + 'px';
+  node.scrollIntoView({ block: 'start', behavior: 'instant' });
+  node.style.scrollMarginTop = was;
+  return band;
+}
+"""
 
 SETTLE_SCRIPT = """
 (el, [stillFor, within]) => new Promise((resolve) => {
@@ -2677,6 +2742,7 @@ def record(scene: dict, out: Path, run_fsmes=None) -> dict:
             for step in scene["step"]
         ]
         play(scene_with_base, stage)
+        stage.callout_down()
         stage.note("end", "end")
 
         video = Path(page.video.path())

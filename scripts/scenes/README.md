@@ -31,8 +31,11 @@ with a ripple. A `<select>` cannot be opened by a script, so on `choose` the
 cursor presses the list and the value changes.
 
 A `say` with `at` (a selector, as `click` takes) draws a box round that thing
-as the caption appears, for the line's hold; `label` puts a few words on a tab
-at the box's top left (below it when the box is at the top of the frame);
-`style = "spotlight"` dims the rest of the frame instead. A thing off the
-frame is scrolled onto it first; a thing not on the page refuses the take,
-naming the step. `label` or `style` without `at` is refused.
+as the caption appears, for the line's hold, and through any `mark` straight
+after it, so those stills show the box; `label` puts a few words on a tab
+at the box's top left (below it when the box is at the top of the frame,
+inside it when the box fills the frame); `style = "spotlight"` dims the rest
+of the frame instead. A thing off the frame, or under the page's sticky
+header or the caption bar, is scrolled clear first; a thing not on the page
+refuses the take, naming the step. Point `at` something smaller than the
+frame. `label` or `style` without `at` is refused.

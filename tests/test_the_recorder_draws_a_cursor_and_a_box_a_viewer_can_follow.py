@@ -209,13 +209,46 @@ def test_a_say_pointing_at_something_not_on_the_page_refuses_the_take_with_its_s
     assert stage.page.locator("#fs-scene-callout").count() == 0, "a box was drawn for nothing"
 
 
-def test_the_box_is_gone_before_the_next_step(stage):
+def test_the_box_stays_through_a_mark_after_its_line_and_is_gone_before_the_next_step(stage):
     stage, base = stage
     stage.goto(f"{base}/dashboard", 0.1)
     stage.say("Plant OEE.", 0.1, at="#kpi-oee", label="Plant OEE")
 
+    stage.begin({"do": "mark"})
+    assert stage.page.locator("#fs-scene-callout").count() == 1, "a still taken after the line has no box"
+
+    stage.begin({"do": "click"})
     assert stage.page.locator("#fs-scene-callout").count() == 0
     assert stage.page.locator("#fs-scene-callout-label").count() == 0
+
+
+#: Is the point at the middle of the element's top band its own, or does
+#: something drawn over it (the sticky header) answer instead?
+SEEN = """(sel) => {
+    const el = document.querySelector(sel);
+    const r = el.getBoundingClientRect();
+    const x = r.left + r.width / 2;
+    return [r.top + 2, r.top + r.height / 2].map((y) => el.contains(document.elementFromPoint(x, y)));
+}"""
+
+
+def test_a_say_at_a_thing_under_the_sticky_header_scrolls_it_out_and_its_label_clear(stage):
+    stage, base = stage
+    stage.goto(f"{base}/dashboard", 0.1)
+    page = stage.page
+    page.evaluate("""() => {
+        const r = document.querySelector('#m-q').getBoundingClientRect();
+        window.scrollBy({top: r.top - 20, behavior: 'instant'});
+    }""")
+    assert page.evaluate(SEEN, "#m-q") == [False, False], "the field is not under the header to begin with"
+
+    stage.say("Type part of a machine's name.", 0.1, at="#m-q", label="Filter")
+
+    assert page.evaluate(SEEN, "#m-q") == [True, True], "the boxed field is still under the header"
+    header = page.evaluate("() => document.querySelector('header').getBoundingClientRect().bottom")
+    tab = page.evaluate("() => document.getElementById('fs-scene-callout-label').getBoundingClientRect().top")
+    assert tab >= header, f"the label's top {tab} is on the header, which ends at {header}"
+    assert stage.marks[-1]["box"]["y"] >= header, stage.marks[-1]
 
 
 def test_the_label_of_a_box_that_fills_the_frame_is_drawn_inside_it_where_it_can_be_read(stage):
