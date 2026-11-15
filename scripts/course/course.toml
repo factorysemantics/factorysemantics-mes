@@ -118,7 +118,12 @@ label = "1.4"
 slug = "a-work-orders-day"
 title = "Work orders — make this many of that, this way"
 one_line = "Released to the floor, station to station; its good count is the last step's, not the sum."
-scene = "scripts/scenes/04-work-orders-and-routings.toml"
+outcomes = [
+  "Say what a work order is: this many of a material, made along its routing, from release to finish.",
+  "Create and release an order on the Orders page, and find it in the first machine's queue on its station screen.",
+  "Read an order's count as its last step's, and say why it stays open past its number until a person finishes it.",
+]
+scene = "scripts/scenes/course/02-04-a-work-orders-day.toml"
 
 # ------------------------------------------------------------------ tier 2
 [[module]]
