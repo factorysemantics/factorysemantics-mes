@@ -71,8 +71,9 @@ def test_a_fill_without_its_text_or_a_choose_without_its_option_is_refused_befor
 
 
 def test_typing_takes_time_in_the_plan_by_the_length_of_what_is_typed(runner, tmp_path):
-    short = runner.load_scene(write_scene(tmp_path, '[[step]]\ndo = "fill"\nselector = "#a"\ntext = "RT"\n'))
-    long = runner.load_scene(write_scene(tmp_path, '[[step]]\ndo = "fill"\nselector = "#a"\ntext = "RT-PALLET-LINE-ONE"\n'))
+    fill = '[[step]]\ndo = "fill"\nselector = "#a"\ntext = "{}"\n'
+    short = runner.load_scene(write_scene(tmp_path, fill.format("RT")))
+    long = runner.load_scene(write_scene(tmp_path, fill.format("RT-PALLET-LINE-ONE")))
 
     assert runner.planned_seconds(long) - runner.planned_seconds(short) == pytest.approx(
         16 * runner.TYPE_DELAY_SECONDS)
