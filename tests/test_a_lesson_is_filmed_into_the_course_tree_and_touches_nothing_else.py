@@ -306,7 +306,9 @@ def test_lesson_json_says_the_lesson_the_files_the_reserved_corner_and_what_it_w
                                   "title": "Before the software"}
     assert document["lesson"]["label"] == "0.2" and document["lesson"]["order"] == 2
     assert document["lesson"]["knows_before"] == ["0.1"]
-    assert document["lesson"]["outcomes"] == [], "an empty list says not written yet"
+    # The class's own three lines, as course.toml has them; a class whose lines
+    # are not written yet carries an empty list, never a missing key.
+    assert document["lesson"]["outcomes"] == lesson["outcomes"] and len(lesson["outcomes"]) == 3
     assert (document["lesson"]["duration_seconds"], document["lesson"]["take"]) == (287.4, 3)
     assert document["files"] == files
     assert document["frame"] == {"width": 1280, "height": 720, "fps": 20}
