@@ -19,8 +19,10 @@ take_is = "lesson"
 part = "hook"
 base = "http://127.0.0.1:8040"
 badge = "pre-alpha · simulated plant · v{version}"
-# Four to six minutes, as the outline says this class runs.
-budget_seconds = 360
+# Four to six minutes, as the outline says this class runs, and up to half a
+# minute more for reaching the station and the Orders page by the menus (Scott,
+# 2026-11-15: click through the menus even if the class runs longer).
+budget_seconds = 390
 gif_skip_seconds = 2.0
 width = 1280
 height = 720
@@ -127,11 +129,28 @@ name = "four-words"
 
 # ------------------------------------------------------------ on the screen
 
+# The station is reached the way an operator reaches it: the Floor page (the
+# one page opened by address, the first after signing in), its Station chip,
+# and the Machine chooser at the top of the station screen. The product has no
+# other station picker; the Floor page's own forms are not the station.
 [[step]]
 part = "screen"
 do = "goto"
-url = "/dashboard/station?m=FORK1_Mold"
-settle = 3
+url = "/dashboard"
+settle = 2
+
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"Station\")"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#machine').options.length > 1"
+
+[[step]]
+do = "choose"
+selector = "#machine"
+value = "FORK1_Mold"
 
 [[step]]
 do = "wait_for"
@@ -141,10 +160,14 @@ text = "WO-FORK1-0001"
 [[step]]
 do = "say"
 line = "The station screen of the fork mould, FORK1_Mold. The machine is chosen at the top; the operator starts the shift here."
+at = "#machine"
+label = "Machine"
 
 [[step]]
 do = "say"
 line = "First card, its state: running, and since when. Going down asks why, which is the next class."
+at = "#state-buttons"
+label = "State"
 
 [[step]]
 do = "mark"
@@ -153,10 +176,14 @@ name = "its-state"
 [[step]]
 do = "say"
 line = "Second card, its queue: the order it is running, WO-FORK1-0001, step 10, Mold, and how many good of how many ordered."
+at = "#queue li.running-op"
+label = "Running order"
 
 [[step]]
 do = "say"
 line = "That count moves by itself: the mould's own counter books every shot it makes."
+at = "#queue li.running-op .what .muted"
+label = "Good of ordered"
 
 [[step]]
 do = "mark"
@@ -173,6 +200,8 @@ scroll_offset = 300
 [[step]]
 do = "say"
 line = "Third card, book output. Against: the order at the head of the queue, step 10. The operator counts a box."
+at = "#book-order"
+label = "Against"
 
 [[step]]
 do = "choose"
@@ -192,6 +221,8 @@ text = "3"
 [[step]]
 do = "say"
 line = "Five hundred good, three scrap. Book."
+at = "#book .big-io"
+label = "Good and scrap"
 
 [[step]]
 do = "click"
@@ -213,6 +244,8 @@ scroll_offset = 300
 [[step]]
 do = "say"
 line = "Booked, against WO-FORK1-0001 step 10, under the name of the person signed in. The queue's count is up by five hundred."
+at = "#queue li.running-op .what .muted"
+label = "The count"
 
 [[step]]
 do = "mark"
@@ -221,6 +254,8 @@ name = "booked-500-good-3-scrap"
 [[step]]
 do = "say"
 line = "Fourth card, issue material. It issues to the order running here, WO-FORK1-0001."
+at = "#issue-where"
+label = "Issues to"
 
 [[step]]
 do = "choose"
@@ -235,6 +270,8 @@ text = "2"
 [[step]]
 do = "say"
 line = "The lot is the fork line's polypropylene resin, LOT-PP-FORK1-001. Two kilos: about what five hundred forks weigh. Issue."
+at = "#issue .big-io"
+label = "Lot and kilos"
 
 [[step]]
 do = "click"
@@ -247,6 +284,8 @@ js = "[...document.querySelectorAll('#issue-lot option')].some(o => o.value === 
 [[step]]
 do = "say"
 line = "Issued. The lot is two kilos lighter, and the order now says which resin went into it."
+at = "#issue-lot"
+label = "Two kilos lighter"
 
 [[step]]
 do = "mark"
@@ -263,6 +302,8 @@ scroll_offset = 300
 [[step]]
 do = "say"
 line = "Fifth card, quality, on what this machine is running: forks, UT-FORK. Only characteristics with a specification are offered."
+at = "#q-char"
+label = "Characteristic"
 
 [[step]]
 do = "choose"
@@ -272,6 +313,8 @@ value = "length_mm"
 [[step]]
 do = "say"
 line = "Length: the specification is 164 to 166 millimetres. The operator puts a fork on the gauge."
+at = "#q-spec"
+label = "Specification"
 
 [[step]]
 do = "fill"
@@ -289,6 +332,8 @@ js = "(document.querySelector('#q-recent').innerText || '').includes('165.1') &&
 [[step]]
 do = "say"
 line = "165.1 millimetres: in spec. It is in the recent results, with the time and who measured it."
+at = "#q-recent li:has-text(\"165.1\")"
+label = "In spec"
 
 [[step]]
 do = "mark"
@@ -305,10 +350,14 @@ scroll_offset = 320
 [[step]]
 do = "say"
 line = "Last card, maintenance on this machine. Here, nothing is owed: this plant has no maintenance plan set up."
+at = "#maint"
+label = "Nothing owed"
 
 [[step]]
 do = "say"
 line = "Where a plan is set up, the jobs due on this machine are listed here, and the operator can start and complete them."
+at = "#maint"
+label = "Jobs due"
 
 [[step]]
 do = "mark"
@@ -316,11 +365,26 @@ name = "what-maintenance-is-owed"
 
 # -------------------------------------------------------------- it refuses
 
+# The Orders page by its menu, and the next fork order found by typing its
+# code into the page's own search box.
 [[step]]
 part = "refuses"
-do = "goto"
-url = "/dashboard/orders?q=WO-FORK1-0002"
-settle = 2
+do = "click"
+selector = "header nav a:text-is(\"Orders\")"
+
+[[step]]
+do = "wait_for"
+selector = "#order-list"
+text = "WO-"
+
+[[step]]
+do = "fill"
+selector = "#f-text"
+text = "WO-FORK1-0002"
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#order-list tbody tr')].length === 1 && document.querySelector('#order-list tbody').innerText.includes('WO-FORK1-0002')"
 
 [[step]]
 do = "click"
@@ -336,19 +400,27 @@ scroll_offset = 220
 [[step]]
 do = "say"
 line = "Now what it refuses. This is the next fork order, WO-FORK1-0002. Its first step is on the same mould, but it is only planned."
+at = "#d-status"
+label = "Only planned"
+style = "spotlight"
 
 [[step]]
 do = "mark"
 name = "the-next-order-is-planned"
 
+# Back the same way: the Floor menu, then its Station chip. The station
+# remembers the machine last chosen on it, FORK1_Mold.
 [[step]]
-do = "goto"
-url = "/dashboard/station?m=FORK1_Mold"
-settle = 3
+do = "click"
+selector = "header nav a:text-is(\"Floor\")"
+
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"Station\")"
 
 [[step]]
 do = "wait_for"
-js = "[...document.querySelectorAll('#book-order option')].map(o => o.value).join() === 'WO-FORK1-0001'"
+js = "document.querySelector('#machine').value === 'FORK1_Mold' && [...document.querySelectorAll('#book-order option')].map(o => o.value).join() === 'WO-FORK1-0001'"
 scroll_to = "#book"
 scroll_block = "start"
 scroll_offset = 300
@@ -356,10 +428,15 @@ scroll_offset = 300
 [[step]]
 do = "say"
 line = "Back at the mould, the Against list holds one order: WO-FORK1-0001. The planned order is not there to book against."
+at = "#book-order"
+label = "One order"
+style = "spotlight"
 
 [[step]]
 do = "say"
 line = "Nor is any order of another line. An operator can only book to work released to this machine."
+at = "#book-order"
+label = "Released work only"
 
 [[step]]
 do = "mark"
@@ -374,6 +451,8 @@ js = "Number(((document.querySelector('#queue').innerText.match(/Mold\\D+([0-9,]
 [[step]]
 do = "say"
 line = "And what it does not refuse. Type five thousand good: more forks than this mould has made since the plant started."
+at = "#book-good"
+label = "Good"
 
 [[step]]
 do = "fill"
@@ -392,6 +471,8 @@ text = "Booked 5,000 good, 0 scrap."
 [[step]]
 do = "say"
 line = "Booked. The station took the figure as typed. Nothing on the screen says the counter disagrees."
+at = "#book"
+label = "No warning"
 
 [[step]]
 do = "mark"
@@ -408,6 +489,8 @@ scroll_offset = 300
 [[step]]
 do = "say"
 line = "The queue now says the mould has made thousands more than its counter saw. A typed booking is added to the count; it is not checked against it."
+at = "#queue li.running-op .what .muted"
+label = "Thousands more"
 
 [[step]]
 do = "say"
