@@ -80,8 +80,6 @@ def chosen(scene: dict, part: str) -> list[str]:
     return [step["value"] for step in scene["step"] if step["part"] == part and step["do"] == "choose"]
 
 
-
-
 def steps_of(scene: dict, part: str) -> list[dict]:
     return [step for step in scene["step"] if step["part"] == part]
 
@@ -190,8 +188,10 @@ def test_what_it_refuses_is_finishing_at_the_count_so_a_person_finishes_every_st
     # It opens on the count past the ordered quantity with the order still open.
     assert refuses[0]["do"] == "wait_for" and "#d-good" in refuses[0]["js"] and "#d-qty" in refuses[0]["js"]
     assert "does not finish itself" in said and "A person closes it" in said
-    assert finished == [f'#ops tbody tr:has-text("{op["name"]}") button:has-text("Finish step")'
-                        for op in sorted(fork_routing()["operations"], key=lambda op: op["seq"])]
+    assert finished == [
+        f'#ops tbody tr:has-text("{op["name"]}") button:has-text("Finish step")'
+        for op in sorted(fork_routing()["operations"], key=lambda op: op["seq"])
+    ]
     # The outbox is opened right after the last step is finished, before the
     # confirmation scrolls off its newest twenty; the row is waited for, then
     # scrolled to, because a step scrolls before it waits.
