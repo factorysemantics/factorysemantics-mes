@@ -88,7 +88,9 @@ runs as a user service on port 5433; a scored run makes its own database
 
 - `build_config.py` writes `line.json` (83 stations, the inspection block
   per station: attributes, limits, sigma); `make_tag_map.py` derives
-  `tag_map.json`; `fsmes sim-generate` (or the runner) writes the CSVs
+  `tag_map.json`; `make_layout.py` derives `line_layout.json` (where each
+  machine stands on the 3D line view, and its model in `models/`) from
+  `positions/<LINE>.json`, studio's plant design of 2026-11-12; `fsmes sim-generate` (or the runner) writes the CSVs
   under `out/`.
 - `init.py` seeds the master data, the dimensional specifications per
   utensil, and one released order per line with its resin or plate lot

@@ -50,8 +50,11 @@ COPY labs/cutlery/plant.toml \
      labs/cutlery/line.json \
      labs/cutlery/floor.json \
      labs/cutlery/tag_map.json \
+     labs/cutlery/line_layout.json \
      ./labs/cutlery/
 COPY labs/cutlery/masterdata ./labs/cutlery/masterdata
+# The 3D line view's machine models (2026-11-14), named by line_layout.json.
+COPY labs/cutlery/models ./labs/cutlery/models
 
 # THE ASSISTANT FOLDERS, FOR THE SAME REASON. `pyproject.toml` force-includes
 # every file under `skills/` so that `fsmes skills unpack` works inside the

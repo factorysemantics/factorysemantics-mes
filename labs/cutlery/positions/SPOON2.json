@@ -1,0 +1,41 @@
+{
+  "units": "m",
+  "frame": {
+    "x": "FreeCAD X",
+    "z": "-FreeCAD Y",
+    "y": "up",
+    "front": "-Z",
+    "rot": "degrees about vertical, CCW from above"
+  },
+  "source": "studio's cutlery plant design (layout.json), delivered 2026-11-12; frame x = plant X, z = -plant Y",
+  "line": "SPOON2",
+  "cells": [
+    {
+      "code": "SPOON2_Mold",
+      "line": "SPOON2",
+      "x": 13.8,
+      "z": -35.1,
+      "rot": 0.0,
+      "model": "mold.glb",
+      "kind": "Mold"
+    },
+    {
+      "code": "SPOON2_Degate",
+      "line": "SPOON2",
+      "x": 20.2,
+      "z": -33.1,
+      "rot": 0.0,
+      "model": "degate.glb",
+      "kind": "Degate"
+    },
+    {
+      "code": "SPOON2_Mark",
+      "line": "SPOON2",
+      "x": 24.0,
+      "z": -33.1,
+      "rot": 0.0,
+      "model": "mark.glb",
+      "kind": "Mark"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "units": "m",
+  "frame": {
+    "x": "FreeCAD X",
+    "z": "-FreeCAD Y",
+    "y": "up",
+    "front": "-Z",
+    "rot": "degrees about vertical, CCW from above"
+  },
+  "source": "studio's cutlery plant design (layout.json), delivered 2026-11-12; frame x = plant X, z = -plant Y",
+  "line": "FORK2",
+  "cells": [
+    {
+      "code": "FORK2_Mold",
+      "line": "FORK2",
+      "x": 13.8,
+      "z": -11.1,
+      "rot": 0.0,
+      "model": "mold.glb",
+      "kind": "Mold"
+    },
+    {
+      "code": "FORK2_Degate",
+      "line": "FORK2",
+      "x": 20.2,
+      "z": -9.1,
+      "rot": 0.0,
+      "model": "degate.glb",
+      "kind": "Degate"
+    },
+    {
+      "code": "FORK2_Mark",
+      "line": "FORK2",
+      "x": 24.0,
+      "z": -9.1,
+      "rot": 0.0,
+      "model": "mark.glb",
+      "kind": "Mark"
+    }
+  ]
+}
