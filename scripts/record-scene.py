@@ -4,8 +4,8 @@
     python scripts/record-scene.py <scene.toml> --base http://127.0.0.1:8110 --out /tmp/take
     python scripts/record-scene.py --course      # course.json and the tree's README only
 
-A scene file is a list of steps — `goto`, `click`, `wait_for`, `say`, `hold`,
-`mark`, `slide` — against a plant that is already running. This file drives a browser
+A scene file is a list of steps — `goto`, `click`, `fill`, `choose`,
+`wait_for`, `say`, `hold`, `mark`, `slide` — against a plant that is already running. This file drives a browser
 through them, burns the overlay into the picture, and writes, into one folder:
 
   * `<name>.gif`, the published loop, under the budget the scene states and
@@ -70,7 +70,8 @@ The bottom-right corner, 240 by 200 pixels, is kept empty of both: the class's
 narrator is drawn there afterwards, and nothing a viewer must read may sit
 under it. The take is checked for that as it is filmed. It also hides the
 floating Assistant and Design buttons, which are the product's and sit in that
-corner.
+corner, and lifts the product's toast above the caption bar, which would
+otherwise cover it.
 
 It is a developer tool. It is not in the wheel, not in CI, and not asked to
 run on Windows. It needs `ffmpeg`, and a Python with Playwright and its
@@ -102,14 +103,18 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
 
-# The seven words a step can be. An eighth is a newer scene file than this
+# The nine words a step can be. A tenth is a newer scene file than this
 # script, and guessing what it meant is how a recording comes out missing the
-# thing it was made to show.
-VERBS = ("goto", "click", "wait_for", "say", "hold", "mark", "slide")
+# thing it was made to show. `fill` types into a field, a key at a time so the
+# viewer sees it typed, and `choose` picks an option of a `<select>`: a class
+# that defines something in a form (1.3, a routing) has to fill the form in.
+# Both change only the page; it is the click on the form's button that writes,
+# and that still needs `allow_writes`.
+VERBS = ("goto", "click", "fill", "choose", "wait_for", "say", "hold", "mark", "slide")
 
 #: What each verb is called in marks.json's `kind`, as the lesson contract names
 #: them. A scroll is a step's `scroll_to` rather than a verb, and is `scroll`.
-KINDS = {"goto": "goto", "click": "click", "wait_for": "wait", "say": "say",
+KINDS = {"goto": "goto", "click": "click", "fill": "fill", "choose": "choose", "wait_for": "wait", "say": "say",
          "hold": "hold", "mark": "mark", "slide": "slide"}
 
 #: The five parts of a lesson, in the order a lesson runs through them. A step
@@ -147,6 +152,8 @@ AVATAR_HEIGHT = 200
 # far short of the right-hand edge, so that it ends 20 px before the corner.
 CAPTION_HEIGHT = 72
 CAPTION_RIGHT_INSET = 260
+# Where the product's toast is moved to: clear of a two-line caption bar.
+TOAST_LIFT = 132
 #: The longest a lesson's teaser GIF may run.
 TEASER_SECONDS = 45
 
@@ -215,6 +222,9 @@ WAIT_TIMEOUT_SECONDS = 20.0
 # the planned length has to include them or a scene that fits on paper runs over.
 SMALL_STEP_SECONDS = 0.4
 SCROLL_SECONDS = 0.5
+# How long `fill` waits between the keys it types: slow enough to be seen
+# typed in a 25-frame video, quick enough that a routing code is not a wait.
+TYPE_DELAY_SECONDS = 0.06
 
 
 # --------------------------------------------------------------- the scene
@@ -268,6 +278,11 @@ def load_scene(path: Path) -> dict:
             step.setdefault("settle", SETTLE_SECONDS)
         if verb == "click" and not step.get("selector"):
             raise SystemExit(f"{where}: a `click` needs a `selector`")
+        if verb == "fill" and (not step.get("selector") or not isinstance(step.get("text"), str)):
+            raise SystemExit(f"{where}: a `fill` needs a `selector` and the `text` it types (\"\" empties the field)")
+        if verb == "choose" and (not step.get("selector") or not isinstance(step.get("value"), str)
+                                 or not step["value"]):
+            raise SystemExit(f"{where}: a `choose` needs a `selector` (a `<select>`) and the option's `value`")
         if verb == "say":
             if not step.get("line"):
                 raise SystemExit(f"{where}: a `say` needs a `line` — it is the sentence on screen")
@@ -391,6 +406,8 @@ def planned_seconds(scene: dict) -> float:
             total += SCROLL_SECONDS
         if step["do"] == "goto":
             total += float(step["settle"])
+        elif step["do"] == "fill":
+            total += len(step["text"]) * TYPE_DELAY_SECONDS + SMALL_STEP_SECONDS
         elif step["do"] == "say":
             total += float(step["hold"])
         elif step["do"] == "hold":
@@ -426,6 +443,10 @@ def play(scene: dict, stage) -> None:
             stage.goto(step["url"], float(step["settle"]))
         elif verb == "click":
             stage.click(step["selector"])
+        elif verb == "fill":
+            stage.fill(step["selector"], step["text"])
+        elif verb == "choose":
+            stage.choose(step["selector"], step["value"])
         elif verb == "wait_for":
             stage.wait_for(step, float(step["timeout"]))
         elif verb == "say":
@@ -483,6 +504,10 @@ def overlay_script(badge: str, captions: bool = True) -> str:
         "padding:0 18px!important;border-radius:8px!important;white-space:nowrap!important;"
         "box-shadow:0 2px 10px rgba(0,0,0,.5)!important}"
         ".assist-launch,.design-launch{display:none!important}"
+        # The product's message after a save sits 22 px off the bottom, under
+        # the caption bar; it is lifted above the bar's two lines, where the
+        # viewer can read it, and is otherwise drawn as the product draws it.
+        f".toast{{bottom:{TOAST_LIFT}px!important}}"
     )
     return f"""
 (() => {{
@@ -603,6 +628,7 @@ class BrowserStage:
         # above. When the clicked thing is gone after the click (a button that
         # takes itself away, a link that leaves the page) the press is all
         # there is, and the mark says so.
+        self.clear_of_caption(selector)
         heard = len(self.presses)
         # The same element `page.click` will press: the first that matches.
         clicked = self.page.locator(selector).first.element_handle()
@@ -622,6 +648,52 @@ class BrowserStage:
             mark["what"] += " (where it landed was neither heard from the page nor measured, so it is not given)"
         print(f"         at {mark['x']},{mark['y']}  press {mark.get('press')}"
               + (f"  ({mark['settled']})" if "settled" in mark else ""), flush=True)
+
+    def fill(self, selector: str, text: str) -> None:
+        # Emptied first, then typed a key at a time, so the frames show the
+        # words arriving rather than a field that was blank and then full.
+        self.clear_of_caption(selector)
+        field = self.page.locator(selector).first
+        field.fill("")
+        if text:
+            field.press_sequentially(text, delay=int(TYPE_DELAY_SECONDS * 1000))
+        self.note(f"fill {selector}: {text!r}", "fill", text=text)
+        self.page.wait_for_timeout(int(SMALL_STEP_SECONDS * 1000))
+
+    def choose(self, selector: str, value: str) -> None:
+        # The option is picked, not the list opened: an open `<select>` is the
+        # browser's own window and is not in the page's video.
+        self.clear_of_caption(selector)
+        self.page.locator(selector).first.select_option(value)
+        self.note(f"choose {selector}: {value}", "choose", value=value)
+        self.page.wait_for_timeout(int(SMALL_STEP_SECONDS * 1000))
+
+    def clear_of_caption(self, selector: str) -> None:
+        """Bring the thing a step acts on out from under the caption bar.
+
+        A button at the very foot of a page (Admin's "Add operation", the
+        first take of class 1.3) sits under the bar with nowhere further to
+        scroll: Playwright cannot press it, and a viewer would not see it
+        pressed. When the thing is under the bar, room is added once below the
+        page's last row and the thing is put in the middle of the window. A
+        thing already clear is left where it is, so no other take moves.
+        """
+        self.page.evaluate(
+            """([selector, bar]) => {
+                 const node = document.querySelector(selector);
+                 if (!node) return;
+                 const box = node.getBoundingClientRect();
+                 if (box.bottom <= window.innerHeight - bar) return;
+                 if (!document.getElementById('fs-scene-room')) {
+                   const room = document.createElement('div');
+                   room.id = 'fs-scene-room';
+                   room.style.height = (2 * bar) + 'px';
+                   document.body.appendChild(room);
+                 }
+                 node.scrollIntoView({ block: 'center', behavior: 'instant' });
+               }""",
+            [selector, CAPTION_HEIGHT * 2],
+        )
 
     def wait_for(self, step: dict, timeout: float) -> None:
         waited = time.monotonic()
@@ -1040,6 +1112,8 @@ def readme(scene: dict, facts: dict) -> str:
         " in every frame of the GIF and the mp4, which the recording checks before it writes this page",
         "- the product's floating Assistant and Design buttons are hidden, because they sit where"
         " the caption bar goes",
+        f"- the product's message after a save (its toast) is drawn {TOAST_LIFT} px off the bottom rather"
+        " than 22, so that the caption bar does not cover it",
     ]
     plant = scene.get("plant")
     if plant:
