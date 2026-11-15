@@ -32,7 +32,7 @@ notes = [
   "The plant was started from the cutlery pack at ten times wall clock. The camera waited, off camera, until the pack's own released fork order, WO-FORK1-0001, had booked its first forks, so that the mould's queue has a running order with a count on it when the class arrives.",
   "The simulated floor was told `MES_OPS_FINISH_ORDERS=false`, so its simulated supervisor neither finishes WO-FORK1-0001 nor releases the next fork order, WO-FORK1-0002, while the camera rolls: the class needs WO-FORK1-0002 to stay planned for its refusal. The switch belongs to the simulated floor; the MES is configured as anybody installs it.",
   "The lot issued is LOT-PP-FORK1-001, the pack's polypropylene lot for the fork line. Two kilos is about what 500 forks weigh: the pack's fork weighs 3.6 to 4.2 grams.",
-  "The reading recorded is 165.1 mm on length_mm, inside the pack's UT-FORK limits of 164 to 166 mm. It is the first reading on this scratch plant, so no control chart rule can fire on it.",
+  "The reading recorded is 165.1 mm on length_mm, inside the pack's UT-FORK limits of 164 to 166 mm. The simulated floor records length readings too, so the recent results show its readings beside ADMIN's.",
   "The cutlery pack carries no maintenance plan, so the maintenance card says nothing is owed. That is the product's answer for this plant, filmed as drawn.",
   "The second booking, 5,000 good, is typed to show that the station does not check a typed figure against the mould's own counter. It is a write to a scratch plant that is thrown away when the take ends.",
   "At any speed but 1x every 2D page carries the product's REPLAY 10× banner across its top. It is filmed as the product draws it.",
@@ -166,7 +166,7 @@ name = "its-queue"
 do = "wait_for"
 selector = "#book-order"
 text = "WO-FORK1-0001"
-scroll_to = "#book"
+scroll_to = "#queue"
 scroll_block = "start"
 scroll_offset = 300
 
