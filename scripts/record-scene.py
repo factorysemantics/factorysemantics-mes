@@ -19,7 +19,24 @@ through them, burns the overlay into the picture, and writes, into one folder:
     product's
   * `marks.json`, the seconds each mark landed at and the planned timings, the
     size of the frame and of the GIF, and for every click the pixel on the
-    frame it landed on, so an effect laid over the clip can be put there
+    frame it landed on, so an effect laid over the clip can be put there; for
+    a `say` that points `at` something, the box drawn round it
+
+A viewer sees what is pressed and what is meant, not only the screen. Every
+`click`, `fill` and `choose` moves a drawn cursor to the thing and presses it
+with a ripple; `fill` types about twelve keys a second (a scene may say
+`type_delay_seconds`, slower). A `say` may name the thing its line is about:
+
+    [[step]]
+    do = "say"
+    line = "The cost center comes from the line."
+    at = "#ops tr:first-child .cc"      # a selector, as `click` takes one
+    label = "Cost center: from the line"  # optional: words on the box's tab
+    style = "box"                        # or "spotlight", which dims the rest
+
+and the box is drawn as the caption appears, held for the line, and taken
+away before the next step. A thing off the frame is scrolled onto it first; a
+thing not on the page refuses the take, naming the step.
 
 A scene that names a `lesson` ("2.1") is filmed into the class's tree instead,
 as `scripts/course/course.toml` lays it out and the lesson hand-off contract
@@ -57,7 +74,7 @@ Two things a scene may say to get out of that, and only together:
     a loopback address and refused everywhere else, before the browser opens,
     because the lab fleet and the public demo answer on this box too.
 
-Two things on screen are this file's and not the product's — three, when a
+Three things on screen are this file's and not the product's — four, when a
 scene starts its own plant — and the README of every folder it writes says so:
 
   1. the caption bar along the bottom — the `say` lines, burnt in — which stops
@@ -65,6 +82,8 @@ scene starts its own plant — and the README of every folder it writes says so:
   2. the badge at the top right, which names the version the plant itself
      reports and says in as many words that the plant is simulated and the
      software is pre-alpha
+  3. the cursor, the ripple of each press, and the box (and its label) round
+     what a `say` points at — drawn under the caption bar and the badge
 
 The bottom-right corner, 240 by 200 pixels, is kept empty of both: the class's
 narrator is drawn there afterwards, and nothing a viewer must read may sit
@@ -1397,6 +1416,11 @@ def readme(scene: dict, facts: dict) -> str:
         " the recording checks that no writing of its own lands there",
         f"- the badge at the top right: `{facts['badge']}`,"
         " in every frame of the GIF and the mp4, which the recording checks before it writes this page",
+        "- the arrow cursor and the ring when it presses: drawn by the recording, moved to each"
+        " thing a step clicks, types into or chooses from, and pressing it as the ring starts",
+        *(["- the cyan box round what a line is about, with its label: drawn by the recording while"
+           " that line is up (`spotlight` dims the rest of the screen instead)"]
+          if any(step.get("at") for step in scene["step"]) else []),
         "- the product's floating Assistant and Design buttons are hidden, because they sit where"
         " the caption bar goes",
         f"- the product's message after a save (its toast) is drawn {TOAST_LIFT} px off the bottom rather"
@@ -1487,8 +1511,10 @@ def readme(scene: dict, facts: dict) -> str:
           if facts.get("slides") else []),
         *(["- `lesson.json` — the lesson this folder is, what it holds, and what it was filmed from"]
           if facts.get("lesson_line") else []),
-        "- `marks.json` — the seconds every step landed at; the frame's size and the GIF's; and, on every"
-        " click, `x` and `y`, the pixel of the mp4's frame the click landed on",
+        "- `marks.json` — the seconds every step landed at; the frame's size and the GIF's; on every"
+        " click, `x` and `y`, the pixel of the mp4's frame the click landed on, and on every click, fill"
+        " and choose `cursor_from` and `ripple_at`; on a line that points at something, `box`"
+        " (`x`, `y`, `w`, `h` in the mp4's pixels), `label`, `selector` and `style`",
         "",
     ]
     return "\n".join(lines)
@@ -1557,7 +1583,13 @@ def marks_document(scene: dict, made: dict, gif: Path, gif_seconds_taken: float)
     them. `frame` is the mp4's size, which is the viewport's; `gif` is the
     published loop's, so a point placed on the mp4 can be scaled onto the GIF.
     Every mark carries `kind` and `part`; a `say` its `line` and `hold`; a
-    `slide` its `image`; a scroll its `from_y`, `to_y` and `took`.
+    `slide` its `image`; a scroll its `from_y`, `to_y` and `took`. Added by
+    addition only, for the drawn cursor and box: a `click`, `fill` or `choose`
+    carries `cursor_from` (`{x, y}` where the cursor's glide began) and
+    `ripple_at` (the second its ripple started, as the press was sent), and a
+    `fill` or `choose` also `x`, `y` (where it pointed) and a `fill`
+    `typed_seconds`; a `say` with `at` carries `box` (`{x, y, w, h}`, integers,
+    in frame pixels, clipped to the frame), `label`, `selector` and `style`.
     """
     return {
         "frame": {"width": int(scene["width"]), "height": int(scene["height"])},
