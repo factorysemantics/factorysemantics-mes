@@ -105,6 +105,12 @@ label = "1.3"
 slug = "routings"
 title = "Routings — the path a material takes"
 one_line = "The ordered operations that make a material, each on a named machine."
+outcomes = [
+  "Say what a routing is: operations in sequence, each on a named machine, for one material.",
+  "Read a plant's routings in Admin, and the cost center each step bills to, read from its machine's line.",
+  "Define a routing in the form, and say the two things it refuses: no operation, and a code in use.",
+]
+scene = "scripts/scenes/course/02-03-routings.toml"
 
 [[module.lesson]]
 order = 4
