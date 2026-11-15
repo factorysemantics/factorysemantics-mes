@@ -193,8 +193,12 @@ def test_what_it_refuses_is_finishing_at_the_count_so_a_person_finishes_every_st
     assert finished == [f'#ops tbody tr:has-text("{op["name"]}") button:has-text("Finish step")'
                         for op in sorted(fork_routing()["operations"], key=lambda op: op["seq"])]
     waits = [step for step in refuses if step["do"] == "wait_for"]
-    assert {"selector": "#d-status", "text": "completed"}.items() <= waits[-2].items()
-    assert waits[-1]["selector"] == "#erp-table tbody" and waits[-1]["text"] == "WO-FORK1-0001"
+    assert {"selector": "#d-status", "text": "completed"}.items() <= waits[-3].items()
+    # The outbox row is waited for, then scrolled to: a step scrolls before it waits.
+    assert [(w["selector"], w["text"], bool(w.get("scroll_to"))) for w in waits[-2:]] == [
+        ("#erp-table tbody", "WO-FORK1-0001", False),
+        ("#erp-table tbody", "WO-FORK1-0001", True),
+    ]
 
 
 def test_the_you_now_know_card_says_the_classs_own_outcomes_word_for_word(runner, scene):

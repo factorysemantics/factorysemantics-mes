@@ -236,6 +236,10 @@ do = "say"
 line = "That is dispatch. The operator does not hunt for paper: the machine's screen says what is next."
 
 [[step]]
+do = "say"
+line = "Each line of the queue says how many good of how many ordered. The next machine, the degating press, gets our order the same way."
+
+[[step]]
 do = "mark"
 name = "in-the-moulds-queue"
 
@@ -356,15 +360,26 @@ do = "mark"
 name = "finished-by-a-person"
 
 [[step]]
+do = "say"
+line = "Look at the over-run beside the ordered number. It is every fork made past 2,778, still attached to the order that made them."
+
+[[step]]
 do = "goto"
 url = "/dashboard/ops"
 settle = 1
 
+# A step scrolls before it waits, so the row is waited for first and scrolled
+# to by a second wait that finds it already there.
 [[step]]
 do = "wait_for"
 selector = "#erp-table tbody"
 text = "WO-FORK1-0001"
 timeout = 15
+
+[[step]]
+do = "wait_for"
+selector = "#erp-table tbody"
+text = "WO-FORK1-0001"
 scroll_to = "#erp-table tr"
 scroll_text = "WO-FORK1-0001"
 scroll_offset = 300
