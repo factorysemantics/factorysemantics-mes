@@ -78,7 +78,11 @@ line = "On a floor, a bin of work carries a card. It says what to make, how many
 
 [[step]]
 do = "say"
-line = "Every station the bin passes reads the card. At the end, somebody signs it off. That card is a work order."
+line = "Every station the bin passes reads the card, and writes down beside its own step how many good it made."
+
+[[step]]
+do = "say"
+line = "The card never counts itself done. At the end, somebody signs it off. That card is a work order."
 
 [[step]]
 do = "mark"
