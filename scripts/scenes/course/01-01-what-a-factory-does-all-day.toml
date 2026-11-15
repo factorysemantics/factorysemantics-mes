@@ -1,0 +1,375 @@
+# Class 0.1 of the course, *What a factory does all day*: materials become
+# products through steps on machines, run by people against orders, and
+# someone has to know what actually happened.
+#
+# Tier 0 comes before the software, so this class teaches the floor, not the
+# screens: the five words a plant runs on, the plant as a tree, and one fork
+# followed from the mould to the pallet. It is filmed on a scratch cutlery
+# plant that started a few minutes before the camera rolls, and every screen
+# is shown as the product draws it. The last beat is the rule the rest of the
+# course leans on: the MES knows nothing about a machine until the machine or a
+# person reports it.
+
+name = "what-a-factory-does-all-day"
+title = "What a factory does all day"
+lesson = "0.1"
+take_is = "lesson"
+part = "hook"
+base = "http://127.0.0.1:8040"
+badge = "pre-alpha · simulated plant · v{version}"
+# Four to six minutes, as the outline says this class runs.
+budget_seconds = 360
+gif_skip_seconds = 2.0
+width = 1280
+height = 720
+
+notes = [
+  "The plant was started a few minutes before the camera rolled, from the cutlery pack, at ten times wall clock, so the pallet line has finished at least one pallet by the time the lesson reaches it. At 1x the first pallet takes the better part of an hour.",
+  "The camera waited, off camera, until the palletizing order WO-PAL1-0001 had booked one good pallet, so every line the fork is followed through has a count above zero on screen.",
+  "At any speed but 1x every 2D page carries the product's REPLAY 10× banner across its top. It is filmed as the product draws it, and the narration says once what it means.",
+  "The 3D line view draws each machine as a plain grey box with its name over it; there is no artwork of the real machines. It is filmed as drawn.",
+  "The machines page labels a line WORK CENTER and a machine WORK UNIT, which are the ISA-95 words. The narration says line and machine and names the labels once.",
+  "Each line runs its own work order on this plant: the stacker's order is for stacks, not forks. The narration follows the product along the steps and does not claim that one physical fork is traced from mould to pallet; tracing lots is class 2.3.",
+  "The line pages show OEE figures with Watched at a few percent: the cutlery pack sets no coverage floor, so nothing is withheld. This class does not read those figures; OEE is class 3.3.",
+]
+
+honesty = [
+  "the 3D view draws every machine as a grey box with its name on it, not a picture of the machine",
+  "the plant is a scratch plant a few minutes old, replaying at ten times wall clock, which is the banner across the top of the 2D pages",
+]
+
+[plant]
+pack = "labs/cutlery"
+speed = 10
+roll_when_timeout_seconds = 1500
+
+# One finished pallet: the end of the fork's road has a count on it.
+[[plant.roll_when_order]]
+code = "WO-PAL1-0001"
+booked = 1
+
+# ----------------------------------------------------------------- the hook
+
+[[step]]
+do = "goto"
+url = "/dashboard/line/3d?line=FORK1LINE"
+settle = 3
+
+[[step]]
+do = "wait_for"
+selector = "#stat-order"
+text = "WO-FORK1-0001"
+
+[[step]]
+do = "say"
+line = "A moulding line that makes plastic forks."
+
+[[step]]
+do = "say"
+line = "Every few seconds, a fork comes out of the mould."
+
+[[step]]
+do = "mark"
+name = "hook"
+
+[[step]]
+do = "say"
+line = "By the end of the shift, someone has to know what each machine did."
+
+[[step]]
+do = "goto"
+url = "/dashboard/line?line=FORK1LINE"
+settle = 2.5
+
+[[step]]
+do = "wait_for"
+selector = "#l-code"
+text = "FORK1LINE"
+
+[[step]]
+do = "say"
+line = "How many good, how many scrap, against which order."
+
+# ----------------------------------------------------------------- the idea
+
+[[step]]
+part = "idea"
+do = "slide"
+name = "five-words"
+title = "Five things on any plant floor"
+lines = [
+  "Material: what goes in and what comes out",
+  "Machine: where the work is done",
+  "Step: one operation, on one machine",
+  "Order: make this many of that",
+  "Shift: who was on, and when",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "That is the whole job of a factory floor, and this class is about it, before any software."
+
+[[step]]
+do = "say"
+line = "Every plant, whatever it makes, runs on five words."
+
+[[step]]
+do = "say"
+line = "Material: the resin that goes in, and the fork that comes out."
+
+[[step]]
+do = "say"
+line = "Machine: the mould, the degater, the marker. Each one is a place where work is done."
+
+[[step]]
+do = "say"
+line = "Step: one operation on one machine. Moulding is a step. Cutting the fork off its runner is the next."
+
+[[step]]
+do = "say"
+line = "Order: the instruction to make this many of that, this way."
+
+[[step]]
+do = "say"
+line = "Shift: the people on the floor, and the hours they were there."
+
+[[step]]
+do = "mark"
+name = "five-words"
+
+[[step]]
+do = "slide"
+name = "the-tree"
+title = "A plant is a tree"
+lines = [
+  "Enterprise: the company",
+  "Site: one plant",
+  "Area: a part of the plant",
+  "Line: machines that work one after another",
+  "Machine: one place work is done",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "And every machine has exactly one place in a tree."
+
+[[step]]
+do = "say"
+line = "A company has sites. A site has areas. An area has lines, and a line has machines."
+
+# ------------------------------------------------------------ on the screen
+
+[[step]]
+part = "screen"
+do = "goto"
+url = "/dashboard/machines"
+settle = 3
+
+[[step]]
+do = "wait_for"
+selector = "#tree"
+text = "CUTLERYCO"
+
+[[step]]
+do = "say"
+line = "Here is that tree for this plant. The enterprise, Cutlery Co. One site, Cutlery Works."
+
+[[step]]
+do = "say"
+line = "The moulding area, and in it, line FORK1. The screen says work center; it means the line."
+
+[[step]]
+do = "mark"
+name = "tree"
+
+[[step]]
+do = "say"
+line = "Under the line, its three machines, each a work unit: the degater, the marker, and the mould."
+
+[[step]]
+do = "say"
+line = "Further down, the same plant has a stacking area, a wrapping area and a palletizing area."
+
+[[step]]
+do = "wait_for"
+selector = "#tree"
+text = "STACK-AREA"
+scroll_to = "#tree .node"
+scroll_text = "STACK-AREA"
+# The page's header stays at the top as it scrolls: 260 px clears it.
+scroll_offset = 260
+
+[[step]]
+do = "say"
+line = "A fork's road runs through all four."
+
+[[step]]
+do = "goto"
+url = "/dashboard/machine/FORK1_Mold?hours=8"
+settle = 3
+
+[[step]]
+do = "wait_for"
+selector = "#m-order"
+text = "WO-FORK1-0001"
+
+[[step]]
+do = "say"
+line = "The mould. It is running, on order WO-FORK1-0001, at its step: Mold, operation 10."
+
+[[step]]
+do = "say"
+line = "Material, machine, step and order, all four on one screen."
+
+[[step]]
+do = "mark"
+name = "the-mould"
+
+[[step]]
+do = "wait_for"
+selector = "#tags-table"
+text = "GoodCount"
+scroll_to = "#tags-table tr"
+scroll_text = "GoodCount"
+scroll_offset = 400
+
+[[step]]
+do = "say"
+line = "And below, what the machine itself reports: its temperature, its cycle time, its good and scrap counts."
+
+[[step]]
+do = "say"
+line = "The age column says how long ago each number arrived."
+
+[[step]]
+do = "goto"
+url = "/dashboard/line?line=STACK07LINE"
+settle = 3
+
+[[step]]
+do = "wait_for"
+selector = "#l-code"
+text = "STACK07LINE"
+
+[[step]]
+do = "say"
+line = "Next on the road, the stacker. It puts a fork, a spoon and a knife into one stack."
+
+[[step]]
+do = "say"
+line = "A different line, a different order, and its count is in stacks, not forks."
+
+[[step]]
+do = "mark"
+name = "stacker"
+
+[[step]]
+do = "goto"
+url = "/dashboard/line?line=WRAP03LINE"
+settle = 3
+
+[[step]]
+do = "wait_for"
+selector = "#l-code"
+text = "WRAP03LINE"
+
+[[step]]
+do = "say"
+line = "Then the wrapper: each stack sealed onto a paper plate. That is the product a customer buys."
+
+[[step]]
+do = "say"
+line = "The banner across the top says this plant is replaying at ten times speed, so a shift fits into a class."
+
+[[step]]
+do = "goto"
+url = "/dashboard/line/3d?line=PAL1LINE"
+settle = 4
+
+[[step]]
+do = "wait_for"
+selector = "#stat-order"
+text = "WO-PAL1-0001"
+
+[[step]]
+do = "say"
+line = "And last, the palletizer and the stretch wrapper. Wrapped sets go onto a pallet, and the pallet goes out the door."
+
+[[step]]
+do = "say"
+line = "Four lines, four orders, one road from resin to pallet."
+
+[[step]]
+do = "mark"
+name = "pallet"
+
+[[step]]
+do = "say"
+line = "Every count on the way is one the floor booked, and none was worked out from the others."
+
+# -------------------------------------------------------------- it refuses
+
+[[step]]
+part = "refuses"
+do = "goto"
+url = "/dashboard/machine/FORK1_Mold?hours=8"
+settle = 3
+
+[[step]]
+do = "click"
+selector = "[data-tab=oee]"
+
+[[step]]
+do = "wait_for"
+selector = "#oee-ledger"
+text = "before first sample"
+scroll_to = "#oee-window"
+scroll_block = "start"
+scroll_offset = 30
+
+[[step]]
+do = "say"
+line = "Now the one rule this whole course leans on. The mould again, over the last eight hours."
+
+[[step]]
+do = "say"
+line = "This plant is a few minutes old. Almost all of those hours are before first sample."
+
+[[step]]
+do = "mark"
+name = "before-first-sample"
+
+[[step]]
+do = "say"
+line = "The MES does not guess what the mould did then. It was not told, so it says it does not know."
+
+[[step]]
+do = "say"
+line = "Nothing is known until a machine or a person reports it: the machine over its tags, a person at the station."
+
+[[step]]
+do = "say"
+line = "A gap stays a gap. It is not counted as running, and it is not counted as stopped."
+
+# ------------------------------------------------------------ you now know
+
+[[step]]
+part = "know"
+do = "slide"
+name = "you-now-know"
+title = "You now know how to"
+lines = [
+  "Name the five things on any plant floor: material, machine, step, order, shift.",
+  "Read a plant as a tree: enterprise, site, area, line, machine.",
+  "Say why the MES knows nothing about a machine until the machine or a person reports it.",
+]
+
+[[step]]
+do = "mark"
+name = "you-now-know"
+
+[[step]]
+do = "hold"
+seconds = 3

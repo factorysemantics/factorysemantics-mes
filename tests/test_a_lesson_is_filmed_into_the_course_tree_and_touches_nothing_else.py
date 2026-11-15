@@ -73,6 +73,7 @@ def problems_with_course_json(document: dict) -> list[str]:
         need(where, module, "order", (int,))
         if module.get("order") != m_number:
             found.append(f"{where}: out of order")
+        need(where, module, "label", (str,))
         need(where, module, "slug", (str,))
         need(where, module, "title", (str,))
         need(where, module, "lessons", (list,))
@@ -81,7 +82,7 @@ def problems_with_course_json(document: dict) -> list[str]:
             need(at, lesson, "order", (int,))
             if lesson.get("order") != l_number:
                 found.append(f"{at}: out of order")
-            for key in ("slug", "title", "path", "status"):
+            for key in ("label", "slug", "title", "path", "status"):
                 need(at, lesson, key, (str,))
             if lesson.get("path") != f"{m_number:02d}-{module.get('slug')}/{l_number:02d}-{lesson.get('slug')}":
                 found.append(f"{at}: `path` is not NN-module/NN-lesson")
@@ -105,14 +106,20 @@ def test_course_json_written_from_course_toml_is_what_the_contract_describes(run
     assert on_disk == document
     assert problems_with_course_json(on_disk) == []
     lessons = [lesson for module in on_disk["modules"] for lesson in module["lessons"]]
-    assert len(on_disk["modules"]) == 5
-    assert len(lessons) == 18
+    assert len(on_disk["modules"]) == 7
+    assert len(lessons) == 25
+    # The label is the number people say; the path is by position, and tier 3
+    # skips 3.2, which draft 2 struck.
+    assert [module["label"] for module in on_disk["modules"]] == ["0", "1", "2", "3", "4", "5", "6"]
+    assert [lesson["label"] for lesson in on_disk["modules"][3]["lessons"]] == ["3.1", "3.3", "3.4"]
+    assert on_disk["modules"][3]["lessons"][1]["path"] == "04-the-machines-talk/02-oee-and-its-three-losses"
+    assert "never-invent-production" not in {lesson["slug"] for lesson in lessons}
     # Nothing filmed yet: every lesson planned, no take, no version claimed.
     assert {lesson["status"] for lesson in lessons} == {"planned"}
     assert all(lesson["take"] is None and lesson["voiced_take"] is None for lesson in lessons)
     assert on_disk["course"]["product_version"] is None
     page = (root / "README.md").read_text(encoding="utf-8")
-    assert "5 modules, 18 lessons: 18 planned, 0 recorded, 0 voiced, 0 published." in page
+    assert "7 modules, 25 lessons: 25 planned, 0 recorded, 0 voiced, 0 published." in page
     assert "mpv --loop" in page
 
 
@@ -121,16 +128,16 @@ def test_a_course_json_that_breaks_the_contract_is_caught_by_the_check(runner, c
     document = runner.write_course(course, tmp_path / "course")
     broken = json.loads(json.dumps(document))
     broken["modules"][1]["lessons"][0]["status"] = "filmed"
-    broken["modules"][0]["lessons"][2]["path"] = "01-what-an-mes-is-for/3-a-work-orders-day"
+    broken["modules"][1]["lessons"][3]["path"] = "02-the-core/4-a-work-orders-day"
     del broken["modules"][4]["lessons"][2]["voiced_take"]
 
     assert len(problems_with_course_json(broken)) == 3
 
 
-def test_scenes_02_and_04_are_the_teasers_of_lessons_2_1_and_1_3(runner, course):
+def test_scenes_02_and_04_are_the_teasers_of_classes_4_3_and_1_4(runner, course):
     for scene_file, lesson_id, path in [
-        ("02-spc-on-the-line.toml", "2.1", "02-quality-on-the-line/01-spc-the-chart-notices-first"),
-        ("04-work-orders-and-routings.toml", "1.3", "01-what-an-mes-is-for/03-a-work-orders-day"),
+        ("02-spc-on-the-line.toml", "4.3", "05-quality/03-spc-the-chart-notices-first"),
+        ("04-work-orders-and-routings.toml", "1.4", "02-the-core/04-a-work-orders-day"),
     ]:
         scene = runner.load_scene(SCENES / scene_file)
         assert scene["lesson"] == lesson_id
@@ -143,12 +150,13 @@ def test_scenes_02_and_04_are_the_teasers_of_lessons_2_1_and_1_3(runner, course)
 def test_a_course_that_skips_a_number_or_assumes_a_lesson_it_lacks_is_refused(runner, tmp_path):
     good = COURSE.read_text(encoding="utf-8")
     skipped = tmp_path / "skipped.toml"
-    skipped.write_text(good.replace('order = 3\nslug = "a-work-orders-day"', 'order = 4\nslug = "a-work-orders-day"'),
+    skipped.write_text(good.replace('order = 4\nlabel = "1.4"\nslug = "a-work-orders-day"',
+                                    'order = 5\nlabel = "1.4"\nslug = "a-work-orders-day"'),
                        encoding="utf-8")
-    with pytest.raises(SystemExit, match="order = 4"):
+    with pytest.raises(SystemExit, match="order = 5"):
         runner.load_course(skipped)
     assumes = tmp_path / "assumes.toml"
-    assumes.write_text(good.replace('knows_before = ["1.1"]', 'knows_before = ["9.9"]'), encoding="utf-8")
+    assumes.write_text(good.replace('knows_before = ["0.1"]', 'knows_before = ["9.9"]'), encoding="utf-8")
     with pytest.raises(SystemExit, match=r"9\.9"):
         runner.load_course(assumes)
 
@@ -194,7 +202,7 @@ def test_a_re_record_bumps_the_take_in_both_files_and_changes_nothing_but_four_k
                                                                                     monkeypatch):
     root = tmp_path / "gifs" / "course"
     studio = tmp_path / "studio" / "out"
-    folder = root / "02-quality-on-the-line" / "01-spc-the-chart-notices-first"
+    folder = root / "05-quality" / "03-spc-the-chart-notices-first"
 
     film(runner, monkeypatch, root, "02-spc-on-the-line.toml", a_take_that_writes_a_folder(runner))
     first = json.loads((folder / "lesson.json").read_text(encoding="utf-8"))
@@ -203,16 +211,16 @@ def test_a_re_record_bumps_the_take_in_both_files_and_changes_nothing_but_four_k
 
     # Studio voices take 1, and keeps its own work in its own tree beside ours.
     document = json.loads((root / "course.json").read_text(encoding="utf-8"))
-    entry = document["modules"][1]["lessons"][0]
+    entry = document["modules"][4]["lessons"][2]
     assert entry["take"] == 1 and entry["voiced_take"] is None
     entry["voiced_take"] = 1
     entry["status"] = "voiced"
     document["course"]["a key from a later contract"] = "kept"
     (root / "course.json").write_text(json.dumps(document, indent=1), encoding="utf-8")
-    (studio / "02-quality-on-the-line").mkdir(parents=True)
-    (studio / "02-quality-on-the-line" / "spc-the-chart-notices-first.voice.txt").write_text("Brian's lines\n",
+    (studio / "05-quality").mkdir(parents=True)
+    (studio / "05-quality" / "spc-the-chart-notices-first.voice.txt").write_text("Brian's lines\n",
                                                                                             encoding="utf-8")
-    other = root / "01-what-an-mes-is-for" / "03-a-work-orders-day"
+    other = root / "02-the-core" / "04-a-work-orders-day"
     other.mkdir(parents=True)
     (other / "keep.txt").write_text("another lesson's folder\n", encoding="utf-8")
     studio_before, other_before = fingerprint(studio), fingerprint(other)
@@ -225,14 +233,14 @@ def test_a_re_record_bumps_the_take_in_both_files_and_changes_nothing_but_four_k
     second = json.loads((folder / "lesson.json").read_text(encoding="utf-8"))
     assert second["lesson"]["take"] == 2
     assert (folder / "spc-the-chart-notices-first.gif").read_bytes() == b"gif of take 2"
-    entry_after = after["modules"][1]["lessons"][0]
+    entry_after = after["modules"][4]["lessons"][2]
     assert entry_after["take"] == 2, "the take is bumped in course.json as in lesson.json"
     assert entry_after["voiced_take"] == 1, "voiced_take is studio's; a re-record never touches it"
     assert entry_after["status"] == "voiced", "a status only moves forward"
     assert entry_after["recorded"] == second["filmed_from"]["recorded"]
     # Everything else in course.json, byte for byte as the reader left it.
     for key in runner.RECORD_KEYS:
-        before["modules"][1]["lessons"][0].pop(key)
+        before["modules"][4]["lessons"][2].pop(key)
         entry_after.pop(key)
     assert after == before
     assert fingerprint(studio) == studio_before
@@ -244,7 +252,7 @@ def test_a_re_record_bumps_the_take_in_both_files_and_changes_nothing_but_four_k
 
 def test_a_take_that_fails_leaves_the_folder_and_course_json_as_they_were(runner, tmp_path, monkeypatch):
     root = tmp_path / "course"
-    folder = root / "01-what-an-mes-is-for" / "03-a-work-orders-day"
+    folder = root / "02-the-core" / "04-a-work-orders-day"
     film(runner, monkeypatch, root, "04-work-orders-and-routings.toml", a_take_that_writes_a_folder(runner))
     folder_before = fingerprint(folder)
     course_before = (root / "course.json").read_bytes()
@@ -271,7 +279,7 @@ def test_a_teaser_only_folder_leaves_its_lesson_planned_with_no_duration(runner,
     film(runner, monkeypatch, root, "02-spc-on-the-line.toml", a_take_that_writes_a_folder(runner))
     document = runner.write_course(course, root)
 
-    entry = document["modules"][1]["lessons"][0]
+    entry = document["modules"][4]["lessons"][2]
     assert (entry["status"], entry["take"], entry["duration_seconds"]) == ("planned", 1, None)
     assert document["course"]["product_version"] == "0.4.2"
     assert problems_with_course_json(document) == []
@@ -281,11 +289,11 @@ def test_a_teaser_only_folder_leaves_its_lesson_planned_with_no_duration(runner,
 
 
 def test_lesson_json_says_the_lesson_the_files_the_reserved_corner_and_what_it_was_filmed_from(runner, course):
-    module, lesson = runner.find_lesson(course, "1.2")
+    module, lesson = runner.find_lesson(course, "0.2")
     scene = runner.load_scene(SCENES / "02-spc-on-the-line.toml")
     scene["take_is"] = "lesson"
-    files = {"video": "never-invent-production.mp4", "teaser": "never-invent-production.gif",
-             "script": "never-invent-production.script.txt", "marks": "marks.json",
+    files = {"video": "what-an-mes-is-and-is-not.mp4", "teaser": "what-an-mes-is-and-is-not.gif",
+             "script": "what-an-mes-is-and-is-not.script.txt", "marks": "marks.json",
              "stills": ["stills/01-the-rollup.png"], "slides": ["slides/01-the-word.png"]}
     document = runner.lesson_document(course, module, lesson, scene, {
         "plant": "bottling", "base": scene["base"], "files": files, "duration_seconds": 287.4, "take": 3,
@@ -294,9 +302,13 @@ def test_lesson_json_says_the_lesson_the_files_the_reserved_corner_and_what_it_w
     })
 
     assert document["contract"] == 1
-    assert document["module"] == {"order": 1, "slug": "what-an-mes-is-for", "title": "What an MES is for"}
-    assert document["lesson"]["knows_before"] == ["1.1"]
-    assert len(document["lesson"]["outcomes"]) == 3
+    assert document["module"] == {"order": 1, "label": "0", "slug": "before-the-software",
+                                  "title": "Before the software"}
+    assert document["lesson"]["label"] == "0.2" and document["lesson"]["order"] == 2
+    assert document["lesson"]["knows_before"] == ["0.1"]
+    # The class's own three lines, as course.toml has them; a class whose lines
+    # are not written yet carries an empty list, never a missing key.
+    assert document["lesson"]["outcomes"] == lesson["outcomes"] and len(lesson["outcomes"]) == 3
     assert (document["lesson"]["duration_seconds"], document["lesson"]["take"]) == (287.4, 3)
     assert document["files"] == files
     assert document["frame"] == {"width": 1280, "height": 720, "fps": 20}
@@ -362,7 +374,8 @@ hold = 3
     [
         ('part = "middle"\n[[step]]\ndo = "hold"\n', "not one of hook"),
         ('[[step]]\ndo = "slide"\nname = "x"\n', "needs a `name`"),
-        ('lesson = "2"\n[[step]]\ndo = "hold"\n', "module.lesson"),
+        ('lesson = "2"\n[[step]]\ndo = "hold"\n', "class's label"),
+        ('lesson = "0.1.2"\n[[step]]\ndo = "hold"\n', "class's label"),
         ('take_is = "trailer"\n[[step]]\ndo = "hold"\n', "take_is"),
     ],
 )
@@ -392,3 +405,76 @@ def test_with_captions_off_the_bar_is_never_drawn_and_with_them_on_it_stops_shor
     assert hidden not in on.replace(" ", "")
     assert hidden in off.replace(" ", "")
     assert f"top:{runner.BADGE_TOP}px" in on.replace(" ", "")
+
+
+# ------------------------------------------------- a layout that changed under us
+
+
+def test_the_readme_lists_each_folder_the_earlier_layout_filmed_and_where_its_class_is_now(runner, course, tmp_path):
+    runner.write_course(course, tmp_path / "course")
+    page = (tmp_path / "course" / "README.md").read_text(encoding="utf-8")
+
+    assert "| Old path | New path |" in page
+    assert ("| `01-what-an-mes-is-for/03-a-work-orders-day/` | `02-the-core/04-a-work-orders-day/` |") in page
+    assert ("| `02-quality-on-the-line/01-spc-the-chart-notices-first/` "
+            "| `05-quality/03-spc-the-chart-notices-first/` |") in page
+    kept = [line for line in page.splitlines() if "`01-what-an-mes-is-for/02-never-invent-production/`" in line]
+    assert len(kept) == 1 and "outside the course" in kept[0] and "nothing reads it" in kept[0]
+    assert "never moves, rewrites or deletes any other" in page
+
+
+def test_folders_the_course_does_not_name_are_left_exactly_as_they_were(runner, course, tmp_path, monkeypatch):
+    """Draft 1's three filmed folders sit in the tree under paths draft 2 does not have."""
+    root = tmp_path / "course"
+    old = {
+        "01-what-an-mes-is-for/02-never-invent-production": "never-invent-production",
+        "01-what-an-mes-is-for/03-a-work-orders-day": "a-work-orders-day",
+        "02-quality-on-the-line/01-spc-the-chart-notices-first": "spc-the-chart-notices-first",
+    }
+    for path, slug in old.items():
+        (root / path).mkdir(parents=True)
+        (root / path / f"{slug}.mp4").write_bytes(b"draft 1's take")
+        (root / path / "lesson.json").write_text(json.dumps({"contract": 1, "lesson": {"slug": slug, "take": 4}}),
+                                                 encoding="utf-8")
+    # Draft 1's course.json, with studio's voiced take on the struck class.
+    (root / "course.json").write_text(json.dumps({"contract": 1, "course": {}, "modules": [
+        {"order": 1, "slug": "what-an-mes-is-for", "lessons": [
+            {"order": 2, "slug": "never-invent-production", "path": old_path, "status": "voiced",
+             "take": 4, "voiced_take": 4} for old_path in ["01-what-an-mes-is-for/02-never-invent-production"]]},
+    ]}), encoding="utf-8")
+    before = {path: fingerprint(root / path) for path in old}
+
+    document = runner.write_course(course, root)
+    film(runner, monkeypatch, root, "02-spc-on-the-line.toml", a_take_that_writes_a_folder(runner))
+
+    assert {path: fingerprint(root / path) for path in old} == before
+    paths = {lesson["path"] for module in document["modules"] for lesson in module["lessons"]}
+    assert not paths & set(old), "course.json names no folder of the earlier layout"
+    after = json.loads((root / "course.json").read_text(encoding="utf-8"))
+    lessons = [lesson for module in after["modules"] for lesson in module["lessons"]]
+    # Studio's voiced take belonged to the folder, not to the number: nothing carries it over.
+    assert all(lesson["voiced_take"] is None for lesson in lessons)
+    assert [lesson["path"] for lesson in lessons if lesson["status"] != "planned" or lesson["take"]] == [
+        "05-quality/03-spc-the-chart-notices-first"]
+    assert problems_with_course_json(after) == []
+
+
+@pytest.mark.parametrize(
+    ("change", "refusal"),
+    [
+        (('label = "3.4"', 'label = "3.3"'), "3.3"),
+        (('label = "0.1"', 'label = "zero.one"'), "label"),
+        (('slug = "a-work-orders-day"\n\n[[moved]]', 'slug = "no-such-class"\n\n[[moved]]'), "no-such-class"),
+        (('from = "01-what-an-mes-is-for/02-never-invent-production"\n',
+          'from = "01-what-an-mes-is-for/02-never-invent-production"\nslug = "routings"\n'), "needs either"),
+    ],
+)
+def test_a_course_whose_labels_or_moved_folders_would_mislead_a_reader_is_refused(runner, tmp_path, change, refusal):
+    old, new = change
+    good = COURSE.read_text(encoding="utf-8")
+    assert good.count(old) == 1, old
+    bad = tmp_path / "bad.toml"
+    bad.write_text(good.replace(old, new), encoding="utf-8")
+
+    with pytest.raises(SystemExit, match=refusal):
+        runner.load_course(bad)

@@ -244,8 +244,10 @@ def load_scene(path: Path) -> dict:
     if scene["part"] is not None and scene["part"] not in PARTS:
         raise SystemExit(f"{path}: `part = {scene['part']!r}` is not one of {', '.join(PARTS)}")
     if scene.get("lesson") is not None:
-        if not re.fullmatch(r"[1-9][0-9]?\.[1-9][0-9]?", str(scene["lesson"])):
-            raise SystemExit(f"{path}: `lesson` is module.lesson as the syllabus numbers it, e.g. \"2.1\"")
+        named = str(scene["lesson"])
+        if not (LABEL.fullmatch(named) or (SLUG.fullmatch(named) and not named.isdigit())):
+            raise SystemExit(f"{path}: `lesson` is the class's label as the syllabus numbers it, e.g. \"0.1\","
+                             " or its slug")
         scene["lesson"] = str(scene["lesson"])
     if scene["take_is"] not in ("lesson", "teaser"):
         raise SystemExit(f"{path}: `take_is` is \"lesson\" or \"teaser\"")
@@ -1301,13 +1303,17 @@ STATUSES = ("planned", "recorded", "voiced", "published")
 #: all, which studio sets to the take it voiced.
 RECORD_KEYS = ("take", "status", "duration_seconds", "recorded")
 SLUG = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
+#: A class's display number, "0.1" or "4.3": what people say and scenes name.
+#: It is not the folder's number, which is position (`order`).
+LABEL = re.compile(r"[0-9]{1,2}\.[0-9]{1,2}")
 
 
 def load_course(path: Path) -> dict:
     """Read course.toml and refuse what a reader of course.json could not rely on.
 
-    Returns the course with each lesson's `id` ("2.1") and `path`
-    ("02-quality-on-the-line/01-spc-the-chart-notices-first") filled in.
+    Returns the course with each lesson's `id` and `path` filled in: `id` is
+    its `label` ("4.3"), or "module.lesson" by position where it has none;
+    `path` is always by position ("05-quality/03-spc-the-chart-notices-first").
     """
     with path.open("rb") as raw:
         course = tomllib.load(raw)
@@ -1337,8 +1343,32 @@ def load_course(path: Path) -> dict:
                 raise SystemExit(f"{where} needs a `one_line`")
             lesson["outcomes"] = list(lesson.get("outcomes") or [])
             lesson["knows_before"] = [str(k) for k in lesson.get("knows_before") or []]
-            lesson["id"] = f"{m_number}.{l_number}"
+            if lesson.get("label") is not None and not LABEL.fullmatch(str(lesson["label"])):
+                raise SystemExit(f"{where}: `label` is the number people say, e.g. \"0.1\"")
+            lesson["id"] = str(lesson.get("label") or f"{m_number}.{l_number}")
             lesson["path"] = f"{m_number:02d}-{module['slug']}/{l_number:02d}-{lesson['slug']}"
+    every = [lesson for module in modules for lesson in module["lesson"]]
+    for key in ("id", "slug"):
+        seen: set[str] = set()
+        for lesson in every:
+            if lesson[key] in seen:
+                raise SystemExit(f"{path}: two lessons are {'labelled' if key == 'id' else 'slugged'} "
+                                 f"{lesson[key]!r}; a scene could not say which it films")
+            seen.add(lesson[key])
+    by_slug = {lesson["slug"]: lesson for lesson in every}
+    moved = []
+    for number, entry in enumerate(course.get("moved") or [], start=1):
+        where = f"{path}: [[moved]] {number}"
+        if not entry.get("from"):
+            raise SystemExit(f"{where} needs `from`, the folder as it was")
+        if bool(entry.get("slug")) == bool(entry.get("kept_outside")):
+            raise SystemExit(f"{where} needs either `slug` (the class it is now) or `kept_outside` (why not)")
+        if entry.get("slug") and entry["slug"] not in by_slug:
+            raise SystemExit(f"{where}: no lesson has the slug {entry['slug']!r}")
+        moved.append({"from": entry["from"],
+                      "to": by_slug[entry["slug"]]["path"] if entry.get("slug") else None,
+                      "kept_outside": entry.get("kept_outside")})
+    course["moved"] = moved
     known = {lesson["id"] for module in modules for lesson in module["lesson"]}
     for module in modules:
         for lesson in module["lesson"]:
@@ -1351,10 +1381,10 @@ def load_course(path: Path) -> dict:
 
 
 def find_lesson(course: dict, lesson_id: str) -> tuple[dict, dict]:
-    """The module and the lesson a scene's `lesson = "2.1"` names."""
+    """The module and the lesson a scene's `lesson` names, by its label ("0.1") or its slug."""
     for module in course["module"]:
         for lesson in module["lesson"]:
-            if lesson["id"] == lesson_id:
+            if lesson_id in (lesson["id"], lesson["slug"]):
                 return module, lesson
     raise SystemExit(f"lesson {lesson_id} is not in the course")
 
@@ -1440,7 +1470,7 @@ def course_document(course: dict, root: Path, previous: dict | None) -> dict:
                                  (folder.get("filmed_from") or {}).get("product_version")))
             was = before.get(lesson["path"], {})
             lessons.append({
-                "order": lesson["order"], "slug": lesson["slug"], "title": lesson["title"],
+                "order": lesson["order"], "label": lesson["id"], "slug": lesson["slug"], "title": lesson["title"],
                 "path": lesson["path"],
                 "status": forward(was.get("status"), keys["status"]),
                 "duration_seconds": keys["duration_seconds"], "take": keys["take"],
@@ -1448,8 +1478,8 @@ def course_document(course: dict, root: Path, previous: dict | None) -> dict:
                 "voiced_take": was.get("voiced_take"),
                 "outcomes": lesson["outcomes"],
             })
-        modules.append({"order": module["order"], "slug": module["slug"], "title": module["title"],
-                        "lessons": lessons})
+        modules.append({"order": module["order"], "label": str(module.get("label") or module["order"]),
+                        "slug": module["slug"], "title": module["title"], "lessons": lessons})
     head = course["course"]
     newest = max(versions, default=("", None))[1]
     return {
@@ -1481,12 +1511,31 @@ def course_readme(course: dict, document: dict) -> str:
         " somebody copies it somewhere public.",
         "",
     ]
-    by_path = {lesson["path"]: lesson for module in course["module"] for lesson in module["lesson"]}
     for module in document["modules"]:
-        lines += [f"## {module['order']}. {module['title']}", "", "| # | Lesson | Status | Take |", "|---|---|---|---|"]
+        lines += [f"## {module['order']:02d}. Tier {module['label']} — {module['title']}", "",
+                  "| # | Lesson | Status | Take |", "|---|---|---|---|"]
         for lesson in module["lessons"]:
-            lines.append(f"| {by_path[lesson['path']]['id']} | [{lesson['title']}]({lesson['path']}/) "
+            lines.append(f"| {lesson['label']} | [{lesson['title']}]({lesson['path']}/) "
                          f"| {lesson['status']} | {lesson['take'] if lesson['take'] is not None else '—'} |")
+        lines.append("")
+    lines += [
+        "## Folders here that are not in the list above",
+        "",
+        "The recorder reads only the folders `course.json` names and never moves, rewrites or deletes"
+        " any other: a folder an earlier layout filmed stays where it is until a person moves it.",
+        "",
+    ]
+    if course.get("moved"):
+        lines += [
+            f"{len(course['moved'])} folder(s) from the earlier layout. The recorder moved none of them;"
+            " whoever keeps work beside one moves their own side to the new path.",
+            "",
+            "| Old path | New path |",
+            "|---|---|",
+        ]
+        for entry in course["moved"]:
+            to = f"`{entry['to']}/`" if entry["to"] else f"none — {entry['kept_outside']}"
+            lines.append(f"| `{entry['from']}/` | {to} |")
         lines.append("")
     return "\n".join(lines)
 
@@ -1570,8 +1619,9 @@ def lesson_document(course: dict, module: dict, lesson: dict, scene: dict, facts
     files = facts["files"]
     return {
         "contract": CONTRACT,
-        "module": {"order": module["order"], "slug": module["slug"], "title": module["title"]},
-        "lesson": {"order": lesson["order"], "slug": lesson["slug"], "title": lesson["title"],
+        "module": {"order": module["order"], "label": str(module.get("label") or module["order"]),
+                   "slug": module["slug"], "title": module["title"]},
+        "lesson": {"order": lesson["order"], "label": lesson["id"], "slug": lesson["slug"], "title": lesson["title"],
                    "one_line": lesson["one_line"], "outcomes": lesson["outcomes"],
                    "knows_before": lesson["knows_before"],
                    "duration_seconds": facts["duration_seconds"] if files.get("video") else None,

@@ -10,11 +10,11 @@
 
 name = "spc-on-the-line"
 title = "SPC on the line"
-# This take is the teaser of lesson 2.1 of the class, *SPC: the chart notices before people do*
+# This take is the teaser of class 4.3 of the course, *SPC: the chart notices before people do*
 # (scripts/course/course.toml): it films into that lesson's folder in the
 # course tree, and the lesson itself, the five-minute one, is filmed later from
 # a scene of its own. Every step of this take is the lesson's hook.
-lesson = "2.1"
+lesson = "4.3"
 take_is = "teaser"
 part = "hook"
 base = "http://127.0.0.1:8010"

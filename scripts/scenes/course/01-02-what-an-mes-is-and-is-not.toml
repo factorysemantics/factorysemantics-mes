@@ -1,0 +1,376 @@
+# Class 0.2 of the course, *What an MES is, and what it is not*: the layer
+# between the office system that says what to make and the machines that make
+# it. It records what actually happened, step by step, and says how much it
+# did not see.
+#
+# Tier 0 is still before the software, so the class shows the MES's place
+# rather than its features: where it sits, the three things it is not, the
+# four tiles at the top of the floor, and one order followed from the office
+# to a machine and back up as a confirmation. The last beat is the coverage
+# word: under every figure the MES says how much of the window it watched, and
+# a figure resting on a few percent is an honest figure, not a broken one.
+# Filmed on a scratch cutlery plant, every screen as the product draws it.
+
+name = "what-an-mes-is-and-is-not"
+title = "What an MES is, and what it is not"
+lesson = "0.2"
+take_is = "lesson"
+part = "hook"
+base = "http://127.0.0.1:8040"
+badge = "pre-alpha · simulated plant · v{version}"
+# Four to six minutes, as the outline says this class runs.
+budget_seconds = 360
+gif_skip_seconds = 2.0
+width = 1280
+height = 720
+
+notes = [
+  "The plant was started a few minutes before the camera rolled, from the cutlery pack, at ten times wall clock, so one stacking order has run from release to completion by the time the lesson follows it. At 1x the same order takes the better part of two hours.",
+  "The camera waited, off camera, until stacking order WO-STACK07-0001 had completed and made its lot, so the order the class follows has been released, booked and confirmed before the first frame.",
+  "The order followed is the stacker's, not the mould's: a stacking order is 260 stacks and finishes in minutes at 10x, while a moulding order is 2,778 forks. The class is about the order's road through the systems, not about which product it makes.",
+  "No office system is connected to this plant. The order was released by the plant's own order book, not sent by an ERP, and the confirmation waits in the outbox with nobody to collect it; the ERP tile reads sending for that reason. The narration says so.",
+  "At any speed but 1x every 2D page carries the product's REPLAY 10× banner across its top. It is filmed as the product draws it.",
+  "The Watched figure under each machine is the share of the last eight hours the MES actually observed. On a plant a few minutes old it is a few percent, and the cutlery pack sets no coverage floor, so the OEE beside it is shown, not withheld. The class reads Watched, not the OEE; OEE is class 3.3.",
+  "The opening whiteboard is a plain card with words on it. There is no artwork of a person or a board.",
+]
+
+honesty = [
+  "no office system is connected to this plant: the order book releases its own orders, and the confirmation waits in the outbox with nobody to collect it, which is why the ERP tile says sending",
+  "the plant is a scratch plant a few minutes old, replaying at ten times wall clock, which is the banner across the top of the 2D pages and why Watched reads a few percent",
+]
+
+[plant]
+pack = "labs/cutlery"
+speed = 10
+roll_when_timeout_seconds = 1800
+
+# One stacking order finished and confirmed: the order the class follows has
+# made the whole trip, office to machine and back up.
+[[plant.roll_when_order]]
+code = "WO-STACK07-0001"
+completed = true
+
+# ----------------------------------------------------------------- the hook
+
+[[step]]
+do = "slide"
+name = "the-whiteboard"
+title = "Line FORK1, day shift"
+lines = [
+  "Order: forks, 2,778",
+  "Good so far: about 1,900?",
+  "Scrap: ask the operator",
+  "Mould stopped 10:40 to 11:15, maybe",
+  "Written up at the end of the shift",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Before software, a plant kept track like this: a whiteboard, a clipboard, a tally at the end of the shift."
+
+[[step]]
+do = "say"
+line = "Roughly right, written up late, and nobody can say where each number came from."
+
+[[step]]
+do = "mark"
+name = "whiteboard"
+
+[[step]]
+do = "goto"
+url = "/dashboard"
+settle = 3
+
+[[step]]
+do = "wait_for"
+selector = "#kpi-machines"
+text = "/83"
+
+[[step]]
+do = "say"
+line = "This is what replaces it. The same plant, right now, counted as it happens."
+
+# ----------------------------------------------------------------- the idea
+
+[[step]]
+part = "idea"
+do = "slide"
+name = "three-layers"
+title = "Where the MES sits"
+lines = [
+  "The office system (ERP): what to make, how many, by when",
+  "The MES: what actually happened, step by step",
+  "The machines (PLC / SCADA): run the steps and report",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "A plant has three layers of systems, and the MES is the one in the middle."
+
+[[step]]
+do = "say"
+line = "Above it, the office system, called the ERP. It takes the customer's order and says what to make, how many, and by when."
+
+[[step]]
+do = "say"
+line = "Below it, the machines and their controllers, called PLC and SCADA. They run the steps and report what they did."
+
+[[step]]
+do = "say"
+line = "In the middle, the MES. It turns the office's order into work on the floor, and the floor's reports into what actually happened."
+
+[[step]]
+do = "mark"
+name = "three-layers"
+
+[[step]]
+do = "slide"
+name = "what-it-is-not"
+title = "What an MES is not"
+lines = [
+  "Not the ERP: it does not take customer orders or send invoices",
+  "Not the historian: it does not just store every reading",
+  "Not a spreadsheet: nobody types the counts in afterwards",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Three things it is not. It is not the ERP: it does not sell, buy or invoice."
+
+[[step]]
+do = "say"
+line = "It is not the historian, the store of every temperature and pressure. It keeps what those readings mean for an order."
+
+[[step]]
+do = "say"
+line = "And it is not a spreadsheet. Nobody types the counts in at the end of the shift; the machines and the people report them as they happen."
+
+[[step]]
+do = "mark"
+name = "what-it-is-not"
+
+# ------------------------------------------------------------ on the screen
+
+[[step]]
+part = "screen"
+do = "goto"
+url = "/dashboard"
+settle = 3
+
+[[step]]
+do = "wait_for"
+selector = "#kpi-oee-sub"
+text = "mean of"
+
+[[step]]
+do = "say"
+line = "The top of the floor screen. Four tiles, each one a question the plant asks every day."
+
+[[step]]
+do = "say"
+line = "Machines running: how many of the eighty-three are running right now."
+
+[[step]]
+do = "say"
+line = "Active orders: how many orders are out on the floor."
+
+[[step]]
+do = "say"
+line = "Plant OEE: how well the machines are doing, and underneath, how many machines that average is drawn from."
+
+[[step]]
+do = "mark"
+name = "four-tiles"
+
+[[step]]
+do = "say"
+line = "And the ERP queue: whether there is news still waiting to go back up to the office."
+
+[[step]]
+do = "goto"
+url = "/dashboard/orders?q=WO-STACK07"
+settle = 3
+
+[[step]]
+do = "wait_for"
+selector = "#order-list"
+text = "WO-STACK07-0001"
+
+[[step]]
+do = "say"
+line = "Now one order, all the way round. Stacker line seven: make 260 stacks of a fork, a spoon and a knife."
+
+[[step]]
+do = "click"
+selector = "#order-list tbody tr:has-text('WO-STACK07-0001')"
+
+[[step]]
+do = "wait_for"
+selector = "#d-status"
+text = "completed"
+# The click scrolls the row into view and takes the order's figures under the
+# sticky header with it; the panel is brought back below the header.
+scroll_to = "#detail-panel"
+scroll_block = "start"
+scroll_offset = 220
+
+[[step]]
+do = "say"
+line = "The order came down from above: released to the floor, with a quantity and a material."
+
+[[step]]
+do = "say"
+line = "On this plant there is no real office system connected, so the plant's own order book released it."
+
+[[step]]
+do = "mark"
+name = "the-order"
+
+[[step]]
+do = "say"
+line = "Its status says completed, and the booked count is what the machine reported, stack by stack."
+
+[[step]]
+do = "goto"
+url = "/dashboard/machine/STACK07_Stacker?hours=8"
+settle = 3
+
+[[step]]
+do = "wait_for"
+selector = "#m-order"
+text = "WO-STACK07"
+
+[[step]]
+do = "say"
+line = "The machine that did the work. The stacker took the order, ran it, and counted every stack it made."
+
+[[step]]
+do = "say"
+line = "When the last stack was counted the order finished, and the stacker went straight on to the next one."
+
+[[step]]
+do = "mark"
+name = "the-machine"
+
+[[step]]
+do = "goto"
+url = "/dashboard/ops"
+settle = 3
+
+[[step]]
+do = "wait_for"
+selector = "#erp-facts"
+text = "pending"
+scroll_to = "#erp-section"
+scroll_block = "start"
+# Below the replay banner and the sticky header, which take the top 205 px.
+scroll_offset = 220
+
+[[step]]
+do = "say"
+line = "Then the news goes back up. When an order finishes, the MES writes a confirmation for the office: how many good, how many scrap."
+
+[[step]]
+do = "say"
+line = "This is the outbox: every message for the office, the confirmations and the machines' states alike. With no office system connected here, they wait as pending, and the tile said sending."
+
+[[step]]
+do = "mark"
+name = "the-outbox"
+
+[[step]]
+do = "goto"
+url = "/dashboard/ops?action=workorder.completed"
+settle = 3
+
+[[step]]
+do = "wait_for"
+selector = "#activity"
+text = "WO-STACK07-0001"
+scroll_to = "#activity tr"
+scroll_text = "WO-STACK07-0001"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "And it is on the audit trail: our order's line says when it was completed, who completed it, and which order it was."
+
+[[step]]
+do = "say"
+line = "Who can be a person or a machine's agent. There is a line for every change, so every number can be traced back to where it came from."
+
+[[step]]
+do = "mark"
+name = "audit-trail"
+
+[[step]]
+do = "say"
+line = "That is the difference from the whiteboard. Not just the number, but a line saying where it came from."
+
+# -------------------------------------------------------------- it refuses
+
+[[step]]
+part = "refuses"
+do = "goto"
+url = "/dashboard?line=PAL1LINE"
+settle = 3
+
+[[step]]
+do = "wait_for"
+selector = "#machines"
+text = "Watched"
+scroll_to = "#machines"
+scroll_block = "start"
+scroll_offset = 220
+
+[[step]]
+do = "say"
+line = "One more word, and it is the most important one: watched."
+
+[[step]]
+do = "say"
+line = "Under every machine, the MES says how much of the last eight hours it actually saw."
+
+[[step]]
+do = "mark"
+name = "watched"
+
+[[step]]
+do = "say"
+line = "This plant is a few minutes old, so it saw only a few percent. It says so, beside the figure, instead of hiding it."
+
+[[step]]
+do = "say"
+line = "The rest of the window is unknown. It is not counted as running, and it is not counted as stopped."
+
+[[step]]
+do = "say"
+line = "A figure that says how little was seen, or a tile that says no figure, is the MES being honest, not broken."
+
+# ------------------------------------------------------------ you now know
+
+[[step]]
+part = "know"
+do = "slide"
+name = "you-now-know"
+title = "You now know how to"
+lines = [
+  "Place the MES between the office system that says what to make and the machines that make it.",
+  "Say what it is not: not the ERP, not the historian, not a spreadsheet.",
+  "Read Watched: a figure that says how little it saw is honest, not broken.",
+]
+
+[[step]]
+do = "say"
+line = "That is where the MES sits, what it is not, and the word that keeps it honest. You now know how to do three things."
+
+[[step]]
+do = "mark"
+name = "you-now-know"
+
+[[step]]
+do = "hold"
+seconds = 3

@@ -70,10 +70,12 @@ PLANT = '\n[plant]\npack = "labs/multiplant/bottling"\n'
 # ------------------------------------------------------------ the scene file
 
 
-def test_the_lesson_is_a_full_take_of_1_2_that_runs_four_to_six_minutes(runner):
+def test_the_lesson_is_a_full_take_named_by_its_slug_that_runs_four_to_six_minutes(runner):
     scene = runner.load_scene(SCENE)
 
-    assert scene["lesson"] == "1.2" and scene["take_is"] == "lesson"
+    # Draft 2 of the course struck this class; the scene names it by slug, so
+    # it can never film into whichever class now carries the number 1.2.
+    assert scene["lesson"] == "never-invent-production" and scene["take_is"] == "lesson"
     planned = runner.planned_seconds(scene)
     # Waits, page loads and the cards' own commands add to the plan; the
     # finished take is measured, and the plan leaves room for it either side.
@@ -99,14 +101,23 @@ def test_the_hook_is_short_enough_to_be_the_teaser(runner):
     assert runner.planned_seconds(hook) - scene["gif_skip_seconds"] <= 30
 
 
-def test_the_you_now_know_card_says_the_lessons_own_outcomes_word_for_word(runner):
+def test_the_struck_class_is_not_in_the_course_so_the_recorder_will_not_film_it(runner):
     scene = runner.load_scene(SCENE)
     course = runner.load_course(REPO / "scripts" / "course" / "course.toml")
-    _, lesson = runner.find_lesson(course, "1.2")
+
+    with pytest.raises(SystemExit) as refused:
+        runner.find_lesson(course, scene["lesson"])
+    assert "not in the course" in str(refused.value)
+    # And the take it filmed is kept, outside the course, and said to be.
+    kept = [moved for moved in course["moved"] if moved["to"] is None]
+    assert [moved["from"] for moved in kept] == ["01-what-an-mes-is-for/02-never-invent-production"]
+
+
+def test_the_you_now_know_card_still_has_one_card_of_three_lines(runner):
+    scene = runner.load_scene(SCENE)
     know = [step for step in scene["step"] if step["part"] == "know" and step["do"] == "slide"]
 
-    assert len(know) == 1
-    assert know[0]["lines"] == lesson["outcomes"]
+    assert len(know) == 1 and len(know[0]["lines"]) == 3
 
 
 def test_the_camera_waits_for_the_fifteen_minutes_to_be_watched_past_the_packs_floor(runner):

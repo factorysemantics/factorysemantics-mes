@@ -8,11 +8,11 @@
 
 name = "work-orders-and-routings"
 title = "Work orders and routings"
-# This take is the teaser of lesson 1.3 of the class, *A work order's day*
+# This take is the teaser of class 1.4 of the course, *A work order's day*
 # (scripts/course/course.toml): it films into that lesson's folder in the
 # course tree, and the lesson itself, the five-minute one, is filmed later from
 # a scene of its own. Every step of this take is the lesson's hook.
-lesson = "1.3"
+lesson = "1.4"
 take_is = "teaser"
 part = "hook"
 base = "http://127.0.0.1:8010"
