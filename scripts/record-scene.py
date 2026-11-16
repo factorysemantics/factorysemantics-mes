@@ -686,13 +686,17 @@ def overlay_script(badge: str, captions: bool = True) -> str:
   // of the narrator's corner, off the box, and clear of every line of the
   // page's own writing (a card's title above the box is the one it used to
   // cover). The writing is looked for cheaply: the elements under a 5 by 3
-  // grid of points on the spot, and the rectangles of their own text. With no
-  // clear spot the label is drawn inside the box's top left and the call says
-  // why, which refuses the take.
+  // grid of points on the spot, and the rectangles of their own text. When no
+  // spot is clear, the same spots are tried again letting the label cover the
+  // boxed thing's own caption and nothing else: its `<label for>`, or the one
+  // short words (30 letters at most) beside it in a field of two ("Status" over a status pill in a
+  // grid of figures, "Characteristic" over its list). With no spot even then,
+  // the label is drawn inside the box's top left and the call says why, which
+  // refuses the take.
   let callout = null;
   const headerBand = {HEADER_BAND_JS.strip()};
   const overlaps = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-  const writingUnder = (spot) => {{
+  const writingUnder = (spot, own) => {{
     const seen = new Set();
     for (let i = 0; i < 5; i++) for (let j = 0; j < 3; j++) {{
       const x = spot.x + 1 + (spot.w - 2) * i / 4, y = spot.y + 1 + (spot.h - 2) * j / 2;
@@ -700,7 +704,7 @@ def overlay_script(badge: str, captions: bool = True) -> str:
         if (seen.has(node) || (node.id && node.id.startsWith('fs-scene'))) continue;
         seen.add(node);
         for (const text of node.childNodes) {{
-          if (text.nodeType !== Node.TEXT_NODE || !text.textContent.trim()) continue;
+          if (text.nodeType !== Node.TEXT_NODE || !text.textContent.trim() || own.has(text)) continue;
           const range = document.createRange();
           range.selectNodeContents(text);
           for (const r of range.getClientRects()) {{
@@ -711,6 +715,21 @@ def overlay_script(badge: str, captions: bool = True) -> str:
       }}
     }}
     return null;
+  }};
+  // The boxed thing's own caption, as text nodes: what labels it and nothing else.
+  const captionOf = (el) => {{
+    const words = new Set();
+    const take = (node) => {{
+      const walk = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+      while (walk.nextNode()) words.add(walk.currentNode);
+    }};
+    for (const label of el.labels || []) take(label);
+    const field = el.parentElement;
+    if (field && field.children.length === 2) {{
+      const other = [...field.children].find((child) => child !== el);
+      if (!other.contains(el) && other.textContent.trim().length <= 30) take(other);
+    }}
+    return words;
   }};
   const labelSpot = (el, r, tab, pad) => {{
     const w = tab.offsetWidth, h = tab.offsetHeight, gap = 4;
@@ -728,18 +747,30 @@ def overlay_script(badge: str, captions: bool = True) -> str:
       ['below', atLeft, below], ['below, right', atRight, below],
       ['right', box.x + box.w + gap, top], ['left', box.x - gap - w, top],
     ];
+    // Over its own caption the label sits on the box's edge, as a tab does:
+    // touching the thing's content, never on it.
+    const content = {{ x: r.left, y: r.top, w: r.width, h: r.height }};
+    const onEdge = [
+      ['above', atLeft, r.top - h - 1], ['above, right', atRight, r.top - h - 1],
+      ['below', atLeft, r.bottom + 1], ['below, right', atRight, r.bottom + 1],
+    ];
     const why = [];
-    for (const [side, x, y] of tries) {{
-      const spot = {{ x, y, w, h }};
-      const fault = x < 0 || y < 0 || x + w > innerWidth || y + h > innerHeight ? 'off the frame'
-        : y < band ? 'under the header'
-        : y + h > floor ? 'on the caption bar'
-        : overlaps(spot, corner) ? "in the narrator's corner"
-        : overlaps(spot, box) ? 'on the box'
-        : null;
-      const words = fault ? null : writingUnder(spot);
-      if (!fault && !words) return {{ side, dx: x - r.left, dy: y - r.top }};
-      why.push(`${{side}}: ${{fault || `over "${{words}}"`}}`);
+    for (const own of [new Set(), captionOf(el)]) {{
+      if (why.length && !own.size) break;
+      const off = own.size ? content : box;
+      for (const [side, x, y] of own.size ? onEdge : tries) {{
+        const spot = {{ x, y, w, h }};
+        const fault = x < 0 || y < 0 || x + w > innerWidth || y + h > innerHeight ? 'off the frame'
+          : y < band ? 'under the header'
+          : y + h > floor ? 'on the caption bar'
+          : overlaps(spot, corner) ? "in the narrator's corner"
+          : overlaps(spot, off) ? 'on the box'
+          : null;
+        const words = fault ? null : writingUnder(spot, own);
+        if (!fault && !words) return {{ side: own.size ? `${{side}}, over its own caption` : side,
+                                        dx: x - r.left, dy: y - r.top }};
+        if (!own.size) why.push(`${{side}}: ${{fault || `over "${{words}}"`}}`);
+      }}
     }}
     return {{ side: null, dx: Math.max(0, box.x) - r.left + 6, dy: Math.max(0, box.y) - r.top + 6,
               why: why.join('; ') }};
@@ -1102,7 +1133,8 @@ class BrowserStage:
                                  f" no clear spot outside the box ({tab['why']}); the take is refused rather than"
                                  " filmed with the label over the page's own writing")
             pointer["label_box"] = {key: round(tab[key]) for key in ("x", "y", "w", "h")}
-        print(f"         box {box}" + (f"  {label!r} {pointer['label_box']}" if label else ""), flush=True)
+        print(f"         box {box}" + (f"  {label!r} {pointer['label_box']} {drawn['label']['side']}"
+                                           if label else ""), flush=True)
         return pointer
 
     def hold(self, seconds: float) -> None:

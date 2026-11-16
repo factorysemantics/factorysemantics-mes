@@ -52,6 +52,24 @@ BY_THE_CORNER = (
     "<div id='issue' style='margin-top:6px;height:84px'>lot</div></div>"
 )
 
+# A grid of figures at the frame's left edge, spaced as the order's detail
+# draws them: each field is a caption over its value, and every spot round the
+# status value holds a neighbour's words or is off the frame. Only the
+# status's own caption may be covered.
+GRID = (
+    "<!doctype html><body style='margin:0;font:16px sans-serif'>"
+    "<div style='position:absolute;left:6px;top:300px;display:grid;grid-template-columns:repeat(3,154px);"
+    "row-gap:18px;column-gap:4px'>"
+    + "".join(
+        f"<div><span id='cap-{name}' style='display:block;font-size:12px;line-height:14px'>{name.upper()}</span>"
+        f"<strong id='{name}' style='display:block;font-size:18px;line-height:24px'>{value}</strong></div>"
+        for name, value in [("material", "UT-FORK"), ("ordered", "2,778"), ("booked", "0"),
+                            ("status", "planned"), ("yield", "none"), ("left", "1"),
+                            ("plan", "none"), ("due", "today"), ("shift", "B")]
+    )
+    + "</div>"
+)
+
 # A thing as big as the frame: there is no outside to put a label in.
 EVERYTHING = (
     "<!doctype html><body style='margin:0'>"
@@ -152,6 +170,19 @@ def test_a_box_beside_the_narrators_corner_keeps_its_label_out_of_the_corner_and
     for words in ("#name", "#count"):
         assert not overlap(label, writing(stage.page, words)), f"the label {label} covers the card's title"
     assert label["x"] >= 0 and label["x"] + label["w"] <= VIEWPORT["width"]
+
+
+def test_a_label_with_nowhere_clear_covers_only_the_caption_of_the_thing_it_boxes(on_a_page):
+    stage = on_a_page(GRID)
+
+    stage.say("Only planned.", 0.05, at="#status", label="Only planned")
+
+    label = the_label(stage.page)
+    assert overlap(label, writing(stage.page, "#cap-status")), "a clear spot was expected not to exist here"
+    for name in ("material", "ordered", "booked", "left", "yield", "plan", "due", "shift"):
+        for selector in (f"#cap-{name}", f"#{name}"):
+            assert not overlap(label, writing(stage.page, selector)), f"the label {label} covers {selector}"
+    assert not overlap(label, writing(stage.page, "#status")), "the label covers the boxed value"
 
 
 def test_a_label_with_no_clear_spot_refuses_the_take_naming_the_step(on_a_page):
