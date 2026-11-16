@@ -678,16 +678,82 @@ def overlay_script(badge: str, captions: bool = True) -> str:
                  {{ duration: {int(RIPPLE_SECONDS * 1000)}, easing: 'ease-out' }}).onfinish = () => ring.remove();
   }};
   // The box round what a line is about, following it if the page moves it, until cleared.
+  //
+  // Its label goes where it covers nothing of the page's: tried in turn above
+  // the box (at its left end, then its right), below it (the same), then
+  // beside its right edge and its left. A spot is taken only if it is wholly
+  // on the frame, below the page's sticky header, above the caption bar, out
+  // of the narrator's corner, off the box, and clear of every line of the
+  // page's own writing (a card's title above the box is the one it used to
+  // cover). The writing is looked for cheaply: the elements under a 5 by 3
+  // grid of points on the spot, and the rectangles of their own text. With no
+  // clear spot the label is drawn inside the box's top left and the call says
+  // why, which refuses the take.
   let callout = null;
+  const headerBand = {HEADER_BAND_JS.strip()};
+  const overlaps = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+  const writingUnder = (spot) => {{
+    const seen = new Set();
+    for (let i = 0; i < 5; i++) for (let j = 0; j < 3; j++) {{
+      const x = spot.x + 1 + (spot.w - 2) * i / 4, y = spot.y + 1 + (spot.h - 2) * j / 2;
+      for (const node of document.elementsFromPoint(x, y)) {{
+        if (seen.has(node) || (node.id && node.id.startsWith('fs-scene'))) continue;
+        seen.add(node);
+        for (const text of node.childNodes) {{
+          if (text.nodeType !== Node.TEXT_NODE || !text.textContent.trim()) continue;
+          const range = document.createRange();
+          range.selectNodeContents(text);
+          for (const r of range.getClientRects()) {{
+            const line = {{ x: r.left, y: r.top, w: r.width, h: r.height }};
+            if (overlaps(spot, line)) return text.textContent.trim().slice(0, 40);
+          }}
+        }}
+      }}
+    }}
+    return null;
+  }};
+  const labelSpot = (el, r, tab, pad) => {{
+    const w = tab.offsetWidth, h = tab.offsetHeight, gap = 4;
+    const box = {{ x: r.left - pad, y: r.top - pad, w: r.width + 2 * pad, h: r.height + 2 * pad }};
+    const band = headerBand(el);
+    const cap = document.getElementById('fs-scene-cap');
+    const capTop = cap && cap.offsetHeight ? cap.getBoundingClientRect().top : innerHeight;
+    const floor = Math.min(innerHeight - {CAPTION_HEIGHT}, capTop);
+    const corner = {{ x: innerWidth - {AVATAR_WIDTH}, y: innerHeight - {AVATAR_HEIGHT},
+                     w: {AVATAR_WIDTH}, h: {AVATAR_HEIGHT} }};
+    const atLeft = Math.max(0, box.x), atRight = Math.min(innerWidth, box.x + box.w) - w;
+    const above = box.y - gap - h, below = box.y + box.h + gap, top = Math.max(box.y, band);
+    const tries = [
+      ['above', atLeft, above], ['above, right', atRight, above],
+      ['below', atLeft, below], ['below, right', atRight, below],
+      ['right', box.x + box.w + gap, top], ['left', box.x - gap - w, top],
+    ];
+    const why = [];
+    for (const [side, x, y] of tries) {{
+      const spot = {{ x, y, w, h }};
+      const fault = x < 0 || y < 0 || x + w > innerWidth || y + h > innerHeight ? 'off the frame'
+        : y < band ? 'under the header'
+        : y + h > floor ? 'on the caption bar'
+        : overlaps(spot, corner) ? "in the narrator's corner"
+        : overlaps(spot, box) ? 'on the box'
+        : null;
+      const words = fault ? null : writingUnder(spot);
+      if (!fault && !words) return {{ side, dx: x - r.left, dy: y - r.top }};
+      why.push(`${{side}}: ${{fault || `over "${{words}}"`}}`);
+    }}
+    return {{ side: null, dx: Math.max(0, box.x) - r.left + 6, dy: Math.max(0, box.y) - r.top + 6,
+              why: why.join('; ') }};
+  }};
   window.__sceneCallout = (el, label, style) => {{
     window.__sceneCalloutClear();
     const box = document.createElement('div');
     box.id = 'fs-scene-callout';
     if (style === 'spotlight') box.classList.add('fs-spot');
     const tab = label ? document.createElement('div') : null;
-    if (tab) {{ tab.id = 'fs-scene-callout-label'; tab.textContent = label; }}
+    if (tab) {{ tab.id = 'fs-scene-callout-label'; tab.textContent = label; tab.style.left = '-9999px'; }}
     document.documentElement.append(box, ...(tab ? [tab] : []));
     const pad = {CALLOUT_PAD};
+    const spot = tab && el.isConnected ? labelSpot(el, el.getBoundingClientRect(), tab, pad) : null;
     const place = () => {{
       if (callout === null || callout.box !== box) return;
       if (el.isConnected) {{
@@ -696,16 +762,9 @@ def overlay_script(badge: str, captions: bool = True) -> str:
         box.style.top = (r.top - pad) + 'px';
         box.style.width = (r.width + 2 * pad) + 'px';
         box.style.height = (r.height + 2 * pad) + 'px';
-        if (tab) {{
-          // On the box's top left, outside it; below the box when the box is at
-          // the top; inside its top left when it fills the frame both ways.
-          const high = tab.offsetHeight;
-          const aboveAt = r.top - pad - high - 2;
-          const belowAt = r.bottom + pad + 2;
-          const floor = innerHeight - {CAPTION_HEIGHT};
-          tab.style.left = Math.max(0, r.left - pad) + 'px';
-          tab.style.top = (aboveAt >= 0 ? aboveAt
-            : belowAt + high <= floor ? belowAt : Math.max(0, r.top - pad) + 6) + 'px';
+        if (spot) {{
+          tab.style.left = (r.left + spot.dx) + 'px';
+          tab.style.top = (r.top + spot.dy) + 'px';
         }}
       }}
       callout.frame = requestAnimationFrame(place);
@@ -713,7 +772,13 @@ def overlay_script(badge: str, captions: bool = True) -> str:
     callout = {{ box, tab, frame: 0 }};
     place();
     const drawn = box.getBoundingClientRect();
-    return {{ x: drawn.left, y: drawn.top, w: drawn.width, h: drawn.height }};
+    const answer = {{ x: drawn.left, y: drawn.top, w: drawn.width, h: drawn.height }};
+    if (tab) {{
+      const t = tab.getBoundingClientRect();
+      answer.label = {{ x: t.left, y: t.top, w: t.width, h: t.height, side: spot ? spot.side : null,
+                        why: spot && spot.why ? spot.why : null }};
+    }}
+    return answer;
   }};
   window.__sceneCalloutClear = () => {{
     if (!callout) return;
@@ -1029,8 +1094,16 @@ class BrowserStage:
         right = min(width, round(drawn["x"] + drawn["w"]))
         bottom = min(height, round(drawn["y"] + drawn["h"]))
         box = {"x": left, "y": top, "w": max(0, right - left), "h": max(0, bottom - top)}
-        print(f"         box {box}" + (f"  {label!r}" if label else ""), flush=True)
-        return {"box": box, "label": label, "selector": at, "style": style}
+        pointer = {"box": box, "label": label, "selector": at, "style": style}
+        if label:
+            tab = drawn["label"]
+            if tab["side"] is None:
+                raise SystemExit(f"step {self.step_number}: the label {label!r} on the box round `at = {at!r}` has"
+                                 f" no clear spot outside the box ({tab['why']}); the take is refused rather than"
+                                 " filmed with the label over the page's own writing")
+            pointer["label_box"] = {key: round(tab[key]) for key in ("x", "y", "w", "h")}
+        print(f"         box {box}" + (f"  {label!r} {pointer['label_box']}" if label else ""), flush=True)
+        return pointer
 
     def hold(self, seconds: float) -> None:
         self.note(f"hold {seconds}s", "hold")
@@ -1283,8 +1356,9 @@ CALLOUT_HEADROOM = 48
 #: recorder's own layer); when the element's top is inside it, the element
 #: is scrolled to sit `headroom` below the band. `scroll-margin-top` does the
 #: scrolling so that a thing inside a scrolling panel is moved too.
-CLEAR_OF_HEADER_SCRIPT = """
-(node, headroom) => {
+#: The band itself: how far down the window the stuck things reach over `node`'s width.
+HEADER_BAND_JS = """
+(node) => {
   const box = node.getBoundingClientRect();
   const stuck = [];
   for (const el of document.body.querySelectorAll('*')) {
@@ -1304,6 +1378,15 @@ CLEAR_OF_HEADER_SCRIPT = """
       if (r.top <= band + 2 && r.bottom > band) { band = r.bottom; grew = true; }
     }
   }
+  return band;
+}
+"""
+
+#: Bring the element out from under the band.
+CLEAR_OF_HEADER_SCRIPT = """
+(node, headroom) => {
+  const box = node.getBoundingClientRect();
+  const band = (""" + HEADER_BAND_JS.strip() + """)(node);
   if (!band || box.top >= band + headroom) return band;
   const was = node.style.scrollMarginTop;
   node.style.scrollMarginTop = (band + headroom) + 'px';
@@ -1599,7 +1682,8 @@ def readme(scene: dict, facts: dict) -> str:
         "- `marks.json` — the seconds every step landed at; the frame's size and the GIF's; on every"
         " click, `x` and `y`, the pixel of the mp4's frame the click landed on, and on every click, fill"
         " and choose `cursor_from` and `ripple_at`; on a line that points at something, `box`"
-        " (`x`, `y`, `w`, `h` in the mp4's pixels), `label`, `selector` and `style`",
+        " (`x`, `y`, `w`, `h` in the mp4's pixels), `label`, `selector` and `style`, and with a label"
+        " `label_box`, where the label sat",
         "",
     ]
     return "\n".join(lines)
@@ -1674,7 +1758,8 @@ def marks_document(scene: dict, made: dict, gif: Path, gif_seconds_taken: float)
     `ripple_at` (the second its ripple started, as the press was sent), and a
     `fill` or `choose` also `x`, `y` (where it pointed) and a `fill`
     `typed_seconds`; a `say` with `at` carries `box` (`{x, y, w, h}`, integers,
-    in frame pixels, clipped to the frame), `label`, `selector` and `style`.
+    in frame pixels, clipped to the frame), `label`, `selector` and `style`,
+    and, when it has a label, `label_box` (`{x, y, w, h}`), where the label sat.
     """
     return {
         "frame": {"width": int(scene["width"]), "height": int(scene["height"])},

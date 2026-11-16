@@ -33,9 +33,14 @@ cursor presses the list and the value changes.
 A `say` with `at` (a selector, as `click` takes) draws a box round that thing
 as the caption appears, for the line's hold, and through any `mark` straight
 after it, so those stills show the box; `label` puts a few words on a tab
-at the box's top left (below it when the box is at the top of the frame,
-inside it when the box fills the frame); `style = "spotlight"` dims the rest
-of the frame instead. A thing off the frame, or under the page's sticky
+just outside the box, never over the page's own writing: above the box at
+its left end, else above at its right end, else below it (left, then right),
+else beside its right edge, else beside its left. A spot under the sticky
+header, on the caption bar, in the narrator's corner, off the frame, on the
+box, or over any text of the page (a card's title above the box) is passed
+over; a label with no clear spot refuses the take, naming the step, so keep
+labels short. `marks.json` says where it sat (`label_box`). `style =
+"spotlight"` dims the rest of the frame instead. A thing off the frame, or under the page's sticky
 header or the caption bar, or reaching into the narrator's corner at the
 bottom right (240 by 200), is scrolled clear first; a thing not on the page
 refuses the take, naming the step. Point `at` something smaller than the
