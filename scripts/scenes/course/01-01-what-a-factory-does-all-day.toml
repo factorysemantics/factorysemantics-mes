@@ -40,9 +40,9 @@ notes = [
   "The machines page labels a line WORK CENTER and a machine WORK UNIT, which are the ISA-95 words. The narration says line and machine and names the labels once.",
   "Each line runs its own work order on this plant: the stacker's order is for stacks, not forks. The narration follows the product along the steps and does not claim that one physical fork is traced from mould to pallet; tracing lots is class 2.3.",
   "The line pages show OEE figures with Watched at a few percent: the cutlery pack sets no coverage floor, so nothing is withheld. This class does not read those figures; OEE is class 3.3.",
-  "The class is clicked through as a person would. It opens on the Line page's 3D tab for line FORK1 and clicks Overview; after the cards it comes back to that page by address, clicks Engineering for the machines tree, and clicks FORK1_Mold in the tree. The machine page's own trail leads back to line FORK1, and the stacker, the wrapper and the pallet line are picked from the Line page's Line list; the pallet line's drawing is its 3D tab. The way back to the mould is Engineering and the tree again, then its OEE tab.",
-  "The 3D drawing is filmed as the Line page's 3D tab, not the full-screen 3D page the first filming opened on: the full-screen page draws its menus under the drawing, so nothing on it can be clicked to leave it. The lines said over the drawing have no box, because the drawing is a page inside the page and the box is drawn on the outer one. The Line page opened on its 3D tab leaves its own heading blank, so the first line's box is round the Line list, which names the line.",
-  "Two lines have no box on purpose: the replay banner is the page's own header, and the narration names it; and the last line of the rule is about every gap, not one figure on the screen.",
+  "The class is clicked through as a person would. It opens on line FORK1's page and clicks its 3D tab; after the cards it comes back to that page by address, because a card is the recorder's page and has no menu, then clicks Engineering for the machines tree and FORK1_Mold in the tree. The machine page's own trail leads back to line FORK1, and the stacker, the wrapper and the pallet line are picked from the Line page's Line list; the pallet line's drawing is its 3D tab. The way back to the mould is Engineering and the tree again, then its OEE tab.",
+  "The 3D drawing is filmed as the Line page's 3D tab, not the full-screen 3D page the first filming opened on: the full-screen page draws its menus under the drawing, so nothing on it can be clicked to leave it. The lines said over the drawing have no box, because the drawing is a page inside the page and the box is drawn on the outer one; the drawing's own readout carries the order, the good and the scrap, and its cards each machine.",
+  "Two more lines have no box on purpose: the replay banner is the page's own header, and the narration names it; and the last line of the rule is about every gap, not one figure on the screen.",
 ]
 
 honesty = [
@@ -62,21 +62,29 @@ booked = 1
 
 # ----------------------------------------------------------------- the hook
 
-# The one page opened by address before the cards: line FORK1 on its 3D tab.
+# The one page opened by address before the cards: line FORK1, then its 3D
+# tab. The class leaves for the cards with the drawing showing: leaving the
+# Line page after its drawing was opened and hidden again holds the camera on
+# a frozen page for seconds.
 [[step]]
 do = "goto"
-url = "/dashboard/line?line=FORK1LINE#scene"
-settle = 3
+url = "/dashboard/line?line=FORK1LINE"
+settle = 2
 
 [[step]]
 do = "wait_for"
-js = "(document.querySelector('#scene')?.contentDocument?.querySelector('#stat-order')?.innerText || '').includes('WO-FORK1-0001')"
+selector = "#l-name"
+text = "Moulding line FORK1"
 
 [[step]]
 do = "say"
 line = "A moulding line that makes plastic forks."
-at = "#line"
+at = "#l-name"
 label = "The line"
+
+[[step]]
+do = "click"
+selector = "[data-tab=scene]"
 
 [[step]]
 do = "wait_for"
@@ -95,24 +103,12 @@ do = "mark"
 name = "hook"
 
 [[step]]
-do = "click"
-selector = "[data-tab=overview]"
-
-[[step]]
-do = "wait_for"
-selector = "#tiles"
-text = "FORK1_Mold"
-
-[[step]]
 do = "say"
 line = "By the end of the shift, someone has to know what each machine did."
-at = "#tiles .machine:has(a:text-is(\"FORK1_Mold\")) .machine-head"
-label = "Each machine"
 
 [[step]]
 do = "say"
 line = "How many good, how many scrap, against which order."
-at = "#tiles .machine:has(a:text-is(\"FORK1_Mold\")) .machine-meta span:first-child"
 
 # ----------------------------------------------------------------- the idea
 

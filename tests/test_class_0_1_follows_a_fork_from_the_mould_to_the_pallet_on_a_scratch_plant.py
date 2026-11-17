@@ -26,6 +26,8 @@ VOICED = REPO / "tests" / "fixtures" / "course" / "class-0-1-voiced-script.txt"
 # the rest are about the whole road or every gap.
 POINTS_AT_NOTHING_ON_SCREEN = {
     "Every few seconds, a fork comes out of the mould.",
+    "By the end of the shift, someone has to know what each machine did.",
+    "How many good, how many scrap, against which order.",
     "A fork's road runs through all four.",
     "Material, machine, step and order, all four on one screen.",
     "The banner across the top says this plant is replaying at ten times speed, so a shift fits into a class.",
@@ -81,14 +83,16 @@ def test_the_scene_walks_the_five_parts_in_order(runner, scene):
     assert order == list(runner.PARTS)
 
 
-def test_the_hook_opens_on_the_lines_3d_tab_clicks_overview_and_is_short_enough_for_the_teaser(runner, scene):
+def test_the_hook_opens_on_the_line_clicks_its_3d_tab_and_is_short_enough_for_the_teaser(runner, scene):
     hook = [step for step in scene["step"] if step["part"] == "hook"]
     visited = [step["url"] for step in hook if step["do"] == "goto"]
     clicked = [step["selector"] for step in hook if step["do"] == "click"]
 
-    assert visited == ["/dashboard/line?line=FORK1LINE#scene"]
+    assert visited == ["/dashboard/line?line=FORK1LINE"]
     assert hook[0]["do"] == "goto"
-    assert clicked == ["[data-tab=overview]"]
+    # The cards follow with the drawing showing: a Line page left after its
+    # drawing was hidden again holds the camera on a frozen page.
+    assert clicked == ["[data-tab=scene]"]
     assert runner.planned_seconds(dict(scene, step=hook)) - scene["gif_skip_seconds"] <= 30
 
 
