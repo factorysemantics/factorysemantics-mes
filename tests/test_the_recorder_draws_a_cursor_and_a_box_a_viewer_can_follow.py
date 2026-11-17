@@ -177,6 +177,24 @@ def test_the_cursor_is_on_the_page_from_the_first_goto_and_on_the_control_after_
         f"the cursor's tip {tip} is not on the button {box}")
 
 
+def test_a_page_shown_inside_a_page_gets_no_second_cursor_caption_or_badge(stage):
+    # The Line page's 3D tab is a page of its own inside the Line page, and the
+    # overlay script runs in every document; it draws only in the top one.
+    stage, base = stage
+    stage.goto(f"{base}/dashboard", 0.3)
+    stage.page.evaluate("""() => new Promise((done) => {
+        const frame = document.createElement('iframe');
+        frame.id = 'inner'; frame.src = '/dashboard'; frame.onload = () => done();
+        document.body.appendChild(frame);
+    })""")
+    inner = stage.page.frame_locator("#inner")
+
+    drawn_inside = [part for part in ("fs-scene-badge", "fs-scene-cap", "fs-scene-cursor")
+                    if inner.locator(f"#{part}").count()]
+    assert drawn_inside == [], f"drawn inside the inner page as well: {drawn_inside}"
+    assert stage.page.locator("#fs-scene-badge").count() == 1
+
+
 def test_the_cursor_is_never_drawn_over_the_caption_bar_or_the_badge(stage):
     stage, base = stage
     stage.goto(f"{base}/dashboard", 0.1)

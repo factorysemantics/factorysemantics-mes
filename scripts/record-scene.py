@@ -585,6 +585,11 @@ def overlay_script(badge: str, captions: bool = True) -> str:
     `sessionStorage` like the caption, so a click that leaves the page finds
     the cursor where it was on the next. A card (a `slide`) is the recorder's
     own picture and nothing is pressed on it: it has no cursor.
+
+    It draws only in the top page. A page the product shows inside a page
+    (the Line page's 3D tab is one) is a document of its own, and the script
+    runs there too: without the guard the first take of class 0.1's second
+    filming had a second cursor and an empty caption bar inside the drawing.
     """
     css = (
         f"#fs-scene-cap{{position:fixed!important;left:0!important;right:{CAPTION_RIGHT_INSET}px!important;"
@@ -624,6 +629,7 @@ def overlay_script(badge: str, captions: bool = True) -> str:
     )
     return f"""
 (() => {{
+  if (window.top !== window) return;
   const KEY = 'fsSceneCaption';
   const remembered = () => {{ try {{ return sessionStorage.getItem(KEY) || ''; }} catch (e) {{ return ''; }} }};
   const draw = () => {{
