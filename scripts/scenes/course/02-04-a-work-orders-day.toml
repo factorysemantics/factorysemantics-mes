@@ -37,6 +37,8 @@ notes = [
   "The outbox is opened right after the order completes, so that its confirmation is among the newest twenty messages the panel draws; the rest are the machines' state changes, which are most of what a plant sends.",
   "At any speed but 1x every 2D page carries the product's REPLAY 10× banner across its top. It is filmed as the product draws it.",
   "The opening beat is a plain card with words on it. There is no artwork of a card, a bin, a machine or a person.",
+  "The class is clicked through, as a person would go. The Orders page is opened by address once, straight after the cards, because a card is the recorder's own page and has no menu. After that every page is reached by a click: Floor, then Station, then FORK1_Mold chosen in the station's machine list; Orders by its menu, with WO-FORK1-0001 typed into the filter; Setup, then Ops, for the outbox; and Orders again.",
+  "Every line said over the screen has a box round the thing it is about, with a few words on a tab where words help. The one spotlight is on the order's booked count, the last step's. The confirmation in the outbox is boxed as the table draws it when its line begins; the panel redraws every six seconds and draws only the newest twenty messages, so by the line after it the confirmation has scrolled off the panel and that line points at nothing.",
 ]
 
 honesty = [
@@ -134,6 +136,8 @@ js = "document.querySelector('#new-order-form').classList.contains('hidden') && 
 [[step]]
 do = "say"
 line = "This is the Orders page. Every order on the plant, its status, what was ordered and what has been booked."
+at = '#order-count'
+label = "Every order"
 
 [[step]]
 do = "mark"
@@ -142,6 +146,8 @@ name = "the-orders-page"
 [[step]]
 do = "say"
 line = "A planner makes a new one. New order: a code, the material, and how many."
+at = '#new-order'
+label = "New order"
 
 [[step]]
 do = "click"
@@ -165,6 +171,8 @@ text = "11000"
 [[step]]
 do = "say"
 line = "Forks, UT-FORK. Eleven thousand: about one shift of the fork line, at some twenty-three forks a minute."
+at = '#no-qty'
+label = "One shift"
 
 [[step]]
 do = "click"
@@ -173,6 +181,8 @@ selector = "#no-release"
 [[step]]
 do = "say"
 line = "We leave release unticked, so the order is only planned for now. Create."
+at = 'label:has(#no-release)'
+label = "Unticked"
 
 [[step]]
 do = "mark"
@@ -192,6 +202,7 @@ scroll_offset = 220
 [[step]]
 do = "say"
 line = "Planned. Its steps were copied from the fork line's routing: Mold, Degate, Mark, each on its machine."
+at = '#ops tbody'
 
 [[step]]
 do = "mark"
@@ -200,6 +211,7 @@ name = "planned-with-its-steps"
 [[step]]
 do = "say"
 line = "Now release it to the floor."
+at = '#order-actions button:has-text("Release")'
 
 [[step]]
 do = "click"
@@ -213,15 +225,36 @@ text = "released"
 [[step]]
 do = "say"
 line = "Released. Nothing has been made against it yet. Where does it show up? At the first machine of its road."
+at = '#d-status'
+label = "Released"
 
 [[step]]
 do = "mark"
 name = "released"
 
+# The station screen is reached as an operator reaches it: Floor, then
+# Station, then the machine chosen in its list.
 [[step]]
-do = "goto"
-url = "/dashboard/station?m=FORK1_Mold"
-settle = 3
+do = "click"
+selector = 'header nav a:text-is("Floor")'
+
+[[step]]
+do = "wait_for"
+selector = ".subnav"
+text = "Station"
+
+[[step]]
+do = "click"
+selector = '.subnav a:text-is("Station")'
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#machine option')].some((o) => o.value === 'FORK1_Mold')"
+
+[[step]]
+do = "choose"
+selector = "#machine"
+value = "FORK1_Mold"
 
 [[step]]
 do = "wait_for"
@@ -234,23 +267,43 @@ scroll_offset = 260
 [[step]]
 do = "say"
 line = "The station screen of the fork mould, FORK1_Mold. Its queue: the order it is running now, and ours behind it, nothing made yet."
+at = '#queue'
+label = "Its queue"
 
 [[step]]
 do = "say"
 line = "That is dispatch. The operator does not hunt for paper: the machine's screen says what is next."
+at = '#queue li:has-text("WO-FORK1-0100")'
+label = "What is next"
 
 [[step]]
 do = "say"
 line = "Each line of the queue says how many good of how many ordered. The next machine, the degating press, gets our order the same way."
+at = '#queue li:has-text("WO-FORK1-0100") .what .muted'
+label = "Good of ordered"
 
 [[step]]
 do = "mark"
 name = "in-the-moulds-queue"
 
+# Back to the Orders page by its menu, the order typed into the filter.
 [[step]]
-do = "goto"
-url = "/dashboard/orders?q=WO-FORK1-0001"
-settle = 2
+do = "click"
+selector = 'header nav a:text-is("Orders")'
+
+[[step]]
+do = "wait_for"
+selector = "#order-list tbody"
+text = "WO-"
+
+[[step]]
+do = "fill"
+selector = "#f-text"
+text = "WO-FORK1-0001"
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#order-list tbody tr')].some((r) => r.innerText.includes('WO-FORK1-0001'))"
 
 [[step]]
 do = "click"
@@ -266,6 +319,8 @@ scroll_offset = 220
 [[step]]
 do = "say"
 line = "The order in front of ours, WO-FORK1-0001, for 2,778 forks, released when the plant started. It is running."
+at = '#d-status'
+label = "Running"
 
 [[step]]
 do = "mark"
@@ -282,10 +337,14 @@ scroll_offset = 230
 [[step]]
 do = "say"
 line = "Each step books what its own machine counted. Mold has made the most, then Degate, then Mark, the last."
+at = '#ops tbody'
 
 [[step]]
 do = "say"
 line = "The order's booked count is the last step's, not the sum. A fork moulded but not yet marked is not a finished fork."
+at = '#d-good'
+label = "The last step's"
+style = "spotlight"
 
 [[step]]
 do = "mark"
@@ -305,7 +364,8 @@ scroll_offset = 220
 [[step]]
 do = "say"
 line = "Now what it refuses. The order has booked past its 2,778, the over-run says by how many, and it is still running."
-hold = 1.0
+at = '#d-over'
+label = "Over-run"
 
 [[step]]
 do = "mark"
@@ -314,14 +374,20 @@ name = "past-its-number-still-open"
 [[step]]
 do = "say"
 line = "An order does not finish itself when the count is reached. A line that has made its number is often still running."
+at = '#d-status'
+label = "Still running"
 
 [[step]]
 do = "say"
 line = "So every fork it makes past the number is booked to this order, and the over-run is the true one. A person closes it."
+at = '#d-over'
+label = "The true one"
 
 [[step]]
 do = "say"
 line = "Here that person finishes each step. Mold first."
+at = '#ops tbody tr:has-text("Mold") button:has-text("Finish step")'
+label = "Finish step"
 
 [[step]]
 do = "click"
@@ -334,6 +400,8 @@ js = "[...document.querySelectorAll('#ops tbody tr')].some(r => r.innerText.incl
 [[step]]
 do = "say"
 line = "Mold is done. The mould's next fork books to the order behind it in its queue, ours."
+at = '#ops tbody tr:has-text("Mold")'
+label = "Done"
 
 [[step]]
 do = "click"
@@ -358,20 +426,35 @@ scroll_offset = 220
 [[step]]
 do = "say"
 line = "Degate, then Mark. Completed."
+at = '#d-status'
+label = "Completed"
 
 [[step]]
 do = "mark"
 name = "finished-by-a-person"
 
 # The outbox draws its newest twenty messages and the machines send about two
-# state changes a second, so it is opened at once, before anything is said
+# state changes a second, so it is opened at once, by Setup then Ops, before anything is said
 # about the order: twenty seconds later the confirmation has scrolled off the
 # panel (the third take). A step scrolls before it waits, so the row is waited
 # for first and scrolled to by a second wait that finds it already there.
 [[step]]
-do = "goto"
-url = "/dashboard/ops"
-settle = 0.5
+do = "click"
+selector = 'header nav a:text-is("Setup")'
+
+[[step]]
+do = "wait_for"
+selector = ".subnav"
+text = "Ops"
+
+[[step]]
+do = "click"
+selector = '.subnav a:text-is("Ops")'
+
+[[step]]
+do = "wait_for"
+js = "location.pathname === '/dashboard/ops' && document.querySelectorAll('#erp-table tbody tr').length > 0"
+timeout = 15
 
 [[step]]
 do = "wait_for"
@@ -394,15 +477,31 @@ name = "the-confirmation-in-the-outbox"
 [[step]]
 do = "say"
 line = "And the news goes up. In the outbox, a confirmation for the office, among the machines' state changes: WO-FORK1-0001, waiting to be sent."
+at = '#erp-table tbody tr:has-text("WO-FORK1-0001")'
+label = "Confirmation"
 
 [[step]]
 do = "say"
 line = "It was written when a person finished the order, not when the count passed the number. So the office hears the number the line really made."
 
+# Back to the Orders page by its menu, the order typed into the filter.
 [[step]]
-do = "goto"
-url = "/dashboard/orders?q=WO-FORK1-0001"
-settle = 2
+do = "click"
+selector = 'header nav a:text-is("Orders")'
+
+[[step]]
+do = "wait_for"
+selector = "#order-list tbody"
+text = "WO-"
+
+[[step]]
+do = "fill"
+selector = "#f-text"
+text = "WO-FORK1-0001"
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#order-list tbody tr')].some((r) => r.innerText.includes('WO-FORK1-0001'))"
 
 [[step]]
 do = "click"
@@ -418,6 +517,8 @@ scroll_offset = 220
 [[step]]
 do = "say"
 line = "Back on the order: completed. The over-run beside the ordered number is every fork made past 2,778, still on the order that made them."
+at = '#d-over'
+label = "Over-run"
 
 [[step]]
 do = "mark"
