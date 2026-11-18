@@ -279,3 +279,32 @@ def test_the_label_of_a_box_that_fills_the_frame_is_drawn_inside_it_where_it_can
     }""")
 
     assert tab["top"] >= 0 and tab["bottom"] <= tab["high"] - 1, f"the label is off the frame: {tab}"
+
+
+def test_a_thing_the_page_redraws_while_it_is_being_brought_into_view_is_found_again_and_boxed(stage):
+    """The floor redraws its cards on a timer; class 0.2's watched box was drawn round a card it had just replaced.
+
+    Here the plant OEE tile replaces itself with a fresh copy the second time
+    anything asks where it is: once the recorder holds it and is bringing it
+    out from under the header. The box must be round the copy on the page,
+    not a zero-sized box at the foot of the document.
+    """
+    stage, base = stage
+    stage.goto(f"{base}/dashboard", 0.1)
+    stage.page.evaluate("""() => {
+        const tile = document.getElementById('kpi-oee');
+        const own = tile.getBoundingClientRect.bind(tile);
+        let asked = 0;
+        tile.getBoundingClientRect = () => {
+            asked += 1;
+            if (asked === 2) tile.replaceWith(tile.cloneNode(true));
+            return own();
+        };
+    }""")
+
+    stage.say("Plant OEE.", 0.1, at="#kpi-oee")
+
+    box = stage.marks[-1]["box"]
+    tile = stage.page.evaluate("() => document.getElementById('kpi-oee').getBoundingClientRect().toJSON()")
+    assert box["w"] > 0 and box["h"] > 0, box
+    assert abs(box["x"] - tile["left"]) <= 12 and abs(box["y"] - tile["top"]) <= 12, (box, tile)

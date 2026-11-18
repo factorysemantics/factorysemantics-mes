@@ -10,6 +10,13 @@
 # word: under every figure the MES says how much of the window it watched, and
 # a figure resting on a few percent is an honest figure, not a broken one.
 # Filmed on a scratch cutlery plant, every screen as the product draws it.
+#
+# The second filming (Scott, 2026-11-15: "Just the screen doesn't explain
+# anything") keeps every caption studio voiced, word for word, puts a box on
+# what each line on the screen is about, and gets from page to page by the
+# menus and links a person would click. The floor is opened by address twice:
+# first after the whiteboard, and again straight after the cards, because a
+# card is the recorder's page and has no menu to click.
 
 name = "what-an-mes-is-and-is-not"
 title = "What an MES is, and what it is not"
@@ -18,8 +25,10 @@ take_is = "lesson"
 part = "hook"
 base = "http://127.0.0.1:8040"
 badge = "pre-alpha · simulated plant · v{version}"
-# Four to six minutes, as the outline says this class runs.
-budget_seconds = 360
+# Four to six minutes, as the outline says this class runs, and up to half a
+# minute more for getting from page to page by the menus (Scott, 2026-11-15:
+# click through the menus even if the class runs longer).
+budget_seconds = 390
 gif_skip_seconds = 2.0
 width = 1280
 height = 720
@@ -32,6 +41,8 @@ notes = [
   "At any speed but 1x every 2D page carries the product's REPLAY 10× banner across its top. It is filmed as the product draws it.",
   "The Watched figure under each machine is the share of the last eight hours the MES actually observed. On a plant a few minutes old it is a few percent, and the cutlery pack sets no coverage floor, so the OEE beside it is shown, not withheld. The class reads Watched, not the OEE; OEE is class 3.3.",
   "The opening whiteboard is a plain card with words on it. There is no artwork of a person or a board.",
+  "The class is clicked through as a person would. The floor is opened by address after the whiteboard, and again after the cards, because a card is the recorder's page and has no menu. From there it clicks Orders and types the order's code into the search box, clicks the order, then the stacker's name on the order's route; Setup, then Ops, for the outbox, and types workorder.completed into the audit trail's action box; and Floor, picking the pallet line from the Line list, for Watched.",
+  "Six lines have no box on purpose: the first look at the floor and the line naming the four tiles are about the page, not one thing on it; nothing on the order names who released it; the outbox's newest rows are the machines' state messages, not our order's confirmation, and its heading is as wide as the page; and the whiteboard line and the last line about honest figures are about every number, not one.",
 ]
 
 honesty = [
@@ -154,6 +165,8 @@ name = "what-it-is-not"
 
 # ------------------------------------------------------------ on the screen
 
+# Back from the cards to the floor, by address: a card is the recorder's page
+# and has no menu to click. Every page after this one is reached by a click.
 [[step]]
 part = "screen"
 do = "goto"
@@ -172,14 +185,20 @@ line = "The top of the floor screen. Four tiles, each one a question the plant a
 [[step]]
 do = "say"
 line = "Machines running: how many of the eighty-three are running right now."
+at = ".kpi:has(#kpi-machines)"
+label = "Running now"
 
 [[step]]
 do = "say"
 line = "Active orders: how many orders are out on the floor."
+at = ".kpi:has(#kpi-orders)"
+label = "On the floor"
 
 [[step]]
 do = "say"
 line = "Plant OEE: how well the machines are doing, and underneath, how many machines that average is drawn from."
+at = "#kpi-oee-sub"
+label = "Drawn from"
 
 [[step]]
 do = "mark"
@@ -188,24 +207,37 @@ name = "four-tiles"
 [[step]]
 do = "say"
 line = "And the ERP queue: whether there is news still waiting to go back up to the office."
+at = ".kpi:has(#kpi-erp)"
+label = "To the office"
 
+# The order book by its menu, and the order by typing its code.
 [[step]]
-do = "goto"
-url = "/dashboard/orders?q=WO-STACK07"
-settle = 3
+do = "click"
+selector = "header nav a:text-is(\"Orders\")"
 
 [[step]]
 do = "wait_for"
-selector = "#order-list"
+selector = "#order-list tbody"
+text = "WO-"
+
+[[step]]
+do = "fill"
+selector = "#f-text"
 text = "WO-STACK07-0001"
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#order-list tbody tr')].length === 1 && document.querySelector('#order-list tbody').innerText.includes('WO-STACK07-0001')"
 
 [[step]]
 do = "say"
 line = "Now one order, all the way round. Stacker line seven: make 260 stacks of a fork, a spoon and a knife."
+at = "#order-list tbody tr:has-text(\"WO-STACK07-0001\")"
+label = "260 stacks"
 
 [[step]]
 do = "click"
-selector = "#order-list tbody tr:has-text('WO-STACK07-0001')"
+selector = "#order-list tbody tr:has-text(\"WO-STACK07-0001\")"
 
 [[step]]
 do = "wait_for"
@@ -220,6 +252,8 @@ scroll_offset = 220
 [[step]]
 do = "say"
 line = "The order came down from above: released to the floor, with a quantity and a material."
+at = "#d-qty"
+label = "Quantity"
 
 [[step]]
 do = "say"
@@ -232,11 +266,13 @@ name = "the-order"
 [[step]]
 do = "say"
 line = "Its status says completed, and the booked count is what the machine reported, stack by stack."
+at = "#d-good"
+label = "Booked"
 
+# The machine, by its name on the order's route.
 [[step]]
-do = "goto"
-url = "/dashboard/machine/STACK07_Stacker?hours=8"
-settle = 3
+do = "click"
+selector = "#ops a:text-is(\"STACK07_Stacker\")"
 
 [[step]]
 do = "wait_for"
@@ -246,19 +282,30 @@ text = "WO-STACK07"
 [[step]]
 do = "say"
 line = "The machine that did the work. The stacker took the order, ran it, and counted every stack it made."
+at = "#m-code"
 
 [[step]]
 do = "say"
 line = "When the last stack was counted the order finished, and the stacker went straight on to the next one."
+at = "#m-order"
 
 [[step]]
 do = "mark"
 name = "the-machine"
 
+# The outbox and the audit trail are on Ops, under Setup.
 [[step]]
-do = "goto"
-url = "/dashboard/ops"
-settle = 3
+do = "click"
+selector = "header nav a:text-is(\"Setup\")"
+
+[[step]]
+do = "wait_for"
+selector = ".subnav"
+text = "Ops"
+
+[[step]]
+do = "click"
+selector = ".subnav a:text-is(\"Ops\")"
 
 [[step]]
 do = "wait_for"
@@ -276,15 +323,17 @@ line = "Then the news goes back up. When an order finishes, the MES writes a con
 [[step]]
 do = "say"
 line = "This is the outbox: every message for the office, the confirmations and the machines' states alike. With no office system connected here, they wait as pending, and the tile said sending."
+at = "#erp-facts .fact:first-child"
 
 [[step]]
 do = "mark"
 name = "the-outbox"
 
+# The audit trail, narrowed to completed orders by typing the action.
 [[step]]
-do = "goto"
-url = "/dashboard/ops?action=workorder.completed"
-settle = 3
+do = "fill"
+selector = "#action-filter"
+text = "workorder.completed"
 
 [[step]]
 do = "wait_for"
@@ -297,10 +346,12 @@ scroll_offset = 300
 [[step]]
 do = "say"
 line = "And it is on the audit trail: our order's line says when it was completed, who completed it, and which order it was."
+at = "#activity tr:has-text(\"WO-STACK07-0001\") td:nth-child(1)"
 
 [[step]]
 do = "say"
 line = "Who can be a person or a machine's agent. There is a line for every change, so every number can be traced back to where it came from."
+at = "#activity tr:has-text(\"WO-STACK07-0001\") td:nth-child(2)"
 
 [[step]]
 do = "mark"
@@ -312,27 +363,44 @@ line = "That is the difference from the whiteboard. Not just the number, but a l
 
 # -------------------------------------------------------------- it refuses
 
+# Back to the floor by its menu, and the pallet line from its Line list.
 [[step]]
 part = "refuses"
-do = "goto"
-url = "/dashboard?line=PAL1LINE"
-settle = 3
+do = "click"
+selector = "header nav a:text-is(\"Floor\")"
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#m-line option')].some((o) => o.value === 'PAL1LINE')"
+
+[[step]]
+do = "choose"
+selector = "#m-line"
+value = "PAL1LINE"
 
 [[step]]
 do = "wait_for"
 selector = "#machines"
-text = "Watched"
+text = "PAL1_StretchWrap"
 scroll_to = "#machines"
 scroll_block = "start"
 scroll_offset = 220
 
+# The floor redraws its cards on a timer: wait for the filtered list's own
+# total (in its pager) and a drawn Palletizer row before the first box goes round one.
+[[step]]
+do = "wait_for"
+js = "/\\b1\u20132 of 2\\b/.test(document.querySelector('#m-pager').textContent) && [...document.querySelectorAll('#machines .machine')].some((m) => m.textContent.includes('PAL1_Palletizer') && m.querySelector('.bar-row.coverage')?.getBoundingClientRect().height > 0)"
+
 [[step]]
 do = "say"
 line = "One more word, and it is the most important one: watched."
+at = "#machines .machine:has(a:text-is(\"PAL1_Palletizer\")) .bar-row.coverage"
 
 [[step]]
 do = "say"
 line = "Under every machine, the MES says how much of the last eight hours it actually saw."
+at = "#machines .machine:has(a:text-is(\"PAL1_StretchWrap\")) .bar-row.coverage"
 
 [[step]]
 do = "mark"
@@ -341,10 +409,13 @@ name = "watched"
 [[step]]
 do = "say"
 line = "This plant is a few minutes old, so it saw only a few percent. It says so, beside the figure, instead of hiding it."
+at = "#machines .machine:has(a:text-is(\"PAL1_Palletizer\")) .bar-row.coverage .num"
+style = "spotlight"
 
 [[step]]
 do = "say"
 line = "The rest of the window is unknown. It is not counted as running, and it is not counted as stopped."
+at = "#machines .machine:has(a:text-is(\"PAL1_Palletizer\")) .bar-row.coverage .bar"
 
 [[step]]
 do = "say"
