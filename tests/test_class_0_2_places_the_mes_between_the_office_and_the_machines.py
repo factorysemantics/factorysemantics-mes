@@ -26,11 +26,14 @@ SCENE = REPO / "scripts" / "scenes" / "course" / "01-02-what-an-mes-is-and-is-no
 # wrote them: the second filming says exactly these, in this order.
 VOICED = REPO / "tests" / "fixtures" / "course" / "class-0-2-voiced-script.txt"
 # The lines over the screen that are about nothing one box can hold: the page
-# as a whole, a release nothing on the order names, and every number at once.
+# as a whole, a release nothing on the order names, a confirmation the outbox's
+# newest rows do not hold, and every number at once.
 POINTS_AT_NOTHING_ON_SCREEN = {
     "This is what replaces it. The same plant, right now, counted as it happens.",
     "The top of the floor screen. Four tiles, each one a question the plant asks every day.",
     "On this plant there is no real office system connected, so the plant's own order book released it.",
+    "Then the news goes back up. When an order finishes, the MES writes a confirmation for the office:"
+    " how many good, how many scrap.",
     "That is the difference from the whiteboard. Not just the number, but a line saying where it came from.",
     "A figure that says how little was seen, or a tile that says no figure, is the MES being honest, not broken.",
 }
@@ -185,7 +188,8 @@ def test_what_it_refuses_is_to_hide_how_little_it_watched(scene):
     refuses = [step for step in scene["step"] if step["part"] == "refuses"]
     said = " ".join(step["line"] for step in refuses if step["do"] == "say")
 
-    assert any(step.get("label") == "Watched" and "coverage" in step["at"] for step in refuses if step["do"] == "say")
+    said_over = [step for step in refuses if step["do"] == "say"]
+    assert any(step["line"].endswith("watched.") and "coverage" in step["at"] for step in said_over)
     assert "not counted as running, and it is not counted as stopped" in said
     assert "no figure" in said
 

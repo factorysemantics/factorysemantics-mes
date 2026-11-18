@@ -42,7 +42,7 @@ notes = [
   "The Watched figure under each machine is the share of the last eight hours the MES actually observed. On a plant a few minutes old it is a few percent, and the cutlery pack sets no coverage floor, so the OEE beside it is shown, not withheld. The class reads Watched, not the OEE; OEE is class 3.3.",
   "The opening whiteboard is a plain card with words on it. There is no artwork of a person or a board.",
   "The class is clicked through as a person would. The floor is opened by address after the whiteboard, and again after the cards, because a card is the recorder's page and has no menu. From there it clicks Orders and types the order's code into the search box, clicks the order, then the stacker's name on the order's route; Setup, then Ops, for the outbox, and types workorder.completed into the audit trail's action box; and Floor, picking the pallet line from the Line list, for Watched.",
-  "Five lines have no box on purpose: the first look at the floor and the line naming the four tiles are about the page, not one thing on it; nothing on the order names who released it; and the whiteboard line and the last line about honest figures are about every number, not one.",
+  "Six lines have no box on purpose: the first look at the floor and the line naming the four tiles are about the page, not one thing on it; nothing on the order names who released it; the outbox's newest rows are the machines' state messages, not our order's confirmation, and its heading is as wide as the page; and the whiteboard line and the last line about honest figures are about every number, not one.",
 ]
 
 honesty = [
@@ -283,13 +283,11 @@ text = "WO-STACK07"
 do = "say"
 line = "The machine that did the work. The stacker took the order, ran it, and counted every stack it made."
 at = "#m-code"
-label = "The stacker"
 
 [[step]]
 do = "say"
 line = "When the last stack was counted the order finished, and the stacker went straight on to the next one."
 at = "#m-order"
-label = "Next order"
 
 [[step]]
 do = "mark"
@@ -321,13 +319,11 @@ scroll_offset = 220
 [[step]]
 do = "say"
 line = "Then the news goes back up. When an order finishes, the MES writes a confirmation for the office: how many good, how many scrap."
-at = "#erp-section h2"
 
 [[step]]
 do = "say"
 line = "This is the outbox: every message for the office, the confirmations and the machines' states alike. With no office system connected here, they wait as pending, and the tile said sending."
 at = "#erp-facts .fact:first-child"
-label = "Pending"
 
 [[step]]
 do = "mark"
@@ -351,13 +347,11 @@ scroll_offset = 300
 do = "say"
 line = "And it is on the audit trail: our order's line says when it was completed, who completed it, and which order it was."
 at = "#activity tr:has-text(\"WO-STACK07-0001\") td:nth-child(1)"
-label = "When"
 
 [[step]]
 do = "say"
 line = "Who can be a person or a machine's agent. There is a line for every change, so every number can be traced back to where it came from."
 at = "#activity tr:has-text(\"WO-STACK07-0001\") td:nth-child(2)"
-label = "Who"
 
 [[step]]
 do = "mark"
@@ -392,11 +386,16 @@ scroll_to = "#machines"
 scroll_block = "start"
 scroll_offset = 220
 
+# The floor redraws its cards on a timer: wait for the filtered list's own
+# total (in its pager) and a drawn Palletizer row before the first box goes round one.
+[[step]]
+do = "wait_for"
+js = "/\\b1\u20132 of 2\\b/.test(document.querySelector('#m-pager').textContent) && [...document.querySelectorAll('#machines .machine')].some((m) => m.textContent.includes('PAL1_Palletizer') && m.querySelector('.bar-row.coverage')?.getBoundingClientRect().height > 0)"
+
 [[step]]
 do = "say"
 line = "One more word, and it is the most important one: watched."
 at = "#machines .machine:has(a:text-is(\"PAL1_Palletizer\")) .bar-row.coverage"
-label = "Watched"
 
 [[step]]
 do = "say"
@@ -411,14 +410,12 @@ name = "watched"
 do = "say"
 line = "This plant is a few minutes old, so it saw only a few percent. It says so, beside the figure, instead of hiding it."
 at = "#machines .machine:has(a:text-is(\"PAL1_Palletizer\")) .bar-row.coverage .num"
-label = "A few percent"
 style = "spotlight"
 
 [[step]]
 do = "say"
 line = "The rest of the window is unknown. It is not counted as running, and it is not counted as stopped."
 at = "#machines .machine:has(a:text-is(\"PAL1_Palletizer\")) .bar-row.coverage .bar"
-label = "Not seen"
 
 [[step]]
 do = "say"
