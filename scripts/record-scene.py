@@ -272,6 +272,8 @@ CALLOUT_STYLES = ("box", "spotlight")
 CALLOUT_PAD = 6
 #: How long a `say` looks for the thing its `at` names before the take is refused.
 CALLOUT_FIND_SECONDS = 2.0
+# How many times a thing the page replaced as it was about to be outlined is looked for again.
+CALLOUT_REDRAWN_TRIES = 4
 
 
 # --------------------------------------------------------------- the scene
@@ -1116,16 +1118,29 @@ class BrowserStage:
             raise SystemExit(f"step {self.step_number}: the `say` points `at = {at!r}`, and nothing on the page"
                              f" matches it within {CALLOUT_FIND_SECONDS:g} s; the take is refused rather than"
                              " filmed without its box") from None
-        self.clear_of_caption(at)
-        target.scroll_into_view_if_needed()
-        handle = target.element_handle()
-        handle.evaluate(CLEAR_OF_HEADER_SCRIPT, CALLOUT_HEADROOM)
-        handle.evaluate(SETTLE_SCRIPT, [STILL_FOR_SECONDS * 1000, STILL_WITHIN_SECONDS * 1000])
-        drawn = handle.evaluate(
-            "(el, [text, label, style]) => {"
-            " window.__sceneSay(text); return window.__sceneCallout(el, label, style); }",
-            [line, label, style],
-        )
+        # A page that redraws itself on a timer (the floor's cards) can replace
+        # the element while it is being brought into view and left to go still;
+        # the box would then be drawn round nothing. The thing is looked for
+        # again, a few times, rather than outlined once it has left the page.
+        drawn = None
+        for _ in range(CALLOUT_REDRAWN_TRIES):
+            self.clear_of_caption(at)
+            target.scroll_into_view_if_needed()
+            handle = target.element_handle()
+            handle.evaluate(CLEAR_OF_HEADER_SCRIPT, CALLOUT_HEADROOM)
+            handle.evaluate(SETTLE_SCRIPT, [STILL_FOR_SECONDS * 1000, STILL_WITHIN_SECONDS * 1000])
+            drawn = handle.evaluate(
+                "(el, [text, label, style]) => {"
+                " if (!el.isConnected) return null;"
+                " window.__sceneSay(text); return window.__sceneCallout(el, label, style); }",
+                [line, label, style],
+            )
+            if drawn is not None:
+                break
+        if drawn is None:
+            raise SystemExit(f"step {self.step_number}: the page redrew `at = {at!r}` each of"
+                             f" {CALLOUT_REDRAWN_TRIES} times it was about to be outlined; the take is refused"
+                             " rather than filmed with a box round nothing")
         width, height = self.page.viewport_size["width"], self.page.viewport_size["height"]
         left, top = max(0, round(drawn["x"])), max(0, round(drawn["y"]))
         right = min(width, round(drawn["x"] + drawn["w"]))
