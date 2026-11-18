@@ -25,6 +25,28 @@ REPO = Path(__file__).resolve().parents[1]
 RUNNER = REPO / "scripts" / "record-scene.py"
 SCENE = REPO / "scripts" / "scenes" / "course" / "02-03-routings.toml"
 PACK = REPO / "labs" / "cutlery" / "masterdata"
+# The caption lines of the take studio voiced, as that take's script file
+# wrote them: the second filming says exactly these, in this order.
+VOICED = REPO / "tests" / "fixtures" / "course" / "class-1-3-voiced-script.txt"
+# The lines over the screen about nothing one box can hold: three machines
+# that fill the Floor's width, and what the class is about to do, over a table
+# the form is not yet on.
+POINTS_AT_NOTHING_ON_SCREEN = {
+    "Here are the three machines of that road, on the floor right now.",
+    "Now the things it refuses. First, a routing with no steps at all: a code, a name, and no operation.",
+}
+
+
+def over_a_card(scene: dict) -> list[bool]:
+    """For each step, whether a card the recorder painted is what is on screen."""
+    card, shown = False, []
+    for step in scene["step"]:
+        if step["do"] == "slide":
+            card = True
+        elif step["do"] == "goto":
+            card = False
+        shown.append(card)
+    return shown
 
 # The lab fleet, the public demo and the stock demo ports: a class is never
 # filmed on a plant somebody else is looking at.
@@ -82,7 +104,8 @@ def test_the_scene_is_a_full_take_of_class_1_3_named_by_its_label_that_runs_four
     assert (scene["width"], scene["height"]) == (1280, 720)
     planned = runner.planned_seconds(scene)
     # Page loads and waits add to the plan; the finished take is measured.
-    assert 240 <= planned <= scene["budget_seconds"] <= 360, planned
+    # Half a minute over the first filming's six, for the clicked path, and no more.
+    assert 240 <= planned <= scene["budget_seconds"] <= 390, planned
     print(f"planned {planned} s against a {scene['budget_seconds']} s budget")
 
 
@@ -109,7 +132,8 @@ def test_the_hook_is_a_card_of_a_forks_road_then_its_line_and_is_short_enough_fo
     assert hook[0]["do"] == "slide" and hook[0]["name"] == "a-forks-road"
     machines = [op["equipment"] for op in next(r for r in pack("routings") if r["code"] == "RT-FORK1")["operations"]]
     assert [line.rsplit(" ", 1)[-1] for line in hook[0]["lines"] if "_" in line] == machines
-    assert [step["url"] for step in hook if step["do"] == "goto"] == ["/dashboard?line=FORK1LINE"]
+    assert [step["url"] for step in hook if step["do"] == "goto"] == ["/dashboard"]
+    assert [(step["selector"], step["value"]) for step in hook if step["do"] == "choose"] == [("#m-line", "FORK1LINE")]
     assert runner.planned_seconds(dict(scene, step=hook)) - scene["gif_skip_seconds"] <= 30
 
 
@@ -204,11 +228,51 @@ def test_the_existing_pallet_routing_the_lists_and_the_replay_are_owned_up_to(sc
     assert "ten times" in honesty
 
 
-def test_admin_is_opened_at_its_routings_and_no_screen_of_people_is_filmed(scene):
-    urls = [step["url"] for step in scene["step"] if step["do"] == "goto"]
+def test_every_caption_is_the_line_studio_voiced_word_for_word_in_the_same_order(runner, scene):
+    voiced = VOICED.read_text(encoding="utf-8").splitlines()
 
-    assert not [url for url in urls if "people" in url]
-    assert [url for url in urls if "/admin" in url] == ["/dashboard/admin#routings"]
+    assert len(voiced) == 28
+    assert runner.script_lines(scene) == voiced
+
+
+def test_every_line_said_over_the_screen_points_at_what_it_is_about_and_no_line_over_a_card_does(scene):
+    said = [(s, card) for s, card in zip(scene["step"], over_a_card(scene), strict=True) if s["do"] == "say"]
+    on_screen = [s for s, card in said if not card]
+    on_cards = [s for s, card in said if card]
+    unpointed = [s["line"] for s in on_screen if not s.get("at")]
+
+    assert set(unpointed) == POINTS_AT_NOTHING_ON_SCREEN, (
+        f"{len(unpointed)} of {len(on_screen)} lines over the screen point at nothing")
+    assert [s["line"] for s in on_cards if s.get("at")] == []
+    # A label is a few words, and the dimmed spotlight is kept for the cost
+    # center the form filled in by itself.
+    assert all(len(s["label"].split()) <= 3 for s in on_screen if s.get("label"))
+    spotlit = [s for s in on_screen if s.get("style") == "spotlight"]
+    assert len(spotlit) == 1 and spotlit[0]["line"].startswith("Cost center CC-PAL01.")
+
+
+def test_the_floor_is_the_only_page_opened_by_address_once_in_the_hook_and_once_after_the_cards(scene):
+    steps = scene["step"]
+    pages = [number for number, step in enumerate(steps) if step["do"] == "goto"]
+
+    # A card is the recorder's page and has no menu: the camera comes back from
+    # the cards by address, and every other page is reached by a click.
+    assert [steps[n]["url"] for n in pages] == ["/dashboard", "/dashboard"]
+    assert steps[pages[0]]["part"] == "hook"
+    assert steps[pages[1]]["part"] == "screen"
+    assert steps[pages[1] - 1]["part"] == "idea", "the goto comes straight after the cards"
+
+
+def test_admin_is_reached_by_its_menus_and_no_page_of_people_is_opened(scene):
+    screen = [step for step in scene["step"] if step["part"] == "screen"]
+    clicks = [step["selector"] for step in screen if step["do"] == "click"]
+
+    assert clicks[:2] == ['header nav a:text-is("Setup")', '.subnav a:text-is("Admin")']
+    assert not [step for step in scene["step"] if step["do"] == "goto" and "people" in step["url"]]
+    # The camera goes straight down to the routings: the next thing waited for
+    # is the routings table, scrolled to its count.
+    after = screen[[s.get("selector") for s in screen].index('.subnav a:text-is("Admin")') + 1]
+    assert after["do"] == "wait_for" and after["scroll_to"] == "#routing-count"
 
 
 def test_the_recorder_plays_every_step_of_it(runner, scene):
@@ -216,7 +280,7 @@ def test_the_recorder_plays_every_step_of_it(runner, scene):
 
     class Stage:
         def __getattr__(self, verb):
-            return lambda *args: handed.append(verb)
+            return lambda *args, **pointer: handed.append(verb)
 
     runner.play(scene, Stage())
 

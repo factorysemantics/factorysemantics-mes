@@ -28,7 +28,8 @@ notes = [
   "The plant was started from the cutlery pack, at ten times wall clock, a minute or two before the camera rolled. A routing is master data, so nothing had to run first; the speed only matters to the floor pages the hook passes through.",
   "The pack already holds a pallet routing for each palletizing line, RT-PAL1 to RT-PAL4, made of the same two steps. The routing typed in the class is RT-PALLET, a code the pack does not have, on material PALLET and line PAL1 as the outline names them: a second routing for a material that has one. Every material the pack makes already has a routing; the two it does not are the raw resin and the paper plate, which are bought, not made, and a routing for either would teach the wrong thing. The class says the pack's own routing is there before it types its new one.",
   "Every value typed or chosen in the form is one of the plant's own codes: material PALLET, machines PAL1_Palletizer and PAL1_StretchWrap. The cost center CC-PAL01 is not typed: the form shows it beside each machine, read from the machine's line, and the table shows it beside each step.",
-  "The Admin page is opened at its routings table (`#routings`), below the people and roles, which are not filmed.",
+  "The class is clicked through, as a person would go. The Floor is opened by address twice: once in the hook, where line FORK1 is then chosen in its list, and once straight after the cards, because a card is the recorder's own page and has no menu. Admin is reached by Setup, then Admin; the camera goes straight down to its routings table, so the people and roles at the top of the page pass by for the second the page takes to load and are not dwelt on.",
+  "Every line said over the screen has a box round the thing it is about, with a few words on a tab where words help; the cost center the form filled in by itself is the one spotlight. Two lines have no box. The three machines of the fork's road fill the width of the Floor, and a box round all three would be as wide as the page and reach into the narrator's corner (a box on the list's count instead scrolled the machines' names off the frame), so that line is said over the three cards. The other says what the class is about to refuse, over a table the form is not yet on. The two operation rows are boxed without a tab: above the row, a tab would sit over the field above it. The cost center sits inside each routing's operations text, not in a cell of its own, so its two lines box the whole operations cell.",
   "The form's machine and material are drop-down lists of the plant's own machines and materials, so it cannot be asked for a step on a machine that does not exist, and it has no blank material to leave. The class says so rather than filming a request the screen cannot make. The two refusals filmed are the ones the form draws: a routing with no operation, and a code already in use.",
   "The product's message after a save is drawn higher on the screen than the product draws it, so that the recorder's caption bar does not cover it.",
   "At any speed but 1x every 2D page carries the product's REPLAY 10× banner across its top. It is filmed as the product draws it.",
@@ -73,10 +74,20 @@ line = "Somebody wrote that order down once, so every fork follows it. That writ
 do = "mark"
 name = "a-forks-road"
 
+# The Floor is the one page opened by address; the line is chosen on it.
 [[step]]
 do = "goto"
-url = "/dashboard?line=FORK1LINE"
+url = "/dashboard"
 settle = 3
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#m-line option')].some((o) => o.value === 'FORK1LINE')"
+
+[[step]]
+do = "choose"
+selector = "#m-line"
+value = "FORK1LINE"
 
 [[step]]
 do = "wait_for"
@@ -153,11 +164,26 @@ name = "steps-not-ingredients"
 
 # ------------------------------------------------------------ on the screen
 
+# A card is the recorder's own page and has no menu, so the camera comes back
+# from the cards to the Floor by address; Admin is reached by its menus.
 [[step]]
 part = "screen"
 do = "goto"
-url = "/dashboard/admin#routings"
+url = "/dashboard"
 settle = 2
+
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"Setup\")"
+
+[[step]]
+do = "wait_for"
+selector = ".subnav"
+text = "Admin"
+
+[[step]]
+do = "click"
+selector = ".subnav a:text-is(\"Admin\")"
 
 [[step]]
 do = "wait_for"
@@ -172,10 +198,14 @@ scroll_offset = 215
 [[step]]
 do = "say"
 line = "This is where a plant keeps its routings: Admin, Routings. Sixty-one of them on this plant, one for each line."
+at = "#routing-count"
+label = "61 routings"
 
 [[step]]
 do = "say"
 line = "The first row is the fork line's. Step ten, Mold, on FORK1_Mold. Then twenty, Degate. Then thirty, Mark."
+at = "#routings tbody tr:first-child td:nth-child(4)"
+label = "10, 20, 30"
 
 [[step]]
 do = "mark"
@@ -184,6 +214,8 @@ name = "the-routings-table"
 [[step]]
 do = "say"
 line = "Beside every step is the cost center it bills to, CC-MOULD01. Nobody typed that into the routing: it comes from the machine's line."
+at = "#routings tbody tr:first-child td:nth-child(4)"
+label = "CC-MOULD01"
 
 [[step]]
 do = "fill"
@@ -198,6 +230,8 @@ text = "4 of 4 matching, 61 in the plant"
 [[step]]
 do = "say"
 line = "The plant already has a pallet routing for each palletizing line. Here they are: RT-PAL1 to RT-PAL4."
+at = "#routing-count"
+label = "Four"
 
 [[step]]
 do = "mark"
@@ -206,6 +240,7 @@ name = "the-pallet-routings"
 [[step]]
 do = "say"
 line = "Now we define one of our own from scratch, in the form below: RT-PALLET, a second way to make the pallet on line PAL1."
+at = "#form-routing"
 
 [[step]]
 do = "fill"
@@ -228,6 +263,8 @@ value = "PALLET"
 [[step]]
 do = "say"
 line = "A code, a name, and the material it makes: PALLET, the outbound pallet of wrapped sets."
+at = "#routing-material"
+label = "Material"
 
 [[step]]
 do = "fill"
@@ -242,10 +279,14 @@ value = "PAL1_Palletizer"
 [[step]]
 do = "say"
 line = "Step ten, Palletizer, on the machine PAL1_Palletizer. Watch the end of the machine's line in the form."
+at = "#ops .op-row:nth-child(1)"
 
 [[step]]
 do = "say"
 line = "Cost center CC-PAL01. We did not type it. The form read it from the line the machine is on."
+at = "#ops .op-row:nth-child(1) [name=op-equipment]"
+label = "From the line"
+style = "spotlight"
 
 [[step]]
 do = "mark"
@@ -268,6 +309,7 @@ value = "PAL1_StretchWrap"
 [[step]]
 do = "say"
 line = "Add an operation. It numbers itself twenty. StretchWrap, on PAL1_StretchWrap, the same line, so the same cost center."
+at = "#ops .op-row:nth-child(2)"
 
 [[step]]
 do = "mark"
@@ -276,6 +318,7 @@ name = "the-form-filled"
 [[step]]
 do = "say"
 line = "Create the routing."
+at = "#form-routing [data-assist=routing-create]"
 
 [[step]]
 do = "click"
@@ -301,6 +344,7 @@ scroll_offset = 300
 [[step]]
 do = "say"
 line = "There it is in the table: RT-PALLET, for PALLET, ten Palletizer then twenty StretchWrap, each with its cost center."
+at = "#routings tbody tr:has-text(\"RT-PALLET\")"
 
 [[step]]
 do = "mark"
@@ -309,6 +353,7 @@ name = "rt-pallet-in-the-table"
 [[step]]
 do = "say"
 line = "From now on an order for a pallet can be made this way, and every step knows where it happens and what it bills to."
+at = "#routings tbody tr:has-text(\"RT-PALLET\") td:nth-child(4)"
 
 # -------------------------------------------------------------- it refuses
 
@@ -346,6 +391,8 @@ text = "A routing needs at least one operation."
 do = "say"
 line = "Refused: a routing needs at least one operation. A material with no steps cannot be made."
 hold = 1.0
+at = "#toast"
+label = "Refused"
 
 [[step]]
 do = "mark"
@@ -358,6 +405,7 @@ seconds = 4.5
 [[step]]
 do = "say"
 line = "Second, the same code twice. We type RT-PALLET again, with one step."
+at = "#form-routing [name=code]"
 
 [[step]]
 do = "fill"
@@ -392,6 +440,8 @@ text = "already exists"
 do = "say"
 line = "Refused: that code already exists. A routing's code names one routing, so an order can say which road it takes."
 hold = 1.0
+at = "#toast"
+label = "Refused"
 
 [[step]]
 do = "mark"
@@ -404,10 +454,14 @@ seconds = 5.0
 [[step]]
 do = "say"
 line = "A step on a machine that does not exist cannot even be asked. The list holds only this plant's own tree, from the company down to each machine."
+at = "#ops .op-row:nth-child(1) [name=op-equipment]"
+label = "The plant's own"
 
 [[step]]
 do = "say"
 line = "And the material is a list with no blank, so it always says something: here, still PALLET. Check it says what you mean before you press create."
+at = "#routing-material"
+label = "Still PALLET"
 
 [[step]]
 do = "mark"
