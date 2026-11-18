@@ -22,6 +22,30 @@ from fsmes import modules
 REPO = Path(__file__).resolve().parents[1]
 RUNNER = REPO / "scripts" / "record-scene.py"
 SCENE = REPO / "scripts" / "scenes" / "course" / "01-02-what-an-mes-is-and-is-not.toml"
+# The caption lines of the take studio voiced, as that take's script file
+# wrote them: the second filming says exactly these, in this order.
+VOICED = REPO / "tests" / "fixtures" / "course" / "class-0-2-voiced-script.txt"
+# The lines over the screen that are about nothing one box can hold: the page
+# as a whole, a release nothing on the order names, and every number at once.
+POINTS_AT_NOTHING_ON_SCREEN = {
+    "This is what replaces it. The same plant, right now, counted as it happens.",
+    "The top of the floor screen. Four tiles, each one a question the plant asks every day.",
+    "On this plant there is no real office system connected, so the plant's own order book released it.",
+    "That is the difference from the whiteboard. Not just the number, but a line saying where it came from.",
+    "A figure that says how little was seen, or a tile that says no figure, is the MES being honest, not broken.",
+}
+
+
+def over_a_card(scene: dict) -> list[bool]:
+    """For each step, whether a card the recorder painted is what is on screen."""
+    card, shown = False, []
+    for step in scene["step"]:
+        if step["do"] == "slide":
+            card = True
+        elif step["do"] == "goto":
+            card = False
+        shown.append(card)
+    return shown
 
 # The lab fleet, the public demo and the stock demo ports: a class is never
 # filmed on a plant somebody else is looking at.
@@ -65,7 +89,8 @@ def test_the_scene_is_a_full_take_of_class_0_2_named_by_its_label_that_runs_four
     assert (scene["width"], scene["height"]) == (1280, 720)
     planned = runner.planned_seconds(scene)
     # Page loads and waits add to the plan; the finished take is measured.
-    assert 240 <= planned <= scene["budget_seconds"] <= 360, planned
+    # Half a minute over the first filming's six, for the clicked path, and no more.
+    assert 240 <= planned <= scene["budget_seconds"] <= 390, planned
     print(f"planned {planned} s against a {scene['budget_seconds']} s budget")
 
 
@@ -103,15 +128,55 @@ def test_the_idea_cards_put_the_office_above_the_machines_below_and_say_the_thre
     assert nots == ["Not the ERP", "Not the historian", "Not a spreadsheet"]
 
 
-def test_one_order_is_followed_from_the_office_to_its_machine_and_back_up_to_the_audit_trail(scene):
-    screen = [step["url"] for step in scene["step"] if step["part"] == "screen" and step["do"] == "goto"]
+def test_every_caption_is_the_line_studio_voiced_word_for_word_in_the_same_order(runner, scene):
+    voiced = VOICED.read_text(encoding="utf-8").splitlines()
 
-    assert screen == [
-        "/dashboard",
-        "/dashboard/orders?q=WO-STACK07",
-        "/dashboard/machine/STACK07_Stacker?hours=8",
-        "/dashboard/ops",
-        "/dashboard/ops?action=workorder.completed",
+    assert len(voiced) == 32
+    assert runner.script_lines(scene) == voiced
+
+
+def test_every_line_said_over_the_screen_points_at_what_it_is_about_and_no_line_over_a_card_does(scene):
+    said = [(s, card) for s, card in zip(scene["step"], over_a_card(scene), strict=True) if s["do"] == "say"]
+    on_screen = [s for s, card in said if not card]
+    on_cards = [s for s, card in said if card]
+    unpointed = [s["line"] for s in on_screen if not s.get("at")]
+
+    assert set(unpointed) == POINTS_AT_NOTHING_ON_SCREEN, (
+        f"{len(unpointed)} of {len(on_screen)} lines over the screen point at nothing")
+    assert [s["line"] for s in on_cards if s.get("at")] == []
+    # A label is a few words, and the dimmed spotlight is kept for the one refusal.
+    assert all(len(s["label"].split()) <= 3 for s in on_screen if s.get("label"))
+    spotlit = [s for s in on_screen if s.get("style") == "spotlight"]
+    assert len(spotlit) == 1 and spotlit[0]["part"] == "refuses"
+
+
+def test_the_floor_is_the_only_page_opened_by_address_after_the_whiteboard_and_after_the_cards(scene):
+    steps = scene["step"]
+    pages = [number for number, step in enumerate(steps) if step["do"] == "goto"]
+
+    # A card is the recorder's page and has no menu: the camera comes back from
+    # the cards by address, and every other page is reached by a click.
+    assert [steps[n]["url"] for n in pages] == ["/dashboard", "/dashboard"]
+    assert [s["name"] for s in steps[:pages[0]] if s["do"] == "slide"] == ["the-whiteboard"]
+    assert steps[pages[1]]["part"] == "screen"
+    assert steps[pages[1] - 1]["part"] == "idea", "the goto comes straight after the cards"
+
+
+def test_one_order_is_followed_from_the_office_to_its_machine_and_back_up_to_the_audit_trail_by_clicks(scene):
+    screen = [step for step in scene["step"] if step["part"] in ("screen", "refuses")]
+    pressed = [(s["do"], s.get("selector"), s.get("text") or s.get("value"))
+               for s in screen if s["do"] in ("click", "fill", "choose")]
+
+    assert pressed == [
+        ("click", 'header nav a:text-is("Orders")', None),
+        ("fill", "#f-text", "WO-STACK07-0001"),
+        ("click", '#order-list tbody tr:has-text("WO-STACK07-0001")', None),
+        ("click", '#ops a:text-is("STACK07_Stacker")', None),
+        ("click", 'header nav a:text-is("Setup")', None),
+        ("click", '.subnav a:text-is("Ops")', None),
+        ("fill", "#action-filter", "workorder.completed"),
+        ("click", 'header nav a:text-is("Floor")', None),
+        ("choose", "#m-line", "PAL1LINE"),
     ]
     assert scene["plant"]["roll_when_order"] == [{"code": "WO-STACK07-0001", "completed": True}]
 
@@ -120,7 +185,7 @@ def test_what_it_refuses_is_to_hide_how_little_it_watched(scene):
     refuses = [step for step in scene["step"] if step["part"] == "refuses"]
     said = " ".join(step["line"] for step in refuses if step["do"] == "say")
 
-    assert any(step.get("text") == "Watched" for step in refuses if step["do"] == "wait_for")
+    assert any(step.get("label") == "Watched" and "coverage" in step["at"] for step in refuses if step["do"] == "say")
     assert "not counted as running, and it is not counted as stopped" in said
     assert "no figure" in said
 
@@ -180,10 +245,11 @@ def test_the_recorder_plays_every_step_of_it(runner, scene):
 
     class Stage:
         def __getattr__(self, verb):
-            return lambda *args: handed.append(verb)
+            return lambda *args, **pointer: handed.append(verb)
 
     runner.play(scene, Stage())
 
-    assert handed.count("goto") == sum(1 for step in scene["step"] if step["do"] == "goto")
+    for verb in ("goto", "click", "fill", "choose"):
+        assert handed.count(verb) == sum(1 for step in scene["step"] if step["do"] == verb), verb
     assert handed.count("scroll_to") == sum(1 for step in scene["step"] if step.get("scroll_to"))
     assert handed.count("slide") == 4 and "terminal" not in handed
