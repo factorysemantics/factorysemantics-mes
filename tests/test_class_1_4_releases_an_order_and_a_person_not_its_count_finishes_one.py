@@ -28,6 +28,27 @@ REPO = Path(__file__).resolve().parents[1]
 RUNNER = REPO / "scripts" / "record-scene.py"
 SCENE = REPO / "scripts" / "scenes" / "course" / "02-04-a-work-orders-day.toml"
 PACK = REPO / "labs" / "cutlery" / "masterdata"
+# The caption lines of the take studio voiced, as that take's script file
+# wrote them: the second filming says exactly these, in this order.
+VOICED = REPO / "tests" / "fixtures" / "course" / "class-1-4-voiced-script.txt"
+# The one line over the screen with nothing to box: the outbox draws its newest
+# twenty messages, and by this line the confirmation has scrolled off it.
+POINTS_AT_NOTHING_ON_SCREEN = {
+    "It was written when a person finished the order, not when the count passed the number. "
+    "So the office hears the number the line really made.",
+}
+
+
+def over_a_card(scene: dict) -> list[bool]:
+    """For each step, whether a card the recorder painted is what is on screen."""
+    card, shown = False, []
+    for step in scene["step"]:
+        if step["do"] == "slide":
+            card = True
+        elif step["do"] == "goto":
+            card = False
+        shown.append(card)
+    return shown
 
 # The lab fleet, the public demo and the stock demo ports: a class is never
 # filmed on a plant somebody else is looking at.
@@ -93,7 +114,8 @@ def test_the_scene_is_a_full_take_of_class_1_4_named_by_its_label_that_runs_four
     assert (scene["width"], scene["height"]) == (1280, 720)
     planned = runner.planned_seconds(scene)
     # Page loads and waits add to the plan; the finished take is measured.
-    assert 240 <= planned <= scene["budget_seconds"] <= 360, planned
+    # Half a minute over the first filming's six, for the clicked path, and no more.
+    assert 240 <= planned <= scene["budget_seconds"] <= 390, planned
     print(f"planned {planned} s against a {scene['budget_seconds']} s budget")
 
 
@@ -138,7 +160,10 @@ def test_the_idea_card_names_order_release_dispatch_and_finish(scene):
 
 def test_the_order_typed_in_is_not_in_the_pack_is_for_the_plants_forks_and_is_about_a_shift_of_the_line(scene):
     screen_typed, screen_chosen = typed(scene, "screen"), chosen(scene, "screen")
-    code, quantity = screen_typed
+    # The form's code and quantity, then the plant's own order typed into the filter.
+    code, quantity, found = screen_typed
+    assert found == "WO-FORK1-0001"
+    screen_chosen = [value for value in screen_chosen if value != "FORK1_Mold"]
     orders = {o["code"]: o for o in pack("work_orders")}
     materials = {m["code"] for m in pack("materials")}
 
@@ -165,9 +190,12 @@ def test_the_released_order_is_found_in_the_queue_of_the_first_machine_on_its_ro
     screen = steps_of(scene, "screen")
     first = min(fork_routing()["operations"], key=lambda op: op["seq"])["equipment"]
     code = typed(scene, "screen")[0]
-    station = next(i for i, step in enumerate(screen) if step["do"] == "goto" and "/station" in step["url"])
+    station = next(i for i, step in enumerate(screen) if step["do"] == "choose" and step["selector"] == "#machine")
 
-    assert screen[station]["url"] == f"/dashboard/station?m={first}"
+    # Floor, then Station, then the first machine of the road chosen in its list.
+    assert [s["selector"] for s in screen[station - 4 : station] if s["do"] == "click"] == [
+        'header nav a:text-is("Floor")', '.subnav a:text-is("Station")']
+    assert screen[station]["value"] == first
     assert screen[station + 1]["selector"] == "#queue" and screen[station + 1]["text"] == code
 
 
@@ -193,11 +221,14 @@ def test_what_it_refuses_is_finishing_at_the_count_so_a_person_finishes_every_st
         for op in sorted(fork_routing()["operations"], key=lambda op: op["seq"])
     ]
     # The outbox is opened right after the last step is finished, before the
-    # confirmation scrolls off its newest twenty; the row is waited for, then
-    # scrolled to, because a step scrolls before it waits.
-    outbox = next(i for i, step in enumerate(refuses) if step["do"] == "goto" and step["url"] == "/dashboard/ops")
-    assert finished[-1] in [step.get("selector") for step in refuses[outbox - 4 : outbox]]
-    assert [(w["selector"], w["text"], bool(w.get("scroll_to"))) for w in refuses[outbox + 1 : outbox + 3]] == [
+    # confirmation scrolls off its newest twenty. The page is waited for, then
+    # the row, then the row is scrolled to, because a step scrolls before it waits.
+    outbox = next(i for i, step in enumerate(refuses) if step.get("selector") == '.subnav a:text-is("Ops")')
+    between = refuses[[s.get("selector") for s in refuses].index(finished[-1]) + 1 : outbox]
+    assert [s["selector"] for s in between if s["do"] == "click"] == ['header nav a:text-is("Setup")']
+    assert len(between) <= 6, "nothing slow stands between the last finish and the outbox"
+    assert "/dashboard/ops" in refuses[outbox + 1]["js"]
+    assert [(w["selector"], w["text"], bool(w.get("scroll_to"))) for w in refuses[outbox + 2 : outbox + 4]] == [
         ("#erp-table tbody", "WO-FORK1-0001", False),
         ("#erp-table tbody", "WO-FORK1-0001", True),
     ]
@@ -262,12 +293,59 @@ def test_no_screen_of_people_is_filmed_and_admin_is_not_opened(scene):
     assert not [url for url in urls if "people" in url or "/admin" in url]
 
 
+def test_every_caption_is_the_line_studio_voiced_word_for_word_in_the_same_order(runner, scene):
+    voiced = VOICED.read_text(encoding="utf-8").splitlines()
+
+    assert len(voiced) == 29
+    assert runner.script_lines(scene) == voiced
+
+
+def test_every_line_said_over_the_screen_points_at_what_it_is_about_and_no_line_over_a_card_does(scene):
+    said = [(s, card) for s, card in zip(scene["step"], over_a_card(scene), strict=True) if s["do"] == "say"]
+    on_screen = [s for s, card in said if not card]
+    on_cards = [s for s, card in said if card]
+    unpointed = [s["line"] for s in on_screen if not s.get("at")]
+
+    assert set(unpointed) == POINTS_AT_NOTHING_ON_SCREEN, (
+        f"{len(unpointed)} of {len(on_screen)} lines over the screen point at nothing")
+    assert [s["line"] for s in on_cards if s.get("at")] == []
+    # A label is a few words, and the dimmed spotlight is kept for the one
+    # idea of the class: the order's count is its last step's.
+    assert all(len(s["label"].split()) <= 3 for s in on_screen if s.get("label"))
+    spotlit = [s for s in on_screen if s.get("style") == "spotlight"]
+    assert len(spotlit) == 1 and spotlit[0]["line"].startswith("The order's booked count is the last step's")
+
+
+def test_the_orders_page_is_the_only_page_opened_by_address_straight_after_the_cards(scene):
+    steps = scene["step"]
+    pages = [number for number, step in enumerate(steps) if step["do"] == "goto"]
+
+    # A card is the recorder's page and has no menu: the camera comes back from
+    # the cards by address, and every other page is reached by a click.
+    assert [steps[n]["url"] for n in pages] == ["/dashboard/orders"]
+    assert steps[pages[0]]["part"] == "screen" and steps[pages[0] - 1]["part"] == "idea"
+    menus = [s["selector"] for s in steps if s["do"] == "click" and "nav a" in s["selector"]]
+    assert menus == [
+        'header nav a:text-is("Floor")', '.subnav a:text-is("Station")',
+        'header nav a:text-is("Orders")',
+        'header nav a:text-is("Setup")', '.subnav a:text-is("Ops")',
+        'header nav a:text-is("Orders")',
+    ]
+
+
+def test_the_line_that_opens_what_it_refuses_is_held_long_enough_to_be_read_and_spoken(runner, scene):
+    # Studio's note on the first filming: this line had one second before the next.
+    line = next(s for s in scene["step"] if s["do"] == "say" and s["line"].startswith("Now what it refuses."))
+
+    assert line["hold"] >= runner.hold_for_words(line["line"])
+
+
 def test_the_recorder_plays_every_step_of_it(runner, scene):
     handed: list[str] = []
 
     class Stage:
         def __getattr__(self, verb):
-            return lambda *args: handed.append(verb)
+            return lambda *args, **pointer: handed.append(verb)
 
     runner.play(scene, Stage())
 
