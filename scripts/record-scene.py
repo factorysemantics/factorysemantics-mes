@@ -1023,7 +1023,7 @@ class BrowserStage:
         began, and `ripple_at`, the second the ripple started; and `x`, `y`,
         the point it went to.
         """
-        target.scroll_into_view_if_needed()
+        scroll_onto_frame(target)
         box = target.bounding_box()
         if box is None:
             return {}
@@ -1125,7 +1125,7 @@ class BrowserStage:
         drawn = None
         for _ in range(CALLOUT_REDRAWN_TRIES):
             self.clear_of_caption(at)
-            target.scroll_into_view_if_needed()
+            scroll_onto_frame(target)
             handle = target.element_handle()
             handle.evaluate(CLEAR_OF_HEADER_SCRIPT, CALLOUT_HEADROOM)
             handle.evaluate(SETTLE_SCRIPT, [STILL_FOR_SECONDS * 1000, STILL_WITHIN_SECONDS * 1000])
@@ -1823,6 +1823,24 @@ def marks_document(scene: dict, made: dict, gif: Path, gif_seconds_taken: float)
         "gif_seconds": round(gif_seconds_taken, 2),
         "marks": made["marks"],
     }
+
+
+def scroll_onto_frame(target, tries: int = CALLOUT_REDRAWN_TRIES) -> None:
+    """Scroll the thing a locator names onto the frame, through a page redrawing it on a timer.
+
+    Playwright finds the element, then waits for it to go still; a list the
+    page redraws every couple of seconds (the floor's cards, the orders
+    table) can replace it in between, and Playwright gives up with "Element
+    is not attached to the DOM" (the third take of class 0.2 stopped on the
+    order row that way). The locator is asked again, which finds the copy.
+    """
+    for attempt in range(tries):
+        try:
+            target.scroll_into_view_if_needed()
+            return
+        except Exception as fault:  # playwright's Error; the recorder imports it lazily
+            if "not attached" not in str(fault) or attempt == tries - 1:
+                raise
 
 
 def badge_box(width: int, height: int) -> tuple[float, float, float, float]:
