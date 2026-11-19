@@ -1,0 +1,34 @@
+A moulding line that makes plastic forks.
+Every few seconds, a fork comes out of the mould.
+By the end of the shift, someone has to know what each machine did.
+How many good, how many scrap, against which order.
+That is the whole job of a factory floor, and this class is about it, before any software.
+Every plant, whatever it makes, runs on five words.
+Material: the resin that goes in, and the fork that comes out.
+Machine: the mould, the degater, the marker. Each one is a place where work is done.
+Step: one operation on one machine. Moulding is a step. Cutting the fork off its runner is the next.
+Order: the instruction to make this many of that, this way.
+Shift: the people on the floor, and the hours they were there.
+And every machine has exactly one place in a tree.
+A company has sites. A site has areas. An area has lines, and a line has machines.
+Here is that tree for this plant. The enterprise, Cutlery Co. One site, Cutlery Works.
+The moulding area, and in it, line FORK1. The screen says work center; it means the line.
+Under the line, its three machines, each a work unit: the degater, the marker, and the mould.
+Further down, the same plant has a stacking area, a wrapping area and a palletizing area.
+A fork's road runs through all four.
+The mould. It is running, on order WO-FORK1-0001, at its step: Mold, operation 10.
+Material, machine, step and order, all four on one screen.
+And below, what the machine itself reports: its temperature, its cycle time, its good and scrap counts.
+The age column says how long ago each number arrived.
+Next on the road, the stacker. It puts a fork, a spoon and a knife into one stack.
+A different line, a different order, and its count is in stacks, not forks.
+Then the wrapper: each stack sealed onto a paper plate. That is the product a customer buys.
+The banner across the top says this plant is replaying at ten times speed, so a shift fits into a class.
+And last, the palletizer and the stretch wrapper. Wrapped sets go onto a pallet, and the pallet goes out the door.
+Four lines, four orders, one road from resin to pallet.
+Every count on the way is one the floor booked, and none was worked out from the others.
+Now the one rule this whole course leans on. The mould again, over the last eight hours.
+This plant is a few minutes old. Almost all of those hours are before first sample.
+The MES does not guess what the mould did then. It was not told, so it says it does not know.
+Nothing is known until a machine or a person reports it: the machine over its tags, a person at the station.
+A gap stays a gap. It is not counted as running, and it is not counted as stopped.

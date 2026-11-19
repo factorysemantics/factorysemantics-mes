@@ -131,6 +131,25 @@ line marking about 23 a minute. The scale goes into `_plant.scale` in that
 folder. The committed `line.json`, `tag_map.json` and the scored runs stay at
 scale 1 (`CUTLERY_SCALE` says the same as `--scale`).
 
+## A named scene
+
+`scenes/<name>.json` is one story told on this plant, for a film: events
+added to named lines, a `pieces` section for the floor script, and an
+`_answer` key saying what happened, where and when. `scene.py` builds a
+copy of the pack with the scene in it and leaves this folder alone, so the
+everyday shift replays exactly what it did:
+
+    python labs/cutlery/scene.py labs/cutlery/scenes/hot-mould.json --out ~/scenes/hot-mould
+    FSMES_PLANT_REGISTRY=~/scenes/hot-mould/fleet.toml fsmes plant cutlery init
+    FSMES_PLANT_REGISTRY=~/scenes/hot-mould/fleet.toml fsmes plant cutlery start --speed 10
+
+`hot-mould` is FORK1's mould stopping on a cooling fault and coming back
+hot: its forks' width spreads while its mean stays put, and the pallets
+after it carry a width Cpk under 1.0 where the ones before were above 1.33.
+In a scene every dimension is measured off a piece a named mould made, so a
+check names its mould; the everyday plant's fifteen-minute checks stay the
+stand-in they always were, with no station, because nothing measured them.
+
 ## For a 3D model
 
 Everything a model of this plant needs is in `line.json` (the stations) and

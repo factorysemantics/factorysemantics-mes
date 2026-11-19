@@ -221,6 +221,7 @@ DEFAULTS = {
     "badge": "pre-alpha · simulated plant · v{version}",
     "budget_seconds": 45.0,
     "gif_skip_seconds": 2.0,
+    "gif_seconds": None,
     "width": 1280,
     "height": 720,
     "user": "ADMIN",
@@ -272,6 +273,8 @@ CALLOUT_STYLES = ("box", "spotlight")
 CALLOUT_PAD = 6
 #: How long a `say` looks for the thing its `at` names before the take is refused.
 CALLOUT_FIND_SECONDS = 2.0
+# How many times a thing the page replaced as it was about to be outlined is looked for again.
+CALLOUT_REDRAWN_TRIES = 4
 
 
 # --------------------------------------------------------------- the scene
@@ -308,6 +311,16 @@ def load_scene(path: Path) -> dict:
         scene["lesson"] = str(scene["lesson"])
     if scene["take_is"] not in ("lesson", "teaser"):
         raise SystemExit(f"{path}: `take_is` is \"lesson\" or \"teaser\"")
+    # A take too long for any GIF under the limit (a film's screen take runs
+    # minutes, and a GIF of it at the smallest setting is half again too
+    # heavy) keeps its whole length in the mp4 and makes its GIF of the first
+    # `gif_seconds` only: a preview to look at, not the take.
+    cut = scene["gif_seconds"]
+    if cut is not None and (isinstance(cut, bool) or not isinstance(cut, (int, float)) or cut <= 0):
+        raise SystemExit(f"{path}: `gif_seconds` is how many seconds of the take the GIF shows, more than 0")
+    if cut is not None and scene.get("lesson") is not None:
+        raise SystemExit(f"{path}: a lesson's GIF is its teaser, cut where the next part begins;"
+                         " `gif_seconds` is for a take that is not a lesson")
     delay = scene.setdefault("type_delay_seconds", TYPE_DELAY_SECONDS)
     if isinstance(delay, bool) or not isinstance(delay, (int, float)) or delay < TYPE_DELAY_FLOOR_SECONDS:
         raise SystemExit(f"{path}: `type_delay_seconds` is the seconds between typed keys, at least"
@@ -585,6 +598,11 @@ def overlay_script(badge: str, captions: bool = True) -> str:
     `sessionStorage` like the caption, so a click that leaves the page finds
     the cursor where it was on the next. A card (a `slide`) is the recorder's
     own picture and nothing is pressed on it: it has no cursor.
+
+    It draws only in the top page. A page the product shows inside a page
+    (the Line page's 3D tab is one) is a document of its own, and the script
+    runs there too: without the guard the first take of class 0.1's second
+    filming had a second cursor and an empty caption bar inside the drawing.
     """
     css = (
         f"#fs-scene-cap{{position:fixed!important;left:0!important;right:{CAPTION_RIGHT_INSET}px!important;"
@@ -624,6 +642,7 @@ def overlay_script(badge: str, captions: bool = True) -> str:
     )
     return f"""
 (() => {{
+  if (window.top !== window) return;
   const KEY = 'fsSceneCaption';
   const remembered = () => {{ try {{ return sessionStorage.getItem(KEY) || ''; }} catch (e) {{ return ''; }} }};
   const draw = () => {{
@@ -678,16 +697,113 @@ def overlay_script(badge: str, captions: bool = True) -> str:
                  {{ duration: {int(RIPPLE_SECONDS * 1000)}, easing: 'ease-out' }}).onfinish = () => ring.remove();
   }};
   // The box round what a line is about, following it if the page moves it, until cleared.
+  //
+  // Its label goes where it covers nothing of the page's: tried in turn above
+  // the box (at its left end, then its right), below it (the same), then
+  // beside its right edge and its left. A spot is taken only if it is wholly
+  // on the frame, below the page's sticky header, above the caption bar, out
+  // of the narrator's corner, off the box, and clear of every line of the
+  // page's own writing (a card's title above the box is the one it used to
+  // cover). The writing is looked for cheaply: the elements under a 5 by 3
+  // grid of points on the spot, and the rectangles of their own text. When no
+  // spot is clear, the same spots are tried again letting the label cover the
+  // boxed thing's own caption and nothing else: its `<label for>`, or the one
+  // short words (30 letters at most) beside it in a field of two ("Status" over a status pill in a
+  // grid of figures, "Characteristic" over its list). With no spot even then,
+  // the label is drawn inside the box's top left and the call says why, which
+  // refuses the take.
   let callout = null;
+  const headerBand = {HEADER_BAND_JS.strip()};
+  const overlaps = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+  const writingUnder = (spot, own) => {{
+    const seen = new Set();
+    for (let i = 0; i < 5; i++) for (let j = 0; j < 3; j++) {{
+      const x = spot.x + 1 + (spot.w - 2) * i / 4, y = spot.y + 1 + (spot.h - 2) * j / 2;
+      for (const node of document.elementsFromPoint(x, y)) {{
+        if (seen.has(node) || (node.id && node.id.startsWith('fs-scene'))) continue;
+        seen.add(node);
+        for (const text of node.childNodes) {{
+          if (text.nodeType !== Node.TEXT_NODE || !text.textContent.trim() || own.has(text)) continue;
+          const range = document.createRange();
+          range.selectNodeContents(text);
+          for (const r of range.getClientRects()) {{
+            const line = {{ x: r.left, y: r.top, w: r.width, h: r.height }};
+            if (overlaps(spot, line)) return text.textContent.trim().slice(0, 40);
+          }}
+        }}
+      }}
+    }}
+    return null;
+  }};
+  // The boxed thing's own caption, as text nodes: what labels it and nothing else.
+  const captionOf = (el) => {{
+    const words = new Set();
+    const take = (node) => {{
+      const walk = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+      while (walk.nextNode()) words.add(walk.currentNode);
+    }};
+    for (const label of el.labels || []) take(label);
+    const field = el.parentElement;
+    if (field && field.children.length === 2) {{
+      const other = [...field.children].find((child) => child !== el);
+      if (!other.contains(el) && other.textContent.trim().length <= 30) take(other);
+    }}
+    return words;
+  }};
+  const labelSpot = (el, r, tab, pad) => {{
+    const w = tab.offsetWidth, h = tab.offsetHeight, gap = 4;
+    const box = {{ x: r.left - pad, y: r.top - pad, w: r.width + 2 * pad, h: r.height + 2 * pad }};
+    const band = headerBand(el);
+    const cap = document.getElementById('fs-scene-cap');
+    const capTop = cap && cap.offsetHeight ? cap.getBoundingClientRect().top : innerHeight;
+    const floor = Math.min(innerHeight - {CAPTION_HEIGHT}, capTop);
+    const corner = {{ x: innerWidth - {AVATAR_WIDTH}, y: innerHeight - {AVATAR_HEIGHT},
+                     w: {AVATAR_WIDTH}, h: {AVATAR_HEIGHT} }};
+    const atLeft = Math.max(0, box.x), atRight = Math.min(innerWidth, box.x + box.w) - w;
+    const above = box.y - gap - h, below = box.y + box.h + gap, top = Math.max(box.y, band);
+    const tries = [
+      ['above', atLeft, above], ['above, right', atRight, above],
+      ['below', atLeft, below], ['below, right', atRight, below],
+      ['right', box.x + box.w + gap, top], ['left', box.x - gap - w, top],
+    ];
+    // Over its own caption the label sits on the box's edge, as a tab does:
+    // touching the thing's content, never on it.
+    const content = {{ x: r.left, y: r.top, w: r.width, h: r.height }};
+    const onEdge = [
+      ['above', atLeft, r.top - h - 1], ['above, right', atRight, r.top - h - 1],
+      ['below', atLeft, r.bottom + 1], ['below, right', atRight, r.bottom + 1],
+    ];
+    const why = [];
+    for (const own of [new Set(), captionOf(el)]) {{
+      if (why.length && !own.size) break;
+      const off = own.size ? content : box;
+      for (const [side, x, y] of own.size ? onEdge : tries) {{
+        const spot = {{ x, y, w, h }};
+        const fault = x < 0 || y < 0 || x + w > innerWidth || y + h > innerHeight ? 'off the frame'
+          : y < band ? 'under the header'
+          : y + h > floor ? 'on the caption bar'
+          : overlaps(spot, corner) ? "in the narrator's corner"
+          : overlaps(spot, off) ? 'on the box'
+          : null;
+        const words = fault ? null : writingUnder(spot, own);
+        if (!fault && !words) return {{ side: own.size ? `${{side}}, over its own caption` : side,
+                                        dx: x - r.left, dy: y - r.top }};
+        if (!own.size) why.push(`${{side}}: ${{fault || `over "${{words}}"`}}`);
+      }}
+    }}
+    return {{ side: null, dx: Math.max(0, box.x) - r.left + 6, dy: Math.max(0, box.y) - r.top + 6,
+              why: why.join('; ') }};
+  }};
   window.__sceneCallout = (el, label, style) => {{
     window.__sceneCalloutClear();
     const box = document.createElement('div');
     box.id = 'fs-scene-callout';
     if (style === 'spotlight') box.classList.add('fs-spot');
     const tab = label ? document.createElement('div') : null;
-    if (tab) {{ tab.id = 'fs-scene-callout-label'; tab.textContent = label; }}
+    if (tab) {{ tab.id = 'fs-scene-callout-label'; tab.textContent = label; tab.style.left = '-9999px'; }}
     document.documentElement.append(box, ...(tab ? [tab] : []));
     const pad = {CALLOUT_PAD};
+    const spot = tab && el.isConnected ? labelSpot(el, el.getBoundingClientRect(), tab, pad) : null;
     const place = () => {{
       if (callout === null || callout.box !== box) return;
       if (el.isConnected) {{
@@ -696,16 +812,9 @@ def overlay_script(badge: str, captions: bool = True) -> str:
         box.style.top = (r.top - pad) + 'px';
         box.style.width = (r.width + 2 * pad) + 'px';
         box.style.height = (r.height + 2 * pad) + 'px';
-        if (tab) {{
-          // On the box's top left, outside it; below the box when the box is at
-          // the top; inside its top left when it fills the frame both ways.
-          const high = tab.offsetHeight;
-          const aboveAt = r.top - pad - high - 2;
-          const belowAt = r.bottom + pad + 2;
-          const floor = innerHeight - {CAPTION_HEIGHT};
-          tab.style.left = Math.max(0, r.left - pad) + 'px';
-          tab.style.top = (aboveAt >= 0 ? aboveAt
-            : belowAt + high <= floor ? belowAt : Math.max(0, r.top - pad) + 6) + 'px';
+        if (spot) {{
+          tab.style.left = (r.left + spot.dx) + 'px';
+          tab.style.top = (r.top + spot.dy) + 'px';
         }}
       }}
       callout.frame = requestAnimationFrame(place);
@@ -713,7 +822,13 @@ def overlay_script(badge: str, captions: bool = True) -> str:
     callout = {{ box, tab, frame: 0 }};
     place();
     const drawn = box.getBoundingClientRect();
-    return {{ x: drawn.left, y: drawn.top, w: drawn.width, h: drawn.height }};
+    const answer = {{ x: drawn.left, y: drawn.top, w: drawn.width, h: drawn.height }};
+    if (tab) {{
+      const t = tab.getBoundingClientRect();
+      answer.label = {{ x: t.left, y: t.top, w: t.width, h: t.height, side: spot ? spot.side : null,
+                        why: spot && spot.why ? spot.why : null }};
+    }}
+    return answer;
   }};
   window.__sceneCalloutClear = () => {{
     if (!callout) return;
@@ -919,7 +1034,7 @@ class BrowserStage:
         began, and `ripple_at`, the second the ripple started; and `x`, `y`,
         the point it went to.
         """
-        target.scroll_into_view_if_needed()
+        scroll_onto_frame(target)
         box = target.bounding_box()
         if box is None:
             return {}
@@ -1014,23 +1129,45 @@ class BrowserStage:
             raise SystemExit(f"step {self.step_number}: the `say` points `at = {at!r}`, and nothing on the page"
                              f" matches it within {CALLOUT_FIND_SECONDS:g} s; the take is refused rather than"
                              " filmed without its box") from None
-        self.clear_of_caption(at)
-        target.scroll_into_view_if_needed()
-        handle = target.element_handle()
-        handle.evaluate(CLEAR_OF_HEADER_SCRIPT, CALLOUT_HEADROOM)
-        handle.evaluate(SETTLE_SCRIPT, [STILL_FOR_SECONDS * 1000, STILL_WITHIN_SECONDS * 1000])
-        drawn = handle.evaluate(
-            "(el, [text, label, style]) => {"
-            " window.__sceneSay(text); return window.__sceneCallout(el, label, style); }",
-            [line, label, style],
-        )
+        # A page that redraws itself on a timer (the floor's cards) can replace
+        # the element while it is being brought into view and left to go still;
+        # the box would then be drawn round nothing. The thing is looked for
+        # again, a few times, rather than outlined once it has left the page.
+        drawn = None
+        for _ in range(CALLOUT_REDRAWN_TRIES):
+            self.clear_of_caption(at)
+            scroll_onto_frame(target)
+            handle = target.element_handle()
+            handle.evaluate(CLEAR_OF_HEADER_SCRIPT, CALLOUT_HEADROOM)
+            handle.evaluate(SETTLE_SCRIPT, [STILL_FOR_SECONDS * 1000, STILL_WITHIN_SECONDS * 1000])
+            drawn = handle.evaluate(
+                "(el, [text, label, style]) => {"
+                " if (!el.isConnected) return null;"
+                " window.__sceneSay(text); return window.__sceneCallout(el, label, style); }",
+                [line, label, style],
+            )
+            if drawn is not None:
+                break
+        if drawn is None:
+            raise SystemExit(f"step {self.step_number}: the page redrew `at = {at!r}` each of"
+                             f" {CALLOUT_REDRAWN_TRIES} times it was about to be outlined; the take is refused"
+                             " rather than filmed with a box round nothing")
         width, height = self.page.viewport_size["width"], self.page.viewport_size["height"]
         left, top = max(0, round(drawn["x"])), max(0, round(drawn["y"]))
         right = min(width, round(drawn["x"] + drawn["w"]))
         bottom = min(height, round(drawn["y"] + drawn["h"]))
         box = {"x": left, "y": top, "w": max(0, right - left), "h": max(0, bottom - top)}
-        print(f"         box {box}" + (f"  {label!r}" if label else ""), flush=True)
-        return {"box": box, "label": label, "selector": at, "style": style}
+        pointer = {"box": box, "label": label, "selector": at, "style": style}
+        if label:
+            tab = drawn["label"]
+            if tab["side"] is None:
+                raise SystemExit(f"step {self.step_number}: the label {label!r} on the box round `at = {at!r}` has"
+                                 f" no clear spot outside the box ({tab['why']}); the take is refused rather than"
+                                 " filmed with the label over the page's own writing")
+            pointer["label_box"] = {key: round(tab[key]) for key in ("x", "y", "w", "h")}
+        print(f"         box {box}" + (f"  {label!r} {pointer['label_box']} {drawn['label']['side']}"
+                                           if label else ""), flush=True)
+        return pointer
 
     def hold(self, seconds: float) -> None:
         self.note(f"hold {seconds}s", "hold")
@@ -1208,7 +1345,8 @@ def slide_html(title: str, lines: list[str]) -> str:
         f"#fs-slide-body{{position:absolute;left:96px;top:96px;right:{AVATAR_WIDTH + 60}px;"
         f"bottom:{AVATAR_HEIGHT + 20}px;overflow:hidden}}"
         "h1{font-size:54px;line-height:1.15;font-weight:700;margin:0 0 30px}"
-        "ul{margin:0;padding:0 0 0 1.1em}"
+        # The list takes the items' size so its bullets sit inside the box, not cut at its edge.
+        "ul{margin:0;padding:0 0 0 1.1em;font-size:32px}"
         "li{font-size:32px;line-height:1.35;font-weight:500;margin:0 0 14px}"
         "</style></head><body><div id='fs-slide'><div id='fs-slide-body'>"
         f"<h1>{html.escape(title)}</h1><ul>{items}</ul></div></div></body></html>"
@@ -1283,8 +1421,9 @@ CALLOUT_HEADROOM = 48
 #: recorder's own layer); when the element's top is inside it, the element
 #: is scrolled to sit `headroom` below the band. `scroll-margin-top` does the
 #: scrolling so that a thing inside a scrolling panel is moved too.
-CLEAR_OF_HEADER_SCRIPT = """
-(node, headroom) => {
+#: The band itself: how far down the window the stuck things reach over `node`'s width.
+HEADER_BAND_JS = """
+(node) => {
   const box = node.getBoundingClientRect();
   const stuck = [];
   for (const el of document.body.querySelectorAll('*')) {
@@ -1304,6 +1443,15 @@ CLEAR_OF_HEADER_SCRIPT = """
       if (r.top <= band + 2 && r.bottom > band) { band = r.bottom; grew = true; }
     }
   }
+  return band;
+}
+"""
+
+#: Bring the element out from under the band.
+CLEAR_OF_HEADER_SCRIPT = """
+(node, headroom) => {
+  const box = node.getBoundingClientRect();
+  const band = (""" + HEADER_BAND_JS.strip() + """)(node);
   if (!band || box.top >= band + headroom) return band;
   const was = node.style.scrollMarginTop;
   node.style.scrollMarginTop = (band + headroom) + 'px';
@@ -1599,7 +1747,8 @@ def readme(scene: dict, facts: dict) -> str:
         "- `marks.json` — the seconds every step landed at; the frame's size and the GIF's; on every"
         " click, `x` and `y`, the pixel of the mp4's frame the click landed on, and on every click, fill"
         " and choose `cursor_from` and `ripple_at`; on a line that points at something, `box`"
-        " (`x`, `y`, `w`, `h` in the mp4's pixels), `label`, `selector` and `style`",
+        " (`x`, `y`, `w`, `h` in the mp4's pixels), `label`, `selector` and `style`, and with a label"
+        " `label_box`, where the label sat",
         "",
     ]
     return "\n".join(lines)
@@ -1674,7 +1823,8 @@ def marks_document(scene: dict, made: dict, gif: Path, gif_seconds_taken: float)
     `ripple_at` (the second its ripple started, as the press was sent), and a
     `fill` or `choose` also `x`, `y` (where it pointed) and a `fill`
     `typed_seconds`; a `say` with `at` carries `box` (`{x, y, w, h}`, integers,
-    in frame pixels, clipped to the frame), `label`, `selector` and `style`.
+    in frame pixels, clipped to the frame), `label`, `selector` and `style`,
+    and, when it has a label, `label_box` (`{x, y, w, h}`), where the label sat.
     """
     return {
         "frame": {"width": int(scene["width"]), "height": int(scene["height"])},
@@ -1685,6 +1835,24 @@ def marks_document(scene: dict, made: dict, gif: Path, gif_seconds_taken: float)
         "gif_seconds": round(gif_seconds_taken, 2),
         "marks": made["marks"],
     }
+
+
+def scroll_onto_frame(target, tries: int = CALLOUT_REDRAWN_TRIES) -> None:
+    """Scroll the thing a locator names onto the frame, through a page redrawing it on a timer.
+
+    Playwright finds the element, then waits for it to go still; a list the
+    page redraws every couple of seconds (the floor's cards, the orders
+    table) can replace it in between, and Playwright gives up with "Element
+    is not attached to the DOM" (the third take of class 0.2 stopped on the
+    order row that way). The locator is asked again, which finds the copy.
+    """
+    for attempt in range(tries):
+        try:
+            target.scroll_into_view_if_needed()
+            return
+        except Exception as fault:  # playwright's Error; the recorder imports it lazily
+            if "not attached" not in str(fault) or attempt == tries - 1:
+                raise
 
 
 def badge_box(width: int, height: int) -> tuple[float, float, float, float]:
@@ -2926,7 +3094,13 @@ def take(scene: dict, args, out: Path, final: Path, name: str, course, module, l
     skip = float(scene["gif_skip_seconds"])
     make_mp4(made["video"], mp4)
     # A lesson's GIF is its teaser: the hook, cut where the next part begins.
-    cut = teaser_length(made["marks"], skip) if lesson and not teaser_only else None
+    # A take that is not a lesson may name its own: `gif_seconds`, a preview.
+    if lesson and not teaser_only:
+        cut = teaser_length(made["marks"], skip)
+    elif scene["gif_seconds"] is not None:
+        cut = float(scene["gif_seconds"])
+    else:
+        cut = None
     setting, gif_bytes, fps = make_gif(made["video"], gif, skip, cut)
     # And the same teaser as a video, for whoever posts it where a GIF will not
     # play: cut from the same take at the same two seconds, so the two agree.
@@ -3012,7 +3186,9 @@ def take(scene: dict, args, out: Path, final: Path, name: str, course, module, l
                          f"— the GIF is {length:.1f} s of it, and the mp4 is the whole of it")
     if lesson and length > TEASER_SECONDS + 0.5:
         raise SystemExit(f"the teaser runs {length:.1f} s, over the {TEASER_SECONDS} s a teaser may")
-    if not lesson and not math.isclose(length, gif_seconds(scene), abs_tol=max(4.0, gif_seconds(scene) * 0.25)):
+    planned = gif_seconds(scene)
+    if (not lesson and scene["gif_seconds"] is None
+            and not math.isclose(length, planned, abs_tol=max(4.0, planned * 0.25))):
         print(f"  note   the take ran {length:.1f} s against a plan of {gif_seconds(scene):.1f} s"
               " — a `wait_for` waited, or the plant was slow")
 

@@ -139,3 +139,25 @@ def test_every_scene_in_the_repo_still_loads_and_points_at_nothing_it_did_not_be
 
 def test_the_label_on_a_box_is_held_out_of_the_avatars_corner_like_the_caption(runner):
     assert "'fs-scene-callout-label'" in runner.CORNER_SCRIPT
+
+
+def test_a_thing_the_page_replaced_while_it_was_scrolled_to_is_asked_for_again_and_a_real_fault_is_not(runner):
+    """The orders table redraws on a timer; the third take of class 0.2 stopped on its row, "not attached"."""
+
+    class Row:
+        def __init__(self, faults):
+            self.faults, self.asked = list(faults), 0
+
+        def scroll_into_view_if_needed(self):
+            self.asked += 1
+            if self.faults:
+                raise RuntimeError(self.faults.pop(0))
+
+    redrawn = Row(["Element is not attached to the DOM"] * 2)
+    runner.scroll_onto_frame(redrawn)
+    assert redrawn.asked == 3
+
+    with pytest.raises(RuntimeError, match="Timeout"):
+        runner.scroll_onto_frame(Row(["Timeout 30000ms exceeded"]))
+    with pytest.raises(RuntimeError, match="not attached"):
+        runner.scroll_onto_frame(Row(["Element is not attached to the DOM"] * 9), tries=3)

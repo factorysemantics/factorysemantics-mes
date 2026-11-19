@@ -9,6 +9,13 @@
 # is shown as the product draws it. The last beat is the rule the rest of the
 # course leans on: the MES knows nothing about a machine until the machine or a
 # person reports it.
+#
+# The second filming (Scott, 2026-11-15: "Just the screen doesn't explain
+# anything") keeps every caption studio voiced, word for word, puts a box on
+# what each line on the screen is about, and gets from page to page by the
+# menus and links a person would click. Two pages are opened by address: the
+# first, and the one the camera comes back to after the cards, because a card
+# is the recorder's page and has no menu to click.
 
 name = "what-a-factory-does-all-day"
 title = "What a factory does all day"
@@ -17,8 +24,10 @@ take_is = "lesson"
 part = "hook"
 base = "http://127.0.0.1:8040"
 badge = "pre-alpha · simulated plant · v{version}"
-# Four to six minutes, as the outline says this class runs.
-budget_seconds = 360
+# Four to six minutes, as the outline says this class runs, and up to half a
+# minute more for getting from page to page by the menus (Scott, 2026-11-15:
+# click through the menus even if the class runs longer).
+budget_seconds = 390
 gif_skip_seconds = 2.0
 width = 1280
 height = 720
@@ -31,6 +40,9 @@ notes = [
   "The machines page labels a line WORK CENTER and a machine WORK UNIT, which are the ISA-95 words. The narration says line and machine and names the labels once.",
   "Each line runs its own work order on this plant: the stacker's order is for stacks, not forks. The narration follows the product along the steps and does not claim that one physical fork is traced from mould to pallet; tracing lots is class 2.3.",
   "The line pages show OEE figures with Watched at a few percent: the cutlery pack sets no coverage floor, so nothing is withheld. This class does not read those figures; OEE is class 3.3.",
+  "The class is clicked through as a person would. It opens on line FORK1's page and clicks its 3D tab; after the cards it comes back to that page by address, because a card is the recorder's page and has no menu, then clicks Engineering for the machines tree and FORK1_Mold in the tree. The machine page's own trail leads back to line FORK1, and the stacker, the wrapper and the pallet line are picked from the Line page's Line list; the pallet line's drawing is its 3D tab. The way back to the mould is Engineering and the tree again, then its OEE tab.",
+  "The 3D drawing is filmed as the Line page's 3D tab, not the full-screen 3D page the first filming opened on: the full-screen page draws its menus under the drawing, so nothing on it can be clicked to leave it. The lines said over the drawing have no box, because the drawing is a page inside the page and the box is drawn on the outer one; the drawing's own readout carries the order, the good and the scrap, and its cards each machine.",
+  "Two more lines have no box on purpose: the replay banner is the page's own header, and the narration names it; and the last line of the rule is about every gap, not one figure on the screen.",
 ]
 
 honesty = [
@@ -50,19 +62,37 @@ booked = 1
 
 # ----------------------------------------------------------------- the hook
 
+# The one page opened by address before the cards: line FORK1, then its 3D
+# tab. The class leaves for the cards with the drawing showing: leaving the
+# Line page after its drawing was opened and hidden again holds the camera on
+# a frozen page for seconds.
 [[step]]
 do = "goto"
-url = "/dashboard/line/3d?line=FORK1LINE"
-settle = 3
+url = "/dashboard/line?line=FORK1LINE"
+settle = 2
 
 [[step]]
 do = "wait_for"
-selector = "#stat-order"
-text = "WO-FORK1-0001"
+selector = "#l-name"
+text = "Moulding line FORK1"
 
 [[step]]
 do = "say"
 line = "A moulding line that makes plastic forks."
+at = "#l-name"
+label = "The line"
+
+[[step]]
+do = "click"
+selector = "[data-tab=scene]"
+
+[[step]]
+do = "wait_for"
+js = "(document.querySelector('#scene')?.contentDocument?.querySelector('#stat-order')?.innerText || '').includes('WO-FORK1-0001')"
+scroll_to = "#scene"
+scroll_block = "start"
+# The page's header stays at the top as it scrolls: 214 px clears it.
+scroll_offset = 214
 
 [[step]]
 do = "say"
@@ -75,16 +105,6 @@ name = "hook"
 [[step]]
 do = "say"
 line = "By the end of the shift, someone has to know what each machine did."
-
-[[step]]
-do = "goto"
-url = "/dashboard/line?line=FORK1LINE"
-settle = 2.5
-
-[[step]]
-do = "wait_for"
-selector = "#l-code"
-text = "FORK1LINE"
 
 [[step]]
 do = "say"
@@ -161,11 +181,22 @@ line = "A company has sites. A site has areas. An area has lines, and a line has
 
 # ------------------------------------------------------------ on the screen
 
+# Back from the cards to the page the hook left, by address (a card has no
+# menu), and from there by the Engineering menu to the machines tree.
 [[step]]
 part = "screen"
 do = "goto"
-url = "/dashboard/machines"
-settle = 3
+url = "/dashboard/line?line=FORK1LINE"
+settle = 2
+
+[[step]]
+do = "wait_for"
+selector = "#l-code"
+text = "FORK1LINE"
+
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"Engineering\")"
 
 [[step]]
 do = "wait_for"
@@ -175,10 +206,12 @@ text = "CUTLERYCO"
 [[step]]
 do = "say"
 line = "Here is that tree for this plant. The enterprise, Cutlery Co. One site, Cutlery Works."
+at = "#tree a:text-is(\"CUTLERYCO\")"
 
 [[step]]
 do = "say"
 line = "The moulding area, and in it, line FORK1. The screen says work center; it means the line."
+at = "#tree .node:has(> a:text-is(\"FORK1LINE\")) .level"
 
 [[step]]
 do = "mark"
@@ -187,10 +220,7 @@ name = "tree"
 [[step]]
 do = "say"
 line = "Under the line, its three machines, each a work unit: the degater, the marker, and the mould."
-
-[[step]]
-do = "say"
-line = "Further down, the same plant has a stacking area, a wrapping area and a palletizing area."
+at = "#tree .node:has(> a:text-is(\"FORK1_Degate\")) .level"
 
 [[step]]
 do = "wait_for"
@@ -203,12 +233,17 @@ scroll_offset = 260
 
 [[step]]
 do = "say"
-line = "A fork's road runs through all four."
+line = "Further down, the same plant has a stacking area, a wrapping area and a palletizing area."
+at = "#tree a:text-is(\"STACK-AREA\")"
 
 [[step]]
-do = "goto"
-url = "/dashboard/machine/FORK1_Mold?hours=8"
-settle = 3
+do = "say"
+line = "A fork's road runs through all four."
+
+# The mould, by its name in the tree.
+[[step]]
+do = "click"
+selector = "#tree a:text-is(\"FORK1_Mold\")"
 
 [[step]]
 do = "wait_for"
@@ -218,6 +253,8 @@ text = "WO-FORK1-0001"
 [[step]]
 do = "say"
 line = "The mould. It is running, on order WO-FORK1-0001, at its step: Mold, operation 10."
+at = "#m-op"
+label = "Its step"
 
 [[step]]
 do = "say"
@@ -238,64 +275,101 @@ scroll_offset = 400
 [[step]]
 do = "say"
 line = "And below, what the machine itself reports: its temperature, its cycle time, its good and scrap counts."
+at = "#tags-table tr[data-tag=\"GoodCount\"] td.num"
+label = "Good count"
 
 [[step]]
 do = "say"
 line = "The age column says how long ago each number arrived."
+at = "#tags-table thead th:last-child"
+label = "Age"
 
+# Back to line FORK1 by the machine page's own trail, and on to the stacker
+# by the Line page's Line list.
 [[step]]
-do = "goto"
-url = "/dashboard/line?line=STACK07LINE"
-settle = 3
+do = "click"
+selector = "#crumbs a:text-is(\"Moulding line FORK1\")"
 
 [[step]]
 do = "wait_for"
 selector = "#l-code"
-text = "STACK07LINE"
+text = "FORK1LINE"
+
+[[step]]
+do = "choose"
+selector = "#line"
+value = "STACK07LINE"
+
+[[step]]
+do = "wait_for"
+selector = "#tiles"
+text = "STACK07_Stacker"
 
 [[step]]
 do = "say"
 line = "Next on the road, the stacker. It puts a fork, a spoon and a knife into one stack."
+at = "#tiles .machine:has(a:text-is(\"STACK07_Stacker\")) .machine-head"
 
 [[step]]
 do = "say"
 line = "A different line, a different order, and its count is in stacks, not forks."
+at = "#tiles .machine:has(a:text-is(\"STACK07_Stacker\")) .machine-meta span:first-child"
 
 [[step]]
 do = "mark"
 name = "stacker"
 
 [[step]]
-do = "goto"
-url = "/dashboard/line?line=WRAP03LINE"
-settle = 3
+do = "choose"
+selector = "#line"
+value = "WRAP03LINE"
 
 [[step]]
 do = "wait_for"
-selector = "#l-code"
-text = "WRAP03LINE"
+selector = "#tiles"
+text = "WRAP03_Wrapper"
 
 [[step]]
 do = "say"
 line = "Then the wrapper: each stack sealed onto a paper plate. That is the product a customer buys."
+at = "#tiles .machine:has(a:text-is(\"WRAP03_Wrapper\")) .machine-head"
 
 [[step]]
 do = "say"
 line = "The banner across the top says this plant is replaying at ten times speed, so a shift fits into a class."
 
+# The pallet line from the same list, and its drawing on the 3D tab.
 [[step]]
-do = "goto"
-url = "/dashboard/line/3d?line=PAL1LINE"
-settle = 4
+do = "choose"
+selector = "#line"
+value = "PAL1LINE"
 
 [[step]]
 do = "wait_for"
-selector = "#stat-order"
-text = "WO-PAL1-0001"
+selector = "#l-code"
+text = "PAL1LINE"
+
+[[step]]
+do = "click"
+selector = "[data-tab=scene]"
+
+[[step]]
+do = "wait_for"
+js = "(document.querySelector('#scene')?.contentDocument?.querySelector('#stat-order')?.innerText || '').includes('WO-PAL1-0001')"
 
 [[step]]
 do = "say"
 line = "And last, the palletizer and the stretch wrapper. Wrapped sets go onto a pallet, and the pallet goes out the door."
+at = "#l-name"
+label = "The pallet line"
+
+[[step]]
+do = "wait_for"
+js = "(document.querySelector('#scene')?.contentDocument?.querySelector('#stat-order')?.innerText || '').includes('WO-PAL1-0001')"
+scroll_to = "#scene"
+scroll_block = "start"
+# The page's header stays at the top as it scrolls: 214 px clears it.
+scroll_offset = 214
 
 [[step]]
 do = "say"
@@ -311,15 +385,40 @@ line = "Every count on the way is one the floor booked, and none was worked out 
 
 # -------------------------------------------------------------- it refuses
 
+# Back to the mould the way the class first reached it: Engineering, then
+# its name in the tree.
 [[step]]
 part = "refuses"
-do = "goto"
-url = "/dashboard/machine/FORK1_Mold?hours=8"
-settle = 3
+do = "click"
+selector = "header nav a:text-is(\"Engineering\")"
+
+[[step]]
+do = "wait_for"
+selector = "#tree"
+text = "FORK1_Mold"
+
+[[step]]
+do = "click"
+selector = "#tree a:text-is(\"FORK1_Mold\")"
+
+[[step]]
+do = "wait_for"
+selector = "#m-order"
+text = "WO-FORK1-0001"
 
 [[step]]
 do = "click"
 selector = "[data-tab=oee]"
+
+[[step]]
+do = "wait_for"
+selector = "#oee-ledger"
+text = "before first sample"
+
+[[step]]
+do = "say"
+line = "Now the one rule this whole course leans on. The mould again, over the last eight hours."
+at = "#machine-span select"
 
 [[step]]
 do = "wait_for"
@@ -331,11 +430,10 @@ scroll_offset = 30
 
 [[step]]
 do = "say"
-line = "Now the one rule this whole course leans on. The mould again, over the last eight hours."
-
-[[step]]
-do = "say"
 line = "This plant is a few minutes old. Almost all of those hours are before first sample."
+at = "#oee-ledger li:has-text(\"before first sample\") .cause"
+label = "Nobody reported"
+style = "spotlight"
 
 [[step]]
 do = "mark"
@@ -344,10 +442,14 @@ name = "before-first-sample"
 [[step]]
 do = "say"
 line = "The MES does not guess what the mould did then. It was not told, so it says it does not know."
+at = "#oee-ledger li:has-text(\"before first sample\") .num"
+label = "Not guessed"
 
 [[step]]
 do = "say"
 line = "Nothing is known until a machine or a person reports it: the machine over its tags, a person at the station."
+at = "#oee-window"
+label = "Watched"
 
 [[step]]
 do = "say"

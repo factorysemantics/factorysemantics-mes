@@ -1,0 +1,32 @@
+Before software, a plant kept track like this: a whiteboard, a clipboard, a tally at the end of the shift.
+Roughly right, written up late, and nobody can say where each number came from.
+This is what replaces it. The same plant, right now, counted as it happens.
+A plant has three layers of systems, and the MES is the one in the middle.
+Above it, the office system, called the ERP. It takes the customer's order and says what to make, how many, and by when.
+Below it, the machines and their controllers, called PLC and SCADA. They run the steps and report what they did.
+In the middle, the MES. It turns the office's order into work on the floor, and the floor's reports into what actually happened.
+Three things it is not. It is not the ERP: it does not sell, buy or invoice.
+It is not the historian, the store of every temperature and pressure. It keeps what those readings mean for an order.
+And it is not a spreadsheet. Nobody types the counts in at the end of the shift; the machines and the people report them as they happen.
+The top of the floor screen. Four tiles, each one a question the plant asks every day.
+Machines running: how many of the eighty-three are running right now.
+Active orders: how many orders are out on the floor.
+Plant OEE: how well the machines are doing, and underneath, how many machines that average is drawn from.
+And the ERP queue: whether there is news still waiting to go back up to the office.
+Now one order, all the way round. Stacker line seven: make 260 stacks of a fork, a spoon and a knife.
+The order came down from above: released to the floor, with a quantity and a material.
+On this plant there is no real office system connected, so the plant's own order book released it.
+Its status says completed, and the booked count is what the machine reported, stack by stack.
+The machine that did the work. The stacker took the order, ran it, and counted every stack it made.
+When the last stack was counted the order finished, and the stacker went straight on to the next one.
+Then the news goes back up. When an order finishes, the MES writes a confirmation for the office: how many good, how many scrap.
+This is the outbox: every message for the office, the confirmations and the machines' states alike. With no office system connected here, they wait as pending, and the tile said sending.
+And it is on the audit trail: our order's line says when it was completed, who completed it, and which order it was.
+Who can be a person or a machine's agent. There is a line for every change, so every number can be traced back to where it came from.
+That is the difference from the whiteboard. Not just the number, but a line saying where it came from.
+One more word, and it is the most important one: watched.
+Under every machine, the MES says how much of the last eight hours it actually saw.
+This plant is a few minutes old, so it saw only a few percent. It says so, beside the figure, instead of hiding it.
+The rest of the window is unknown. It is not counted as running, and it is not counted as stopped.
+A figure that says how little was seen, or a tile that says no figure, is the MES being honest, not broken.
+That is where the MES sits, what it is not, and the word that keeps it honest. You now know how to do three things.

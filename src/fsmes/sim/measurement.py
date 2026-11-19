@@ -187,6 +187,97 @@ def plans(script: dict) -> dict[str, Plan]:
 
 
 @dataclass(frozen=True)
+class Follows:
+    """A tag the spread of a characteristic grows with.
+
+    While the machine's `tag` reads above `above`, one sigma of the pieces
+    it makes grows by `sigma_per_unit` for every unit over. Below it the
+    spread is the rule's own and nothing else: a mould a degree or two warm
+    on ordinary noise makes ordinary forks. The centre does not move - a
+    hot mould makes forks that wander both ways, which is why the average
+    of a chart of them stays put while its range climbs.
+    """
+
+    tag: str
+    above: float
+    sigma_per_unit: float
+
+
+@dataclass(frozen=True)
+class PieceRule:
+    """One characteristic measured off a piece a named machine made.
+
+    Width is the case this was written for: no machine on a moulding line
+    publishes a width - an inspector takes a fork off the line after the
+    mould and puts a gauge on it - so there is no tag to read the number
+    off, as there is for a filler's fill weight. What the floor does know is
+    which mould made the fork and what that mould's own tags read while it
+    did. So the reading is drawn here, around the rule's centre, with a
+    spread that may follow one of those tags, and the check records the
+    mould as its station: a chart of the readings can be split by mould, and
+    the point panel can show that mould's tags beside the point.
+
+    Every number is the pack's, in its floor script, and a script with no
+    `pieces` section has no rules: its floor inspects exactly as before.
+    """
+
+    material: str
+    characteristic: str
+    #: The machines that make this material, one of which made each piece.
+    stations: tuple[str, ...]
+    centre: float
+    sigma: float
+    every_line_s: float = 900.0
+    follows: Follows | None = None
+
+    def spread(self, reading: float | None) -> float:
+        """One sigma of the pieces made while the followed tag reads `reading`.
+
+        `None` is only allowed for a rule that follows nothing: a rule that
+        follows a tag nobody can read has no spread to give, and the caller
+        takes no reading rather than guessing one (unknown is not zero).
+        """
+        if self.follows is None:
+            return self.sigma
+        if reading is None:
+            raise ValueError(f"{self.characteristic} follows {self.follows.tag}, "
+                             "which has no reading")
+        over = max(float(reading) - self.follows.above, 0.0)
+        return self.sigma + self.follows.sigma_per_unit * over
+
+    def draw(self, rng: random.Random, reading: float | None) -> float:
+        """The true value of one piece. Deterministic for a seed and a reading."""
+        return rng.gauss(self.centre, self.spread(reading))
+
+
+def piece_rules(script: dict) -> list[PieceRule]:
+    """The piece rules in one floor script, in the order it writes them.
+
+    A script with no `pieces` section has none, which is every pack written
+    before this existed - the everyday cutlery shift among them.
+    """
+    section = script.get("pieces") or {}
+    every = float(section.get("every_line_s") or 900.0)
+    out: list[PieceRule] = []
+    for entry in section.get("rules") or []:
+        if not isinstance(entry, dict):
+            continue
+        follows = entry.get("follows")
+        out.append(PieceRule(
+            material=str(entry["material"]),
+            characteristic=str(entry["characteristic"]),
+            stations=tuple(str(s) for s in entry["stations"]),
+            centre=float(entry["centre"]),
+            sigma=float(entry["sigma"]),
+            every_line_s=float(entry.get("every_line_s") or every),
+            follows=Follows(tag=str(follows["tag"]), above=float(follows["above"]),
+                            sigma_per_unit=float(follows["sigma_per_unit"]))
+            if follows else None,
+        ))
+    return out
+
+
+@dataclass(frozen=True)
 class Inspection:
     """How a simulated floor counts one stretch of production.
 

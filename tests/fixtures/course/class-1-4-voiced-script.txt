@@ -1,0 +1,29 @@
+On a floor, a bin of work carries a card. It says what to make, how many, and which way.
+Every station the bin passes reads the card, and writes down beside its own step how many good it made.
+The card never counts itself done. At the end, somebody signs it off. That card is a work order.
+Four words. An order says make this many of that material, this way. This way is its routing, the road from the last class.
+Release means the order may now go to the floor. Until then it is a plan, and no machine works on it.
+Dispatch is each machine's queue: the work it has next, in order. And finish is a person saying a step is done, and then the order.
+This is the Orders page. Every order on the plant, its status, what was ordered and what has been booked.
+A planner makes a new one. New order: a code, the material, and how many.
+Forks, UT-FORK. Eleven thousand: about one shift of the fork line, at some twenty-three forks a minute.
+We leave release unticked, so the order is only planned for now. Create.
+Planned. Its steps were copied from the fork line's routing: Mold, Degate, Mark, each on its machine.
+Now release it to the floor.
+Released. Nothing has been made against it yet. Where does it show up? At the first machine of its road.
+The station screen of the fork mould, FORK1_Mold. Its queue: the order it is running now, and ours behind it, nothing made yet.
+That is dispatch. The operator does not hunt for paper: the machine's screen says what is next.
+Each line of the queue says how many good of how many ordered. The next machine, the degating press, gets our order the same way.
+The order in front of ours, WO-FORK1-0001, for 2,778 forks, released when the plant started. It is running.
+Each step books what its own machine counted. Mold has made the most, then Degate, then Mark, the last.
+The order's booked count is the last step's, not the sum. A fork moulded but not yet marked is not a finished fork.
+Now what it refuses. The order has booked past its 2,778, the over-run says by how many, and it is still running.
+An order does not finish itself when the count is reached. A line that has made its number is often still running.
+So every fork it makes past the number is booked to this order, and the over-run is the true one. A person closes it.
+Here that person finishes each step. Mold first.
+Mold is done. The mould's next fork books to the order behind it in its queue, ours.
+Degate, then Mark. Completed.
+And the news goes up. In the outbox, a confirmation for the office, among the machines' state changes: WO-FORK1-0001, waiting to be sent.
+It was written when a person finished the order, not when the count passed the number. So the office hears the number the line really made.
+Back on the order: completed. The over-run beside the ordered number is every fork made past 2,778, still on the order that made them.
+That is a work order's day: planned, released, dispatched, counted step by step, and finished by a person. You now know how to do three things.

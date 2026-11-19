@@ -1,0 +1,28 @@
+A fork is moulded, dropped in a bin, cut off its runner, and marked by a laser. Always in that order.
+Somebody wrote that order down once, so every fork follows it. That written-down road is a routing.
+Here are the three machines of that road, on the floor right now.
+Three words. An operation is one step, done on one machine: moulding, on the mould.
+A sequence is the step's number. Ten comes before twenty, twenty before thirty. The gaps leave room to add a step later.
+And a routing is the operations in sequence, for one material. The fork's routing is moulding, then degating, then marking.
+A routing is a recipe, but a recipe of steps, not of ingredients.
+What goes in, the resin and the plate, is the bill of materials. The routing says what is done to it, in what order, and where.
+Every order for a material runs that material's routing. So the routing is where the floor's work starts.
+This is where a plant keeps its routings: Admin, Routings. Sixty-one of them on this plant, one for each line.
+The first row is the fork line's. Step ten, Mold, on FORK1_Mold. Then twenty, Degate. Then thirty, Mark.
+Beside every step is the cost center it bills to, CC-MOULD01. Nobody typed that into the routing: it comes from the machine's line.
+The plant already has a pallet routing for each palletizing line. Here they are: RT-PAL1 to RT-PAL4.
+Now we define one of our own from scratch, in the form below: RT-PALLET, a second way to make the pallet on line PAL1.
+A code, a name, and the material it makes: PALLET, the outbound pallet of wrapped sets.
+Step ten, Palletizer, on the machine PAL1_Palletizer. Watch the end of the machine's line in the form.
+Cost center CC-PAL01. We did not type it. The form read it from the line the machine is on.
+Add an operation. It numbers itself twenty. StretchWrap, on PAL1_StretchWrap, the same line, so the same cost center.
+Create the routing.
+There it is in the table: RT-PALLET, for PALLET, ten Palletizer then twenty StretchWrap, each with its cost center.
+From now on an order for a pallet can be made this way, and every step knows where it happens and what it bills to.
+Now the things it refuses. First, a routing with no steps at all: a code, a name, and no operation.
+Refused: a routing needs at least one operation. A material with no steps cannot be made.
+Second, the same code twice. We type RT-PALLET again, with one step.
+Refused: that code already exists. A routing's code names one routing, so an order can say which road it takes.
+A step on a machine that does not exist cannot even be asked. The list holds only this plant's own tree, from the company down to each machine.
+And the material is a list with no blank, so it always says something: here, still PALLET. Check it says what you mean before you press create.
+That is a routing: the road a material takes, step by step, machine by machine. You now know how to do three things.
