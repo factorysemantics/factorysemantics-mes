@@ -82,9 +82,9 @@ hold = 5.0
 
 [[step]]
 do = "say"
-line = "Fork width: Cpk 0.665. The process is not capable. The certificate says: see SPC."
+line = "Fork width: Cpk 0.546. The process is not capable. The certificate says: see SPC."
 at = "#cert-body tr:has-text(\"UT-FORK\"):has-text(\"width_mm\")"
-label = "Fork width: Cpk 0.665"
+label = "Fork width: Cpk 0.546"
 hold = 6.0
 
 [[step]]
@@ -103,9 +103,9 @@ text = "width_mm"
 
 [[step]]
 do = "say"
-line = "The first pallet of the shift, same forks, same check: Cpk 1.61. Something changed."
+line = "The first pallet of the shift, same forks, same check: Cpk 1.83. Something changed."
 at = "#cert-body tr:has-text(\"UT-FORK\"):has-text(\"width_mm\")"
-label = "First pallet: Cpk 1.61"
+label = "First pallet: Cpk 1.83"
 hold = 6.0
 
 [[step]]
