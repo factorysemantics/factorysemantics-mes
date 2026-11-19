@@ -8,6 +8,9 @@ Top of the file: `name` (names every file), `title`, `base`, `budget_seconds`,
 `allow_writes` (loopback only), `[plant]` (a scratch plant of the take's own),
 and `type_delay_seconds` — seconds between typed keys, 0.085 by default
 (about twelve a second), never under 0.05.
+A take that is not a lesson may set `gif_seconds`: its GIF is then that many
+seconds from the start, a preview, while the mp4 stays the whole take — for a
+take of minutes, whose GIF would never come in under 10,000,000 bytes.
 
 Each `[[step]]` has a `do`:
 
@@ -48,3 +51,11 @@ bottom right (240 by 200), is scrolled clear first; a thing not on the page
 refuses the take, naming the step. Point `at` something smaller than the
 frame. `label` or `style` without `at` is refused. A box, a label or a press
 that still lands in the narrator's corner fails the take, as a caption there does.
+
+## `film/`
+
+A scene in `film/` is the screen take of a longer film, not a clip of the
+series: one take of a few minutes with marks, which a narrator cuts, voices
+and lays other footage over. It is kept out of the top level for the same
+reason `course/` is: a clip there plans 45 seconds or less, and the test of
+that budget reads the top level only.
