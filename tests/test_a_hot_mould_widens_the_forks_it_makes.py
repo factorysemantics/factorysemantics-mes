@@ -67,6 +67,12 @@ def builder():
     return module
 
 
+def the_story(scene: dict) -> dict[str, tuple[int, int]]:
+    """The scene's own windows, in FORK1's line seconds: the stop, and the hot hold."""
+    events = {e["type"]: (e["start"], e["end"]) for e in scene["events"]["FORK1"]}
+    return {"stop": events["down"], "climb": events["drift"], "hot": events["offset"]}
+
+
 def fork_width(scene: dict) -> measurement.PieceRule:
     return next(r for r in measurement.piece_rules(scene)
                 if (r.material, r.characteristic) == ("UT-FORK", "width_mm"))
@@ -129,7 +135,7 @@ def scene_hour(tmp_path_factory) -> dict[str, dict[int, float]]:
     path.write_text(json.dumps(module.scened_line(line, the_scene())), encoding="utf-8")
     out = path.parent / "out"
     generate.generate(path, out, write_docs=False)
-    temps = {}
+    temps: dict[str, dict[int, float]] = {}
     for mould in ("FORK1_Mold", "FORK2_Mold", "FORK3_Mold"):
         with (out / f"{mould}.csv").open(encoding="ascii", newline="") as f:
             temps[mould] = {int(row["TSec"]): float(row["MeltTemp"]) for row in csv.DictReader(f)}
@@ -141,18 +147,20 @@ def the_checks_the_floor_would_take(rule, temps, seed: int = 7) -> list[tuple[in
     one of the three moulds made, with the spread that mould's melt reads then."""
     rng = random.Random(seed)
     checks = []
-    for t in range(0, 3600, int(rule.every_line_s)):
+    for t in range(0, len(temps["FORK1_Mold"]), int(rule.every_line_s)):
         mould = rng.choice(sorted(rule.stations))
-        checks.append((t, mould, rule.draw(rng, temps[mould][t])))
+        hour = temps[mould]
+        checks.append((t, mould, rule.draw(rng, hour[t % len(hour)])))
     return checks
 
 
 def test_only_the_named_mould_runs_hot_and_only_after_its_stop(scene_hour):
-    fork1 = scene_hour["FORK1_Mold"]
+    fork1, story = scene_hour["FORK1_Mold"], the_story(the_scene())
     above = fork_width(the_scene()).follows.above
-    assert max(fork1[t] for t in range(0, 1500)) < above
-    assert statistics.fmean(fork1[t] for t in range(2400, 2990)) > 236
-    assert min(fork1[t] for t in range(2400, 2990)) > above
+    hot = range(*story["hot"])
+    assert max(fork1[t] for t in range(0, story["stop"][0])) < above
+    assert statistics.fmean(fork1[t] for t in hot) > 236
+    assert min(fork1[t] for t in hot) > above
     for other in ("FORK2_Mold", "FORK3_Mold"):
         assert max(scene_hour[other].values()) < above
 
@@ -161,11 +169,16 @@ def test_only_the_named_mould_runs_hot_and_only_after_its_stop(scene_hour):
 def test_the_scene_gives_a_pallet_cpk_above_1_33_before_the_fault_and_under_1_after_it(scene_hour, seed):
     rule, spec = fork_width(the_scene()), width_spec()
     checks = the_checks_the_floor_would_take(rule, scene_hour, seed)
+    story = the_story(the_scene())
+    # A certificate reads the checks from its pallet's first piece to its
+    # close (`coa.gather_pallet`) - about 1,600 line seconds on this plant at
+    # its teaching pace, so a pallet wholly before the stop and one wholly in
+    # the hot hold, measured as the floor measures them.
+    pallet = 1600
+    before = [v for t, _, v in checks if story["stop"][0] - pallet <= t < story["stop"][0]]
+    after = [v for t, _, v in checks if story["hot"][1] - pallet <= t < story["hot"][1]]
     fewest = spc.MIN_POINTS
-    # A certificate reads the checks in its pallet's window, or the last
-    # `fewest` before its close when the window holds fewer (`coa.gather_pallet`).
-    before = [v for t, _, v in checks if t <= 1450][-fewest * 2:]
-    after = [v for t, _, v in checks if 2400 <= t <= 2990][-fewest * 2:]
+    assert len(before) >= fewest and len(after) >= fewest
 
     healthy = spc.capability(before, spec["min"], spec["max"], fewest=fewest)
     hot = spc.capability(after, spec["min"], spec["max"], fewest=fewest)
@@ -180,8 +193,9 @@ def test_the_scene_gives_a_pallet_cpk_above_1_33_before_the_fault_and_under_1_af
 def test_the_width_charts_moving_range_rule_fires_once_the_mould_runs_hot(scene_hour):
     rule = fork_width(the_scene())
     checks = the_checks_the_floor_would_take(rule, scene_hour)
-    history = [v for t, _, v in checks if t <= 2990][-spc.HISTORY:]
-    stamps = [t for t, _, _ in checks if t <= 2990][-spc.HISTORY:]
+    story = the_story(the_scene())
+    taken = [(t, v) for t, _, v in checks if t < story["hot"][1]][-spc.HISTORY:]
+    stamps, history = [t for t, _ in taken], [v for _, v in taken]
     ranges = spc._moving_ranges(history)
     upper = spc.D4_N2 * statistics.fmean(ranges)
 
@@ -189,7 +203,7 @@ def test_the_width_charts_moving_range_rule_fires_once_the_mould_runs_hot(scene_
 
     assert fired, "no moving range beyond its upper limit"
     # Every one of them is after the fault, none in the healthy stretch.
-    assert all(stamps[f["index"] + 1] > 1560 for f in fired)
+    assert all(stamps[f["index"] + 1] > story["stop"][1] for f in fired)
 
 
 # ------------------------------------------------- the floor, on a real plant

@@ -5,7 +5,7 @@
     FSMES_PLANT_REGISTRY=~/scenes/hot-mould/fleet.toml fsmes plant cutlery start --speed 10
 
 A scene is data (`scenes/<name>.json`): events added to named lines of
-`line.json`, sections added to the floor script, and the answer key. This
+`line.json` and settings over theirs, sections added to the floor script, and the answer key. This
 writes a copy of the pack with both applied, generates its replay into the
 copy's `out/`, and writes a fleet file beside it. **The pack in this
 directory is never touched**, so the everyday shift - `fsmes demo cutlery`,
@@ -33,14 +33,17 @@ LEFT_OUT = ("out", ".data", "analysis", "images", "walkthroughs", "positions", "
 
 
 def scened_line(line: dict, scene: dict) -> dict:
-    """`line.json` with the scene's events added to the lines it names."""
+    """`line.json` with the scene's events added to the lines it names, and
+    its `lines` settings (a line's own `duration_s`, say) over theirs."""
     events = scene.get("events") or {}
+    settings = scene.get("lines") or {}
     names = {entry["name"] for entry in line["lines"]}
-    unknown = sorted(set(events) - names)
+    unknown = sorted((set(events) | set(settings)) - names)
     if unknown:
         raise SystemExit(f"the scene names lines this plant does not have: {', '.join(unknown)}")
     out = json.loads(json.dumps(line))
     for entry in out["lines"]:
+        entry.update(settings.get(entry["name"]) or {})
         added = [{k: v for k, v in e.items() if not k.startswith("_")}
                  for e in events.get(entry["name"], [])]
         entry["events"] = list(entry.get("events") or []) + added
