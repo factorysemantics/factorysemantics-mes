@@ -565,6 +565,14 @@ class Floor:
         # Empty for a plant whose script has no `sampling` section, which is
         # every pack written before one existed.
         self.plans = measurement.plans(self.script)
+        # The characteristics measured off a piece a named machine made - a
+        # fork's width, off the mould that made it - and the spread each is
+        # drawn with. Empty for a script with no `pieces` section, which is
+        # every pack written before one existed and the everyday cutlery
+        # shift: `inspect` then chooses and draws exactly as it always did.
+        self.pieces = measurement.piece_rules(self.script)
+        self._by_piece = {(r.material, r.characteristic) for r in self.pieces}
+        self._said_no_piece: set[tuple[str, str]] = set()
         # The newest stored reading each plan has already used, so the next
         # sample is five *different* pieces. A floor that re-measured the
         # same five would be writing one sample down twice, and on an X-bar
@@ -1472,6 +1480,13 @@ class Floor:
         # sent one would be offering the plant a number it made up, and the
         # plant refuses it. `inspect_a_lot` is what records those.
         specs = [s for s in specs if not s.get("counted")]
+        # And a characteristic a piece rule measures is inspected by
+        # `inspect_a_piece`, on the rule's own cadence and against the machine
+        # that made the piece. Recording it here too would put a second
+        # series of stand-in values with no station into the same chart.
+        if self._by_piece:
+            specs = [s for s in specs
+                     if (s.get("material"), s.get("characteristic")) not in self._by_piece]
         if not specs:
             return
         chosen = specs if every_spec else [self.rng.choice(specs)]
@@ -1541,6 +1556,92 @@ class Floor:
             except httpx.HTTPStatusError as exc:
                 log.warning("inspection refused", status=exc.response.status_code,
                             detail=exc.response.text[:160])
+
+    async def _reading_of(self, equipment: str, tag: str) -> float | None:
+        """The newest value of one named tag on one machine, or `None`.
+
+        `None` is *nobody can say* - the tag has published nothing in the
+        window, or the read failed - and the caller takes no measurement
+        rather than one drawn from a spread it does not know.
+        """
+        try:
+            trend = await self.get(f"/analysis/tag/{equipment}", tag=tag, hours=0.05,
+                                   buckets=60)
+        except httpx.HTTPError as exc:
+            log.warning("could not read the tag a piece's spread follows",
+                        equipment=equipment, tag=tag, error=str(exc)[:160])
+            return None
+        latest = [p["mean"] for p in trend.get("points") or [] if p.get("mean") is not None]
+        return float(latest[-1]) if latest else None
+
+    async def inspect_a_piece(self, rule, specs: list[dict], orders: list[dict]) -> bool:
+        """Measure one piece a named machine made, and record that machine.
+
+        The piece is made against an open order of the rule's material, by
+        the machine on that order's routing that the rule names; the order
+        and the machine go on the check. Its true value is the rule's draw,
+        with the spread the machine's followed tag reads at this moment, and
+        then the gauge reads it as it reads anything else.
+
+        Nothing is recorded when nothing can be said: no specification for
+        the characteristic, no open order on one of the rule's machines, or
+        a followed tag with no reading. Each is said once.
+        """
+        key = (rule.material, rule.characteristic)
+        spec = next((s for s in specs if s.get("material") == rule.material
+                     and s.get("characteristic") == rule.characteristic), None)
+        candidates: list[tuple[str, str]] = []
+        for order in orders:
+            if order.get("status") not in ACTIVE_STATUSES or order.get("material") != rule.material:
+                continue
+            for op in order.get("operations") or []:
+                if op.get("equipment") in rule.stations:
+                    candidates.append((order["code"], op["equipment"]))
+        if spec is None or not candidates:
+            if key not in self._said_no_piece:
+                self._said_no_piece.add(key)
+                log.info("no piece to measure; taking nothing", material=rule.material,
+                         characteristic=rule.characteristic, spec=spec is not None,
+                         open_orders_on_its_machines=len(candidates))
+            return False
+        order, station = self.rng.choice(sorted(candidates))
+        reading = None
+        if rule.follows is not None:
+            reading = await self._reading_of(station, rule.follows.tag)
+            if reading is None:
+                if key not in self._said_no_piece:
+                    self._said_no_piece.add(key)
+                    log.info("the tag a piece's spread follows has no reading; taking "
+                             "nothing", equipment=station, tag=rule.follows.tag,
+                             characteristic=rule.characteristic)
+                return False
+        self._said_no_piece.discard(key)
+        shift = await self.current_shift() if self.script else None
+        gauge, value = self.bench.measure(
+            rule.characteristic, rule.draw(self.rng, reading), rng=self.rng,
+            today=identity.today(self.settings), shift_code=shift)
+        body = {"material": rule.material, "characteristic": rule.characteristic,
+                "value": round(value, 3), "order": order, "equipment": station}
+        if gauge:
+            body["gauge"] = gauge
+        try:
+            response = await self.post("/quality/checks", json=body)
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            log.warning("inspection refused", status=exc.response.status_code,
+                        detail=exc.response.text[:160])
+            return False
+        out = response.json()
+        log.info("inspected a piece", characteristic=rule.characteristic,
+                 value=body["value"], result=out.get("result"), order=order,
+                 equipment=station, follows=rule.follows.tag if rule.follows else None,
+                 reading=reading, sigma=round(rule.spread(reading), 4), gauge=gauge)
+        for signal in out.get("spc") or []:
+            log.warning("spc signal", rule=signal.get("rule"), what=signal.get("what"),
+                        characteristic=rule.characteristic,
+                        nonconformance=signal.get("nonconformance"),
+                        equipment=signal.get("equipment"))
+        return True
 
     # ------------------------------------------------------ sampled checks
 
@@ -2764,6 +2865,37 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
                         log.warning("the sampling step failed", characteristic=name,
                                     error=str(exc)[:160])
 
+        async def measure_the_pieces() -> None:
+            """Its own loop, on each piece rule's own cadence.
+
+            A fork's width is taken off a fork, on the plan the floor script
+            writes down - which for a scene that has to draw a chart at a
+            film's speed is far more often than the everyday fifteen minutes.
+            """
+            if not floor.pieces:
+                return
+            due = [0.0] * len(floor.pieces)
+            while True:
+                wait = min(rule.every_line_s / floor.speed for rule in floor.pieces)
+                await asyncio.sleep(max(wait, 1.0))
+                now = time.monotonic()
+                try:
+                    specs = await floor.every("/quality/specs")
+                    orders = (await floor.get("/workorders", status=["released", "running"],
+                                              limit=500))["items"]
+                except httpx.HTTPError as exc:
+                    log.warning("the piece step failed", error=str(exc)[:160])
+                    continue
+                for i, rule in enumerate(floor.pieces):
+                    if now < due[i]:
+                        continue
+                    due[i] = now + rule.every_line_s / floor.speed
+                    try:
+                        await floor.inspect_a_piece(rule, specs, orders)
+                    except httpx.HTTPError as exc:
+                        log.warning("the piece step failed", characteristic=rule.characteristic,
+                                    error=str(exc)[:160])
+
         async def count_what_went_back() -> None:
             """Its own loop, like the bench's, on each plan's own cadence.
 
@@ -2883,6 +3015,7 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
             every(supervise_every, do_supervise),
             watch_the_stops(),
             sample_the_bench(),
+            measure_the_pieces(),
             count_what_went_back(),
             plan_ahead(),
             do_the_work(),
