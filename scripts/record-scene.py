@@ -221,6 +221,7 @@ DEFAULTS = {
     "badge": "pre-alpha · simulated plant · v{version}",
     "budget_seconds": 45.0,
     "gif_skip_seconds": 2.0,
+    "gif_seconds": None,
     "width": 1280,
     "height": 720,
     "user": "ADMIN",
@@ -310,6 +311,16 @@ def load_scene(path: Path) -> dict:
         scene["lesson"] = str(scene["lesson"])
     if scene["take_is"] not in ("lesson", "teaser"):
         raise SystemExit(f"{path}: `take_is` is \"lesson\" or \"teaser\"")
+    # A take too long for any GIF under the limit (a film's screen take runs
+    # minutes, and a GIF of it at the smallest setting is half again too
+    # heavy) keeps its whole length in the mp4 and makes its GIF of the first
+    # `gif_seconds` only: a preview to look at, not the take.
+    cut = scene["gif_seconds"]
+    if cut is not None and (isinstance(cut, bool) or not isinstance(cut, (int, float)) or cut <= 0):
+        raise SystemExit(f"{path}: `gif_seconds` is how many seconds of the take the GIF shows, more than 0")
+    if cut is not None and scene.get("lesson") is not None:
+        raise SystemExit(f"{path}: a lesson's GIF is its teaser, cut where the next part begins;"
+                         " `gif_seconds` is for a take that is not a lesson")
     delay = scene.setdefault("type_delay_seconds", TYPE_DELAY_SECONDS)
     if isinstance(delay, bool) or not isinstance(delay, (int, float)) or delay < TYPE_DELAY_FLOOR_SECONDS:
         raise SystemExit(f"{path}: `type_delay_seconds` is the seconds between typed keys, at least"
@@ -1334,7 +1345,8 @@ def slide_html(title: str, lines: list[str]) -> str:
         f"#fs-slide-body{{position:absolute;left:96px;top:96px;right:{AVATAR_WIDTH + 60}px;"
         f"bottom:{AVATAR_HEIGHT + 20}px;overflow:hidden}}"
         "h1{font-size:54px;line-height:1.15;font-weight:700;margin:0 0 30px}"
-        "ul{margin:0;padding:0 0 0 1.1em}"
+        # The list takes the items' size so its bullets sit inside the box, not cut at its edge.
+        "ul{margin:0;padding:0 0 0 1.1em;font-size:32px}"
         "li{font-size:32px;line-height:1.35;font-weight:500;margin:0 0 14px}"
         "</style></head><body><div id='fs-slide'><div id='fs-slide-body'>"
         f"<h1>{html.escape(title)}</h1><ul>{items}</ul></div></div></body></html>"
@@ -3082,7 +3094,13 @@ def take(scene: dict, args, out: Path, final: Path, name: str, course, module, l
     skip = float(scene["gif_skip_seconds"])
     make_mp4(made["video"], mp4)
     # A lesson's GIF is its teaser: the hook, cut where the next part begins.
-    cut = teaser_length(made["marks"], skip) if lesson and not teaser_only else None
+    # A take that is not a lesson may name its own: `gif_seconds`, a preview.
+    if lesson and not teaser_only:
+        cut = teaser_length(made["marks"], skip)
+    elif scene["gif_seconds"] is not None:
+        cut = float(scene["gif_seconds"])
+    else:
+        cut = None
     setting, gif_bytes, fps = make_gif(made["video"], gif, skip, cut)
     # And the same teaser as a video, for whoever posts it where a GIF will not
     # play: cut from the same take at the same two seconds, so the two agree.
@@ -3168,7 +3186,9 @@ def take(scene: dict, args, out: Path, final: Path, name: str, course, module, l
                          f"— the GIF is {length:.1f} s of it, and the mp4 is the whole of it")
     if lesson and length > TEASER_SECONDS + 0.5:
         raise SystemExit(f"the teaser runs {length:.1f} s, over the {TEASER_SECONDS} s a teaser may")
-    if not lesson and not math.isclose(length, gif_seconds(scene), abs_tol=max(4.0, gif_seconds(scene) * 0.25)):
+    planned = gif_seconds(scene)
+    if (not lesson and scene["gif_seconds"] is None
+            and not math.isclose(length, planned, abs_tol=max(4.0, planned * 0.25))):
         print(f"  note   the take ran {length:.1f} s against a plan of {gif_seconds(scene):.1f} s"
               " — a `wait_for` waited, or the plant was slow")
 

@@ -1,0 +1,380 @@
+# The Cpk walk-back: a pallet's certificate says fork width is not capable,
+# and the MES is walked back up the line to the fork mould that ran hot.
+#
+# The screen part of a film, not a class and not a teaser: one take with
+# marks, cut and voiced afterwards by the narrator, who also lays the robot's
+# walk along the line over the quiet card in the middle. The captions are a
+# first draft for the narrator to rewrite.
+#
+# The plant is the cutlery pack's "hot-mould" scene
+# (labs/cutlery/scenes/hot-mould.json): fork mould 1 has a cooling-water
+# stop three minutes in at 10x, its melt temperature climbs from about 214 to
+# about 238 °C, and the width of the forks it makes spreads while their mean
+# stays at 25 mm. It is a scene pack built by labs/cutlery/scene.py, not a
+# pack, so this file has no `[plant]`: the plant is brought up first, by hand,
+# on 127.0.0.1:8040 (OPC 4844), and the take films it.
+#
+#   python labs/cutlery/scene.py labs/cutlery/scenes/hot-mould.json --out <empty dir>
+#   FSMES_PLANT_REGISTRY=<dir>/fleet.toml fsmes plant cutlery init
+#   ANTHROPIC_API_KEY=... FSMES_PLANT_REGISTRY=<dir>/fleet.toml fsmes plant cutlery start --speed 10
+#
+# The chat on the AI tab answers only on a plant started with
+# ANTHROPIC_API_KEY in its environment. Without it the take still runs and
+# films the agent saying it is off, which is not this film.
+#
+# Before the camera rolls, once pallet PL1-000000004 has closed (about six
+# minutes after start at 10x), two pallet certificates are issued, because the
+# product issues a pallet's certificate only when a person does:
+#
+#   POST /coa/pallet/PL1-000000001   and   POST /coa/pallet/PL1-000000004
+#
+# as a user holding quality.close_nc (ADMIN on a fresh plant). That is a
+# supervisor's act done off camera; the take itself writes only the chat
+# question, which is why it sets `allow_writes`.
+#
+#   python scripts/record-scene.py scripts/scenes/film/03-cpk-walk-back.toml
+
+name = "cpk-walk-back"
+title = "Cpk walk-back"
+out = "~/Work/gifs/film-cpk-walk-back/03-cpk-walk-back"
+base = "http://127.0.0.1:8040"
+badge = "pre-alpha · simulated plant · v{version}"
+# About four minutes scripted, and up to ninety seconds of the chat thinking,
+# which the narrator cuts between the two marks either side of it.
+budget_seconds = 340
+gif_skip_seconds = 2.0
+# The take runs minutes; the GIF is a preview of its opening, the mp4 is the take.
+gif_seconds = 40.0
+width = 1280
+height = 720
+
+# The take asks the analysis agent one question, and a question is a POST.
+# Honoured only against a loopback plant: the scratch plant above.
+allow_writes = true
+
+notes = [
+  "A simulated cutlery plant with a scripted fault (a fork mould's cooling-water stop), replayed at 10x. Nothing here is a real plant.",
+  "The two pallet certificates were issued off camera, by a POST as ADMIN, before the take: the product issues a pallet's certificate only when a person asks it to.",
+  "The chat's answer is the model's own and differs from take to take; no caption quotes it.",
+]
+
+# --- 1. the certificate
+
+[[step]]
+do = "goto"
+url = "/dashboard/coa?order=PL1-000000004"
+settle = 2.5
+
+[[step]]
+do = "wait_for"
+selector = "#cert-body"
+text = "width_mm"
+
+[[step]]
+do = "say"
+line = "A simulated cutlery plant, a scripted fault, replayed at ten times speed."
+hold = 4.0
+
+[[step]]
+do = "say"
+line = "The palletizer closed pallet PL1-000000004. Its certificate of analysis has a problem."
+hold = 5.0
+
+[[step]]
+do = "say"
+line = "Fork width: Cpk 0.665. The process is not capable. The certificate says: see SPC."
+at = "#cert-body tr:has-text(\"UT-FORK\"):has-text(\"width_mm\")"
+label = "Fork width: Cpk 0.665"
+hold = 6.0
+
+[[step]]
+do = "mark"
+name = "certificate-late-pallet"
+
+[[step]]
+do = "goto"
+url = "/dashboard/coa?order=PL1-000000001"
+settle = 2.5
+
+[[step]]
+do = "wait_for"
+selector = "#cert-body"
+text = "width_mm"
+
+[[step]]
+do = "say"
+line = "The first pallet of the shift, same forks, same check: Cpk 1.61. Something changed."
+at = "#cert-body tr:has-text(\"UT-FORK\"):has-text(\"width_mm\")"
+label = "First pallet: Cpk 1.61"
+hold = 6.0
+
+[[step]]
+do = "mark"
+name = "certificate-early-pallet"
+
+# --- 2. the trace back
+#
+# The pallet holds forks from all three fork moulds, so the walk back goes
+# through one fork from line 1: its own trace page names its order.
+
+[[step]]
+do = "goto"
+url = "/dashboard/trace?serial=PL1-000000004"
+settle = 3.0
+
+[[step]]
+do = "wait_for"
+selector = "#s-order"
+text = "WO-PAL1"
+
+[[step]]
+do = "say"
+line = "Trace the late pallet back. Inside: wraps, stacks, and forks from three fork moulds."
+at = "#s-count"
+hold = 6.0
+
+[[step]]
+do = "say"
+line = "Pick a fork made on fork line 1."
+at = "#s-tree a.obj:text-matches(\"^F1-\")"
+hold = 3.5
+
+[[step]]
+do = "click"
+selector = "#s-tree a.obj:text-matches(\"^F1-\")"
+
+[[step]]
+do = "wait_for"
+selector = "#s-order"
+text = "WO-FORK1-0001"
+
+[[step]]
+do = "say"
+line = "Its order: WO-FORK1-0001. That is fork line 1 — the walk back starts here."
+at = "#s-order"
+label = "The fork order"
+hold = 5.5
+
+[[step]]
+do = "mark"
+name = "trace-to-the-fork-order"
+
+# --- 3. the robot's walk: a quiet card, no clicks
+
+# A caption of its own first: the card would otherwise carry the trace's.
+[[step]]
+do = "say"
+line = "From the palletizer, back up the line to the machine that made those forks."
+hold = 1.0
+
+[[step]]
+do = "slide"
+name = "walk-the-line"
+title = "Walk back up the line"
+lines = [
+  "Palletizing → Wrapping → Stacking → Moulding",
+  "Fork mould 1 · FORK1_Mold",
+]
+hold = 27.0
+
+[[step]]
+do = "mark"
+name = "walk-ends"
+
+# --- 4. the tag, by its name
+
+[[step]]
+do = "goto"
+url = "/dashboard/tags"
+settle = 2.5
+
+[[step]]
+do = "say"
+line = "At the mould, the tag on the machine reads MeltTemp. The MES shows a tag by that name."
+hold = 5.0
+
+[[step]]
+do = "fill"
+selector = "#q"
+text = "MeltTemp"
+
+[[step]]
+do = "wait_for"
+selector = "#tags-table"
+text = "FORK1_Mold"
+
+[[step]]
+do = "say"
+line = "Fork mould 1, MeltTemp."
+at = "#tags-table tr:has-text(\"FORK1_Mold\"):has-text(\"MeltTemp\")"
+hold = 3.5
+
+[[step]]
+do = "click"
+selector = "#tags-table tr:has-text(\"FORK1_Mold\"):has-text(\"MeltTemp\")"
+
+[[step]]
+do = "wait_for"
+selector = "#trend-window"
+text = "readings are drawn"
+timeout = 20
+
+[[step]]
+do = "say"
+line = "Its trend: near 214 °C, then up near 238 and back — the replay runs the same stretch of the line again and again."
+at = "#trend"
+hold = 9.0
+
+[[step]]
+do = "mark"
+name = "melttemp-trend"
+
+# --- 5. the SPC chart
+
+[[step]]
+do = "goto"
+url = "/dashboard/spc?spec=UT-FORK%7Cwidth_mm"
+settle = 3.0
+
+[[step]]
+do = "wait_for"
+selector = "#verdict"
+text = "out of control"
+
+[[step]]
+do = "say"
+line = "SPC on fork width: quiet stretches, then wild ones. The average holds; the spread does not."
+at = "#chart"
+hold = 6.0
+
+[[step]]
+do = "say"
+line = "The verdict, in red: out of control."
+at = "#verdict"
+hold = 4.0
+
+[[step]]
+do = "mark"
+name = "spc-width-chart"
+
+# --- 6. one late reading, and the mould's temperature beside it
+
+[[step]]
+do = "click"
+selector = "#open-point"
+
+[[step]]
+do = "wait_for"
+selector = "#point-body"
+text = "FORK1_Mold"
+
+[[step]]
+do = "say"
+line = "Open the reading that broke rule 1. The station that made it: FORK1_Mold."
+at = "#point-body :text(\"FORK1_Mold\")"
+hold = 5.5
+
+[[step]]
+do = "click"
+selector = "#point-body details[data-fold=\"tags\"] > summary"
+
+[[step]]
+do = "wait_for"
+selector = "#point-body details[data-fold=\"tags\"]"
+text = "MeltTemp"
+
+[[step]]
+do = "say"
+line = "And that station's process values in the minutes before: the melt temperature, high."
+at = "#point-body details[data-fold=\"tags\"] .point-chart:has(h4:text-is(\"MeltTemp\")) svg"
+hold = 6.5
+
+[[step]]
+do = "mark"
+name = "reading-and-melttemp"
+
+# --- 7. ask the chat
+
+[[step]]
+do = "goto"
+url = "/dashboard/ai#explore"
+settle = 3.0
+
+[[step]]
+do = "wait_for"
+selector = "#explore-state"
+text = "is answering"
+
+[[step]]
+do = "say"
+line = "Ask the analysis agent, in plain words. It reads the plant and changes nothing."
+hold = 4.5
+
+[[step]]
+do = "fill"
+selector = "#explore-input"
+text = "Which machine made the forks on pallet PL1-000000004, and did anything change before their width went wide?"
+
+[[step]]
+do = "click"
+selector = "#explore-send"
+
+[[step]]
+do = "mark"
+name = "chat-asked"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#explore-log .explore-msg.bot') !== null"
+timeout = 90
+
+[[step]]
+do = "mark"
+name = "chat-answered"
+
+[[step]]
+do = "say"
+line = "Its answer, from the plant's own records. A lead to check, not a verdict."
+at = "#explore-log .explore-msg.bot > p"
+hold = 12.0
+
+[[step]]
+do = "mark"
+name = "chat-answer"
+
+# --- 8. the nonconformance the chart raised
+
+[[step]]
+do = "goto"
+url = "/dashboard/spc?spec=UT-FORK%7Cwidth_mm"
+settle = 3.0
+
+[[step]]
+do = "wait_for"
+selector = "#signals"
+text = "NC-"
+
+[[step]]
+do = "say"
+line = "And the problem is already on record: the chart raised a nonconformance on rule 1."
+at = "#signals tbody tr:has-text(\"NC-\")"
+hold = 5.0
+
+[[step]]
+do = "click"
+selector = "#signals tbody tr:has-text(\"NC-\") a.obj"
+
+[[step]]
+do = "wait_for"
+selector = "#ncs"
+text = "NC-"
+
+[[step]]
+do = "say"
+line = "Open, raised by the MES itself, waiting for a person to decide what to do with those forks."
+at = "#ncs > li:has-text(\"NC-\")"
+hold = 6.0
+
+[[step]]
+do = "mark"
+name = "nonconformance-open"
