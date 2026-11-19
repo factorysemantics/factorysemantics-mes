@@ -82,9 +82,9 @@ hold = 5.0
 
 [[step]]
 do = "say"
-line = "Fork width: Cpk 0.665. The process is not capable. The certificate says: see SPC."
+line = "Fork width: Cpk 0.546. The process is not capable. The certificate says: see SPC."
 at = "#cert-body tr:has-text(\"UT-FORK\"):has-text(\"width_mm\")"
-label = "Fork width: Cpk 0.665"
+label = "Fork width: Cpk 0.546"
 hold = 6.0
 
 [[step]]
@@ -103,9 +103,9 @@ text = "width_mm"
 
 [[step]]
 do = "say"
-line = "The first pallet of the shift, same forks, same check: Cpk 1.61. Something changed."
+line = "The first pallet of the shift, same forks, same check: Cpk 1.83. Something changed."
 at = "#cert-body tr:has-text(\"UT-FORK\"):has-text(\"width_mm\")"
-label = "First pallet: Cpk 1.61"
+label = "First pallet: Cpk 1.83"
 hold = 6.0
 
 [[step]]
@@ -313,7 +313,7 @@ hold = 4.5
 [[step]]
 do = "fill"
 selector = "#explore-input"
-text = "Which machine made the forks on pallet PL1-000000004, and did anything change before their width went wide?"
+text = "Which machine made the wide forks on pallet PL1-000000004, and what were that machine's process values doing before their width went wide?"
 
 [[step]]
 do = "click"
@@ -322,6 +322,13 @@ selector = "#explore-send"
 [[step]]
 do = "mark"
 name = "chat-asked"
+
+# A caption of its own for the wait, so the still at the answer does not
+# carry the line that asked.
+[[step]]
+do = "say"
+line = "It looks things up in the plant's records on its own. The wait is cut."
+hold = 1.0
 
 [[step]]
 do = "wait_for"
