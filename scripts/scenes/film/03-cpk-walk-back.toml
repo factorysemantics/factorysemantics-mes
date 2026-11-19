@@ -313,7 +313,7 @@ hold = 4.5
 [[step]]
 do = "fill"
 selector = "#explore-input"
-text = "Which machine made the forks on pallet PL1-000000004, and did anything change before their width went wide?"
+text = "Which machine made the wide forks on pallet PL1-000000004, and what were that machine's process values doing before their width went wide?"
 
 [[step]]
 do = "click"
@@ -322,6 +322,13 @@ selector = "#explore-send"
 [[step]]
 do = "mark"
 name = "chat-asked"
+
+# A caption of its own for the wait, so the still at the answer does not
+# carry the line that asked.
+[[step]]
+do = "say"
+line = "It looks things up in the plant's records on its own. The wait is cut."
+hold = 1.0
 
 [[step]]
 do = "wait_for"
