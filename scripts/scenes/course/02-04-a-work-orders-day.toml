@@ -1,0 +1,550 @@
+# Class 1.4 of the course, *Work orders — make this many of that, this way*:
+# an order is released to the floor, runs station to station, and is finished
+# by a person, not by its count.
+#
+# It starts from the card a bin carries on a floor, names the four words of an
+# order's life (order, release, dispatch, finish), types a new order for forks
+# into the Orders page and releases it, finds it in the mould's queue on its
+# station screen, and reads the plant's own fork order step by step, its good
+# count the last step's. Then what an order refuses: it has passed its number
+# and is still open, because reaching the quantity is not being finished
+# (decision 0029). A person finishes it, and the confirmation for the office is
+# in the outbox. Filmed on a scratch cutlery plant, every screen as the product
+# draws it.
+
+name = "a-work-orders-day"
+title = "Work orders — make this many of that, this way"
+lesson = "1.4"
+take_is = "lesson"
+part = "hook"
+base = "http://127.0.0.1:8040"
+badge = "pre-alpha · simulated plant · v{version}"
+# Four to six minutes, as the outline says this class runs.
+budget_seconds = 360
+gif_skip_seconds = 2.0
+width = 1280
+height = 720
+# Creating, releasing and finishing an order are writes, and they are the story.
+allow_writes = true
+what_is_written = "which is how the class creates and releases its order and finishes the plant's: Create, Release and each Finish step are real `POST`s to the take's own scratch plant, made with the product's own buttons, and its audit trail names the person signed in as having made them."
+
+notes = [
+  "The plant was started from the cutlery pack at ten times wall clock. The camera waited, off camera, until the pack's own released fork order, WO-FORK1-0001 for 2,778 forks, had booked 2,400 of them, so that by the time the class reaches it the line has run past its number on camera's side of the cut.",
+  "The simulated floor was told `MES_OPS_FINISH_ORDERS=false`. Its simulated shift supervisor otherwise finishes an order soon after the line has made its number and releases the next one himself: he would have finished, off camera, the very order this class shows a person finishing. The switch belongs to the simulated floor (it is the one `fsmes lab` uses for its over-run experiment); the MES is configured as anybody installs it.",
+  "The order typed in is WO-FORK1-0100 for 11,000 forks of UT-FORK, a code the pack does not have, outside the planner's own sequence (it continues WO-FORK1-0003, 0004, ...). 11,000 is about one eight-hour shift of the fork line, which the pack rates at a little over twenty-three forks a minute; the pack's own orders are for two hours, 2,778. The form has no routing or line to choose: the order's steps are copied from the material's first routing, RT-FORK1, which is the fork line's.",
+  "The order is created with the form's Release box unticked, so that release is its own press on camera, the Release button, rather than a side effect of Create.",
+  "The finish beat is filmed on the plant's own WO-FORK1-0001, which was released when the plant started and was far along when the camera rolled; the order typed in the class would take hours at this speed. The person finishes its three steps one by one with the orders page's Finish step button.",
+  "The outbox is opened right after the order completes, so that its confirmation is among the newest twenty messages the panel draws; the rest are the machines' state changes, which are most of what a plant sends.",
+  "At any speed but 1x every 2D page carries the product's REPLAY 10× banner across its top. It is filmed as the product draws it.",
+  "The opening beat is a plain card with words on it. There is no artwork of a card, a bin, a machine or a person.",
+  "The class is clicked through, as a person would go. The Orders page is opened by address once, straight after the cards, because a card is the recorder's own page and has no menu. After that every page is reached by a click: Floor, then Station, then FORK1_Mold chosen in the station's machine list; Orders by its menu, with WO-FORK1-0001 typed into the filter; Setup, then Ops, for the outbox; and Orders again.",
+  "Every line said over the screen has a box round the thing it is about, with a few words on a tab where words help. The one spotlight is on the order's booked count, the last step's. The confirmation in the outbox is boxed as the table draws it when its line begins; the panel redraws every six seconds and draws only the newest twenty messages, so by the line after it the confirmation has scrolled off the panel and that line points at nothing.",
+]
+
+honesty = [
+  "the order typed in is not the one finished: finishing is filmed on the plant's own fork order, WO-FORK1-0001, released when the plant started and far along when the camera rolled, because an order for a shift does not run out in a five-minute class",
+  "the form chooses no routing: a new order takes its material's first routing, and for forks that is RT-FORK1, the fork line's; the class says the steps were copied from the fork line's routing, not that the planner picked a line",
+  "the simulated floor was told not to finish orders itself (MES_OPS_FINISH_ORDERS=false), so the order on camera stays open past its number until the person on camera finishes it; on a plant left to itself the simulated supervisor would have closed it",
+  "the outbox panel draws the newest twenty messages, most of them machine state changes; the confirmation is in view only because the class opens the panel seconds after the order completes; the card already open about that panel stands",
+  "the plant is a scratch plant a few minutes old, replaying at ten times wall clock, which is the banner across the top of the 2D pages",
+]
+
+[plant]
+pack = "labs/cutlery"
+speed = 10
+env = { MES_OPS_FINISH_ORDERS = "false" }
+roll_when_timeout_seconds = 1800
+
+# Short of its 2,778, so the count passes the number while the class is on it.
+[[plant.roll_when_order]]
+code = "WO-FORK1-0001"
+booked = 2400
+
+# ----------------------------------------------------------------- the hook
+
+[[step]]
+do = "slide"
+name = "the-card-on-the-bin"
+title = "The card clipped to a bin"
+lines = [
+  "Make: forks, UT-FORK",
+  "How many: 2,778",
+  "This way: Mold, then Degate, then Mark",
+  "Done when somebody signs it off",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "On a floor, a bin of work carries a card. It says what to make, how many, and which way."
+
+[[step]]
+do = "say"
+line = "Every station the bin passes reads the card, and writes down beside its own step how many good it made."
+
+[[step]]
+do = "say"
+line = "The card never counts itself done. At the end, somebody signs it off. That card is a work order."
+
+[[step]]
+do = "mark"
+name = "the-card-on-the-bin"
+
+# ----------------------------------------------------------------- the idea
+
+[[step]]
+part = "idea"
+do = "slide"
+name = "four-words"
+title = "Four words"
+lines = [
+  "Order: make this many of that material, this way (its routing)",
+  "Release: the order may now go to the floor",
+  "Dispatch: each machine's queue shows the work it has next",
+  "Finish: a person says a step, and then the order, is done",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Four words. An order says make this many of that material, this way. This way is its routing, the road from the last class."
+
+[[step]]
+do = "say"
+line = "Release means the order may now go to the floor. Until then it is a plan, and no machine works on it."
+
+[[step]]
+do = "say"
+line = "Dispatch is each machine's queue: the work it has next, in order. And finish is a person saying a step is done, and then the order."
+
+[[step]]
+do = "mark"
+name = "four-words"
+
+# ------------------------------------------------------------ on the screen
+
+[[step]]
+part = "screen"
+do = "goto"
+url = "/dashboard/orders"
+settle = 2
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#new-order-form').classList.contains('hidden') && document.querySelectorAll('#order-list tbody tr').length > 0"
+
+[[step]]
+do = "say"
+line = "This is the Orders page. Every order on the plant, its status, what was ordered and what has been booked."
+at = '#order-count'
+label = "Every order"
+
+[[step]]
+do = "mark"
+name = "the-orders-page"
+
+[[step]]
+do = "say"
+line = "A planner makes a new one. New order: a code, the material, and how many."
+at = '#new-order'
+label = "New order"
+
+[[step]]
+do = "click"
+selector = "#new-order"
+
+[[step]]
+do = "fill"
+selector = "#no-code"
+text = "WO-FORK1-0100"
+
+[[step]]
+do = "choose"
+selector = "#no-material"
+value = "UT-FORK"
+
+[[step]]
+do = "fill"
+selector = "#no-qty"
+text = "11000"
+
+[[step]]
+do = "say"
+line = "Forks, UT-FORK. Eleven thousand: about one shift of the fork line, at some twenty-three forks a minute."
+at = '#no-qty'
+label = "One shift"
+
+[[step]]
+do = "click"
+selector = "#no-release"
+
+[[step]]
+do = "say"
+line = "We leave release unticked, so the order is only planned for now. Create."
+at = 'label:has(#no-release)'
+label = "Unticked"
+
+[[step]]
+do = "mark"
+name = "the-new-order-form"
+
+[[step]]
+do = "click"
+selector = "#no-create"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#detail-code').innerText === 'WO-FORK1-0100' && document.querySelector('#d-status').innerText === 'planned' && document.querySelectorAll('#ops tbody tr').length === 3"
+scroll_to = "#detail-panel"
+scroll_block = "start"
+scroll_offset = 220
+
+[[step]]
+do = "say"
+line = "Planned. Its steps were copied from the fork line's routing: Mold, Degate, Mark, each on its machine."
+at = '#ops tbody'
+
+[[step]]
+do = "mark"
+name = "planned-with-its-steps"
+
+[[step]]
+do = "say"
+line = "Now release it to the floor."
+at = '#order-actions button:has-text("Release")'
+
+[[step]]
+do = "click"
+selector = "#order-actions button:has-text(\"Release\")"
+
+[[step]]
+do = "wait_for"
+selector = "#d-status"
+text = "released"
+
+[[step]]
+do = "say"
+line = "Released. Nothing has been made against it yet. Where does it show up? At the first machine of its road."
+at = '#d-status'
+label = "Released"
+
+[[step]]
+do = "mark"
+name = "released"
+
+# The station screen is reached as an operator reaches it: Floor, then
+# Station, then the machine chosen in its list.
+[[step]]
+do = "click"
+selector = 'header nav a:text-is("Floor")'
+
+[[step]]
+do = "wait_for"
+selector = ".subnav"
+text = "Station"
+
+[[step]]
+do = "click"
+selector = '.subnav a:text-is("Station")'
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#machine option')].some((o) => o.value === 'FORK1_Mold')"
+
+[[step]]
+do = "choose"
+selector = "#machine"
+value = "FORK1_Mold"
+
+[[step]]
+do = "wait_for"
+selector = "#queue"
+text = "WO-FORK1-0100"
+scroll_to = "#queue"
+scroll_block = "start"
+scroll_offset = 260
+
+[[step]]
+do = "say"
+line = "The station screen of the fork mould, FORK1_Mold. Its queue: the order it is running now, and ours behind it, nothing made yet."
+at = '#queue'
+label = "Its queue"
+
+[[step]]
+do = "say"
+line = "That is dispatch. The operator does not hunt for paper: the machine's screen says what is next."
+at = '#queue li:has-text("WO-FORK1-0100")'
+label = "What is next"
+
+[[step]]
+do = "say"
+line = "Each line of the queue says how many good of how many ordered. The next machine, the degating press, gets our order the same way."
+at = '#queue li:has-text("WO-FORK1-0100") .what .muted'
+label = "Good of ordered"
+
+[[step]]
+do = "mark"
+name = "in-the-moulds-queue"
+
+# Back to the Orders page by its menu, the order typed into the filter.
+[[step]]
+do = "click"
+selector = 'header nav a:text-is("Orders")'
+
+[[step]]
+do = "wait_for"
+selector = "#order-list tbody"
+text = "WO-"
+
+[[step]]
+do = "fill"
+selector = "#f-text"
+text = "WO-FORK1-0001"
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#order-list tbody tr')].some((r) => r.innerText.includes('WO-FORK1-0001'))"
+
+[[step]]
+do = "click"
+selector = "#order-list tbody tr:has-text(\"WO-FORK1-0001\")"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#detail-code').innerText === 'WO-FORK1-0001' && document.querySelector('#d-status').innerText === 'running' && document.querySelectorAll('#ops tbody tr').length === 3"
+scroll_to = "#detail-panel"
+scroll_block = "start"
+scroll_offset = 220
+
+[[step]]
+do = "say"
+line = "The order in front of ours, WO-FORK1-0001, for 2,778 forks, released when the plant started. It is running."
+at = '#d-status'
+label = "Running"
+
+[[step]]
+do = "mark"
+name = "the-running-order"
+
+[[step]]
+do = "wait_for"
+selector = "#ops tbody"
+text = "Mark"
+scroll_to = "#ops"
+scroll_block = "start"
+scroll_offset = 230
+
+[[step]]
+do = "say"
+line = "Each step books what its own machine counted. Mold has made the most, then Degate, then Mark, the last."
+at = '#ops tbody'
+
+[[step]]
+do = "say"
+line = "The order's booked count is the last step's, not the sum. A fork moulded but not yet marked is not a finished fork."
+at = '#d-good'
+label = "The last step's"
+style = "spotlight"
+
+[[step]]
+do = "mark"
+name = "each-step-its-own-count"
+
+# -------------------------------------------------------------- it refuses
+
+[[step]]
+part = "refuses"
+do = "wait_for"
+js = "Number((document.querySelector('#d-good').innerText || '').replace(/[^0-9.]/g, '')) > Number((document.querySelector('#d-qty').innerText || '').replace(/[^0-9.]/g, ''))"
+timeout = 240
+scroll_to = "#detail-panel"
+scroll_block = "start"
+scroll_offset = 220
+
+[[step]]
+do = "say"
+line = "Now what it refuses. The order has booked past its 2,778, the over-run says by how many, and it is still running."
+at = '#d-over'
+label = "Over-run"
+
+[[step]]
+do = "mark"
+name = "past-its-number-still-open"
+
+[[step]]
+do = "say"
+line = "An order does not finish itself when the count is reached. A line that has made its number is often still running."
+at = '#d-status'
+label = "Still running"
+
+[[step]]
+do = "say"
+line = "So every fork it makes past the number is booked to this order, and the over-run is the true one. A person closes it."
+at = '#d-over'
+label = "The true one"
+
+[[step]]
+do = "say"
+line = "Here that person finishes each step. Mold first."
+at = '#ops tbody tr:has-text("Mold") button:has-text("Finish step")'
+label = "Finish step"
+
+[[step]]
+do = "click"
+selector = "#ops tbody tr:has-text(\"Mold\") button:has-text(\"Finish step\")"
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#ops tbody tr')].some(r => r.innerText.includes('Mold') && r.innerText.toLowerCase().includes('done'))"
+
+[[step]]
+do = "say"
+line = "Mold is done. The mould's next fork books to the order behind it in its queue, ours."
+at = '#ops tbody tr:has-text("Mold")'
+label = "Done"
+
+[[step]]
+do = "click"
+selector = "#ops tbody tr:has-text(\"Degate\") button:has-text(\"Finish step\")"
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#ops tbody tr')].some(r => r.innerText.includes('Degate') && r.innerText.toLowerCase().includes('done'))"
+
+[[step]]
+do = "click"
+selector = "#ops tbody tr:has-text(\"Mark\") button:has-text(\"Finish step\")"
+
+[[step]]
+do = "wait_for"
+selector = "#d-status"
+text = "completed"
+scroll_to = "#detail-panel"
+scroll_block = "start"
+scroll_offset = 220
+
+[[step]]
+do = "say"
+line = "Degate, then Mark. Completed."
+at = '#d-status'
+label = "Completed"
+
+[[step]]
+do = "mark"
+name = "finished-by-a-person"
+
+# The outbox draws its newest twenty messages and the machines send about two
+# state changes a second, so it is opened at once, by Setup then Ops, before anything is said
+# about the order: twenty seconds later the confirmation has scrolled off the
+# panel (the third take). A step scrolls before it waits, so the row is waited
+# for first and scrolled to by a second wait that finds it already there.
+[[step]]
+do = "click"
+selector = 'header nav a:text-is("Setup")'
+
+[[step]]
+do = "wait_for"
+selector = ".subnav"
+text = "Ops"
+
+[[step]]
+do = "click"
+selector = '.subnav a:text-is("Ops")'
+
+[[step]]
+do = "wait_for"
+js = "location.pathname === '/dashboard/ops' && document.querySelectorAll('#erp-table tbody tr').length > 0"
+timeout = 15
+
+[[step]]
+do = "wait_for"
+selector = "#erp-table tbody"
+text = "WO-FORK1-0001"
+timeout = 15
+
+[[step]]
+do = "wait_for"
+selector = "#erp-table tbody"
+text = "WO-FORK1-0001"
+scroll_to = "#erp-table tr"
+scroll_text = "WO-FORK1-0001"
+scroll_offset = 300
+
+[[step]]
+do = "mark"
+name = "the-confirmation-in-the-outbox"
+
+[[step]]
+do = "say"
+line = "And the news goes up. In the outbox, a confirmation for the office, among the machines' state changes: WO-FORK1-0001, waiting to be sent."
+at = '#erp-table tbody tr:has-text("WO-FORK1-0001")'
+label = "Confirmation"
+
+[[step]]
+do = "say"
+line = "It was written when a person finished the order, not when the count passed the number. So the office hears the number the line really made."
+
+# Back to the Orders page by its menu, the order typed into the filter.
+[[step]]
+do = "click"
+selector = 'header nav a:text-is("Orders")'
+
+[[step]]
+do = "wait_for"
+selector = "#order-list tbody"
+text = "WO-"
+
+[[step]]
+do = "fill"
+selector = "#f-text"
+text = "WO-FORK1-0001"
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#order-list tbody tr')].some((r) => r.innerText.includes('WO-FORK1-0001'))"
+
+[[step]]
+do = "click"
+selector = "#order-list tbody tr:has-text(\"WO-FORK1-0001\")"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#detail-code').innerText === 'WO-FORK1-0001' && document.querySelector('#d-status').innerText === 'completed'"
+scroll_to = "#detail-panel"
+scroll_block = "start"
+scroll_offset = 220
+
+[[step]]
+do = "say"
+line = "Back on the order: completed. The over-run beside the ordered number is every fork made past 2,778, still on the order that made them."
+at = '#d-over'
+label = "Over-run"
+
+[[step]]
+do = "mark"
+name = "completed-with-its-over-run"
+
+# ------------------------------------------------------------ you now know
+
+[[step]]
+part = "know"
+do = "slide"
+name = "you-now-know"
+title = "You now know how to"
+lines = [
+  "Say what a work order is: this many of a material, made along its routing, from release to finish.",
+  "Create and release an order on the Orders page, and find it in the first machine's queue on its station screen.",
+  "Read an order's count as its last step's, and say why it stays open past its number until a person finishes it.",
+]
+
+[[step]]
+do = "say"
+line = "That is a work order's day: planned, released, dispatched, counted step by step, and finished by a person. You now know how to do three things."
+
+[[step]]
+do = "mark"
+name = "you-now-know"
+
+[[step]]
+do = "hold"
+seconds = 3

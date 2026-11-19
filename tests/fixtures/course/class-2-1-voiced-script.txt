@@ -1,0 +1,30 @@
+An operator stands at one press for a whole shift, a tablet in hand. Not the plant, not the line: this one machine.
+Through the shift they ask the same few things. What is it doing, and what is next for it?
+What did I make, what did I put in, is it good, and is anything owed to the machine? One screen answers all of them.
+Four words. A station is one machine's screen, made for the person standing at it, not for the office.
+The queue is the work released to this machine, in the order it should run. Only released work is in it.
+To book is to write down how many good and how many scrap, always against an order and its step.
+To issue is to write down which lot of material went into that order, so it can be traced later.
+The station screen of the fork mould, FORK1_Mold. The machine is chosen at the top; the operator starts the shift here.
+First card, its state: running, and since when. Going down asks why, which is the next class.
+Second card, its queue: the order it is running, WO-FORK1-0001, step 10, Mold, and how many good of how many ordered.
+That count moves by itself: the mould's own counter books every shot it makes.
+Third card, book output. Against: the order at the head of the queue, step 10. The operator counts a box.
+Five hundred good, three scrap. Book.
+Booked, against WO-FORK1-0001 step 10, under the name of the person signed in. The queue's count is up by five hundred.
+Fourth card, issue material. It issues to the order running here, WO-FORK1-0001.
+The lot is the fork line's polypropylene resin, LOT-PP-FORK1-001. Two kilos: about what five hundred forks weigh. Issue.
+Issued. The lot is two kilos lighter, and the order now says which resin went into it.
+Fifth card, quality, on what this machine is running: forks, UT-FORK. Only characteristics with a specification are offered.
+Length: the specification is 164 to 166 millimetres. The operator puts a fork on the gauge.
+165.1 millimetres: in spec. It is in the recent results, with the time and who measured it.
+Last card, maintenance on this machine. Here, nothing is owed: this plant has no maintenance plan set up.
+Where a plan is set up, the jobs due on this machine are listed here, and the operator can start and complete them.
+Now what it refuses. This is the next fork order, WO-FORK1-0002. Its first step is on the same mould, but it is only planned.
+Back at the mould, the Against list holds one order: WO-FORK1-0001. The planned order is not there to book against.
+Nor is any order of another line. An operator can only book to work released to this machine.
+And what it does not refuse. Type five thousand good: more forks than this mould has made since the plant started.
+Booked. The station took the figure as typed. Nothing on the screen says the counter disagrees.
+The queue now says the mould has made thousands more than its counter saw. A typed booking is added to the count; it is not checked against it.
+So a typed figure is the operator's word. The audit trail says who typed it, and the counter's own shots stay counted beside it.
+That is the station screen: one machine, read top to bottom, and the work done at it written down. You now know how to do three things.

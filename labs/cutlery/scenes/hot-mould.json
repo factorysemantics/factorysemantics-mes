@@ -1,0 +1,231 @@
+{
+ "_what": "The film's plant: one fork mould runs hot after a cooling fault and its forks' width wanders, so the pallets built after it carry a certificate with width Cpk under 1.0 while the pallets before it were above 1.33. Built into a copy of the cutlery pack by labs/cutlery/scene.py; the pack on disk is not touched, and the everyday shift does not change.",
+ "name": "hot-mould",
+ "speed": 10,
+ "_speed": "Ten times: FORK1's ninety-minute hour is nine minutes of wall clock - three healthy, one stopping and climbing, five hot. At that speed the fork-width checks below come every three wall seconds, forty a wall minute across the three fork moulds, which is what lets a chart be drawn at a film's pace (the bottling SPC scene found an excursion at high speed with too few readings fires nothing).",
+ "lines": {
+  "FORK1": {
+   "duration_s": 5400
+  }
+ },
+ "_lines": "FORK1's hour is ninety minutes in this scene, the other sixty lines' still sixty: each table replays on its own length. A pallet's certificate reads the checks from its first piece to its close, about 1,600 line seconds, so a pallet that is wholly healthy and one that is wholly hot need half an hour of each; at 10x that is nine minutes of wall clock for the whole story.",
+ "events": {
+  "FORK1": [
+   {
+    "type": "down",
+    "station": "Mold",
+    "start": 1800,
+    "end": 1860,
+    "_why": "The cause a person can find: the mould trips and stands down for a minute - a cooling-water fault - and is restarted with the cooling still short. It is the one stop on FORK1_Mold's state history just before its temperature starts to climb. (No fault number on it: on a line of a factory the generator writes a FaultCode cell without its header, so a scene that wants one waits for that to be fixed.)"
+   },
+   {
+    "type": "drift",
+    "station": "Mold",
+    "analog": "MeltTemp",
+    "start": 1860,
+    "end": 2300,
+    "to": 238.0,
+    "_why": "Restarted with the cooling still short, the melt climbs from its 214 C base to 238 C over seven line minutes. The setpoint does not move; the actual walks away from it."
+   },
+   {
+    "type": "offset",
+    "station": "Mold",
+    "analog": "MeltTemp",
+    "start": 2300,
+    "end": 5390,
+    "offset": 24.0,
+    "_why": "And stays there, 24 C over its base, to the end of FORK1's hour - through the line's own changeover at 3000 s, which does not fix a cooling fault. The hour then starts healthy again."
+   }
+  ]
+ },
+ "pieces": {
+  "_why": "Every dimension on every utensil is measured off a piece one of its three moulds made, and the check names that mould. Healthy spread is a twelfth of the tolerance (Cpk about 2, so a pallet's figure off a dozen checks stays above 1.33). Fork width alone follows its mould's MeltTemp: above 224 C - four of the melt's own noise sigmas over its 214 C base, so a healthy mould never crosses it - one sigma grows by 0.07 mm a degree, so at 238 C FORK1's forks have a sigma of about 1.15 mm around the same 25 mm centre, while FORK2 and FORK3 stay where they were.",
+  "every_line_s": 90,
+  "rules": [
+   {
+    "material": "UT-FORK",
+    "characteristic": "length_mm",
+    "stations": [
+     "FORK1_Mold",
+     "FORK2_Mold",
+     "FORK3_Mold"
+    ],
+    "centre": 165.0,
+    "sigma": 0.1667
+   },
+   {
+    "material": "UT-FORK",
+    "characteristic": "width_mm",
+    "stations": [
+     "FORK1_Mold",
+     "FORK2_Mold",
+     "FORK3_Mold"
+    ],
+    "centre": 25.0,
+    "sigma": 0.1667,
+    "every_line_s": 30,
+    "follows": {
+     "tag": "MeltTemp",
+     "above": 224.0,
+     "sigma_per_unit": 0.07
+    }
+   },
+   {
+    "material": "UT-FORK",
+    "characteristic": "thickness_mm",
+    "stations": [
+     "FORK1_Mold",
+     "FORK2_Mold",
+     "FORK3_Mold"
+    ],
+    "centre": 2.1,
+    "sigma": 0.0333
+   },
+   {
+    "material": "UT-FORK",
+    "characteristic": "weight_g",
+    "stations": [
+     "FORK1_Mold",
+     "FORK2_Mold",
+     "FORK3_Mold"
+    ],
+    "centre": 3.9,
+    "sigma": 0.05
+   },
+   {
+    "material": "UT-FORK",
+    "characteristic": "tine_gap_mm",
+    "stations": [
+     "FORK1_Mold",
+     "FORK2_Mold",
+     "FORK3_Mold"
+    ],
+    "centre": 3.2,
+    "sigma": 0.05
+   },
+   {
+    "material": "UT-SPOON",
+    "characteristic": "length_mm",
+    "stations": [
+     "SPOON1_Mold",
+     "SPOON2_Mold",
+     "SPOON3_Mold"
+    ],
+    "centre": 160.0,
+    "sigma": 0.1667
+   },
+   {
+    "material": "UT-SPOON",
+    "characteristic": "width_mm",
+    "stations": [
+     "SPOON1_Mold",
+     "SPOON2_Mold",
+     "SPOON3_Mold"
+    ],
+    "centre": 34.0,
+    "sigma": 0.1667
+   },
+   {
+    "material": "UT-SPOON",
+    "characteristic": "thickness_mm",
+    "stations": [
+     "SPOON1_Mold",
+     "SPOON2_Mold",
+     "SPOON3_Mold"
+    ],
+    "centre": 2.1,
+    "sigma": 0.0333
+   },
+   {
+    "material": "UT-SPOON",
+    "characteristic": "weight_g",
+    "stations": [
+     "SPOON1_Mold",
+     "SPOON2_Mold",
+     "SPOON3_Mold"
+    ],
+    "centre": 4.7,
+    "sigma": 0.05
+   },
+   {
+    "material": "UT-SPOON",
+    "characteristic": "bowl_depth_mm",
+    "stations": [
+     "SPOON1_Mold",
+     "SPOON2_Mold",
+     "SPOON3_Mold"
+    ],
+    "centre": 9.0,
+    "sigma": 0.0833
+   },
+   {
+    "material": "UT-KNIFE",
+    "characteristic": "length_mm",
+    "stations": [
+     "KNIFE1_Mold",
+     "KNIFE2_Mold",
+     "KNIFE3_Mold"
+    ],
+    "centre": 175.0,
+    "sigma": 0.1667
+   },
+   {
+    "material": "UT-KNIFE",
+    "characteristic": "width_mm",
+    "stations": [
+     "KNIFE1_Mold",
+     "KNIFE2_Mold",
+     "KNIFE3_Mold"
+    ],
+    "centre": 18.0,
+    "sigma": 0.1667
+   },
+   {
+    "material": "UT-KNIFE",
+    "characteristic": "thickness_mm",
+    "stations": [
+     "KNIFE1_Mold",
+     "KNIFE2_Mold",
+     "KNIFE3_Mold"
+    ],
+    "centre": 2.1,
+    "sigma": 0.0333
+   },
+   {
+    "material": "UT-KNIFE",
+    "characteristic": "weight_g",
+    "stations": [
+     "KNIFE1_Mold",
+     "KNIFE2_Mold",
+     "KNIFE3_Mold"
+    ],
+    "centre": 4.3,
+    "sigma": 0.05
+   },
+   {
+    "material": "UT-KNIFE",
+    "characteristic": "edge_straightness_mm",
+    "stations": [
+     "KNIFE1_Mold",
+     "KNIFE2_Mold",
+     "KNIFE3_Mold"
+    ],
+    "centre": 0.2,
+    "sigma": 0.0333
+   }
+  ]
+ },
+ "_answer": {
+  "mould": "FORK1_Mold",
+  "line": "FORK1LINE",
+  "tag": "FORK1_Mold.MeltTemp (base 214 C, climbs to 238 C)",
+  "cause": "FORK1_Mold down 1800-1860 line s of FORK1's hour (a cooling-water fault), then MeltTemp drifting 1860-2300 to 238 C and held +24 C to 5390",
+  "characteristic": "UT-FORK width_mm, spec 24.0-26.0 mm, centre 25.0",
+  "before": "the first pallets (PL1..PL4-000000001, closed about 2:45 after start): width Cpk about 1.8 (at least 1.33), mean about 25.0",
+  "after": "pallets closed after about 6:30 from start, whose every piece was made hot: width Cpk about 0.6-0.8 (under 1.0) - one fork in three off the hot mould, sigma about 1.15 mm, the other two still tight - and the mean still about 25.0, inside the limits; the pallets between straddle the fault and read in between",
+  "range_rule": "rule 5, a moving range beyond its upper limit, on the width chart's moving-range chart, from the first FORK1 forks after the climb (also rules 1, 2 and 4 on the individuals chart, from the out-of-spec and wide points)",
+  "pallets": "serials are PL1..PL4-00000000N in close order, four closing together about every 85 wall seconds; which N is hot depends on the start, so read the close time on the Certificates screen",
+  "not_moved": "FORK2_Mold and FORK3_Mold, every other characteristic, spoons and knives",
+  "when": "at 10x from the plant's start: healthy to 3:00, the stop at 3:00-3:06, climbing to 3:50, hot to 9:00, then the hour repeats"
+ }
+}

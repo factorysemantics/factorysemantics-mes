@@ -1,0 +1,527 @@
+# Class 2.1 of the course, *The station screen — one machine at arm's length*:
+# what an operator standing at one machine reads and does on its screen.
+#
+# It starts from the operator at the press with a tablet (a card of words, no
+# drawing), names the four words of the class (station, book, issue, queue),
+# and reads the station screen of the fork mould, FORK1_Mold, top to bottom,
+# one action per card: its state, its queue, 500 good and 3 scrap booked
+# against the order at the head of the queue, two kilos of the line's resin lot
+# issued to it, one length reading recorded and judged in spec, and what
+# maintenance is owed. Then what it refuses: an order that is planned, not
+# released, is not on the screen to book against; and what it does not refuse:
+# a Good figure the machine's own counter contradicts is taken as typed.
+# Filmed on a scratch cutlery plant, every screen as the product draws it.
+
+name = "the-station-screen"
+title = "The station screen — one machine at arm's length"
+lesson = "2.1"
+take_is = "lesson"
+part = "hook"
+base = "http://127.0.0.1:8040"
+badge = "pre-alpha · simulated plant · v{version}"
+# Four to six minutes, as the outline says this class runs, and up to half a
+# minute more for reaching the station and the Orders page by the menus (Scott,
+# 2026-11-15: click through the menus even if the class runs longer).
+budget_seconds = 390
+gif_skip_seconds = 2.0
+width = 1280
+height = 720
+# Booking, issuing and recording a reading are writes, and they are the story.
+allow_writes = true
+what_is_written = "which is how the class books output, issues material and records a quality reading: Book, Issue and Record are real `POST`s to the take's own scratch plant, made with the station screen's own buttons, and its audit trail names the person signed in as having made them."
+
+notes = [
+  "The plant was started from the cutlery pack at ten times wall clock. The camera waited, off camera, until the pack's own released fork order, WO-FORK1-0001, had booked its first forks, so that the mould's queue has a running order with a count on it when the class arrives.",
+  "The simulated floor was told `MES_OPS_FINISH_ORDERS=false`, so its simulated supervisor neither finishes WO-FORK1-0001 nor releases the next fork order, WO-FORK1-0002, while the camera rolls: the class needs WO-FORK1-0002 to stay planned for its refusal. The switch belongs to the simulated floor; the MES is configured as anybody installs it.",
+  "The lot issued is LOT-PP-FORK1-001, the pack's polypropylene lot for the fork line. Two kilos is about what 500 forks weigh: the pack's fork weighs 3.6 to 4.2 grams.",
+  "The reading recorded is 165.1 mm on length_mm, inside the pack's UT-FORK limits of 164 to 166 mm. The simulated floor records length readings too, so the recent results show its readings beside ADMIN's.",
+  "The cutlery pack carries no maintenance plan, so the maintenance card says nothing is owed. That is the product's answer for this plant, filmed as drawn.",
+  "The second booking, 5,000 good, is typed to show that the station does not check a typed figure against the mould's own counter. It is a write to a scratch plant that is thrown away when the take ends.",
+  "At any speed but 1x every 2D page carries the product's REPLAY 10× banner across its top. It is filmed as the product draws it.",
+  "The class is clicked through as a person would: the only page opened by address is the Floor, the first page after sign-in. The station is reached by the Floor menu's Station tab and the mould chosen from its Machine list; the planned order is reached by the Orders menu and found with its search box; the way back is Floor, then Station.",
+  "The opening beat is a plain card with words on it. There is no artwork of a machine, a tablet or a person.",
+]
+
+honesty = [
+  "the mould's counter books every shot by itself on this plant; the 500 good and 3 scrap typed in the class are added on top of what it counted, not instead of it",
+  "the station does not refuse a Good figure the machine's own counter contradicts: 5,000 typed against a mould whose whole count, counter and typed, was short of 5,000 is taken as typed, and nothing on the screen says the two disagree; the class shows that rather than a refusal the product does not make",
+  "the refusal to book against an order not released to this machine is drawn as an absence: the Against list holds only the machine's own released queue, so the planned order WO-FORK1-0002 is not offered; the class does not call the API behind the screen, which books to any order named with an explicit step, on whatever machine that step is",
+  "the simulated floor was told not to finish or release orders itself (MES_OPS_FINISH_ORDERS=false), so WO-FORK1-0002 stays planned while the camera rolls; on a plant left to itself the simulated supervisor would release it when WO-FORK1-0001 is done",
+  "the Lot list at the station offers every available lot on the plant, paper plates among them, not only the resin this machine takes; the class picks the fork line's resin lot from it",
+  "the maintenance card is empty because the cutlery pack has no maintenance plan, not because the machine was just serviced",
+  "the plant is a scratch plant a few minutes old, replaying at ten times wall clock, which is the banner across the top of the 2D pages",
+]
+
+[plant]
+pack = "labs/cutlery"
+speed = 10
+env = { MES_OPS_FINISH_ORDERS = "false" }
+roll_when_timeout_seconds = 900
+
+# A running order with a count on it at the head of the mould's queue.
+[[plant.roll_when_order]]
+code = "WO-FORK1-0001"
+booked = 100
+
+# ----------------------------------------------------------------- the hook
+
+[[step]]
+do = "slide"
+name = "the-operator-at-the-press"
+title = "An operator at the press, a tablet in hand"
+lines = [
+  "One machine: the fork mould",
+  "What is it doing? What is next?",
+  "What did I make? What did I put in?",
+  "Is it good? What is owed to it?",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "An operator stands at one press for a whole shift, a tablet in hand. Not the plant, not the line: this one machine."
+
+[[step]]
+do = "say"
+line = "Through the shift they ask the same few things. What is it doing, and what is next for it?"
+
+[[step]]
+do = "say"
+line = "What did I make, what did I put in, is it good, and is anything owed to the machine? One screen answers all of them."
+
+[[step]]
+do = "mark"
+name = "the-operator-at-the-press"
+
+# ----------------------------------------------------------------- the idea
+
+[[step]]
+part = "idea"
+do = "slide"
+name = "four-words"
+title = "Four words"
+lines = [
+  "Station: one machine's screen, for the person standing at it",
+  "Queue: the released work this machine has next, in order",
+  "Book: write down how many good and how many scrap, against an order",
+  "Issue: write down which lot of material went into that order",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Four words. A station is one machine's screen, made for the person standing at it, not for the office."
+
+[[step]]
+do = "say"
+line = "The queue is the work released to this machine, in the order it should run. Only released work is in it."
+
+[[step]]
+do = "say"
+line = "To book is to write down how many good and how many scrap, always against an order and its step."
+
+[[step]]
+do = "say"
+line = "To issue is to write down which lot of material went into that order, so it can be traced later."
+
+[[step]]
+do = "mark"
+name = "four-words"
+
+# ------------------------------------------------------------ on the screen
+
+# The station is reached the way an operator reaches it: the Floor page (the
+# one page opened by address, the first after signing in), its Station chip,
+# and the Machine chooser at the top of the station screen. The product has no
+# other station picker; the Floor page's own forms are not the station.
+[[step]]
+part = "screen"
+do = "goto"
+url = "/dashboard"
+settle = 2
+
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"Station\")"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#machine').options.length > 1"
+
+[[step]]
+do = "choose"
+selector = "#machine"
+value = "FORK1_Mold"
+
+[[step]]
+do = "wait_for"
+selector = "#queue"
+text = "WO-FORK1-0001"
+
+[[step]]
+do = "say"
+line = "The station screen of the fork mould, FORK1_Mold. The machine is chosen at the top; the operator starts the shift here."
+at = "#machine"
+label = "Machine"
+
+[[step]]
+do = "say"
+line = "First card, its state: running, and since when. Going down asks why, which is the next class."
+at = "#state-buttons"
+label = "State"
+
+[[step]]
+do = "mark"
+name = "its-state"
+
+[[step]]
+do = "say"
+line = "Second card, its queue: the order it is running, WO-FORK1-0001, step 10, Mold, and how many good of how many ordered."
+at = "#queue li.running-op"
+label = "Running order"
+
+[[step]]
+do = "say"
+line = "That count moves by itself: the mould's own counter books every shot it makes."
+at = "#queue li.running-op .what .muted"
+label = "Good of ordered"
+
+[[step]]
+do = "mark"
+name = "its-queue"
+
+[[step]]
+do = "wait_for"
+selector = "#book-order"
+text = "WO-FORK1-0001"
+scroll_to = "#queue"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "Third card, book output. Against: the order at the head of the queue, step 10. The operator counts a box."
+at = "#book-order"
+label = "Against"
+
+[[step]]
+do = "choose"
+selector = "#book-order"
+value = "WO-FORK1-0001"
+
+[[step]]
+do = "fill"
+selector = "#book-good"
+text = "500"
+
+[[step]]
+do = "fill"
+selector = "#book-scrap"
+text = "3"
+
+[[step]]
+do = "say"
+line = "Five hundred good, three scrap. Book."
+at = "#book .big-io"
+label = "Good and scrap"
+
+[[step]]
+do = "click"
+selector = "#book-submit"
+
+[[step]]
+do = "wait_for"
+selector = "#toast"
+text = "Booked 500 good, 3 scrap."
+
+[[step]]
+do = "wait_for"
+selector = "#queue"
+text = "WO-FORK1-0001"
+scroll_to = "#queue"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "Booked, against WO-FORK1-0001 step 10, under the name of the person signed in. The queue's count is up by five hundred."
+at = "#queue li.running-op .what .muted"
+label = "The count"
+
+[[step]]
+do = "mark"
+name = "booked-500-good-3-scrap"
+
+[[step]]
+do = "say"
+line = "Fourth card, issue material. It issues to the order running here, WO-FORK1-0001."
+at = "#issue-where"
+label = "Issues to"
+
+[[step]]
+do = "choose"
+selector = "#issue-lot"
+value = "LOT-PP-FORK1-001"
+
+[[step]]
+do = "fill"
+selector = "#issue-qty"
+text = "2"
+
+[[step]]
+do = "say"
+line = "The lot is the fork line's polypropylene resin, LOT-PP-FORK1-001. Two kilos: about what five hundred forks weigh. Issue."
+at = "#issue .big-io"
+label = "Lot and kilos"
+
+[[step]]
+do = "click"
+selector = "#issue-submit"
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#issue-lot option')].some(o => o.value === 'LOT-PP-FORK1-001' && o.textContent.includes('4,485.5'))"
+
+[[step]]
+do = "say"
+line = "Issued. The lot is two kilos lighter, and the order now says which resin went into it."
+at = "#issue-lot"
+label = "Two kilos lighter"
+
+[[step]]
+do = "mark"
+name = "issued-two-kilos-of-resin"
+
+[[step]]
+do = "wait_for"
+selector = "#q-spec"
+text = "Spec 164 to 166 mm."
+scroll_to = "#quality"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "Fifth card, quality, on what this machine is running: forks, UT-FORK. Only characteristics with a specification are offered."
+at = "#q-char"
+label = "Characteristic"
+
+[[step]]
+do = "choose"
+selector = "#q-char"
+value = "length_mm"
+
+[[step]]
+do = "say"
+line = "Length: the specification is 164 to 166 millimetres. The operator puts a fork on the gauge."
+at = "#q-spec"
+label = "Specification"
+
+[[step]]
+do = "fill"
+selector = "#q-value"
+text = "165.1"
+
+[[step]]
+do = "click"
+selector = "#q-submit"
+
+[[step]]
+do = "wait_for"
+js = "(document.querySelector('#q-recent').innerText || '').includes('165.1') && (document.querySelector('#q-recent').innerText || '').includes('in spec')"
+
+[[step]]
+do = "say"
+line = "165.1 millimetres: in spec. It is in the recent results, with the time and who measured it."
+at = "#q-recent li:has-text(\"165.1\")"
+label = "In spec"
+
+[[step]]
+do = "mark"
+name = "a-reading-in-spec"
+
+[[step]]
+do = "wait_for"
+selector = "#maint"
+text = "Nothing owed on this machine."
+scroll_to = "#maint"
+scroll_block = "start"
+scroll_offset = 320
+
+[[step]]
+do = "say"
+line = "Last card, maintenance on this machine. Here, nothing is owed: this plant has no maintenance plan set up."
+at = "#maint"
+label = "Nothing owed"
+
+[[step]]
+do = "say"
+line = "Where a plan is set up, the jobs due on this machine are listed here, and the operator can start and complete them."
+at = "#maint"
+label = "Jobs due"
+
+[[step]]
+do = "mark"
+name = "what-maintenance-is-owed"
+
+# -------------------------------------------------------------- it refuses
+
+# The Orders page by its menu, and the next fork order found by typing its
+# code into the page's own search box.
+[[step]]
+part = "refuses"
+do = "click"
+selector = "header nav a:text-is(\"Orders\")"
+
+[[step]]
+do = "wait_for"
+selector = "#order-list"
+text = "WO-"
+
+[[step]]
+do = "fill"
+selector = "#f-text"
+text = "WO-FORK1-0002"
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#order-list tbody tr')].length === 1 && document.querySelector('#order-list tbody').innerText.includes('WO-FORK1-0002')"
+
+[[step]]
+do = "click"
+selector = "#order-list tbody tr:has-text(\"WO-FORK1-0002\")"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#detail-code').innerText === 'WO-FORK1-0002' && document.querySelector('#d-status').innerText === 'planned'"
+scroll_to = "#detail-panel"
+scroll_block = "start"
+scroll_offset = 220
+
+[[step]]
+do = "say"
+line = "Now what it refuses. This is the next fork order, WO-FORK1-0002. Its first step is on the same mould, but it is only planned."
+at = "#d-status"
+label = "Only planned"
+style = "spotlight"
+
+[[step]]
+do = "mark"
+name = "the-next-order-is-planned"
+
+# Back the same way: the Floor menu, then its Station chip. The station
+# remembers the machine last chosen on it, FORK1_Mold.
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"Floor\")"
+
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"Station\")"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#machine').value === 'FORK1_Mold' && [...document.querySelectorAll('#book-order option')].map(o => o.value).join() === 'WO-FORK1-0001'"
+scroll_to = "#book"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "Back at the mould, the Against list holds one order: WO-FORK1-0001. The planned order is not there to book against."
+at = "#book-order"
+label = "One order"
+style = "spotlight"
+
+[[step]]
+do = "say"
+line = "Nor is any order of another line. An operator can only book to work released to this machine."
+at = "#book-order"
+label = "Released work only"
+
+[[step]]
+do = "mark"
+name = "only-released-work-to-book-against"
+
+# The claim the next caption makes, checked on the take: the mould's count,
+# its counter's shots and the 500 typed, is still short of what is typed next.
+[[step]]
+do = "wait_for"
+js = "Number(((document.querySelector('#queue').innerText.match(/Mold\\D+([0-9,]+) of/) || [])[1] || 'NaN').replace(/,/g, '')) < 5000"
+
+[[step]]
+do = "say"
+line = "And what it does not refuse. Type five thousand good: more forks than this mould has made since the plant started."
+at = "#book-good"
+label = "Good"
+
+[[step]]
+do = "fill"
+selector = "#book-good"
+text = "5000"
+
+[[step]]
+do = "click"
+selector = "#book-submit"
+
+[[step]]
+do = "wait_for"
+selector = "#toast"
+text = "Booked 5,000 good, 0 scrap."
+
+[[step]]
+do = "say"
+line = "Booked. The station took the figure as typed. Nothing on the screen says the counter disagrees."
+at = "#book"
+label = "No warning"
+
+[[step]]
+do = "mark"
+name = "a-figure-the-counter-contradicts-is-taken"
+
+[[step]]
+do = "wait_for"
+selector = "#queue"
+text = "WO-FORK1-0001"
+scroll_to = "#queue"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "The queue now says the mould has made thousands more than its counter saw. A typed booking is added to the count; it is not checked against it."
+at = "#queue li.running-op .what .muted"
+label = "Thousands more"
+
+[[step]]
+do = "say"
+line = "So a typed figure is the operator's word. The audit trail says who typed it, and the counter's own shots stay counted beside it."
+
+[[step]]
+do = "mark"
+name = "the-queue-takes-the-typed-figure"
+
+# ------------------------------------------------------------ you now know
+
+[[step]]
+part = "know"
+do = "slide"
+name = "you-now-know"
+title = "You now know how to"
+lines = [
+  "Read one machine on its station screen: its state, its queue of released work, and what maintenance is owed.",
+  "Book good and scrap against the order at the head of its queue, issue a lot, and record a quality reading.",
+  "Say why only released work can be booked at a station, and why a typed count is the operator's word.",
+]
+
+[[step]]
+do = "say"
+line = "That is the station screen: one machine, read top to bottom, and the work done at it written down. You now know how to do three things."
+
+[[step]]
+do = "mark"
+name = "you-now-know"
+
+[[step]]
+do = "hold"
+seconds = 3
