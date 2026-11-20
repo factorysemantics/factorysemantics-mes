@@ -199,6 +199,13 @@ label = "3.3"
 slug = "oee-and-its-three-losses"
 title = "OEE and its three losses"
 one_line = "Availability, performance, quality — and the figure the MES withholds."
+knows_before = ["2.2", "3.1"]
+outcomes = [
+  "Say what OEE is: availability, performance and quality, multiplied.",
+  "Read a machine's OEE tab and check its figure from its three parts.",
+  "Find the biggest loss on the Analysis page, and say when the MES gives no figure.",
+]
+scene = "scripts/scenes/course/04-03-oee-and-its-three-losses.toml"
 
 [[module.lesson]]
 order = 3
