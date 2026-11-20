@@ -185,6 +185,13 @@ label = "3.1"
 slug = "tags-and-opc-ua"
 title = "Tags — how a machine's counters reach the MES"
 one_line = "A machine publishes tags over OPC UA; the MES reads them, read-only, through a tag map."
+knows_before = ["2.1"]
+outcomes = [
+  "Say what a tag is: a name, a value and a time, published by a machine over OPC UA.",
+  "Find a machine's tags, their live values and one tag's trend.",
+  "Say what the tag map decides, why the MES only reads, and what a quiet tag shows.",
+]
+scene = "scripts/scenes/course/04-01-tags-and-opc-ua.toml"
 
 [[module.lesson]]
 order = 2

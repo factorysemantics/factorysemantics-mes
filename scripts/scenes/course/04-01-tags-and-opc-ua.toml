@@ -1,0 +1,472 @@
+# Class 3.1 of the course, *Tags — how a machine's counters reach the MES*:
+# what a tag is, where the MES lists them, and what it says when one goes
+# quiet.
+#
+# It starts from a card of words about a machine that counts (no drawing),
+# names the words of the class (a tag, OPC UA, the tag map, read-only), and
+# then follows the fork mould's numbers the way the product shows them: the
+# mould's tile on the Floor with its melt temperature, the mould's own page
+# with every tag it publishes, and its state code turned into "running" by the
+# tag map; the plant's whole list of tags on Engineering > Tags, narrowed to
+# the mould, with its writable setpoint and the line that nothing writes it
+# from here; one tag's trend, reached by clicking its row; and on Setup > Ops
+# the plant's OPC UA endpoint, its tag map file, and the two parts that carry
+# the tags, the simulated tag server and the agent that reads it. Then what it
+# refuses: a tag that goes quiet is marked stale, and a lost connection is
+# unknown time, never a guess. Filmed on a scratch cutlery plant, every screen
+# as the product draws it.
+
+name = "tags-and-opc-ua"
+title = "Tags — how a machine's counters reach the MES"
+lesson = "3.1"
+take_is = "lesson"
+part = "hook"
+base = "http://127.0.0.1:8040"
+badge = "pre-alpha · simulated plant · v{version}"
+# Four and a half to six minutes, as the handoff asks, clicked through the
+# menus all the way.
+budget_seconds = 390
+gif_skip_seconds = 2.0
+width = 1280
+height = 720
+
+notes = [
+  "The plant was started from the cutlery pack at ten times wall clock. The camera waited, off camera, until the pack's released fork order, WO-FORK1-0001, had booked 200 forks, so that the mould has a few minutes of readings to trend when the class arrives.",
+  "Every tag in the class comes from the plant's own simulated OPC UA server, the opc-replay component on the Ops page, which replays the pack's recorded line (labs/cutlery/line.json). The MES's agent reads it exactly as it would read a real server. No real plant's tag server is read.",
+  "The take writes nothing. Ticking \"stale only\" on the Tags page is a filter in the browser, and the Machine filter is the same.",
+  "The state code: the cutlery tag map (labs/cutlery/tag_map.json) maps the State tag's 1 to running, which is what the machine page's pill says while the State row reads 1.",
+  "GoodCount and ScrapCount are the counters the agent books production from, by how much each goes up; that is the tag map's default when a machine names no other counters.",
+  "The cutlery tag map gives every machine `order_tag = null`: the agent never writes an order code to these machines. The only other write the agent makes is an approved adjustment, which is class 5.3.",
+  "The tag map is shown on Ops only as the path of its file. Its contents (which tag is the state, what each state code means, which counters book production) are on no screen.",
+  "No tag goes quiet during the take. What a quiet tag and a lost connection look like is said, with the Tags page's own counters at zero; the class does not cut a connection to show it.",
+  "The class is clicked through as a person would: the only page opened by address is the Floor, the first page after sign-in. The machine page is reached from the mould's tile on the Floor, the Tags page by the Engineering menu, the trend by clicking the tag's row, Ops by the Setup menu, and the Tags page again by the Engineering menu.",
+  "The opening beat is a plain card with words on it. There is no artwork of a machine or a server.",
+]
+
+honesty = [
+  "the tag server in this class is the simulated plant's own, replaying a recorded line; no real plant's tag server has been read yet",
+  "the MES shows a tag by its name, not by its OPC address; the address is in the tag map, which no screen shows",
+  "the tag map is named on the Ops page only as a file; its contents are read by opening the file",
+  "no tag went quiet during the take: what a stale tag and a lost connection look like is said over counters that read zero, not filmed",
+  "the plant is a scratch plant a few minutes old, replaying at ten times wall clock",
+]
+
+[plant]
+pack = "labs/cutlery"
+speed = 10
+roll_when_timeout_seconds = 900
+
+# By 200 forks booked the mould has minutes of readings to trend, and its
+# first stop, a minute after the start, is long past.
+[[plant.roll_when_order]]
+code = "WO-FORK1-0001"
+booked = 200
+
+# ----------------------------------------------------------------- the hook
+
+[[step]]
+do = "slide"
+name = "a-machine-that-counts"
+title = "A machine that counts"
+lines = [
+  "The fork mould counts every fork it makes",
+  "It knows its own temperature",
+  "How do those numbers reach the MES?",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "The fork mould counts every fork it makes, and it knows its own temperature."
+
+[[step]]
+do = "say"
+line = "The MES was not standing beside it. So how does it know those numbers?"
+
+[[step]]
+do = "say"
+line = "This class follows the mould's numbers from the machine to the screens that show them."
+
+[[step]]
+do = "mark"
+name = "a-machine-that-counts"
+
+# ----------------------------------------------------------------- the idea
+
+[[step]]
+part = "idea"
+do = "slide"
+name = "the-words"
+title = "The words"
+lines = [
+  "Tag: a name, a value and a time",
+  "OPC UA: how machines publish their tags",
+  "Tag map: which tag is whose, and what it means",
+  "Read-only: the MES listens; it does not write",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "A tag is one number a machine keeps up to date. It has a name, a value, and the time it was last sent."
+
+[[step]]
+do = "say"
+line = "OPC UA is a common language machines use to publish their tags, so any software can read them the same way."
+
+[[step]]
+do = "say"
+line = "The tag map is a file. It says which tags belong to which machine, and what their values mean."
+
+[[step]]
+do = "say"
+line = "And the MES only reads. It listens to the tags. It does not write them back to the machine."
+
+[[step]]
+do = "mark"
+name = "the-words"
+
+# ------------------------------------------------------------ on the screen
+
+# The Floor is the one page opened by address, the first after signing in.
+[[step]]
+part = "screen"
+do = "goto"
+url = "/dashboard"
+settle = 2
+
+[[step]]
+do = "wait_for"
+js = "!!document.querySelector('main .machine a.machine-code[href=\"/dashboard/machine/FORK1_Mold\"]') && document.querySelector('main .machine:has(a.machine-code[href=\"/dashboard/machine/FORK1_Mold\"])').textContent.includes('MeltTemp')"
+scroll_to = "main .machine:has(a.machine-code[href=\"/dashboard/machine/FORK1_Mold\"])"
+scroll_block = "start"
+scroll_offset = 260
+
+[[step]]
+do = "say"
+line = "The Floor. Here is the fork mould, running."
+at = "main .machine:has(a.machine-code[href=\"/dashboard/machine/FORK1_Mold\"])"
+label = "Fork mould"
+
+[[step]]
+do = "say"
+line = "Beside its order, its melt temperature. Nobody typed that number in. It came from the machine."
+at = "main .machine:has(a.machine-code[href=\"/dashboard/machine/FORK1_Mold\"]) .machine-meta span:has-text(\"MeltTemp\")"
+
+[[step]]
+do = "mark"
+name = "a-machine-on-the-floor"
+
+[[step]]
+do = "click"
+selector = "main .machine a.machine-code[href=\"/dashboard/machine/FORK1_Mold\"]"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#m-state').textContent.trim().toLowerCase() === 'running' && [...document.querySelectorAll('#tags-table tbody tr')].some(r => r.querySelector('td') && r.querySelector('td').textContent.trim() === 'State' && r.querySelector('td.num').textContent.trim() === '1')"
+scroll_to = "#tags-table"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "The mould's own page lists every tag it publishes. Each row is one tag: its name, its value, and its age."
+at = "#tags-table thead"
+label = "Its tags"
+
+[[step]]
+do = "say"
+line = "GoodCount is a counter: the good forks it has made. The MES books production from how much it goes up."
+at = "#tags-table tbody tr:has-text(\"GoodCount\")"
+
+[[step]]
+do = "say"
+line = "MeltTemp is a reading, in degrees Celsius. Beside it, the setpoint: what the temperature should be."
+at = "#tags-table tbody tr:has-text(\"MeltTemp\")"
+
+[[step]]
+do = "say"
+line = "State is a code. The machine does not send the word running. It sends the number 1."
+at = "#tags-table tbody tr:has-text(\"State\"):not(:has-text(\"ReadyBit\"))"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#m-state').textContent.trim().toLowerCase() === 'running'"
+scroll_to = "#m-state"
+scroll_block = "start"
+scroll_offset = 280
+
+[[step]]
+do = "say"
+line = "The tag map says that on this machine 1 means running. So the page says running."
+at = "#m-state"
+label = "1 means running"
+
+[[step]]
+do = "mark"
+name = "one-machines-tags"
+
+# The plant's whole list, by the Engineering menu and its Tags chip.
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"Engineering\")"
+
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"Tags\")"
+
+[[step]]
+do = "wait_for"
+selector = "#kpi-tags"
+text = "1,310"
+
+[[step]]
+do = "say"
+line = "Engineering, Tags: every tag in the plant, in one list. This plant publishes 1,310."
+at = "#kpi-tags"
+label = "Every tag"
+
+[[step]]
+do = "say"
+line = "Each machine gets a tile. Is it still talking, and when did it last speak?"
+at = "#health .health-tile:has(a[href=\"/dashboard/machine/FORK1_Mold\"])"
+label = "Still talking"
+
+[[step]]
+do = "choose"
+selector = "#machine"
+value = "FORK1_Mold"
+
+[[step]]
+do = "wait_for"
+selector = "#row-count"
+text = "11 of 11"
+scroll_to = "#tags-table"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "Narrow it to the fork mould. The list says what it shows: 11 of 11 matching, out of 1,310."
+at = "#row-count"
+label = "Its total"
+
+[[step]]
+do = "say"
+line = "Each tag is shown by its name, like GoodCount, not by its OPC address on the server. That address lives in the tag map."
+at = "#tags-table tbody tr:has-text(\"GoodCount\") td.code"
+
+[[step]]
+do = "mark"
+name = "every-tag-in-the-plant"
+
+[[step]]
+do = "say"
+line = "MeltTempSP is the setpoint. The machine would accept a new value for it, so it is marked writable."
+at = "#tags-table tbody tr:has-text(\"MeltTempSP\") .pill:text-is(\"writable\")"
+
+[[step]]
+do = "say"
+line = "But the MES writes no tag from here. The page says so: nothing writes them yet."
+at = "p.muted.small:has-text(\"nothing writes them yet\")"
+
+[[step]]
+do = "say"
+line = "The one path from the MES to a machine is an approved adjustment, under Adjustments. That is class 5.3."
+at = "nav.subnav a:text-is(\"Adjustments\")"
+label = "Class 5.3"
+
+[[step]]
+do = "mark"
+name = "the-mes-only-reads"
+
+[[step]]
+do = "say"
+line = "Click a tag to see its history. Here, the melt temperature."
+at = "#tags-table tbody tr:has-text(\"primary\")"
+
+[[step]]
+do = "click"
+selector = "#tags-table tbody tr:has-text(\"primary\")"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#trend-tag') && document.querySelector('#trend-tag').value === 'MeltTemp' && !!document.querySelector('#trend polyline.trend-line') && !!document.querySelector('#trend text.chart-coverage')"
+scroll_to = "#trend"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "Back on the mould's page, on its Trend tab: the melt temperature, every reading since the MES began watching."
+at = "#trend"
+label = "Trend"
+
+[[step]]
+do = "say"
+line = "Each reading has its time, so the line is drawn where the machine said it, not where it is assumed."
+at = "#trend polyline.trend-line"
+label = "Each reading"
+
+[[step]]
+do = "say"
+line = "The footer says how much of the window was watched. Before the MES was watching, it does not pretend to know."
+at = "#trend text.chart-coverage"
+
+[[step]]
+do = "mark"
+name = "one-tags-trend"
+
+# Where the tags come from, by the Setup menu and its Ops chip.
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"Setup\")"
+
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"Ops\")"
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#plant-facts .fact')].some(f => f.textContent.includes('Tag map')) && [...document.querySelectorAll('#components .component')].some(c => c.textContent.includes('opc-replay'))"
+
+[[step]]
+do = "say"
+line = "Setup, Ops. Where do the tags come from? This is the plant's OPC UA endpoint: the address the MES connects to."
+at = "#plant-facts .fact:has-text(\"OPC UA endpoint\")"
+label = "Endpoint"
+
+[[step]]
+do = "say"
+line = "And this is the tag map: the file that says which tag is a machine's state, what each code means, and which counters book production."
+at = "#plant-facts .fact:has-text(\"Tag map\")"
+label = "Tag map"
+
+[[step]]
+do = "say"
+line = "Here it is only a file name. No screen shows what is inside it yet. To read it, you open the file."
+at = "#plant-facts .fact:has-text(\"Tag map\") .v"
+
+[[step]]
+do = "mark"
+name = "the-tag-map"
+
+[[step]]
+do = "wait_for"
+selector = "#components"
+text = "opc-agent"
+scroll_to = "#components"
+scroll_block = "start"
+scroll_offset = 260
+
+[[step]]
+do = "say"
+line = "The opc-agent listens to the machines and books what they report."
+at = "#components .component:has-text(\"opc-agent\")"
+label = "The listener"
+
+[[step]]
+do = "say"
+line = "What it listens to is opc-replay: this simulated plant's own tag server, replaying a recorded line."
+at = "#components .component:has-text(\"opc-replay\")"
+label = "Simulated server"
+
+[[step]]
+do = "say"
+line = "So every tag in this class came from a simulator. No real plant's tag server has been read yet."
+at = "#components .component:has-text(\"opc-replay\") .purpose"
+
+[[step]]
+do = "mark"
+name = "a-simulated-tag-server"
+
+# -------------------------------------------------------------- it refuses
+
+# The Tags page again, by the Engineering menu.
+[[step]]
+part = "refuses"
+do = "click"
+selector = "header nav a:text-is(\"Engineering\")"
+
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"Tags\")"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#kpi-tags').textContent.trim() === '1,310' && document.querySelector('#kpi-quiet').textContent.trim() === '0' && document.querySelector('#kpi-stale').textContent.trim() === '0'"
+
+[[step]]
+do = "say"
+line = "What if a machine goes quiet? Right now none has. Machines quiet: zero."
+at = "#kpi-quiet"
+label = "None quiet"
+
+[[step]]
+do = "say"
+line = "A tag that stops arriving for a minute is marked stale, with how old its last value is. Stale tags: zero."
+at = "#kpi-stale"
+label = "Stale"
+
+[[step]]
+do = "click"
+selector = "#only-stale"
+
+[[step]]
+do = "wait_for"
+selector = "#row-count"
+text = "0 of 0"
+scroll_to = "#tags-table"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "Stale only: none of the 1,310 tags. Even an empty list says what it was drawn from."
+at = "#row-count"
+label = "0 of 1,310"
+style = "spotlight"
+
+[[step]]
+do = "mark"
+name = "a-quiet-tag-is-marked-stale"
+
+[[step]]
+do = "say"
+line = "If the connection drops, the machine reads disconnected. That time counts as unknown, not as running and not as down."
+at = "#kpi-quiet"
+label = "Unknown"
+style = "spotlight"
+
+[[step]]
+do = "say"
+line = "The MES does not fill the gap with a guess. A number it did not hear is a number it does not have."
+
+[[step]]
+do = "mark"
+name = "a-lost-connection-is-not-a-guess"
+
+# ------------------------------------------------------------ you now know
+
+[[step]]
+part = "know"
+do = "slide"
+name = "you-now-know"
+title = "You now know how to"
+lines = [
+  "Say what a tag is: a name, a value and a time, published by a machine over OPC UA.",
+  "Find a machine's tags, their live values and one tag's trend.",
+  "Say what the tag map decides, why the MES only reads, and what a quiet tag shows.",
+]
+
+[[step]]
+do = "say"
+line = "That is tags: numbers a machine publishes, read through a map, and never guessed. You now know how to do three things."
+
+[[step]]
+do = "mark"
+name = "you-now-know"
+
+[[step]]
+do = "hold"
+seconds = 3
