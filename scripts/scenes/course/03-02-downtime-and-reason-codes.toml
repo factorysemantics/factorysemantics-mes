@@ -1,0 +1,521 @@
+# Class 2.2 of the course, *Downtime and reason codes*: what happens when a
+# machine stops, how the stop gets a reason, and where its minutes land.
+#
+# It starts from a red light on the fork mould (a card of words, no drawing),
+# names the words of the class (the four states, a reason code, a planned stop,
+# an unlabelled stop), and then follows a stop the way the product records it:
+# the mould's state on its station screen, what pressing "down" asks, the stop
+# the mould itself reported a minute after the plant started, found on its
+# machine page's timeline and named Breakdown from the plant's own list, the
+# list itself on the Downtime reasons page, and the stop's nine seconds on the
+# line's downtime pareto. Then what it refuses: the second line's mould stopped
+# too and nobody named it, and the pareto says "unlabelled" rather than guess.
+# Filmed on a scratch cutlery plant, every screen as the product draws it.
+
+name = "downtime-and-reason-codes"
+title = "Downtime and reason codes"
+lesson = "2.2"
+take_is = "lesson"
+part = "hook"
+base = "http://127.0.0.1:8040"
+badge = "pre-alpha · simulated plant · v{version}"
+# Four and a half to six minutes, as the handoff asks, clicked through the
+# menus all the way.
+budget_seconds = 390
+gif_skip_seconds = 2.0
+width = 1280
+height = 720
+# Naming a stop is a write, and it is the story.
+allow_writes = true
+what_is_written = "which is how the class names a stop: \"Name this stop\" on the machine page is a real `POST` to the take's own scratch plant, made with the page's own button, and its audit trail names the person signed in as having said it. Pressing \"down\" at the station is cancelled with \"Never mind\" and writes nothing."
+
+notes = [
+  "The plant was started from the cutlery pack at ten times wall clock. The camera waited, off camera, until the pack's released fork order, WO-FORK1-0001, had booked 200 forks, so that the replayed line has already stopped each mould once when the class arrives: the fork mould FORK1_Mold about a minute after the start, the second line's mould FORK2_Mold half a minute later. Both stops are in the pack's recorded line (labs/cutlery/line.json); the class does not cause them.",
+  "Each stop is nine seconds of wall clock: ninety seconds of the line, played at ten times. The durations on screen are the wall clock this MES measured, which is what the REPLAY 10× banner across the top of every 2D page says.",
+  "At the station the class presses \"down\" to show what the screen asks, chooses Breakdown to show its description, and then presses \"Never mind\": the mould was running, and a real operator would not mark it down. Nothing is written.",
+  "The mould's own stop arrived from the replayed machine, not from the station, so the station did not ask why when it happened. It is named afterwards on the machine page's timeline, which is where the product labels a stop that came from the machine.",
+  "The machine page's window is set to 15 minutes before the stop is clicked: at the 8-hour default a nine-second block is narrower than a pixel and the timeline folds it into the running block beside it, which the page says it does.",
+  "The six reasons are the cutlery pack's own (labs/cutlery/masterdata/downtime_reasons.json), applied when the plant was made, which is the \"pack-apply\" the Downtime reasons page shows beside each.",
+  "FORK2_Mold's stop is left unnamed on purpose, for the class's refusal.",
+  "The fork marking laser's short micro stops in the recorded line are not drawn as separate down blocks on this plant; the class does not point at them.",
+  "The class is clicked through as a person would: the only page opened by address is the Floor, the first page after sign-in. The station is reached by the Floor menu's Station tab, the machine page by the station's Machine page button, the reasons by the link in the stop's own panel, and the analysis by the Engineering menu.",
+  "The opening beat is a plain card with words on it. There is no artwork of a machine, a light or a person.",
+]
+
+honesty = [
+  "the stop shown was reported by the replayed machine, and the station did not ask why when it happened: a stop that arrives from the machine is named afterwards, on the machine page; the station asks only when the operator presses down",
+  "the press of down at the station was cancelled with Never mind, so it wrote nothing; the stop the class names is the mould's own",
+  "durations are wall clock measured by this MES on a line replayed at ten times, which is the banner across the top of the 2D pages; nine seconds on screen is ninety seconds of the recorded line",
+  "the machine page is set to a 15-minute window because at 8 hours the nine-second block is folded into the running block beside it",
+  "drafting and signing a new reason is described, not done: the class does not draft a word or sign one",
+  "the second mould's stop was left unnamed on purpose, and the pareto shows it as unlabelled rather than filed under a reason",
+  "the plant is a scratch plant a few minutes old, replaying at ten times wall clock",
+]
+
+[plant]
+pack = "labs/cutlery"
+speed = 10
+env = { MES_OPS_FINISH_ORDERS = "false" }
+roll_when_timeout_seconds = 900
+
+# By 200 forks booked both moulds' first stops are well past, and the fork
+# mould's next one, a whole loop of the recording later, is minutes away.
+[[plant.roll_when_order]]
+code = "WO-FORK1-0001"
+booked = 200
+
+# ----------------------------------------------------------------- the hook
+
+[[step]]
+do = "slide"
+name = "a-red-light-on-the-mould"
+title = "A red light on the fork mould"
+lines = [
+  "It has stopped",
+  "Somebody will ask: why?",
+  "And next month: how many minutes, and for what?",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "A red light on the fork mould. It has stopped making forks."
+
+[[step]]
+do = "say"
+line = "Someone will ask why it stopped. Next month someone will ask how many minutes were lost, and to what."
+
+[[step]]
+do = "say"
+line = "This class follows one stop from the machine to the chart that adds up the minutes."
+
+[[step]]
+do = "mark"
+name = "a-red-light-on-the-mould"
+
+# ----------------------------------------------------------------- the idea
+
+[[step]]
+part = "idea"
+do = "slide"
+name = "the-words"
+title = "The words"
+lines = [
+  "State: a machine is always running, idle, down or in setup",
+  "Reason: the plant's own word for why it went down",
+  "A planned stop, like a changeover, is setup, not a breakdown",
+  "A stop nobody names stays unlabelled",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "A machine is always in exactly one state: running, idle, down, or in setup."
+
+[[step]]
+do = "say"
+line = "When it goes down, the question is why. The answer is a reason: a word from the plant's own list."
+
+[[step]]
+do = "say"
+line = "A planned stop, like changing the mould for another product, is setup. It is not counted as a breakdown."
+
+[[step]]
+do = "say"
+line = "And a stop that nobody names stays unlabelled. The system does not guess a reason for it."
+
+[[step]]
+do = "mark"
+name = "the-words"
+
+# ------------------------------------------------------------ on the screen
+
+# The station is reached the way an operator reaches it: the Floor page (the
+# one page opened by address, the first after signing in), its Station chip,
+# and the Machine chooser at the top of the station screen.
+[[step]]
+part = "screen"
+do = "goto"
+url = "/dashboard"
+settle = 2
+
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"Station\")"
+
+[[step]]
+do = "wait_for"
+js = "!!document.querySelector('#machine') && document.querySelector('#machine').options.length > 1"
+
+[[step]]
+do = "choose"
+selector = "#machine"
+value = "FORK1_Mold"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#machine-state').textContent.trim().toLowerCase() === 'running'"
+
+[[step]]
+do = "say"
+line = "The station screen of the fork mould. Top right, its state: running, and since when."
+at = "#machine-state"
+label = "State"
+
+[[step]]
+do = "say"
+line = "These four buttons are the four states. The one lit up is where the mould is now."
+at = "#state-buttons"
+label = "Four states"
+
+[[step]]
+do = "mark"
+name = "the-state-pill"
+
+[[step]]
+do = "click"
+selector = "#state-buttons .state-btn.down"
+
+[[step]]
+do = "wait_for"
+js = "!document.querySelector('#reason-box').classList.contains('hidden') && document.querySelector('#reason-confirm').disabled"
+
+[[step]]
+do = "say"
+line = "Press down, and the screen asks at once: why is it down? There is no box to type in."
+at = "#reason-box"
+label = "Why?"
+
+[[step]]
+do = "say"
+line = "The choice is one of six words. They are this plant's own list, not words built into the software."
+at = "#down-reason-code"
+label = "Six words"
+
+[[step]]
+do = "say"
+line = "It is down stays grey until a word is chosen. The stop cannot be saved without a reason."
+at = "#reason-confirm"
+label = "Grey"
+
+[[step]]
+do = "choose"
+selector = "#down-reason-code"
+value = "breakdown"
+
+[[step]]
+do = "wait_for"
+selector = "#down-reason-help"
+text = "broke down"
+
+[[step]]
+do = "say"
+line = "Each word says what it means, so two operators use it the same way. Breakdown: something failed and it made nothing until fixed."
+at = "#down-reason-help"
+label = "What it means"
+
+[[step]]
+do = "mark"
+name = "the-floor-asks-why"
+
+[[step]]
+do = "say"
+line = "But this mould is running, so the operator presses Never mind. Nothing is saved."
+at = "#reason-cancel"
+label = "Never mind"
+
+[[step]]
+do = "click"
+selector = "#reason-cancel"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#machine-state').textContent.trim().toLowerCase() === 'running'"
+
+[[step]]
+do = "say"
+line = "Stops also arrive from the machine itself. The mould stopped by itself a minute after this plant started. Its own page has the record."
+at = "#machine-page"
+label = "Machine page"
+
+[[step]]
+do = "click"
+selector = "#machine-page"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#m-state').textContent.trim().toLowerCase() === 'running'"
+
+[[step]]
+do = "click"
+selector = "button.tab[data-tab=\"timeline\"]"
+
+[[step]]
+do = "wait_for"
+selector = "#machine-span"
+text = "Showing"
+
+[[step]]
+do = "choose"
+selector = "#machine-span select[data-span=\"kind\"]"
+value = "h:0.25"
+
+[[step]]
+do = "wait_for"
+js = "!!document.querySelector('#tl rect.state-mark[data-state=\"down\"]')"
+scroll_to = "#tl"
+scroll_block = "start"
+scroll_offset = 260
+
+[[step]]
+do = "say"
+line = "The mould's timeline for the last fifteen minutes. Green is running. The red block is the stop it reported."
+at = "#tl rect.state-mark[data-state=\"down\"]"
+label = "The stop"
+
+[[step]]
+do = "mark"
+name = "a-stop-from-the-machine"
+
+[[step]]
+do = "click"
+selector = "#tl rect.state-mark[data-state=\"down\"]"
+
+[[step]]
+do = "wait_for"
+selector = "#block-panel"
+text = "nobody has said why yet"
+
+[[step]]
+do = "say"
+line = "Open it. Down, nine seconds. Under Why: nobody has said why yet."
+at = "#block-panel p.stop-says"
+label = "Nobody said why"
+
+[[step]]
+do = "wait_for"
+js = "!!document.querySelector('#stop-label #stop-reason-code') && document.querySelector('#stop-label').textContent.includes('Name this stop')"
+
+[[step]]
+do = "say"
+line = "The operator who was there names it from the same list of six. It was a breakdown."
+at = "#stop-reason-code"
+label = "Same six words"
+
+[[step]]
+do = "choose"
+selector = "#stop-reason-code"
+value = "breakdown"
+
+[[step]]
+do = "click"
+selector = "#stop-label button[type=\"submit\"]"
+
+[[step]]
+do = "wait_for"
+selector = "#toast"
+text = "1 stop named Breakdown"
+
+[[step]]
+do = "say"
+line = "One stop named Breakdown. The record keeps who named it and when."
+at = "#toast"
+label = "Named"
+
+[[step]]
+do = "mark"
+name = "the-operator-names-the-stop"
+
+[[step]]
+do = "wait_for"
+selector = "#block-panel"
+text = "This plant's word for it"
+
+[[step]]
+do = "say"
+line = "Where does the list of six come from? The panel links to it."
+at = "#block-panel a[href=\"/dashboard/reasons\"]"
+label = "The list"
+
+[[step]]
+do = "click"
+selector = "#block-panel a[href=\"/dashboard/reasons\"]"
+
+[[step]]
+do = "wait_for"
+selector = "#kpi-approved"
+text = "6"
+
+[[step]]
+do = "say"
+line = "The Downtime reasons page. Six words on the list. These are the only ones an operator can choose."
+at = "#kpi-approved"
+label = "On the list"
+
+[[step]]
+do = "say"
+line = "Anyone can draft a new word here. It changes nothing on the floor until a person allowed to approve it signs it."
+at = "#reason-form"
+label = "Draft a word"
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#reasons-table tbody tr')].some(r => r.innerText.includes('Breakdown') && r.querySelector('td.num').textContent.trim() === '1')"
+scroll_to = "#reasons-table"
+scroll_block = "start"
+scroll_offset = 220
+
+[[step]]
+do = "say"
+line = "The list itself: each word, what it means, and who drafted and signed it."
+at = "#reasons-table thead"
+label = "The plant's words"
+
+[[step]]
+do = "say"
+line = "Breakdown now carries one label: the stop just named."
+at = "#reasons-table tbody tr:has-text(\"Breakdown\") td.num"
+label = "One label"
+
+[[step]]
+do = "mark"
+name = "the-reason-list-is-the-plants-own"
+
+# The analysis by the Engineering menu and its Analysis chip.
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"Engineering\")"
+
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"Analysis\")"
+
+[[step]]
+do = "wait_for"
+selector = "#kpi-downtime"
+text = "9s"
+
+[[step]]
+do = "say"
+line = "Where the minutes land: the line's analysis. Downtime on the fork line: nine seconds."
+at = "#kpi-downtime"
+label = "Downtime"
+
+[[step]]
+do = "wait_for"
+selector = "#pareto"
+text = "Breakdown"
+scroll_to = "#pareto"
+scroll_block = "start"
+scroll_offset = 220
+
+[[step]]
+do = "say"
+line = "The downtime pareto adds up the stopped time by reason, longest first. Here, one reason: Breakdown."
+at = "#pareto"
+label = "Pareto"
+
+[[step]]
+do = "say"
+line = "Over a month, the longest bar is the reason to fix first. That only works if stops are named."
+at = "#pareto"
+label = "Fix first"
+
+[[step]]
+do = "mark"
+name = "where-the-minutes-land"
+
+[[step]]
+do = "wait_for"
+selector = "#oee"
+text = "FORK1_Mold"
+scroll_to = "#oee"
+scroll_block = "start"
+scroll_offset = 220
+
+[[step]]
+do = "say"
+line = "The red part of each bar is time lost to stops. That bar has a name, OEE, and it has a class of its own: 3.3."
+at = "#oee"
+label = "Lost to stops"
+
+[[step]]
+do = "mark"
+name = "pointing-ahead-to-oee"
+
+# -------------------------------------------------------------- it refuses
+
+[[step]]
+part = "refuses"
+do = "choose"
+selector = "#line"
+value = "FORK2LINE"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#kpi-unlabelled').textContent.includes('100% unlabelled') && document.querySelector('#pareto').textContent.includes('unlabelled')"
+
+[[step]]
+do = "say"
+line = "Now the second fork line. Its mould stopped too, for nine seconds, and nobody named that stop."
+at = "#kpi-downtime"
+label = "Second line"
+
+[[step]]
+do = "say"
+line = "The downtime figure says so outright: all of this line's stopped time is unlabelled."
+at = "#kpi-unlabelled"
+label = "100% unlabelled"
+style = "spotlight"
+
+[[step]]
+do = "mark"
+name = "the-share-nobody-explained"
+
+[[step]]
+do = "wait_for"
+selector = "#pareto"
+text = "unlabelled"
+scroll_to = "#pareto"
+scroll_block = "start"
+scroll_offset = 220
+
+[[step]]
+do = "say"
+line = "And the pareto does not guess. The stop is a grey bar called unlabelled, not filed under a reason."
+at = "#pareto"
+label = "Unlabelled"
+style = "spotlight"
+
+[[step]]
+do = "say"
+line = "An unlabelled stop is the row the pareto cannot explain. The fix is a person naming it, not the software picking a word."
+
+[[step]]
+do = "mark"
+name = "an-unnamed-stop-stays-unlabelled"
+
+# ------------------------------------------------------------ you now know
+
+[[step]]
+part = "know"
+do = "slide"
+name = "you-now-know"
+title = "You now know how to"
+lines = [
+  "Read a machine's state, and say why going down asks for a reason.",
+  "Name a stop with a word from the plant's own list, at the station or afterwards on the machine page.",
+  "Find where the stopped minutes land, and why an unnamed stop stays unlabelled.",
+]
+
+[[step]]
+do = "say"
+line = "That is downtime: one stop, one word from the plant's list, and the minutes added up by reason. You now know how to do three things."
+
+[[step]]
+do = "mark"
+name = "you-now-know"
+
+[[step]]
+do = "hold"
+seconds = 3

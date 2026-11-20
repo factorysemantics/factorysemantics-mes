@@ -151,6 +151,12 @@ label = "2.2"
 slug = "downtime-and-reason-codes"
 title = "Downtime and reason codes"
 one_line = "Going down asks why; the reasons are the plant's own words, and an unlabelled stop is not guessed."
+outcomes = [
+  "Read a machine's state, and say why going down asks for a reason.",
+  "Name a stop with a word from the plant's own list, at the station or afterwards on the machine page.",
+  "Find where the stopped minutes land, and why an unnamed stop stays unlabelled.",
+]
+scene = "scripts/scenes/course/03-02-downtime-and-reason-codes.toml"
 
 [[module.lesson]]
 order = 3
