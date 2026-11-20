@@ -1,0 +1,445 @@
+# Class 3.3 of the course, *OEE and its three losses*: one machine's window
+# taken apart into the three things OEE is made of, the same losses for every
+# machine on the Analysis page, and where the MES will not give a figure.
+#
+# It starts from a card of words (no drawing): a machine ran, was it a good
+# run, and one number made of three answers. The idea card names OEE and its
+# three parts, each with the question it asks. Then the fork mould the way the
+# product shows it: its tile on the Floor, its own page's OEE tab over the last
+# fifteen minutes - watched in full - with availability, performance against
+# the rated cycle in the page's header, quality, and the three multiplied;
+# the replay bar that says the plant runs ten times the clock and that rates
+# are worked on the line's clock. Then Engineering > Analysis: the fork line's
+# waterfall, which loss is widest on the mould, the line's worst station, and
+# the downtime pareto, where every stop on this simulated plant is unlabelled.
+# Then what it refuses: the whole plant's list states its total; asked for an
+# hour, the page narrows to what the MES watched and will not call the rest
+# downtime; and on the mould's page over that hour, the plant's own sentence
+# that its pack sets no coverage floor, with what a plant that sets one shows
+# instead, said in words. Filmed on a scratch cutlery plant, every screen as the product
+# draws it.
+
+name = "oee-and-its-three-losses"
+title = "OEE and its three losses"
+lesson = "3.3"
+take_is = "lesson"
+part = "hook"
+base = "http://127.0.0.1:8040"
+badge = "pre-alpha · simulated plant · v{version}"
+# Four and a half to six minutes, as the handoff asks, clicked through the
+# menus all the way.
+budget_seconds = 390
+gif_skip_seconds = 2.0
+width = 1280
+height = 720
+
+notes = [
+  "The plant was started from the cutlery pack at ten times wall clock, and the recorder started it with `fsmes fleet start --speed 10`, which puts MES_SIM_SPEED=10 into the API's environment. So the MES knows its own clock: performance is worked on the line's clock (run time times ten), and the replay bar at the top of every page says so.",
+  "The camera waited, off camera, until the MES had watched the fork mould, FORK1_Mold, for at least 99 % of the last fifteen minutes, so that the fifteen-minute window the class reads is watched in full and nothing in it is before first sample.",
+  "The simulated line replays an hour of the line's own time, which at ten times is six minutes of wall clock, so a fifteen-minute window holds the mould's recorded stops two and a half times over. Its three losses come from the recorded line: its stops (availability), its cycle a little slower than the rated 2.5352 s (performance), and 0.4 % scrap (quality).",
+  "The take writes nothing. The Window and Line lists are filters in the browser.",
+  "The cutlery pack sets no coverage floor (`[oee] coverage_floor`), so on this plant nothing is withheld for being watched too little: every figure is shown with how much of the window was watched beside it, and the machine page says so in its own words. What a plant that sets one shows instead - no figure, only how much was watched - is said, not filmed.",
+  "No machine had its performance figure withheld during the take. The three reasons the MES gives none (no rated cycle, nothing counted, counted work that will not fit in the run time) are said, not filmed.",
+  "Every stop on a scratch plant is unlabelled: nobody stands at its stations to give a reason. Naming a stop is class 2.2.",
+  "The class is clicked through as a person would: the only page opened by address is the Floor, the first page after sign-in. The mould's page is reached from its tile on the Floor, Analysis by the Engineering menu, and the mould's page again from its row on Analysis.",
+  "The opening beat is a plain card with words on it. There is no artwork of a machine.",
+]
+
+honesty = [
+  "the plant is a scratch simulated plant, replaying a recorded line at ten times wall clock; the MES is told the speed and works rates on the line's clock",
+  "every stop in the take is unlabelled, because nobody stands at a simulated plant's stations to give a reason",
+  "the cutlery pack sets no coverage floor, so no figure is withheld for too little watching on this plant: what a floor withholds is said, not filmed",
+  "no machine had its performance figure withheld during the take: the three reasons the MES gives none are said, not filmed",
+]
+
+[plant]
+pack = "labs/cutlery"
+speed = 10
+roll_when_timeout_seconds = 1500
+
+# The fifteen minutes the class reads are watched in full before it rolls.
+[plant.roll_when_watched]
+equipment = "FORK1_Mold"
+hours = 0.25
+at_least = 0.99
+
+# ----------------------------------------------------------------- the hook
+
+[[step]]
+do = "slide"
+name = "was-it-a-good-run"
+title = "Was it a good run?"
+lines = [
+  "The fork mould ran for fifteen minutes",
+  "Was that a good fifteen minutes?",
+  "One number answers, and it is made of three",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "The fork mould ran for fifteen minutes. Was that a good fifteen minutes?"
+
+[[step]]
+do = "say"
+line = "Most plants answer with one number. This class takes that number apart."
+
+[[step]]
+do = "mark"
+name = "was-it-a-good-run"
+
+# ----------------------------------------------------------------- the idea
+
+[[step]]
+part = "idea"
+do = "slide"
+name = "the-words"
+title = "The words"
+lines = [
+  "OEE: one number for how well a machine's time was used",
+  "Availability: was it running?",
+  "Performance: was it running at its rated speed?",
+  "Quality: were the pieces good?",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "OEE is short for overall equipment effectiveness. It is one number for how well a machine's time was used."
+
+[[step]]
+do = "say"
+line = "Availability is the share of the watched time the machine was running. Stops and idle time are its loss."
+
+[[step]]
+do = "say"
+line = "Performance is how fast it ran, against its rated cycle: the time one piece should take."
+
+[[step]]
+do = "say"
+line = "Quality is the share of the pieces that were good. Scrap is its loss."
+
+[[step]]
+do = "say"
+line = "Multiply the three and you have OEE. Ninety percent, three times over, is about seventy-three."
+
+[[step]]
+do = "mark"
+name = "the-words"
+
+# ------------------------------------------------------------ on the screen
+
+# The Floor is the one page opened by address, the first after signing in.
+[[step]]
+part = "screen"
+do = "goto"
+url = "/dashboard"
+settle = 2
+
+[[step]]
+do = "wait_for"
+js = "!!document.querySelector('main .machine a.machine-code[href=\"/dashboard/machine/FORK1_Mold\"]')"
+scroll_to = "main .machine:has(a.machine-code[href=\"/dashboard/machine/FORK1_Mold\"])"
+scroll_block = "start"
+scroll_offset = 260
+
+[[step]]
+do = "say"
+line = "The Floor. Here is the fork mould, the machine from the last class."
+at = "main .machine:has(a.machine-code[href=\"/dashboard/machine/FORK1_Mold\"])"
+label = "Fork mould"
+
+[[step]]
+do = "click"
+selector = "main .machine a.machine-code[href=\"/dashboard/machine/FORK1_Mold\"]"
+
+[[step]]
+do = "wait_for"
+js = "!!document.querySelector('button.tab[data-tab=\"oee\"]') && document.querySelector('#m-cycle').textContent.trim() === '2.5352 s'"
+
+[[step]]
+do = "click"
+selector = "button.tab[data-tab=\"oee\"]"
+
+[[step]]
+do = "choose"
+selector = "select[data-span=\"kind\"]"
+value = "h:0.25"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#oee-window').textContent.includes('0.25 h of history') && [...document.querySelectorAll('#oee-bars .bar-row')].length >= 5 && /\\d+%/.test(document.querySelector('#oee-bars .bar-row.total .num').textContent)"
+scroll_to = "#oee-bars"
+scroll_block = "start"
+scroll_offset = 320
+
+[[step]]
+do = "say"
+line = "The mould's OEE tab, over the last fifteen minutes. Three bars, and OEE under them."
+at = "#oee-bars"
+
+[[step]]
+do = "say"
+line = "The header says how much of the window the MES watched. Here, all of it."
+at = "#oee-window"
+
+[[step]]
+do = "mark"
+name = "a-machines-oee-tab"
+
+[[step]]
+do = "say"
+line = "Availability. The mould was running for most of the window, and stopped for the rest."
+at = "#oee-bars .bar-row:has-text(\"Availability\")"
+
+[[step]]
+do = "say"
+line = "The line under the bars gives the time it was running and the time it was down."
+at = "#oee-facts"
+
+[[step]]
+do = "say"
+line = "Why it stopped is the reason picked at the station, from class 2.2. The Timeline tab shows each stop."
+at = "button.tab[data-tab=\"timeline\"]"
+
+[[step]]
+do = "mark"
+name = "availability"
+
+[[step]]
+do = "say"
+line = "Performance starts from the rated cycle, up here: the seconds one fork should take."
+at = "#m-cycle"
+label = "Rated cycle"
+
+[[step]]
+do = "say"
+line = "Run time over the rated cycle is how many forks it could have made. The forks it did make, against that, is performance."
+at = "#oee-bars .bar-row:has-text(\"Performance\")"
+
+[[step]]
+do = "say"
+line = "This plant runs ten times faster than the clock, and the MES is told so. Rates are worked out on the line's own clock."
+at = "#replay-bar strong"
+
+[[step]]
+do = "mark"
+name = "performance"
+
+[[step]]
+do = "say"
+line = "Quality: good forks against all the forks made. The mould scraps very few, so this loss is small, but not zero."
+at = "#oee-bars .bar-row:has-text(\"Quality\")"
+
+[[step]]
+do = "say"
+line = "And OEE is the three multiplied. Availability, times performance, times quality, gives this figure, to within rounding."
+at = "#oee-bars .bar-row.total"
+
+[[step]]
+do = "mark"
+name = "the-three-multiplied"
+
+# Every machine on the line, by the Engineering menu and its Analysis chip.
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"Engineering\")"
+
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"Analysis\")"
+
+[[step]]
+do = "wait_for"
+js = "!!document.querySelector('#line') && document.querySelector('#line').value === 'FORK1LINE' && !!document.querySelector('#oee .oee-row')"
+
+[[step]]
+do = "choose"
+selector = "#hours"
+value = "0.25"
+
+# The caption says the mould's widest loss is availability, so the take
+# waits until the drawn bar says so.
+[[step]]
+do = "wait_for"
+js = "const row = [...document.querySelectorAll('#oee .oee-row')].find(r => r.querySelector('.who') && r.querySelector('.who').textContent.includes('FORK1_Mold')); if (!row || document.querySelector('#hours').value !== '0.25') return false; const w = (c) => { const i = row.querySelector('.bar .' + c); return i ? parseFloat(i.style.width) : 0; }; return w('b-avail') > w('b-perf') && w('b-avail') > w('b-qual') && w('b-perf') > 0 && w('b-qual') > 0;"
+scroll_to = "#oee"
+scroll_block = "start"
+scroll_offset = 320
+
+[[step]]
+do = "say"
+line = "Engineering, Analysis: the same three losses, for every machine on the fork line, over the same fifteen minutes."
+at = "#oee"
+
+[[step]]
+do = "say"
+line = "Each bar is the whole window. Green is what was left: the OEE. After it, each loss in its own colour."
+at = "#oee .oee-row:has(.who:has-text(\"FORK1_Mold\")) .bar"
+
+[[step]]
+do = "say"
+line = "Red is availability, amber is performance, pink is quality."
+at = "section.panel:has(#oee) p.legend"
+
+[[step]]
+do = "say"
+line = "On the mould, the red is the widest. Its stops cost it more than its speed or its scrap. That is where to look first."
+at = "#oee .oee-row:has(.who:has-text(\"FORK1_Mold\")) .bar .b-avail"
+style = "spotlight"
+
+[[step]]
+do = "mark"
+name = "the-losses-on-analysis"
+
+[[step]]
+do = "say"
+line = "Line OEE is the worst station's: a line makes no more than its weakest machine lets it."
+at = "#kpi-oee"
+
+[[step]]
+do = "wait_for"
+selector = "#pareto"
+text = "unlabelled"
+scroll_to = "#pareto"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "The downtime pareto ranks the stopped minutes by their reason. On this simulated plant nobody gave one, so every stop is unlabelled."
+at = "#pareto"
+
+[[step]]
+do = "mark"
+name = "the-stops-behind-the-red"
+
+# -------------------------------------------------------------- it refuses
+
+[[step]]
+part = "refuses"
+do = "choose"
+selector = "#line"
+value = "*"
+
+[[step]]
+do = "wait_for"
+selector = "#oee .oee-total"
+text = "83 machines across every line, worst OEE first"
+scroll_to = "#oee .oee-total"
+scroll_block = "center"
+scroll_offset = 0
+
+[[step]]
+do = "say"
+line = "Every line at once: the whole plant's machines, worst first. The list says its total: eighty-three."
+at = "#oee .oee-total"
+
+[[step]]
+do = "mark"
+name = "every-machine-worst-first"
+
+[[step]]
+do = "choose"
+selector = "#hours"
+value = "1"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#hours').value === '1' && !document.querySelector('#banner').classList.contains('hidden') && document.querySelector('#banner').textContent.includes('not 1 h') && document.querySelector('#banner').textContent.includes('not downtime')"
+scroll_to = "#banner"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "Now ask for the last hour. The MES has watched this plant for only part of it, and says so."
+at = "#banner"
+style = "spotlight"
+
+[[step]]
+do = "say"
+line = "It does not count the minutes before it was watching as downtime. A guess would, and every machine would look far worse than it ran."
+at = "#banner"
+
+[[step]]
+do = "mark"
+name = "an-hour-it-did-not-watch"
+
+[[step]]
+do = "click"
+selector = "#oee .oee-row .who a:text-is(\"FORK1_Mold\")"
+
+[[step]]
+do = "click"
+selector = "button.tab[data-tab=\"oee\"]"
+
+[[step]]
+do = "choose"
+selector = "select[data-span=\"kind\"]"
+value = "h:1"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#oee-window').textContent.includes('h of history') && !document.querySelector('#oee-window').textContent.includes('100%') && document.querySelector('#oee-ledger').textContent.includes('sets no coverage floor')"
+scroll_to = "#oee-bars"
+scroll_block = "start"
+scroll_offset = 320
+
+[[step]]
+do = "say"
+line = "The mould over that hour. The header says how much history there is, and what share of the hour was watched."
+at = "#oee-window"
+
+[[step]]
+do = "say"
+line = "This plant sets no coverage floor, so the figures are still shown, with the watching beside them."
+at = "#oee-ledger :text(\"sets no coverage floor\")"
+
+[[step]]
+do = "say"
+line = "A plant that sets a floor shows no figure at all when it watched less than that. Only how much it watched."
+at = "#oee-bars .bar-row.coverage"
+style = "spotlight"
+
+[[step]]
+do = "mark"
+name = "the-figure-it-withholds"
+
+[[step]]
+do = "say"
+line = "Performance has no figure, too, for a machine with no rated cycle, or nothing counted, or more counted than its run time could hold."
+at = "#oee-bars .bar-row:has-text(\"Performance\")"
+
+[[step]]
+do = "say"
+line = "No figure is better than a guessed one. A guess looks like a measurement, and someone will act on it."
+
+[[step]]
+do = "mark"
+name = "no-figure-is-better-than-a-guess"
+
+# ------------------------------------------------------------ you now know
+
+[[step]]
+part = "know"
+do = "slide"
+name = "you-now-know"
+title = "You now know how to"
+lines = [
+  "Say what OEE is: availability, performance and quality, multiplied.",
+  "Read a machine's OEE tab and check its figure from its three parts.",
+  "Find the biggest loss on the Analysis page, and say when the MES gives no figure.",
+]
+
+[[step]]
+do = "say"
+line = "That is OEE: three losses, one number, and no number at all when the MES cannot stand behind it. You now know how to do three things."
+
+[[step]]
+do = "mark"
+name = "you-now-know"
+
+[[step]]
+do = "hold"
+seconds = 3
