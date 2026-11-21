@@ -506,8 +506,9 @@ def record_check(plant: str, material: str, characteristic: str, value: float,
                  on_behalf_of: str | None = None, client_ref: str | None = None) -> dict:
     """Record a quality measurement. Out-of-spec values automatically open a
     non-conformance - that is the MES working, not an error. `equipment` is
-    the machine it was taken on and `gauge` the instrument, as the Floor form
-    and the station screen send them; left out, the check says not recorded."""
+    the machine it was taken on, as the Floor form and the station screen
+    send it. `gauge` is the instrument; only this tool sends one today, the
+    two screens do not. Either left out, the check says not recorded."""
     _identity.set((on_behalf_of.upper() if on_behalf_of else None, client_ref))
     body: dict = {"material": material, "characteristic": characteristic, "value": value}
     for name, given in (("order", order), ("equipment", equipment), ("gauge", gauge)):
