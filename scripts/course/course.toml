@@ -255,7 +255,13 @@ label = "4.3"
 slug = "spc-the-chart-notices-first"
 title = "SPC — the chart notices before people do"
 one_line = "Control limits from the process, rules that fire on patterns, and capability withheld when there is too little data."
-scene = "scripts/scenes/02-spc-on-the-line.toml"
+knows_before = ["4.1"]
+outcomes = [
+  "Say the difference between specification limits and control limits.",
+  "Read a control chart: its readings, centre line, limits, and a rule that fired.",
+  "Find the hold an SPC rule raises, and say when the MES withholds capability.",
+]
+scene = "scripts/scenes/course/05-03-spc-the-chart-notices-first.toml"
 
 [[module.lesson]]
 order = 4
