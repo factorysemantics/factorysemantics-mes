@@ -241,6 +241,13 @@ label = "4.2"
 slug = "nonconformances-and-who-decides"
 title = "Non-conformances, severities and who decides"
 one_line = "Review, severity in the plant's own words, disposition and close, each by the role that owns it."
+knows_before = ["4.1"]
+outcomes = [
+  "Raise a non-conformance by hand, and say what one is.",
+  "Take one through review, a disposition with its reason, and the close, as the role that owns each step.",
+  "Read who did what, and when, in its history, and find the plant's own words for severity.",
+]
+scene = "scripts/scenes/course/05-02-nonconformances-and-who-decides.toml"
 
 [[module.lesson]]
 order = 3

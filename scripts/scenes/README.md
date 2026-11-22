@@ -25,9 +25,16 @@ Each `[[step]]` has a `do`:
 | `hold` | | `seconds` |
 | `mark` | `name` | |
 | `slide` | `name`, `title` | `lines`, `command`, `start_at`, `stop_after`, `hold` |
+| `sign_in` | `user` | `password` (the scene's own if left out), `settle` |
 
 Any step may also have `part` and `scroll_to` (with `scroll_block`,
 `scroll_offset`, `scroll_text`).
+
+`sign_in` signs the browser in as another user, off camera, and loads the
+page it is on again, so the header shows the new name and role; the
+product's sign-in page is never filmed. The scene's own `user` and
+`password` are who the take starts as. Use a pack's lab accounts, never a
+real person's.
 
 `click`, `fill` and `choose` move a drawn cursor to the thing and press it
 with a ripple. A `<select>` cannot be opened by a script, so on `choose` the
