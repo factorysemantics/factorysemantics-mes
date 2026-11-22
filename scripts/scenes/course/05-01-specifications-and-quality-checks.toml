@@ -1,0 +1,495 @@
+# Class 4.1 of the course, *Specifications and quality checks*: what the gauge
+# actually read, set against the spec, and an out-of-spec reading recorded
+# exactly as typed.
+#
+# It starts from a card of words (no drawing): a gauge on a fork, a number, and
+# the question of what happens to that number. The idea card names the four
+# words of the class: characteristic, specification, quality check and
+# non-conformance. Then the product: the plant's specifications on the Quality
+# screen, found by their search box, with the fork's width at 24 to 26 mm; the
+# fork mould's station screen, its Quality card offering only the
+# characteristics with a spec for what the mould is running; a width of 25.1 mm
+# typed and recorded in spec; a width of 26.35 mm typed, recorded as typed, and
+# the non-conformance the MES raised for it; then the Quality screen again: the
+# width's chart with the reading outside the band, the non-conformance in the
+# list, the reading in the inspection history and the export. Then what it
+# refuses: rounding the reading into spec, and a reading from anybody who does
+# not hold the right to record one; and, in its own words, two things the
+# product does not do yet. Filmed on a scratch cutlery plant, every screen as
+# the product draws it.
+
+name = "specifications-and-quality-checks"
+title = "Specifications and quality checks"
+lesson = "4.1"
+take_is = "lesson"
+part = "hook"
+base = "http://127.0.0.1:8040"
+badge = "pre-alpha · simulated plant · v{version}"
+# Four to six minutes, as the handoff asks, clicked through the menus.
+budget_seconds = 390
+gif_skip_seconds = 2.0
+width = 1280
+height = 720
+# Recording a reading is a write, and it is the story.
+allow_writes = true
+what_is_written = "which is how the class records two quality readings: Record on the station screen is a real `POST` to the take's own scratch plant, made with the station's own button, and its audit trail names the person signed in as having taken them. The out-of-spec one opens a non-conformance, which the MES does by itself."
+
+notes = [
+  "The plant was started from the cutlery pack at ten times wall clock. The camera waited, off camera, until the pack's released fork order, WO-FORK1-0001, had booked 1,800 good, so that the simulated floor's own inspections - every specification, every fifteen minutes of the line's clock - had put several fork widths on the chart before the class arrives, and fewer than the twelve the control chart needs before its rules run. So the class's out-of-spec reading opens its non-conformance for being out of spec, which is this class, and not for a control-chart rule, which is class 4.3.",
+  "The readings typed are 25.1 mm and 26.35 mm on width_mm, against the pack's UT-FORK limits of 24 to 26 mm. Both are typed into the station's Measured field with the cursor, as an operator would; neither is put in through the API.",
+  "The simulated floor records readings too, under its own name, FLOOR-SIM, so the chart and the history show its readings beside ADMIN's.",
+  "The cutlery pack's specifications carry a low and a high limit and no target: this MES keeps no target value. The chart's middle line is halfway between the two limits, and the class says so.",
+  "Who may record is said, not filmed on the Admin screen: that screen opens on the plant's list of people, and no person's name is filmed. The roles are the built-in ones: Operator, Supervisor and Quality Inspector hold `quality.record`; Viewer and Analyst do not.",
+  "The station screen does not ask which gauge took a reading, so a check recorded there says its gauge is not recorded. The class says so and does not show a gauge.",
+  "The Floor page's own Quality check form takes the Measured value in steps of one decimal, so a browser refuses 26.35 there and offers 26.3 or 26.4 instead. That is a gap in the product, written up for the people who fix it; the class records at the station, which takes the reading as typed, and says why.",
+  "At any speed but 1x every 2D page carries the product's REPLAY 10× banner across its top. It is filmed as the product draws it.",
+  "The class is clicked through as a person would: the only page opened by address is the Floor, the first page after sign-in. Quality is reached by its menu, the station by the Floor menu's Station tab and the mould chosen from its Machine list.",
+  "The opening beat is a plain card with words on it. There is no artwork of a gauge, a fork or a person.",
+]
+
+honesty = [
+  "the plant is a scratch simulated plant, replaying a recorded line at ten times wall clock, which is the banner across the top of the 2D pages",
+  "the specifications in the cutlery pack carry limits and no target, because this MES keeps no target value; the middle line on the chart is halfway between the limits",
+  "who may record is said, not filmed: the Admin screen that lists roles opens on the plant's people, and no person is filmed",
+  "the station does not ask which gauge took a reading, so the readings in this class say their gauge is not recorded",
+  "the Floor page's quick Quality check form takes one decimal only and a browser refuses 26.35 there; the class records at the station, which takes the reading as typed",
+]
+
+[plant]
+pack = "labs/cutlery"
+speed = 10
+roll_when_timeout_seconds = 1500
+
+# Several of the floor's own fork widths on the chart, and fewer than twelve.
+[[plant.roll_when_order]]
+code = "WO-FORK1-0001"
+booked = 1800
+
+# ----------------------------------------------------------------- the hook
+
+[[step]]
+do = "slide"
+name = "the-gauge-reads"
+title = "The gauge reads 26.35 mm"
+lines = [
+  "A fork, fresh from the mould, in the jaws of a gauge",
+  "The drawing says 24 to 26 mm",
+  "What do you write down?",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "A fork comes off the mould. Someone puts it in a gauge, and the gauge reads twenty-six point three five millimetres."
+
+[[step]]
+do = "say"
+line = "The drawing says twenty-four to twenty-six. What gets written down? This class answers: exactly what the gauge read."
+
+[[step]]
+do = "mark"
+name = "the-gauge-reads"
+
+# ----------------------------------------------------------------- the idea
+
+[[step]]
+part = "idea"
+do = "slide"
+name = "four-words"
+title = "Four words"
+lines = [
+  "Characteristic: what you measure, like a width",
+  "Specification: its low and high limit",
+  "Quality check: one reading, judged against them",
+  "Non-conformance: the record of an out-of-spec",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Four words. A characteristic is one thing you can measure on a part: its length, its weight, its width."
+
+[[step]]
+do = "say"
+line = "A specification gives a characteristic its low limit and its high limit, for one material. In between is in spec."
+
+[[step]]
+do = "say"
+line = "A quality check is one reading of a characteristic, judged against its specification: in spec, or out of spec."
+
+[[step]]
+do = "say"
+line = "A non-conformance is the record that something is out of spec. It waits there until a person decides what happens to the material."
+
+[[step]]
+do = "mark"
+name = "four-words"
+
+# ------------------------------------------------------------ on the screen
+
+# The Floor is the one page opened by address, the first after signing in;
+# Quality is reached by its menu.
+[[step]]
+part = "screen"
+do = "goto"
+url = "/dashboard"
+settle = 2
+
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"Quality\")"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#s-count').textContent.includes('of 15') && !!document.querySelector('#specs tbody tr')"
+scroll_to = "#specs"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "The Quality screen, and the plant's specifications. The list says its total: fifteen."
+at = "#s-count"
+
+[[step]]
+do = "fill"
+selector = "#s-q"
+text = "width"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#s-count').textContent.includes('matching') && [...document.querySelectorAll('#specs tbody tr')].length === 3"
+
+[[step]]
+do = "say"
+line = "Search for width. Each of the three materials, fork, knife and spoon, has its own width, with its own limits."
+at = "#specs tbody"
+
+[[step]]
+do = "say"
+line = "The fork's width: twenty-four to twenty-six millimetres. The limits come from the plant's master data, not from the machine."
+at = "#specs tbody tr:has(td:text-is(\"UT-FORK\"))"
+
+[[step]]
+do = "mark"
+name = "a-specification"
+
+# The station, by the Floor menu's Station tab and its Machine list.
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"Floor\")"
+
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"Station\")"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#machine').options.length > 1"
+
+[[step]]
+do = "choose"
+selector = "#machine"
+value = "FORK1_Mold"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#q-for').textContent.includes('UT-FORK') && document.querySelector('#q-char').options.length >= 5"
+scroll_to = "#quality"
+scroll_block = "start"
+scroll_offset = 330
+
+[[step]]
+do = "say"
+line = "Now the fork mould's station screen, from class 2.1. Its Quality card is where the operator records a check."
+at = "section.panel:has(#quality) h2"
+
+[[step]]
+do = "say"
+line = "The mould is making forks, so the list holds the fork's five characteristics with a specification, and nothing else."
+at = "#q-char"
+
+[[step]]
+do = "choose"
+selector = "#q-char"
+value = "width_mm"
+
+[[step]]
+do = "wait_for"
+selector = "#q-spec"
+text = "Spec 24 to 26 mm."
+
+[[step]]
+do = "say"
+line = "Pick width. The card shows the specification it will be judged against: twenty-four to twenty-six millimetres."
+at = "#q-spec"
+
+[[step]]
+do = "mark"
+name = "the-station-quality-card"
+
+[[step]]
+do = "fill"
+selector = "#q-value"
+text = "25.1"
+
+[[step]]
+do = "say"
+line = "The gauge reads twenty-five point one. Type it in Measured, and press Record."
+at = "#q-value"
+
+[[step]]
+do = "click"
+selector = "#q-submit"
+
+[[step]]
+do = "wait_for"
+selector = "#toast"
+text = "Recorded 25.1 — in spec."
+
+[[step]]
+do = "say"
+line = "Recorded, in spec, under the name of the person signed in. That is one quality check: one reading, judged against the limits."
+at = "#toast"
+
+[[step]]
+do = "mark"
+name = "an-in-spec-reading"
+
+[[step]]
+do = "fill"
+selector = "#q-value"
+text = "26.35"
+
+[[step]]
+do = "say"
+line = "The next fork reads twenty-six point three five. That is over the high limit. Type exactly that, and Record."
+at = "#q-value"
+
+[[step]]
+do = "click"
+selector = "#q-submit"
+
+[[step]]
+do = "wait_for"
+js = "!document.querySelector('#q-raised').classList.contains('hidden') && document.querySelector('#q-raised').textContent.includes('26.35 was outside the specification')"
+
+[[step]]
+do = "say"
+line = "Twenty-six point three five, out of spec, kept exactly as typed."
+at = "#toast"
+
+[[step]]
+do = "say"
+line = "And the MES raised a non-conformance for it, by itself, with its own code. Nobody had to remember to."
+at = "#q-raised"
+style = "spotlight"
+
+[[step]]
+do = "mark"
+name = "an-out-of-spec-reading"
+
+[[step]]
+do = "say"
+line = "A supervisor decides what happens to those forks, on the Quality screen. That is the next class."
+at = "#q-raised"
+
+[[step]]
+do = "mark"
+name = "it-raised-a-non-conformance"
+
+# Back to Quality by its menu: the chart, the non-conformance, the history.
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"Quality\")"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#q-material').options.length > 1"
+
+[[step]]
+do = "choose"
+selector = "#q-material"
+value = "UT-FORK"
+
+[[step]]
+do = "click"
+selector = "#spec-tabs button.tab:text-is(\"width_mm\")"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#chart-label').textContent.includes('width_mm on UT-FORK') && !!document.querySelector('#chart circle.point-fail')"
+scroll_to = "#chart-wrap"
+scroll_block = "start"
+scroll_offset = 330
+
+[[step]]
+do = "say"
+line = "Back on the Quality screen, the fork's width over its recent checks. The shaded band is the specification."
+at = "#chart-wrap"
+
+[[step]]
+do = "say"
+line = "The middle line is only halfway between the limits. It is not a target: this MES keeps no target, only the two limits."
+at = "#chart-wrap"
+
+[[step]]
+do = "say"
+line = "Most dots are the simulated floor's own checks. The red one above the band is our twenty-six point three five."
+at = "#chart-wrap"
+style = "spotlight"
+
+[[step]]
+do = "mark"
+name = "the-chart"
+
+[[step]]
+do = "wait_for"
+js = "!!document.querySelector('#ncs li') && [...document.querySelectorAll('#ncs > li')].some(li => li.textContent.includes('width_mm=26.35mm'))"
+scroll_to = "#ncs"
+scroll_block = "start"
+scroll_offset = 330
+
+[[step]]
+do = "say"
+line = "The non-conformance it raised: minor, and open. Its line quotes the reading, the limits and the order."
+at = "#ncs > li:has-text(\"width_mm=26.35mm\")"
+
+[[step]]
+do = "mark"
+name = "the-non-conformance"
+
+[[step]]
+do = "choose"
+selector = "#h-material"
+value = "UT-FORK"
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#h-char option')].some(o => o.value === 'width_mm')"
+
+[[step]]
+do = "choose"
+selector = "#h-char"
+value = "width_mm"
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#checks tbody tr')].some(r => r.textContent.includes('26.35')) && document.querySelector('#h-count').textContent.includes('matching')"
+scroll_to = "#checks"
+scroll_block = "start"
+scroll_offset = 330
+
+[[step]]
+do = "say"
+line = "Inspection history: every check, newest first. Here, the fork's width only. The count says how many match."
+at = "#h-count"
+
+[[step]]
+do = "say"
+line = "Our two readings, as typed: twenty-six point three five, fail, and twenty-five point one, pass. Each with its order and its inspector."
+at = "#checks tbody tr:has(td:text-is(\"26.35\"))"
+
+[[step]]
+do = "say"
+line = "Export x l s x downloads exactly this list, filtered as it is, for a spreadsheet."
+at = "#h-export"
+
+[[step]]
+do = "mark"
+name = "the-inspection-history"
+
+# -------------------------------------------------------------- it refuses
+
+[[step]]
+part = "refuses"
+do = "choose"
+selector = "#h-result"
+value = "fail"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#h-result').value === 'fail' && [...document.querySelectorAll('#checks tbody tr')].length > 0 && [...document.querySelectorAll('#checks tbody tr')].every(r => r.textContent.includes('fail'))"
+
+[[step]]
+do = "say"
+line = "Failures only. The MES did not round twenty-six point three five down to twenty-six, which would have passed."
+at = "#checks tbody tr:has(td:text-is(\"26.35\"))"
+
+[[step]]
+do = "say"
+line = "A rounded reading is a guess that looks like a measurement. The record keeps what the gauge said."
+at = "#checks tbody tr:has(td:text-is(\"26.35\")) td.num"
+
+[[step]]
+do = "mark"
+name = "not-rounded"
+
+[[step]]
+do = "say"
+line = "Who may record a check? A person whose role holds the right to: an operator, a supervisor, or a quality inspector."
+at = "#checks thead th:text-is(\"Inspector\")"
+
+[[step]]
+do = "say"
+line = "A viewer or an analyst does not see the station's Quality card at all, and the MES refuses a reading sent in their name."
+at = "#checks thead th:text-is(\"Inspector\")"
+
+[[step]]
+do = "mark"
+name = "who-may-record"
+
+[[step]]
+do = "say"
+line = "Two things it does not do yet. The station does not ask which gauge took a reading, so the gauge is not recorded."
+at = "#checks thead"
+
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"Floor\")"
+
+[[step]]
+do = "wait_for"
+js = "!!document.querySelector('#form-quality') && document.querySelector('#form-quality').offsetParent !== null"
+scroll_to = "#form-quality"
+scroll_block = "center"
+scroll_offset = 0
+
+[[step]]
+do = "say"
+line = "And the Floor page has a quick Quality check form too, but today it takes one decimal only. So this class recorded at the station."
+at = "#form-quality"
+
+[[step]]
+do = "say"
+line = "Everything you saw is a simulated plant, replaying a recorded line at ten times the clock."
+at = "#replay-bar strong"
+
+[[step]]
+do = "mark"
+name = "what-it-does-not-do-yet"
+
+# ------------------------------------------------------------ you now know
+
+[[step]]
+part = "know"
+do = "slide"
+name = "you-now-know"
+title = "You now know how to"
+lines = [
+  "Say what a specification is: a characteristic's low and high limit, for one material.",
+  "Record a reading at the station exactly as the gauge read it, in spec or out.",
+  "Find the reading and the non-conformance it raised on the Quality screen, and say who may record one.",
+]
+
+[[step]]
+do = "say"
+line = "That is a quality check: what the gauge read, against the limits, kept as read. You now know how to do three things."
+
+[[step]]
+do = "mark"
+name = "you-now-know"
+
+[[step]]
+do = "hold"
+seconds = 3
