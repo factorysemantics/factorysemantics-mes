@@ -124,19 +124,25 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
 
-# The nine words a step can be. A tenth is a newer scene file than this
+# The ten words a step can be. An eleventh is a newer scene file than this
 # script, and guessing what it meant is how a recording comes out missing the
 # thing it was made to show. `fill` types into a field, a key at a time so the
 # viewer sees it typed, and `choose` picks an option of a `<select>`: a class
 # that defines something in a form (1.3, a routing) has to fill the form in.
 # Both change only the page; it is the click on the form's button that writes,
-# and that still needs `allow_writes`.
-VERBS = ("goto", "click", "fill", "choose", "wait_for", "say", "hold", "mark", "slide")
+# and that still needs `allow_writes`. `sign_in` changes who the browser is
+# signed in as, off camera, and reloads the page it is on so the header shows
+# the new name and role: a class about who may do what (4.2, a non-conformance
+# raised by an operator and decided by a supervisor) films more than one role,
+# and the product's sign-in page is not filmed, because it shows the demo
+# accounts' hint.
+VERBS = ("goto", "click", "fill", "choose", "wait_for", "say", "hold", "mark", "slide", "sign_in")
 
 #: What each verb is called in marks.json's `kind`, as the lesson contract names
-#: them. A scroll is a step's `scroll_to` rather than a verb, and is `scroll`.
+#: them. A scroll is a step's `scroll_to` rather than a verb, and is `scroll`. A
+#: `sign_in` is a `goto`: what the frames show is the page loading again.
 KINDS = {"goto": "goto", "click": "click", "fill": "fill", "choose": "choose", "wait_for": "wait", "say": "say",
-         "hold": "hold", "mark": "mark", "slide": "slide"}
+         "hold": "hold", "mark": "mark", "slide": "slide", "sign_in": "goto"}
 
 #: The five parts of a lesson, in the order a lesson runs through them. A step
 #: is in the part it names, or else in the part of the step before it.
@@ -362,6 +368,13 @@ def load_scene(path: Path) -> dict:
             step.setdefault("hold", hold_for_words(" ".join([step["title"], *step["lines"]])))
         if verb == "hold":
             step.setdefault("seconds", HOLD_SECONDS)
+        if verb == "sign_in":
+            if not isinstance(step.get("user"), str) or not step["user"]:
+                raise SystemExit(f"{where}: a `sign_in` needs the `user` it signs in as")
+            if step.get("password") is not None and not isinstance(step["password"], str):
+                raise SystemExit(f"{where}: a `sign_in`'s `password` is a string (the scene's own if left out)")
+            step.setdefault("password", scene["password"])
+            step.setdefault("settle", SETTLE_SECONDS)
         if verb == "mark" and not step.get("name"):
             raise SystemExit(f"{where}: a `mark` needs a `name` — it names the still")
         if verb == "wait_for":
@@ -492,7 +505,7 @@ def planned_seconds(scene: dict) -> float:
     for step in scene["step"]:
         if step.get("scroll_to"):
             total += SCROLL_SECONDS
-        if step["do"] == "goto":
+        if step["do"] in ("goto", "sign_in"):
             total += float(step["settle"])
         elif step["do"] == "fill":
             total += (len(step["text"]) * float(scene.get("type_delay_seconds", TYPE_DELAY_SECONDS))
@@ -546,6 +559,8 @@ def play(scene: dict, stage) -> None:
             stage.say(step["line"], float(step["hold"]), **pointer)
         elif verb == "hold":
             stage.hold(float(step["seconds"]))
+        elif verb == "sign_in":
+            stage.sign_in(step["user"], step["password"], float(step["settle"]))
         elif verb == "mark":
             stage.mark(step["name"])
         elif verb == "slide" and step.get("command") is not None:
@@ -1172,6 +1187,25 @@ class BrowserStage:
     def hold(self, seconds: float) -> None:
         self.note(f"hold {seconds}s", "hold")
         self.page.wait_for_timeout(int(seconds * 1000))
+
+    def sign_in(self, user: str, password: str, settle: float) -> None:
+        """Sign the browser in as somebody else, off camera, and load the page it is on again.
+
+        The sign-in is sent as the take's first one is, by the context's own
+        request client, whose cookie jar is the page's: the new session
+        replaces the old one, and the page, reloaded, draws the header with
+        the new name and role. The product's sign-in page is never on camera.
+        """
+        signed_in = self.page.context.request.post(
+            f"{self.base}/auth/login",
+            data=json.dumps({"code": user, "password": password}),
+            headers={"Content-Type": "application/json"},
+        )
+        if signed_in.status != 200:
+            raise SystemExit(f"step {self.step_number}: could not sign in as {user} (HTTP {signed_in.status})")
+        self.page.reload(wait_until="load")
+        self.note(f"signed in as {user}, page loaded again", "goto", url=self.page.url, user=user)
+        self.page.wait_for_timeout(int(settle * 1000))
 
     def slide(self, name: str, title: str, lines: list[str], hold: float) -> None:
         """Put a card on screen: a page this script paints, served on the plant's origin.
