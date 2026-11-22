@@ -57,7 +57,10 @@ jobs:
     # difference, not a platform or interpreter difference, so multiplying
     # the matrix would buy nothing and cost four times the minutes.
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # 45, not 30: the suite took 24 to 29 minutes here on main in the week of
+    # 2026-11-18, and a slow runner ran out the 30 twice on one PR with no test
+    # failing. The cure is a faster suite; this stops the false reds meanwhile.
+    timeout-minutes: 45
 
     services:
       postgres:
