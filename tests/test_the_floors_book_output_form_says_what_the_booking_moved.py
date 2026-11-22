@@ -142,7 +142,10 @@ def test_typing_a_machine_fills_its_orders_without_leaving_the_box(page):
     """Card 2026-11-19-book-output: "the order list stayed empty until I
     clicked away from the machine field". A datalist input fires `change`
     only when it loses focus, so the orders now come on `input`, as soon as
-    the box holds a machine the plant has. No `change` is sent here."""
+    the box holds a machine the plant has. No `change` is sent here, and the
+    Floor's two-second refresh, which also refills the list, is held still so
+    it cannot do the filling for the form."""
+    page.evaluate("clearInterval(timer); timer = null")
     box = page.get_by_label("Machine to book on", exact=True)
     box.fill("")
     page.evaluate("document.querySelector('#form-report [name=order]').textContent = ''")
@@ -152,6 +155,7 @@ def test_typing_a_machine_fills_its_orders_without_leaving_the_box(page):
         "[...document.querySelectorAll('#form-report [name=order] option')].some(o => o.value === 'WO-BOOK')",
         timeout=5000)
     assert page.evaluate("document.activeElement.name") == "equipment", "the box lost focus"
+    page.evaluate("timer = setInterval(refresh, 2000)")
 
 def test_booking_at_an_earlier_step_says_the_step_rose_and_the_orders_good_waits_for_the_last_step(page):
     page.get_by_label("Machine to book on", exact=True).fill("MIX01")
