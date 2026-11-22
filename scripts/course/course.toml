@@ -227,6 +227,13 @@ label = "4.1"
 slug = "specifications-and-quality-checks"
 title = "Specifications and quality checks"
 one_line = "What the gauge actually read, against the spec; out of spec is recorded, not rounded."
+knows_before = ["2.1"]
+outcomes = [
+  "Say what a specification is: a characteristic's low and high limit, for one material.",
+  "Record a reading at the station exactly as the gauge read it, in spec or out.",
+  "Find the reading and the non-conformance it raised on the Quality screen, and say who may record one.",
+]
+scene = "scripts/scenes/course/05-01-specifications-and-quality-checks.toml"
 
 [[module.lesson]]
 order = 2
