@@ -1,0 +1,470 @@
+# Class 6.1 of the course, *The AI tab - ask a plain question, and the record
+# of who asked*: a supervisor asks the plant's analysis agent a plain
+# question, checks the answer on the product's own screen, asks it to do
+# something it may not do, and then reads the record the MES kept of both.
+#
+# It starts from a card of words (no drawing): which machine stood still the
+# longest, and the two ways to find out. The idea card names the AI tab, the
+# analysis agent, the key and the trace. Then the product as a supervisor
+# sees it: the Floor, the AI tab by its menu, Explore, and the line that says
+# a model is answering and as which account; the read-only promise on the
+# panel; one question about the fork line's last fifteen minutes, typed and
+# sent, and the answer boxed, never quoted; the same figure found on the fork
+# mould's own OEE tab. Then what it refuses: asked to stop the mould, the
+# agent says, in its own words, that it only reads; and every turn of the
+# conversation is on the Conversations tab, with who asked, what it read and
+# what it cost. Filmed on a scratch cutlery plant, every screen as the product
+# draws it.
+#
+# The chat answers only on a plant started with ANTHROPIC_API_KEY in its
+# environment. The recorder's scratch plant inherits the recorder's own
+# environment, so the take is run with the key loaded, never printed:
+#
+#   set -a; . <the plant owner's env file>; set +a
+#   python scripts/record-scene.py scripts/scenes/course/07-01-the-chat-on-the-ai-tab.toml
+#
+# Without the key the take still runs to the Explore line and stops there,
+# because that line then says the agent is off, which is not this class.
+
+name = "the-chat-on-the-ai-tab"
+title = "The AI tab — ask a plain question, and the record of who asked"
+lesson = "6.1"
+take_is = "lesson"
+part = "hook"
+base = "http://127.0.0.1:8040"
+badge = "pre-alpha · simulated plant · v{version}"
+# The take is a supervisor's: the record it reads at the end names them.
+user = "WALK-SUP"
+password = "walk-lab-only"
+# About four and a half minutes scripted, and up to a minute of the agent
+# looking things up, twice.
+budget_seconds = 420
+gif_skip_seconds = 2.0
+width = 1280
+height = 720
+
+# The take asks the analysis agent two questions, and a question is a POST.
+# Honoured only against a loopback plant: the scratch plant below.
+allow_writes = true
+
+notes = [
+  "The plant was started from the cutlery pack at ten times wall clock, by the recorder, with `fsmes fleet start --speed 10`. The MES knows its own clock, and the replay bar at the top of every page says so.",
+  "The analysis agent answers because the scratch plant was started with an Anthropic API key in its environment, the key a plant's owner supplies. The key is never shown, logged or filmed; without one, the Explore line says the agent is off, and why.",
+  "The camera waited, off camera, until the MES had watched the fork mould, FORK1_Mold, for at least 99 % of the last fifteen minutes, so the window the question asks about is watched in full.",
+  "The take is a supervisor's, the lab account WALK-SUP, which holds `audit.read`: the Explore and Conversations tabs are behind it. An operator sees only the My agent tab, their own record.",
+  "The cutlery pack defines no shift patterns, so the question asks about the last fifteen minutes rather than this shift. Asked about this shift, the agent says the plant has no shift to anchor it to.",
+  "The agent's words are the model's own and differ from take to take; no caption quotes them. Before the caption that says the answer names the fork mould, the take checks that it does, and refuses the take if it does not.",
+  "The take writes two questions to the plant, the trace of them, and nothing else. Asked to stop the mould, the agent can only read; it stopped nothing.",
+  "The opening beat is a plain card with words on it. There is no artwork of a machine.",
+]
+
+honesty = [
+  "the plant is a scratch simulated plant, replaying a recorded line at ten times wall clock",
+  "the agent's answers are the model's own words, different on every take, and are boxed, never quoted",
+  "the agent waits while it looks things up; the waits are in the take, at a few seconds each",
+  "the cutlery pack defines no shifts, so the class asks about the last fifteen minutes instead of this shift",
+  "the Assistant panel on the other screens, which may propose a change for a person to confirm, is not in this class",
+]
+
+[plant]
+pack = "labs/cutlery"
+speed = 10
+roll_when_timeout_seconds = 1500
+
+# The fifteen minutes the question asks about are watched in full before it rolls.
+[plant.roll_when_watched]
+equipment = "FORK1_Mold"
+hours = 0.25
+at_least = 0.99
+
+# ----------------------------------------------------------------- the hook
+
+[[step]]
+do = "slide"
+name = "which-machine-stood-still"
+title = "Which machine stood still the longest?"
+lines = [
+  "A supervisor wants to know which machine stopped the most",
+  "The answer is on the screens, if you know where to look",
+  "Or you can ask the plant, in plain words",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "A supervisor wants to know which machine on the fork line stood still the longest."
+
+[[step]]
+do = "say"
+line = "The answer is on the screens, if you know where to look. This class asks the plant instead, and then checks the answer on the screen."
+
+[[step]]
+do = "mark"
+name = "which-machine-stood-still"
+
+# ----------------------------------------------------------------- the idea
+
+[[step]]
+part = "idea"
+do = "slide"
+name = "the-words"
+title = "The words"
+lines = [
+  "The AI tab: where you ask, and every question is kept",
+  "The agent: a model that reads the plant's records",
+  "The key: what lets it answer, from the plant's owner",
+  "The trace: who asked what, and what it read",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "The AI tab is one place in the MES. You ask the plant questions there, and every question asked is kept there."
+
+[[step]]
+do = "say"
+line = "The analysis agent answers. It is a language model, a program that reads and writes plain words, and it looks up the plant's own records."
+
+[[step]]
+do = "say"
+line = "The model runs at an AI company. The plant's owner buys a key from that company and gives it to the MES. No key, no answers."
+
+[[step]]
+do = "say"
+line = "The trace is the record of every conversation: who asked, what was asked, what the agent read, and what it said back."
+
+[[step]]
+do = "mark"
+name = "the-words"
+
+# ------------------------------------------------------------ on the screen
+
+# The Floor is the one page opened by address, the first after signing in.
+[[step]]
+part = "screen"
+do = "goto"
+url = "/dashboard"
+settle = 2
+
+[[step]]
+do = "say"
+line = "Signed in as a supervisor. The AI tab is in the menu, beside Setup."
+at = "header nav a:text-is(\"AI\")"
+
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"AI\")"
+
+[[step]]
+do = "wait_for"
+js = "!!document.querySelector('button.tab[data-tab=\"explore\"]') && !document.querySelector('#ai-tabs').classList.contains('hidden')"
+
+[[step]]
+do = "click"
+selector = "button.tab[data-tab=\"explore\"]"
+
+[[step]]
+do = "wait_for"
+selector = "#explore-state"
+text = "is answering"
+
+[[step]]
+do = "say"
+line = "Explore is where you ask. This line says a model is answering, as an analyst account that may read everything and write nothing."
+at = "#explore-state"
+
+[[step]]
+do = "say"
+line = "On a plant with no key, the same line says the agent is off, and why. The tab is still there."
+at = "#explore-state"
+
+[[step]]
+do = "say"
+line = "Above it, the tab's own promise: this agent reads and only reads. It cannot book, propose, approve or change anything."
+at = "section[data-panel=\"explore\"] p:has-text(\"reads and only reads\")"
+
+[[step]]
+do = "mark"
+name = "the-ai-tab"
+
+[[step]]
+do = "say"
+line = "This plant has no shifts set up, so the question asks about the last fifteen minutes instead of this shift."
+at = "#explore-input"
+
+[[step]]
+do = "fill"
+selector = "#explore-input"
+text = "Over the last fifteen minutes, which machine on line FORK1LINE was stopped the longest, and for how long?"
+
+[[step]]
+do = "click"
+selector = "#explore-send"
+
+[[step]]
+do = "mark"
+name = "a-plain-question"
+
+# A caption of its own for the wait, so the still at the answer does not
+# carry the line that asked.
+[[step]]
+do = "say"
+line = "The agent looks things up in the plant's records on its own. That takes a few seconds."
+hold = 1.0
+
+[[step]]
+do = "wait_for"
+js = "document.querySelectorAll('#explore-log .explore-next').length >= 1 && document.querySelector('#explore-cost').textContent.includes('That answer cost')"
+timeout = 120
+scroll_to = "#explore-log .explore-msg.me"
+scroll_block = "start"
+scroll_offset = 200
+
+[[step]]
+do = "say"
+line = "Its answer, in its own words, starting here. The words change every time you ask, so this class does not read them out."
+at = "#explore-log .explore-msg.bot > :first-child"
+hold = 8.0
+
+[[step]]
+do = "say"
+line = "Above the answer, the records it read. Open that line and you see each look-up, and what came back."
+at = "#explore-log .explore-trace"
+
+[[step]]
+do = "mark"
+name = "the-answer"
+
+# The caption names the machine, so the take checks the answer does.
+[[step]]
+do = "wait_for"
+js = "const bots = [...document.querySelectorAll('#explore-log .explore-msg.bot')]; return bots.some((b) => b.textContent.includes('FORK1_Mold'));"
+timeout = 5
+
+[[step]]
+do = "say"
+line = "It names the fork mould, with a time it was stopped. An answer is a lead. Check it where the plant keeps the figure."
+at = "#explore-log .explore-msg.bot :is(p, li):has-text(\"FORK1_Mold\")"
+
+[[step]]
+do = "say"
+line = "The cost line says what that answer cost, and what is left of this month's budget for the AI."
+at = "#explore-cost"
+
+# The check, clicked through as a person would: Floor, the mould's tile, its
+# OEE tab over the same fifteen minutes.
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"Floor\")"
+
+[[step]]
+do = "wait_for"
+js = "!!document.querySelector('main .machine a.machine-code[href=\"/dashboard/machine/FORK1_Mold\"]')"
+scroll_to = "main .machine:has(a.machine-code[href=\"/dashboard/machine/FORK1_Mold\"])"
+scroll_block = "start"
+scroll_offset = 260
+
+[[step]]
+do = "click"
+selector = "main .machine a.machine-code[href=\"/dashboard/machine/FORK1_Mold\"]"
+
+[[step]]
+do = "wait_for"
+js = "!!document.querySelector('button.tab[data-tab=\"oee\"]')"
+
+[[step]]
+do = "click"
+selector = "button.tab[data-tab=\"oee\"]"
+
+[[step]]
+do = "choose"
+selector = "select[data-span=\"kind\"]"
+value = "h:0.25"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#oee-window').textContent.includes('0.25 h of history') && /down /.test(document.querySelector('#oee-facts').textContent)"
+scroll_to = "#oee-bars"
+scroll_block = "start"
+scroll_offset = 320
+
+[[step]]
+do = "say"
+line = "The fork mould's own page, its OEE tab, over the same fifteen minutes. The header says all of it was watched."
+at = "#oee-window"
+
+[[step]]
+do = "say"
+line = "This line gives the time it ran, and all the time it was down in the window, every stop added together."
+at = "#oee-facts"
+hold = 6.0
+
+[[step]]
+do = "say"
+line = "Add up the stops the answer named, and they should come to about this. If they do not, the screen is the plant's own arithmetic. Trust the screen."
+at = "#oee-facts"
+
+[[step]]
+do = "mark"
+name = "the-same-figure-on-the-screen"
+
+# -------------------------------------------------------------- it refuses
+
+[[step]]
+part = "refuses"
+do = "click"
+selector = "header nav a:text-is(\"AI\")"
+
+[[step]]
+do = "wait_for"
+js = "!document.querySelector('#ai-tabs').classList.contains('hidden')"
+
+[[step]]
+do = "click"
+selector = "button.tab[data-tab=\"explore\"]"
+
+[[step]]
+do = "wait_for"
+selector = "#explore-state"
+text = "is answering"
+
+[[step]]
+do = "say"
+line = "Back to Explore. Now ask it to do something to the plant."
+at = "#explore-input"
+
+[[step]]
+do = "fill"
+selector = "#explore-input"
+text = "Stop the fork mould for ten minutes, please."
+
+[[step]]
+do = "click"
+selector = "#explore-send"
+
+[[step]]
+do = "say"
+line = "It looks again. The reply is filmed as it came."
+hold = 1.0
+
+# Leaving the page ended the first exploration, so this log holds only the
+# second question and its reply.
+[[step]]
+do = "wait_for"
+js = "document.querySelectorAll('#explore-log .explore-next').length >= 1 && document.querySelector('#explore-cost').textContent.includes('That answer cost') && document.querySelector('#explore-log .explore-msg.me').textContent.includes('Stop the fork mould')"
+timeout = 120
+scroll_to = "#explore-log .explore-msg.me"
+scroll_block = "start"
+scroll_offset = 200
+
+[[step]]
+do = "say"
+line = "It says no, in its own words. It only reads the plant's records. It cannot stop a machine, book a stop, or change a setting."
+at = "#explore-log .explore-msg.bot > :first-child"
+hold = 8.0
+
+[[step]]
+do = "say"
+line = "Nothing on the plant changed. This agent has no way to change it: its account holds no right that writes."
+at = "#explore-log .explore-msg.bot > :first-child"
+
+[[step]]
+do = "mark"
+name = "it-changes-nothing"
+
+# The record of who asked.
+[[step]]
+do = "click"
+selector = "button.tab[data-tab=\"conversations\"]"
+
+[[step]]
+do = "wait_for"
+js = "const rows = [...document.querySelectorAll('#conv-table tbody tr')]; return rows.some((r) => r.textContent.includes('WALK-SUP') && r.textContent.includes('Over the last fifteen minutes')) && rows.some((r) => r.textContent.includes('WALK-SUP') && r.textContent.includes('Stop the fork mould'));"
+timeout = 20
+scroll_to = "#conv-table"
+scroll_block = "start"
+scroll_offset = 260
+
+[[step]]
+do = "say"
+line = "The Conversations tab: the trace. One row for every conversation anyone has had with this plant's AI."
+at = "section[data-panel=\"conversations\"] h2"
+
+[[step]]
+do = "say"
+line = "Who asked, when, the first thing they asked, how many turns, and what it cost. Both rows here are the supervisor's."
+at = "#conv-table thead"
+
+[[step]]
+do = "say"
+line = "Two rows, not one: leaving the page ended the first conversation, so the second question started another."
+at = "#conv-table tbody tr:has-text(\"Stop the fork mould\")"
+
+[[step]]
+do = "click"
+selector = "#conv-table tbody tr:has-text(\"Stop the fork mould\") button:text-is(\"Read it\")"
+
+[[step]]
+do = "wait_for"
+js = "!document.querySelector('#conv-detail').classList.contains('hidden') && document.querySelectorAll('#turns .turn').length >= 1 && document.querySelector('#turns .turn .asked').textContent.includes('Stop the fork mould')"
+scroll_to = "#conv-detail"
+scroll_block = "start"
+scroll_offset = 260
+
+[[step]]
+do = "say"
+line = "Read it, and the turn is there: the words typed, word for word. The request to stop the mould is kept too."
+at = "#turns .turn .asked"
+
+[[step]]
+do = "say"
+line = "Under them, any look-up the agent made, and last, what it said back."
+at = "#turns .turn > :last-child"
+
+[[step]]
+do = "say"
+line = "The plant keeps this in its own database. A question asked on a phone last night is readable here this morning."
+at = "#detail-facts"
+
+[[step]]
+do = "mark"
+name = "the-record-of-who-asked"
+
+[[step]]
+do = "say"
+line = "A supervisor reads everyone's trace. An operator sees only their own, on the My agent tab."
+at = "button.tab[data-tab=\"mine\"]"
+
+[[step]]
+do = "say"
+line = "It never holds the key, and never the plant's raw rows. It holds what the person was shown."
+at = "#detail-facts"
+
+[[step]]
+do = "mark"
+name = "who-may-read-it"
+
+# ------------------------------------------------------------ you now know
+
+[[step]]
+part = "know"
+do = "slide"
+name = "you-now-know"
+title = "You now know how to"
+lines = [
+  "Ask the plant a plain question on the AI tab, and say what it needs to answer.",
+  "Check an answer against the screen the plant keeps the figure on.",
+  "Find who asked what on the Conversations tab, and say what the agent cannot do.",
+]
+
+[[step]]
+do = "say"
+line = "That is the AI tab: plain questions, answers you check on the screens, and a record of every one. You now know how to do three things."
+
+[[step]]
+do = "mark"
+name = "you-now-know"
+
+[[step]]
+do = "hold"
+seconds = 3
