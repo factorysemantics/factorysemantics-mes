@@ -755,14 +755,20 @@ async function act(path, message, body) {
    whichever sorts first and says nothing - quantity against the wrong order,
    discovered at month end. The select defaults to that same first operation,
    so the honest path costs no extra clicks. */
+let reportOrdersTurn = 0;   /* typing and leaving the box can both ask; the last one draws */
 async function fillReportOrders() {
+  const turn = ++reportOrdersTurn;
   const machine = $("#form-report [name=equipment]").value;
   const select = $("#form-report [name=order]");
   const keep = select.value;
-  select.textContent = "";
-  if (!machine) return;
+  /* Emptied only when the answer is in: the Floor refreshes every two
+     seconds, and clearing before the fetch left the list blank for the
+     length of every round trip. */
+  if (!machine) { select.textContent = ""; return; }
   try {
     const queue = await api(`/workorders/dispatch?equipment=${encodeURIComponent(machine)}`);
+    if (turn !== reportOrdersTurn) return;
+    select.textContent = "";
     const open = queue.filter((entry) => entry.status !== "done");
     for (const entry of open) {
       const option = el("option", null,
@@ -782,6 +788,14 @@ async function fillReportOrders() {
 }
 
 $("#form-report [name=equipment]").addEventListener("change", fillReportOrders);
+/* A datalist box fires `change` only when it loses focus, so a typed
+   machine left the order list empty until the operator clicked away (card
+   2026-11-19-book-output). Fill it as soon as the box holds a machine the
+   plant has; a half-typed code asks nothing. */
+$("#form-report [name=equipment]").addEventListener("input", (event) => {
+  const typed = event.target.value;
+  if ([...$("#machine-options").options].some((o) => o.value === typed)) fillReportOrders();
+});
 
 $("#form-report").addEventListener("submit", async (event) => {
   event.preventDefault();

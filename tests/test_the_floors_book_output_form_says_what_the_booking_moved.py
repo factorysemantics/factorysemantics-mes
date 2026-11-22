@@ -145,6 +145,7 @@ def test_typing_a_machine_fills_its_orders_without_leaving_the_box(page):
     the box holds a machine the plant has. No `change` is sent here, and the
     Floor's two-second refresh, which also refills the list, is held still so
     it cannot do the filling for the form."""
+    page.wait_for_function("timer !== null", timeout=15000)   # the page shows before its clock starts
     page.evaluate("clearInterval(timer); timer = null")
     box = page.get_by_label("Machine to book on", exact=True)
     box.fill("")
