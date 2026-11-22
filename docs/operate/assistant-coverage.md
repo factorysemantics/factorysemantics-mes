@@ -73,7 +73,7 @@ control is.
 | POST | `/masterdata/routings` | `admin.js` | `create_routing` | `masterdata.write` | yes |
 | POST | `/quality/checks` | `app.js`, `quality.js`, `station.js` | `record_check` | `quality.record` | yes |
 | POST | `/quality/counts` | — | `record_count` | `quality.record` | no |
-| POST | `/quality/gauges` | `gauges.js` | `register_gauge` | `masterdata.write` | no |
+| POST | `/quality/gauges` | `app.js`, `gauges.js`, `station.js` | `register_gauge` | `masterdata.write` | no |
 | POST | `/quality/gauges/{code}/calibrate` | `gauges.js` | `calibrate_gauge` | `quality.close_nc` | no |
 | POST | `/quality/nonconformances` | `quality.js` | `raise_nonconformance` | `quality.record` | yes |
 | POST | `/quality/nonconformances/{code}/close` | `quality.js` | `close_nonconformance` | `quality.close_nc` | yes |

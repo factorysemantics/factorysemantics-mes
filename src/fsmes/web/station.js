@@ -151,6 +151,17 @@ function picking() {
   return !!(vocabulary && vocabulary.total);
 }
 
+/* The plant's gauge register, offered for the reading's instrument. Any
+   code may still be typed; the server refuses one the plant does not have. */
+async function loadGauges() {
+  const register = await api("/quality/gauges").catch(() => ({ gauges: [] }));
+  const list = $("#q-gauge-options");
+  if (!list) return;
+  list.replaceChildren(...(register.gauges || [])
+    .filter((g) => g.status !== "lost")
+    .map((g) => new Option(g.overdue ? `${g.name} — calibration overdue` : g.name, g.code)));
+}
+
 async function loadReasons() {
   try {
     vocabulary = await api("/equipment/downtime-reasons");
@@ -582,6 +593,9 @@ function wireQuality() {
         // The person is standing at this machine. Recording where a reading
         // was taken is the only honest way for anything downstream to say so.
         equipment: machine,
+        // Which instrument read it. Kept for the next reading - an operator
+        // measures a run with the same gauge - and empty means not recorded.
+        gauge: $("#q-gauge").value.trim() || null,
       }});
       $("#q-value").value = "";
       const raised = $("#q-raised");
@@ -763,6 +777,7 @@ async function refresh() {
   wireMaintenance();
   await loadMachines();
   await loadReasons();
+  await loadGauges();
   await loadLots();
   await refresh();
   // After the first refresh, so the note can say what this machine is doing

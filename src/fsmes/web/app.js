@@ -877,10 +877,11 @@ $("#form-quality").addEventListener("submit", async (event) => {
   const form = new FormData(event.target);
   const [material, characteristic] = String(form.get("spec")).split("::");
   const equipment = String(form.get("equipment") || "").trim();
+  const gauge = String(form.get("gauge") || "").trim();
   try {
     const result = await api("/quality/checks", {
       method: "POST",
-      body: { material, characteristic, value: Number(form.get("value")), order: null, equipment: equipment || null },
+      body: { material, characteristic, value: Number(form.get("value")), order: null, equipment: equipment || null, gauge: gauge || null },
     });
     toast(
       result.result === "pass" ? "Check passed." : `Out of spec — ${result.non_conformance} opened.`,
@@ -921,13 +922,25 @@ async function loadSpecs() {
   }
 }
 
+/* The gauges a reading can be said to come from. A datalist, so a code the
+   register does not list may still be typed and the server says whether it
+   exists; an overdue gauge is offered and named so, because those readings
+   are recorded on real floors and an unnamed one is worse. Left empty, the
+   check says not recorded. */
+async function loadGauges() {
+  const register = await api("/quality/gauges").catch(() => ({ gauges: [] }));
+  fillOptions("gauge-options", (register.gauges || [])
+    .filter((g) => g.status !== "lost")
+    .map((g) => [g.code, g.overdue ? `${g.name} — calibration overdue` : g.name]));
+}
+
 /* ---------- boot ---------- */
 
 (async function boot() {
   try {
     user = await api("/auth/me");
     await start();
-    await Promise.all([loadLots(), loadSpecs()]);
+    await Promise.all([loadLots(), loadSpecs(), loadGauges()]);
   } catch {
     showLogin();
   }

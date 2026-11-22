@@ -112,6 +112,8 @@
           <select name="spec" data-fill="specs" aria-label="Characteristic" data-assist="quality-spec"></select>
           <input name="value" type="number" step="any" placeholder="Measured" required data-assist="quality-value">
           <input name="equipment" list="machine-options" placeholder="Machine (optional)" aria-label="Machine the check was taken on" title="The machine this reading came from; leave empty if it is not tied to one" autocomplete="off" data-assist="quality-equipment">
+          <input name="gauge" list="gauge-options" placeholder="Gauge (optional)" aria-label="Gauge that took the reading" title="The instrument this reading was taken with; leave empty and the check says not recorded" autocomplete="off" data-assist="quality-gauge">
+          <datalist id="gauge-options"></datalist>
           <button data-assist="quality-submit">Record</button>
         </div>
         <p id="quality-scope" class="muted small"></p>
