@@ -37,10 +37,6 @@ POINTS_AT_NOTHING_ON_SCREEN = {
 }
 ON_SCREEN = ("hook", "screen", "refuses")
 
-# The lab fleet, the public demo and the stock demo ports: a class is never
-# filmed on a plant somebody else is looking at.
-NOT_OURS = {8090, 8110, 8120, 8140, 9030, 5433, 5434}
-
 
 @pytest.fixture(scope="module")
 def runner():
@@ -173,12 +169,12 @@ def test_the_you_now_know_card_says_the_classs_own_outcomes_word_for_word(runner
     assert len(know) == 1 and know[0]["lines"] == lesson["outcomes"]
 
 
-def test_it_is_filmed_on_a_scratch_cutlery_plant_on_loopback_and_never_on_one_somebody_else_runs(scene):
+def test_it_is_filmed_on_a_scratch_cutlery_plant_on_loopback_and_never_on_one_somebody_else_runs(runner, scene):
     base = urlparse(scene["base"])
 
     assert scene["plant"]["pack"] == "labs/cutlery"
     assert base.hostname == "127.0.0.1"
-    assert base.port not in NOT_OURS
+    assert base.port not in runner.PORTS_THAT_BELONG_TO_SOMETHING_ELSE
     assert scene["plant"]["roll_when_order"] == [{"code": "WO-PAL1-0001", "booked": 1}]
 
 

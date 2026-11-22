@@ -34,10 +34,6 @@ PACK = REPO / "labs" / "cutlery"
 MACHINE = "FORK1_Mold"
 IN_SPEC, OUT_OF_SPEC = "25.1", "26.35"
 
-# The lab fleet, the public demo and the stock demo ports: a class is never
-# filmed on a plant somebody else is looking at.
-NOT_OURS = {8090, 8110, 8120, 8140, 9030, 5433, 5434, 4944, 4945}
-
 # What no caption, card or note may carry: a calendar date, a year, a month's
 # name. The class is about any plant on any day.
 A_DATE = re.compile(
@@ -296,7 +292,7 @@ def test_it_is_filmed_on_a_scratch_cutlery_plant_on_loopback_and_never_on_one_so
 
     assert scene["plant"]["pack"] == "labs/cutlery"
     assert base.hostname == "127.0.0.1" and base.port == 8040
-    assert not set(ports) & NOT_OURS
+    assert not set(ports) & set(runner.PORTS_THAT_BELONG_TO_SOMETHING_ELSE)
     assert scene["allow_writes"] is True
 
 

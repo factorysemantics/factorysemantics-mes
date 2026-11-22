@@ -2326,7 +2326,8 @@ def lesson_document(course: dict, module: dict, lesson: dict, scene: dict, facts
 # simulate; a take that bound one of these would not fail, it would quietly
 # film the wrong plant, or stop one Scott is watching. The pre-flight names
 # what usually owns a port so the person reading the refusal knows whether to
-# worry.
+# worry. This is the one list: the class tests read it rather than keep
+# their own (tests/test_one_list_of_ports_that_are_not_ours.py).
 PORTS_THAT_BELONG_TO_SOMETHING_ELSE = {
     8090: "the lab's fleet console",
     8110: "the lab's bottling plant",
@@ -2338,6 +2339,9 @@ PORTS_THAT_BELONG_TO_SOMETHING_ELSE = {
     4943: "the public demo's OPC endpoint",
     5433: "the public demo's PostgreSQL",
     5434: "the public demo's second PostgreSQL",
+    8140: "a plant the crew's standing orders keep off limits",
+    4944: "the stock demo's OPC endpoint",
+    4945: "the stock demo's scenario OPC endpoint",
 }
 
 #: What a scene's `[plant] env` may set: the switches of `fsmes run-operations`,
