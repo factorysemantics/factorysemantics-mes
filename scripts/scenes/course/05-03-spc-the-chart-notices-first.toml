@@ -1,0 +1,453 @@
+# Class 4.3 of the course, *SPC - the chart notices before people do*: a
+# control chart on the cutlery plant, its limits, a rule firing on a fork
+# mould that runs hot while every fork is still inside the specification, the
+# hold the MES raises by itself, the mould's own temperature behind the
+# reading, and the capability figure the MES withholds - first for too few
+# readings, then for a process out of control.
+#
+# The plant is the cutlery pack's "hot-mould" scene
+# (labs/cutlery/scenes/hot-mould.json), the one the Cpk film used: fork mould
+# 1 stops for a minute about three minutes after start at 10x, restarts with
+# its cooling short, and its melt climbs from about 214 to about 238 C; the
+# width of the forks it makes spreads while their centre stays at 25 mm. It is
+# a scene pack built by labs/cutlery/scene.py, not a pack, so this file has no
+# `[plant]`: the plant is brought up first, by hand, on 127.0.0.1:8040 (OPC
+# 4844), and the take is started straight after it, because the opening shot
+# needs a chart with fewer than twelve readings and the plant makes that many
+# in about two minutes.
+#
+#   python labs/cutlery/scene.py labs/cutlery/scenes/hot-mould.json --out <empty dir>
+#   FSMES_PLANT_REGISTRY=<dir>/fleet.toml fsmes plant cutlery init
+#   FSMES_PLANT_REGISTRY=<dir>/fleet.toml fsmes plant cutlery start --speed 10
+#   python scripts/record-scene.py scripts/scenes/course/05-03-spc-the-chart-notices-first.toml
+#
+# A fresh plant every take: the chart keeps every reading, so a second take on
+# the same plant would open on a chart already out of control.
+#
+# The everyday shift of the pack is not changed: the scene is built into a copy.
+
+name = "spc-the-chart-notices-first"
+title = "SPC - the chart notices before people do"
+lesson = "4.3"
+take_is = "lesson"
+part = "hook"
+base = "http://127.0.0.1:8040"
+badge = "pre-alpha · simulated plant · v{version}"
+# Four to six minutes, as the handoff asks. One wait in it is filmed: the
+# chart turning, which the narrator may cut short.
+budget_seconds = 400
+gif_skip_seconds = 2.0
+width = 1280
+height = 720
+
+notes = [
+  "The plant is the cutlery pack's hot-mould scene (labs/cutlery/scenes/hot-mould.json), built into a scratch copy of the pack by labs/cutlery/scene.py and started by hand at ten times wall clock on 127.0.0.1:8040, just before the take. The pack itself, and its everyday shift, are not changed.",
+  "The fault is scripted: fork mould 1 (FORK1_Mold) stops for a line minute, restarts with its cooling short, and its melt temperature climbs from about 214 to about 238 C. Above 224 C the spread of fork width grows with the temperature; the centre stays at 25 mm. The other two fork moulds stay healthy.",
+  "The opening shot is the fork-length chart in the first two minutes after the plant started, while it still had fewer than the twelve readings this plant asks for before it draws limits. It is in the hook, not with the other refusals, because a plant makes twelve readings in two minutes and the camera could only catch it at the start.",
+  "Fork width is measured every thirty line seconds on each of the three fork moulds, so the chart gets a reading about every three wall seconds. Each dot is one fork. The chart pools the three moulds; the reading's own panel names the mould.",
+  "The camera checks before it says so that every reading a rule had fired on, at that moment, was inside the specification of 24 to 26 mm.",
+  "The hold was raised by the MES when the reading was recorded. The take writes nothing: it reads the chart, the hold and the reading's records.",
+  "This plant raises a hold on rules 1 to 4; rule 5, on the moving range, is drawn and raises none. Which rule fires first differs from take to take, so no caption names it; the screen does.",
+  "Capability is withheld twice on screen: for too few readings at the start, and while the chart is out of control later. The plant's least is twelve readings (`spc_min_points`).",
+]
+
+honesty = [
+  "the plant is a scratch simulated plant with a fault written into it, replayed at ten times wall clock; a real plant's patterns are less tidy",
+  "the opening shot of a chart with too few readings is filmed in the first two minutes after the plant started",
+  "which rule fires first varies from take to take; the caption does not name it",
+]
+
+# ----------------------------------------------------------------- the hook
+
+[[step]]
+do = "goto"
+url = "/dashboard/spc?spec=UT-FORK%7Clength_mm"
+settle = 2
+
+[[step]]
+do = "wait_for"
+js = "const n = document.querySelector('#chart-note').textContent; return (window.__fsmesPageData || {}).material === 'UT-FORK' && window.__fsmesPageData.characteristic === 'length_mm' && n.includes('control limits need at least') && document.querySelector('#f-cpk').textContent.trim() === 'withheld';"
+
+[[step]]
+do = "say"
+line = "This cutlery plant has only just started. Here is its control chart for the length of a fork."
+at = "#spec"
+
+[[step]]
+do = "say"
+line = "It has only a few readings, so the MES draws no limits yet, and says why, here."
+at = "#chart-note"
+
+[[step]]
+do = "say"
+line = "No capability figure either. Cp and Cpk say withheld: a number from a handful of forks would change with every new one."
+at = "#f-cpk"
+style = "spotlight"
+
+[[step]]
+do = "mark"
+name = "too-few-readings"
+
+[[step]]
+do = "say"
+line = "Give it a few minutes, and a chart like this will notice a fault before any fork is out of size."
+at = "#chart"
+
+# ----------------------------------------------------------------- the idea
+
+[[step]]
+part = "idea"
+do = "slide"
+name = "the-words"
+title = "The words"
+lines = [
+  "Specification limits: what the customer allows",
+  "Control limits: what the process does",
+  "A rule: a pattern chance rarely makes",
+  "Cp, Cpk: does the spread fit the spec?",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "SPC is short for statistical process control: watching a process through its own measurements."
+
+[[step]]
+do = "say"
+line = "Specification limits are what the customer allows. A fork between twenty-four and twenty-six millimetres wide is a good fork."
+
+[[step]]
+do = "say"
+line = "Control limits are what the process does when nothing has changed. They come from the readings, not from the customer."
+
+[[step]]
+do = "say"
+line = "A rule is a pattern in the readings that chance rarely makes: one far out, or several leaning the same way."
+
+[[step]]
+do = "say"
+line = "Cp compares the width of the specification with the spread of the process. Cpk does the same from the centre to the nearer limit."
+
+[[step]]
+do = "say"
+line = "So a process can be in spec and out of control. That is the moment SPC is for: something changed, and no bad part has been made yet."
+
+[[step]]
+do = "mark"
+name = "the-words"
+
+# ------------------------------------------------------------ on the screen
+
+# Back to the SPC page after the card, on fork width this time.
+[[step]]
+part = "screen"
+do = "goto"
+url = "/dashboard/spc?spec=UT-FORK%7Cwidth_mm"
+settle = 2
+
+[[step]]
+do = "wait_for"
+js = "return (window.__fsmesPageData || {}).material === 'UT-FORK' && window.__fsmesPageData.characteristic === 'width_mm' && document.querySelector('#verdict').textContent.startsWith('in control') && document.querySelectorAll('#chart circle.spc-dot').length >= 40;"
+scroll_to = "#chart"
+scroll_block = "start"
+scroll_offset = 215
+
+[[step]]
+do = "say"
+line = "Now fork width. Each dot is one fork, measured, oldest on the left. Three moulds make these forks."
+at = "#chart g.chart-plot"
+
+[[step]]
+do = "say"
+line = "The red dashed lines are the specification, USL and LSL: twenty-six and twenty-four millimetres."
+at = "#chart text.axis:has-text(\"USL\")"
+
+[[step]]
+do = "say"
+line = "The orange lines are the control limits, UCL and LCL: three sigma either side of the centre. Sigma is the process's own spread."
+at = "#chart text.axis:has-text(\"UCL\")"
+
+[[step]]
+do = "say"
+line = "The green line is the centre, the average width. The limits sit well inside the specification: this process is tighter than it needs to be."
+at = "#chart text.axis:has-text(\"x̄\")"
+
+[[step]]
+do = "say"
+line = "The lower chart is the gap between each fork and the one before. Sigma, and so both sets of control limits, come from those gaps."
+at = "#chart g[data-half]"
+
+[[step]]
+do = "mark"
+name = "reading-the-chart"
+
+[[step]]
+do = "wait_for"
+js = "const cpk = parseFloat(document.querySelector('#f-cpk').textContent); return document.querySelector('#verdict').textContent.startsWith('in control') && cpk >= 1.33;"
+scroll_to = "#verdict"
+scroll_block = "start"
+scroll_offset = 230
+
+[[step]]
+do = "say"
+line = "The verdict: in control and capable. Cpk is well above one point three three, the bar this plant sets."
+at = "#verdict"
+
+[[step]]
+do = "mark"
+name = "in-control-and-capable"
+
+[[step]]
+do = "say"
+line = "This simulated plant has a fault written into it. Fork mould one is about to stop, and come back with its cooling short."
+at = "#verdict"
+
+[[step]]
+do = "wait_for"
+js = "return (window.__fsmesPageData || {}).material === 'UT-FORK' && window.__fsmesPageData.characteristic === 'width_mm' && !!document.querySelector('#chart g.chart-plot');"
+scroll_to = "#chart"
+scroll_block = "start"
+scroll_offset = 215
+
+[[step]]
+do = "say"
+line = "Watch the chart. A new fork every few seconds."
+at = "#chart g.chart-plot"
+
+# The one wait that is filmed: the event. Every flagged reading must still be
+# inside the specification when it lands, or the caption after it is false.
+[[step]]
+do = "wait_for"
+js = "if (!document.querySelector('#verdict').textContent.startsWith('out of control')) return false; const hit = [...document.querySelectorAll('#chart g.chart-plot circle.spc-flag')]; return hit.length > 0;"
+timeout = 150
+scroll_to = "#chart"
+scroll_block = "start"
+scroll_offset = 215
+
+[[step]]
+do = "say"
+line = "There. A rule fired. The fork it fired on is marked in pink, and the verdict above now says out of control."
+at = "#chart circle.spc-flag[data-series=\"individuals\"]"
+style = "spotlight"
+
+# The caption after this says the first fork a rule fired on is inside the
+# specification; the take checks it, on the dot itself, before saying so.
+[[step]]
+do = "wait_for"
+js = "const first = document.querySelector('#chart circle.spc-flag[data-series=\"individuals\"]'); if (!first) return false; const v = parseFloat(first.dataset.value); return v > 24 && v < 26;"
+timeout = 5
+
+[[step]]
+do = "say"
+line = "And that fork is still inside the specification, between the red lines. The customer would take it. The chart noticed anyway."
+at = "#chart circle.spc-flag[data-series=\"individuals\"]"
+
+[[step]]
+do = "mark"
+name = "a-rule-fires-in-spec"
+
+# Opened at once, while the fork the rule fired on is still the first pink dot:
+# a few minutes on, the limits have widened with the fault and an early firing
+# may no longer be drawn pink.
+[[step]]
+do = "click"
+selector = "#chart circle.spc-flag[data-series=\"individuals\"]"
+
+[[step]]
+do = "wait_for"
+js = "const p = document.querySelector('#point-panel'); return !!p.dataset.point && p.textContent.includes('FORK1_Mold') && p.textContent.includes('What the machine was doing');"
+scroll_to = "#point-panel"
+scroll_block = "start"
+scroll_offset = 215
+
+[[step]]
+do = "say"
+line = "Click the fork the rule fired on. The panel beside the chart shows every record the MES holds around it."
+at = "#point-title"
+
+[[step]]
+do = "say"
+line = "The station that made it: fork mould one."
+at = "#point-body section.point-block:has-text(\"The reading\") :text(\"FORK1_Mold\")"
+
+[[step]]
+do = "wait_for"
+selector = "#point-body"
+text = "Just before"
+scroll_to = "#point-body section.point-block"
+scroll_text = "What the machine was doing"
+scroll_block = "start"
+scroll_offset = 215
+
+[[step]]
+do = "say"
+line = "What the machine was doing. Just before this fork, it was down: that is the stop, moments before the rule fired."
+at = "#point-body section.point-block:has-text(\"What the machine was doing\") :text-is(\"Just before\")"
+
+[[step]]
+do = "click"
+selector = "#point-body details.point-fold:has-text(\"This station's process values\") > summary"
+
+[[step]]
+do = "wait_for"
+js = "const d = [...document.querySelectorAll('#point-body details.point-fold')].find(x => x.textContent.includes(\"This station's process values\")); return !!d && d.open && d.textContent.includes('MeltTemp');"
+scroll_to = "#point-body details.point-fold"
+scroll_text = "This station's process values"
+scroll_block = "start"
+scroll_offset = 215
+
+[[step]]
+do = "say"
+line = "Open the mould's process values over the ten minutes before it. One of them is its melt temperature, MeltTemp, climbing after the stop."
+at = "#point-body details.point-fold:has-text(\"This station's process values\") > summary"
+
+[[step]]
+do = "mark"
+name = "the-tags-before-the-reading"
+
+[[step]]
+do = "wait_for"
+selector = "#signals tbody"
+text = "hold"
+scroll_to = "#signals"
+scroll_block = "start"
+scroll_offset = 240
+
+[[step]]
+do = "say"
+line = "Below the chart, the rules that fired: which rule, where, and what it means, in words."
+at = "#signals tbody tr:first-child"
+
+[[step]]
+do = "say"
+line = "And what it raised: a quality hold. Nobody typed it. The MES raised it the moment the reading was recorded."
+at = "#signals tbody tr:first-child td:last-child"
+
+[[step]]
+do = "mark"
+name = "the-rule-raises-a-hold"
+
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"Quality\")"
+
+[[step]]
+do = "wait_for"
+selector = "#ncs"
+text = "SPC rule"
+scroll_to = "#ncs"
+scroll_block = "start"
+scroll_offset = 250
+
+# Two short lines, each boxing the hold afresh: a new hold landing at the top
+# of the list moves this one down, and a box measured once would be left
+# around whatever took its place.
+[[step]]
+do = "say"
+line = "The Quality page. The hold is here, open, raised by an SPC rule on fork width."
+at = "#ncs > li:has-text(\"UT-FORK/width_mm\"):has-text(\"SPC rule\")"
+
+[[step]]
+do = "say"
+line = "Deciding what happens to those forks is a person's job: the last class."
+at = "#ncs > li:has-text(\"UT-FORK/width_mm\"):has-text(\"SPC rule\")"
+
+[[step]]
+do = "mark"
+name = "the-hold-on-the-quality-page"
+
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"SPC\")"
+
+[[step]]
+do = "choose"
+selector = "#spec"
+value = "UT-FORK|width_mm"
+
+[[step]]
+do = "wait_for"
+js = "return (window.__fsmesPageData || {}).material === 'UT-FORK' && window.__fsmesPageData.characteristic === 'width_mm' && !!document.querySelector('#chart g.chart-plot');"
+scroll_to = "#chart"
+scroll_block = "start"
+scroll_offset = 215
+
+# -------------------------------------------------------------- it refuses
+
+[[step]]
+part = "refuses"
+do = "wait_for"
+selector = "#f-cpk"
+text = "withheld"
+scroll_to = "#verdict"
+scroll_block = "start"
+scroll_offset = 230
+
+[[step]]
+do = "say"
+line = "Back at the top, Cp and Cpk say withheld again: the process is out of control, and a Cpk from it would describe a process that no longer exists."
+at = "#f-cpk"
+style = "spotlight"
+
+[[step]]
+do = "mark"
+name = "capability-withheld-out-of-control"
+
+[[step]]
+do = "choose"
+selector = "#spec"
+value = "UT-FORK|length_mm"
+
+[[step]]
+do = "wait_for"
+js = "return (window.__fsmesPageData || {}).material === 'UT-FORK' && window.__fsmesPageData.characteristic === 'length_mm' && document.querySelector('#verdict').textContent.startsWith('in control') && /^\\d/.test(document.querySelector('#f-cpk').textContent.trim());"
+scroll_to = "#verdict"
+scroll_block = "start"
+scroll_offset = 230
+
+[[step]]
+do = "say"
+line = "Fork length, the chart from the start. It has enough readings now and it is in control, so its Cpk is given."
+at = "#f-cpk"
+
+[[step]]
+do = "say"
+line = "Too few readings, or a process out of control: either way the MES shows no capability figure, and says why."
+at = "#verdict"
+
+[[step]]
+do = "mark"
+name = "capability-given-when-it-means-something"
+
+[[step]]
+do = "say"
+line = "This was a simulated plant, sped up ten times, with its fault written in. A real plant's charts are rarely this tidy."
+
+[[step]]
+do = "mark"
+name = "a-simulated-plant"
+
+# ------------------------------------------------------------ you now know
+
+[[step]]
+part = "know"
+do = "slide"
+name = "you-now-know"
+title = "You now know how to"
+lines = [
+  "Say the difference between specification limits and control limits.",
+  "Read a control chart: its readings, centre line, limits, and a rule that fired.",
+  "Find the hold an SPC rule raises, and say when the MES withholds capability.",
+]
+
+[[step]]
+do = "say"
+line = "That is SPC: the chart notices a change before the customer would, and the MES raises the hold. You now know how to do three things."
+
+[[step]]
+do = "mark"
+name = "you-now-know"
+
+[[step]]
+do = "hold"
+seconds = 3
