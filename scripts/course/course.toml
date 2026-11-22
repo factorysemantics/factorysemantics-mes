@@ -325,6 +325,13 @@ label = "6.1"
 slug = "the-chat-on-the-ai-tab"
 title = "The AI tab — ask a plain question, and the record of who asked"
 one_line = "The assistant reads the numbers the screens show, and every conversation is kept."
+knows_before = ["3.3"]
+outcomes = [
+  "Ask the plant a plain question on the AI tab, and say what it needs to answer.",
+  "Check an answer against the screen the plant keeps the figure on.",
+  "Find who asked what on the Conversations tab, and say what the agent cannot do.",
+]
+scene = "scripts/scenes/course/07-01-the-chat-on-the-ai-tab.toml"
 
 [[module.lesson]]
 order = 2
