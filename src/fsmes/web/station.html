@@ -132,6 +132,13 @@
             <input id="q-value" type="number" inputmode="decimal" step="any"
                    data-assist="station-quality-value">
           </div>
+          <div class="field">
+            <label for="q-gauge">Gauge</label>
+            <input id="q-gauge" list="q-gauge-options" autocomplete="off" placeholder="optional"
+                   title="The instrument you measured with. It stays for the next reading; leave empty and the check says not recorded"
+                   data-assist="station-quality-gauge">
+            <datalist id="q-gauge-options"></datalist>
+          </div>
           <button id="q-submit" type="button" data-assist="station-quality-submit">Record</button>
         </div>
         <p id="q-spec" class="muted small"></p>
