@@ -1,0 +1,523 @@
+# Class 4.2 of the course, *Non-conformances, severities and who decides*:
+# a non-conformance raised by the operator who saw it, and reviewed, decided
+# and closed by the supervisor who owns those steps, each under their name.
+#
+# It starts from a card of words (no drawing): burrs on forks that no gauge
+# measured, and who writes that down and who decides. The idea card names the
+# five words of the class: non-conformance, severity, review, disposition and
+# close. Then the product, signed in as the cutlery plant's lab operator: the
+# Quality screen's non-conformances, the ones the MES raised by itself, and one
+# raised by hand against the fork order. Then, signed in as the lab's shift
+# supervisor: the plant's own words for severity on Quality > Configuration,
+# and the burr taken under review, decided (rework, with its reason) and
+# closed, and its history of who did each step and when. Then what it
+# refuses: signed in as the operator again, an open non-conformance with no
+# button to review, decide or close; and, in its own words, what the product
+# does not stop or does not show yet. Filmed on a scratch cutlery plant, every
+# screen as the product draws it.
+
+name = "nonconformances-and-who-decides"
+title = "Non-conformances, severities and who decides"
+lesson = "4.2"
+take_is = "lesson"
+part = "hook"
+base = "http://127.0.0.1:8040"
+badge = "pre-alpha · simulated plant · v{version}"
+# The take starts as the cutlery pack's lab operator, and a `sign_in` step
+# changes to the lab's shift supervisor and back. Both are the pack's seeded
+# lab accounts, not people; the product's sign-in page is never filmed.
+user = "WALK-OP"
+password = "walk-lab-only"
+# Four to six minutes, as the handoff asks, clicked through the menus.
+budget_seconds = 390
+gif_skip_seconds = 2.0
+width = 1280
+height = 720
+# Raising, reviewing, deciding and closing are writes, and they are the story.
+allow_writes = true
+what_is_written = "which is how the class raises one non-conformance and works it to its close: Raise it, Take under review, Record the decision and Close are real `POST`s to the take's own scratch plant, made with the Quality screen's own buttons, and each step's audit names the lab account signed in when it was taken."
+
+notes = [
+  "The plant was started from the cutlery pack at ten times wall clock. The camera waited, off camera, until the pack's released fork order, WO-FORK1-0001, had booked 1,800 good, so that the simulated floor's own inspections had put readings out of specification on the line and the MES had raised non-conformances for them before the class arrives.",
+  "The class signs in as two of the cutlery pack's seeded lab accounts: WALK-OP, \"Walker: line operator\", in the Operator role, and WALK-SUP, \"Walker: shift supervisor\", in the Supervisor role. They are lab accounts, not people. The recorder's `sign_in` step changes who is signed in off camera and loads the page again, so the product's sign-in page, which prints the demo accounts' hint, is never on camera.",
+  "The non-conformance raised by hand says \"Burr on the tines, about one fork in twenty\", against WO-FORK1-0001. It is typed into the Quality screen's own form with the cursor; nothing is put in through the API.",
+  "The Raise non-conformance form's Severity list shows only \"The plant's default\" on this build: it asks the API for the plant's severities at an address that answers 404, so it never offers the plant's own words and every non-conformance raised by hand is minor. That is a gap in the product, written up for the people who fix it; the class shows the form as drawn and says so, and shows the plant's own words on Quality > Configuration > Non-conformance severities instead.",
+  "The pack's floor simulation raises non-conformances from its own out-of-spec checks under its own name, FLOOR-SIM, and never reviews, decides or closes one, so nothing but the class moves the one it raises.",
+  "The Operator role holds `quality.record` and not `quality.close_nc`; the Supervisor role holds both. The Quality screen draws no Take under review, Decide or Close button for a role without `quality.close_nc`, and the API refuses those requests with 403. The class films the missing buttons; the 403 is said, not filmed.",
+  "The product does not keep the person who raised a non-conformance from closing it: a supervisor may do both. The class says so.",
+  "Severity is chosen when a non-conformance is raised; review does not change it. The class says so.",
+  "At any speed but 1x every 2D page carries the product's REPLAY 10× banner across its top. It is filmed as the product draws it.",
+  "The class is clicked through as a person would: the only page opened by address is the Floor, the first page after sign-in. Quality is reached by its menu, the severities by Quality's Configuration tab and its link.",
+  "The opening beat is a plain card with words on it. There is no artwork of a fork or a person.",
+]
+
+honesty = [
+  "the plant is a scratch simulated plant, replaying a recorded line at ten times wall clock, which is the banner across the top of the 2D pages",
+  "the operator and the supervisor are the cutlery pack's seeded lab accounts, signed in off camera; no real person's name is on screen",
+  "the Raise non-conformance form offers only the plant's default severity on this build, so the class's non-conformance is minor; the plant's own words are shown on the severities page instead",
+  "the product does not keep the person who raised a non-conformance from closing it; the class says so",
+  "an operator's refused review, decision or close is filmed as the missing buttons; the API's 403 is said, not filmed",
+]
+
+[plant]
+pack = "labs/cutlery"
+speed = 10
+roll_when_timeout_seconds = 1500
+
+# The floor's own out-of-spec checks have raised non-conformances by now.
+[[plant.roll_when_order]]
+code = "WO-FORK1-0001"
+booked = 1800
+
+# ----------------------------------------------------------------- the hook
+
+[[step]]
+do = "slide"
+name = "burrs-on-the-forks"
+title = "Burrs on the forks"
+lines = [
+  "An operator runs a thumb along a fork off the mould",
+  "The tines are rough. No gauge measured that",
+  "Who writes it down, and who decides?",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "An operator picks a fork off the mould and feels a burr on the tines. About one fork in twenty has it."
+
+[[step]]
+do = "say"
+line = "No gauge measured that. Who writes it down, and who decides what happens to those forks?"
+
+[[step]]
+do = "mark"
+name = "burrs-on-the-forks"
+
+# ----------------------------------------------------------------- the idea
+
+[[step]]
+part = "idea"
+do = "slide"
+name = "five-words"
+title = "Five words"
+lines = [
+  "Non-conformance: the record that something is wrong",
+  "Severity: how bad, in the plant's own words",
+  "Review: somebody takes it on",
+  "Disposition: what happens to the material",
+  "Close: the record is finished, and kept",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Five words. A non-conformance is the record that something about the product is wrong."
+
+[[step]]
+do = "say"
+line = "Severity is how bad it is, in words the plant chose itself."
+
+[[step]]
+do = "say"
+line = "Review means somebody has taken the non-conformance on, and is looking into it."
+
+[[step]]
+do = "say"
+line = "A disposition is the decision about the material: use it as it is, rework it, scrap it, or send it back to the supplier."
+
+[[step]]
+do = "say"
+line = "Close means the record is finished. It is kept, never deleted."
+
+[[step]]
+do = "say"
+line = "Each step belongs to a role. The operator raises it. The supervisor reviews, decides and closes."
+
+[[step]]
+do = "mark"
+name = "five-words"
+
+# ------------------------------------------------------------ on the screen
+
+# The Floor is the one page opened by address, the first after signing in;
+# Quality is reached by its menu.
+[[step]]
+part = "screen"
+do = "goto"
+url = "/dashboard"
+settle = 2
+
+[[step]]
+do = "wait_for"
+selector = "#user-name"
+text = "Walker: line operator"
+
+[[step]]
+do = "say"
+line = "We are signed in as Walker, a line operator: one of the lab plant's own accounts. The header says the role."
+at = "#user-name"
+
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"Quality\")"
+
+[[step]]
+do = "wait_for"
+js = "/ of [1-9]/.test(document.querySelector('#n-count').textContent) && [...document.querySelectorAll('#ncs > li')].some(li => li.textContent.includes('raised by FLOOR-SIM'))"
+timeout = 60
+scroll_to = "#n-raise"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "The Quality screen's non-conformances. The count says how many are still open."
+at = "#n-count"
+
+[[step]]
+do = "say"
+line = "The MES raised these by itself, each time a check came out of spec. Each says what was wrong, how bad, when, and on which order."
+at = "#ncs > li:first-child"
+
+[[step]]
+do = "mark"
+name = "the-non-conformances"
+
+[[step]]
+do = "say"
+line = "A burr is not a reading, so nothing raised it by itself. The operator raises it by hand."
+at = "#n-raise"
+
+[[step]]
+do = "click"
+selector = "#n-raise"
+
+[[step]]
+do = "wait_for"
+js = "!document.querySelector('#raise-form').classList.contains('hidden') && document.querySelector('#r-severity').options.length >= 1"
+
+[[step]]
+do = "fill"
+selector = "#r-order"
+text = "WO-FORK1-0001"
+
+[[step]]
+do = "say"
+line = "Severity offers only the plant's default. This plant has its own words, but this form does not show them yet. It raises the burr as minor."
+at = "#r-severity"
+
+[[step]]
+do = "fill"
+selector = "#r-note"
+text = "Burr on the tines, about one fork in twenty"
+
+[[step]]
+do = "say"
+line = "What is wrong, in plain words. Then Raise it."
+at = "#r-note"
+
+[[step]]
+do = "click"
+selector = "#r-save"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#toast').textContent.startsWith('Raised NC-')"
+
+[[step]]
+do = "fill"
+selector = "#n-q"
+text = "Burr"
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#ncs > li')].length === 1 && document.querySelector('#ncs > li').textContent.includes('Burr on the tines') && document.querySelector('#ncs > li').textContent.includes('raised by WALK-OP')"
+
+[[step]]
+do = "say"
+line = "Search for it. There it is: open, minor, on the fork order, raised by WALK-OP, with the time."
+at = "#ncs > li:has-text(\"Burr on the tines\")"
+
+[[step]]
+do = "say"
+line = "And no button to do anything more with it. The operator's part is done."
+at = "#ncs > li:has-text(\"Burr on the tines\")"
+
+[[step]]
+do = "mark"
+name = "raised-by-hand"
+
+# The supervisor, signed in off camera; the header changes as the page loads.
+[[step]]
+do = "sign_in"
+user = "WALK-SUP"
+settle = 2
+
+[[step]]
+do = "wait_for"
+selector = "#user-name"
+text = "Walker: shift supervisor"
+
+[[step]]
+do = "say"
+line = "Now the shift supervisor signs in. How bad is minor? The plant's own words are under Configuration."
+at = "nav.subnav a:text-is(\"Configuration\")"
+
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"Configuration\")"
+
+[[step]]
+do = "click"
+selector = "a[href=\"/dashboard/severities\"]"
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#severities-table tbody tr')].length === 2 && document.querySelector('#severities-table tbody').textContent.includes('Major')"
+scroll_to = "#severities-table"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "The plant's severities: two words, minor and major, each with what it means on this line."
+at = "#severities-table"
+
+[[step]]
+do = "say"
+line = "Minor: the plant can work through it in the normal course of the shift."
+at = "#severities-table tbody tr:has-text(\"normal course of the shift\")"
+
+[[step]]
+do = "say"
+line = "Major: somebody should look at it now, not at the end of the shift. The plant writes these, not the software."
+at = "#severities-table tbody tr:has-text(\"rather than at the end of the shift\")"
+
+[[step]]
+do = "mark"
+name = "severity-in-the-plants-words"
+
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"Quality\")"
+
+[[step]]
+do = "wait_for"
+js = "!!document.querySelector('#ncs > li') && !document.querySelector('#n-raise').classList.contains('hidden')"
+
+[[step]]
+do = "fill"
+selector = "#n-q"
+text = "Burr"
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#ncs > li')].length === 1 && !!document.querySelector('#ncs > li .nc-actions')"
+scroll_to = "#n-count"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "Back to the burr. The supervisor has buttons the operator did not: Take under review, and Decide."
+at = "#ncs > li:has-text(\"Burr on the tines\") .nc-actions"
+
+[[step]]
+do = "click"
+selector = "#ncs > li:has-text(\"Burr on the tines\") button:text-is(\"Take under review\")"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#toast').textContent.includes('taken under review') && !!document.querySelector('#ncs > li .pill.under_review')"
+
+[[step]]
+do = "say"
+line = "Under review. The history underneath now says who took it on, and when."
+at = "#ncs > li:has-text(\"Burr on the tines\") ol.nc-history"
+
+[[step]]
+do = "mark"
+name = "under-review"
+
+[[step]]
+do = "click"
+selector = "#ncs > li:has-text(\"Burr on the tines\") button:text-is(\"Decide…\")"
+
+[[step]]
+do = "wait_for"
+js = "!document.querySelector('#disposition').classList.contains('hidden') && document.querySelector('#d-save').disabled"
+scroll_to = "#disposition"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "The disposition: what happens to the forks? Use as is, rework, scrap, or return to the supplier."
+at = "#d-choice"
+
+[[step]]
+do = "choose"
+selector = "#d-choice"
+value = "rework"
+
+[[step]]
+do = "say"
+line = "Rework. But Record the decision stays grey: the MES will not take a decision without a reason."
+at = "#d-save"
+
+[[step]]
+do = "mark"
+name = "no-reason-no-decision"
+
+[[step]]
+do = "fill"
+selector = "#d-reason"
+text = "Deburr the batch by hand; mould sent for a trim"
+
+[[step]]
+do = "wait_for"
+js = "!document.querySelector('#d-save').disabled"
+
+[[step]]
+do = "say"
+line = "With a reason, the button wakes up. Record the decision."
+at = "#d-save"
+
+[[step]]
+do = "click"
+selector = "#d-save"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#toast').textContent.includes('decided') && !!document.querySelector('#ncs > li .pill.dispositioned')"
+scroll_to = "#n-count"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "Decided: rework, with its reason, under the supervisor's name."
+at = "#ncs > li:has-text(\"Burr on the tines\")"
+
+[[step]]
+do = "mark"
+name = "the-disposition"
+
+[[step]]
+do = "say"
+line = "Only now is there a Close button. The MES does not offer to close what nobody has decided."
+at = "#ncs > li:has-text(\"Burr on the tines\") .nc-actions"
+
+[[step]]
+do = "click"
+selector = "#ncs > li:has-text(\"Burr on the tines\") button:text-is(\"Close\")"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#toast').textContent.includes('closed')"
+
+[[step]]
+do = "choose"
+selector = "#n-status"
+value = "closed"
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#ncs > li')].length === 1 && !!document.querySelector('#ncs > li .pill.closed') && document.querySelectorAll('#ncs > li ol.nc-history li').length === 4"
+scroll_to = "#n-count"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "Closed, and still there under the closed ones. Who did what, and when: raised by the operator; under review, decided and closed by the supervisor. Each with its time."
+at = "#ncs > li:has-text(\"Burr on the tines\") ol.nc-history"
+style = "spotlight"
+
+[[step]]
+do = "mark"
+name = "who-did-what-when"
+
+# -------------------------------------------------------------- it refuses
+
+[[step]]
+part = "refuses"
+do = "sign_in"
+user = "WALK-OP"
+settle = 2
+
+[[step]]
+do = "wait_for"
+selector = "#user-name"
+text = "Walker: line operator"
+
+[[step]]
+do = "choose"
+selector = "#n-status"
+value = "open,under_review,dispositioned"
+
+[[step]]
+do = "fill"
+selector = "#n-q"
+text = ""
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#n-status').value === 'open,under_review,dispositioned' && document.querySelector('#n-q').value === '' && [...document.querySelectorAll('#ncs > li')].some(li => li.textContent.includes('raised by FLOOR-SIM')) && !document.querySelector('#ncs .nc-actions')"
+scroll_to = "#n-count"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "Back as the operator. This one the MES raised is still open, and there is no button to review, decide or close it. A request sent anyway is refused."
+at = "#ncs > li:first-child"
+
+[[step]]
+do = "mark"
+name = "the-operator-cannot-decide"
+
+[[step]]
+do = "say"
+line = "What it does not stop: a supervisor may raise a non-conformance and close it too. The history names them both, and that is all."
+at = "#n-count"
+
+[[step]]
+do = "say"
+line = "And severity is chosen when it is raised. Reviewing it does not change it."
+at = "#n-count"
+
+[[step]]
+do = "say"
+line = "Everything you saw is a simulated plant, replaying a recorded line at ten times the clock."
+at = "#replay-bar strong"
+
+[[step]]
+do = "mark"
+name = "what-it-does-not-stop"
+
+# ------------------------------------------------------------ you now know
+
+[[step]]
+part = "know"
+do = "slide"
+name = "you-now-know"
+title = "You now know how to"
+lines = [
+  "Raise a non-conformance by hand, and say what one is.",
+  "Take one through review, a disposition with its reason, and the close, as the role that owns each step.",
+  "Read who did what, and when, in its history, and find the plant's own words for severity.",
+]
+
+[[step]]
+do = "say"
+line = "A non-conformance is raised by whoever saw it and decided by whoever owns the decision. You now know how to do three things."
+
+[[step]]
+do = "mark"
+name = "you-now-know"
+
+[[step]]
+do = "hold"
+seconds = 3
