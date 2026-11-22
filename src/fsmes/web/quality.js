@@ -448,7 +448,7 @@ function fillHistoryChars() {
 async function fillSeverities() {
   const sel = $("#r-severity");
   sel.textContent = "";
-  const data = await api("/severities").catch(() => null);
+  const data = await api("/quality/severities").catch(() => null);
   const names = (data && data.names) || {};
   const codes = Object.keys(names);
   if (!codes.length) {
