@@ -21,7 +21,6 @@ from fsmes.domain import (
     AuditLog,
     Equipment,
     EquipmentConnection,
-    EquipmentLevel,
     EquipmentState,
     EquipmentStateName,
     ErpMessage,
@@ -163,23 +162,8 @@ def _open_states(db: Session, ids: list[int]) -> dict[int, EquipmentState]:
     }
 
 
-def _line_of(eq: Equipment, cache: dict[int, dict | None]) -> dict | None:
-    """The work centre this machine sits under, at whatever depth.
-
-    The floor screen used to answer this by downloading the whole equipment
-    tree once a minute and walking it in the browser — every node of the
-    plant, to label twenty-four cards. The machine knows its own ancestry;
-    it can say so.
-    """
-    node = eq.parent
-    while node is not None:
-        if node.id in cache:
-            return cache[node.id]
-        if node.level == EquipmentLevel.WORK_CENTER:
-            cache[node.id] = {"code": node.code, "name": node.name}
-            return cache[node.id]
-        node = node.parent
-    return None
+def _code_and_name(centre: Equipment | None) -> dict | None:
+    return {"code": centre.code, "name": centre.name} if centre else None
 
 
 def _matching(machines: list[Equipment], open_states: dict, q: str | None,
@@ -239,7 +223,6 @@ def _build_summary(db: Session, oee_hours: float | None, line: str | None = None
         next_up.setdefault(op.equipment_id, op)
 
     machines = []
-    lines: dict[int, dict | None] = {}
     for eq in wanted:
         state = open_states.get(eq.id)
         current = next_up.get(eq.id)
@@ -259,8 +242,9 @@ def _build_summary(db: Session, oee_hours: float | None, line: str | None = None
                 # this used to read blank on any line but the cola one.
                 "analog": line_service.analog_reading(db, eq),
                 # Which line it is on, said by the plant rather than worked out
-                # in the browser from a copy of the whole tree.
-                "line": _line_of(eq, lines),
+                # in the browser from a copy of the whole tree - and by the one
+                # walk up the tree there is, `masterdata.work_center_of`.
+                "line": _code_and_name(masterdata.work_center_of(db, eq)),
                 "current_order": current.order.code if current else None,
                 "current_operation": current.name if current else None,
                 "oee": oees[eq.code],
