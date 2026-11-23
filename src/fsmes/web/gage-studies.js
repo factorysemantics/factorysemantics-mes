@@ -174,6 +174,9 @@ function wire() {
   });
   $("#plan-form").addEventListener("submit", async (event) => {
     event.preventDefault();
+    // A refused plan says why beside the form and keeps saying it until the
+    // next try: the reason is what the engineer changes, so it must not fade.
+    $("#plan-refused").textContent = "";
     try {
       const out = await api("/quality/gage-studies", { method: "POST", body: {
         gauge: $("#plan-gauge").value, material: $("#plan-material").value.trim(),
@@ -184,7 +187,7 @@ function wire() {
       toast(`${out.code} planned: ${out.expected} readings to take`);
       selected = out.code;
       await loadList(); await loadStudy();
-    } catch (err) { toast(err.message, "bad"); }
+    } catch (err) { $("#plan-refused").textContent = `Not planned: ${err.message}`; }
   });
 }
 

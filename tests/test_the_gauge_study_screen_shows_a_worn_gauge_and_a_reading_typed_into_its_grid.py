@@ -123,7 +123,10 @@ def _open(browser, plant, study):
     page = browser.new_page()
 
     def held(route):
-        page.wait_for_timeout(HELD_BACK_MS)
+        # The list is what the page draws late; a plan posted to the same
+        # path goes straight through.
+        if route.request.method == "GET":
+            page.wait_for_timeout(HELD_BACK_MS)
         route.continue_()
 
     page.route("**/quality/gage-studies", held)
@@ -143,6 +146,7 @@ def test_the_worn_gauge_study_says_not_acceptable_and_draws_repeatability_as_the
         assert "90 of 90" in page.inner_text("#studies-table tbody")
         assert page.text_content("#studies-count") == "2 in total"
     finally:
+        page.unroute_all(behavior="ignoreErrors")
         page.close()
 
 
@@ -160,4 +164,26 @@ def test_a_reading_typed_into_the_grid_is_saved_and_the_count_goes_up(browser, p
         assert page.query_selector(cell) is None
         assert "Not judged" in page.inner_text("#study-verdict")
     finally:
+        page.unroute_all(behavior="ignoreErrors")
+        page.close()
+
+
+def test_a_refused_plan_says_why_beside_the_form_and_the_list_does_not_grow(browser, plant):
+    page = _open(browser, plant, "GS-WORN-MIC")
+    try:
+        page.wait_for_function(
+            "() => document.querySelector('#plan-gauge').options.length >= 1"
+            " && /in total/.test(document.querySelector('#studies-count').textContent)", timeout=20000)
+        before = page.text_content("#studies-count")
+        page.fill("#plan-material", "UT-FORK")
+        page.fill("#plan-characteristic", "thickness_mm")
+        page.fill("#plan-appraisers", "Ana")
+        page.click("#plan-submit")
+        page.wait_for_function(
+            "() => /at least 2 appraisers/.test(document.querySelector('#plan-refused').textContent)",
+            timeout=20000)
+        assert page.text_content("#plan-refused").startswith("Not planned:")
+        assert page.text_content("#studies-count") == before
+    finally:
+        page.unroute_all(behavior="ignoreErrors")
         page.close()

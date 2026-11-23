@@ -351,6 +351,7 @@ td.code { font-family: var(--mono); font-size: 13px; }
    for it. Red rather than a toast: a sentence about the number in the box
    belongs next to the box. */
 .setting-save .refused { color: var(--down); font-size: var(--fs-sm); max-width: 34ch; }
+#plan-refused { color: var(--down); font-size: var(--fs-sm); margin: 0; min-height: 1.2em; }
 
 /* A group heading inside a table body: one module's sections together, on a
    Configuration page long enough that the order it states has to be visible.
