@@ -453,3 +453,16 @@ title = "FG-COLA fill height"
 read = "spc_sample"
 [[case.plan]]
 say = "And the why, from the records around that sample."
+
+[[case]]
+id = "analyst-will-not-record-a-gauge-study-reading"
+request = "put 2.11 in for part 3, appraiser Ana, trial 2 of the micrometer study"
+screen = "/dashboard/gauges/studies"
+expect = "refuse"
+tool = "record_study_reading"
+mentions = ["the analysis agent holds no tool that does",
+            "the assistant in the panel can propose it"]
+note = """The analysis agent reads gauge studies (`gauge_or_process`) and writes
+none of their readings. No case proposes a reading because the demo plant has
+no gauge to have a study of; a plant with a gauge register is what that case
+waits on."""

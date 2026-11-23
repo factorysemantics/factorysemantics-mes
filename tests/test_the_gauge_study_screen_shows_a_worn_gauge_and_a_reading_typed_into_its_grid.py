@@ -11,15 +11,9 @@ Chromium for.
 """
 
 import json
-import socket
-import threading
-import time
-import urllib.error
-import urllib.request
 from pathlib import Path
 
 import pytest
-from sqlalchemy.orm import Session
 
 pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
@@ -27,55 +21,18 @@ ROOT = Path(__file__).resolve().parents[1]
 HELD_BACK_MS = 1200
 
 
-def _wait_until_answering(base: str, seconds: float = 20.0) -> None:
-    deadline = time.monotonic() + seconds
-    while time.monotonic() < deadline:
-        try:
-            with urllib.request.urlopen(f"{base}/health", timeout=1) as reply:
-                if reply.status == 200:
-                    return
-        except (urllib.error.URLError, OSError):
-            time.sleep(0.1)
-    raise AssertionError(f"the plant at {base} never answered /health")
-
-
 @pytest.fixture(scope="module")
-def plant(tmp_path_factory):
-    """An empty plant with the worn-gauge case run into it through its API,
+def plant(serve_plant):
+    """The demo plant with the worn-gauge case run into it through its API,
     and a second study planned and not yet read."""
     import httpx
-    import uvicorn
 
-    from fsmes import config, db
-    from fsmes.api.app import create_app
-    from fsmes.db import Base, make_engine
-    from fsmes.services import auth
     from fsmes.sim import gage_study
 
-    url = f"sqlite:///{tmp_path_factory.mktemp('studies') / 'plant.db'}"
     with pytest.MonkeyPatch.context() as env:
-        env.setenv("MES_DATABASE_URL", url)
         env.setenv("MES_PLANT_TIMEZONE", "UTC")
-        for leaked in ("MES_MODULES", "MES_WORDS", "MES_PLANT_NAME", "MES_TAG_MAP_FILE"):
-            env.delenv(leaked, raising=False)
-        config.get_settings.cache_clear()
-        db.get_engine.cache_clear()
-        db.get_sessionmaker.cache_clear()
-        engine = make_engine(url)
-        Base.metadata.create_all(engine)
-        with Session(engine, expire_on_commit=False) as session:
-            auth.ensure_builtin_roles(session)
-            auth.create_user(session, code="ADMIN", name="Plant administrator",
-                             password="admin", role="admin")
-            session.commit()
-        sock = socket.socket()
-        sock.bind(("127.0.0.1", 0))
-        server = uvicorn.Server(uvicorn.Config(create_app(), log_level="warning", lifespan="on"))
-        thread = threading.Thread(target=lambda: server.run(sockets=[sock]), daemon=True)
-        thread.start()
-        try:
-            base = f"http://127.0.0.1:{sock.getsockname()[1]}"
-            _wait_until_answering(base)
+        with serve_plant(name="studies") as served:
+            base = served.base
             with httpx.Client(base_url=base, timeout=30) as client:
                 assert client.post("/auth/login", json={"code": "ADMIN", "password": "admin"}).is_success
                 for code in ("UT-FORK", "UT-SPOON"):
@@ -90,13 +47,6 @@ def plant(tmp_path_factory):
                     "characteristic": "thickness_mm", "appraisers": ["Ana", "Ben"],
                     "parts": 5, "trials": 2}).raise_for_status()
             yield base
-        finally:
-            server.should_exit = True
-            thread.join(timeout=10)
-            engine.dispose()
-    config.get_settings.cache_clear()
-    db.get_engine.cache_clear()
-    db.get_sessionmaker.cache_clear()
 
 
 @pytest.fixture(scope="module")
