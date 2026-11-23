@@ -180,3 +180,25 @@ def test_a_duplicate_reading_through_the_tool_is_a_conflict_the_assistant_can_re
     assert "error" not in mcp_server.record_study_reading("testplant", **args)
     again = mcp_server.record_study_reading("testplant", **args)
     assert "error" in again and "409" in again["error"]
+
+
+def test_the_ai_tab_can_read_every_gauge_study_and_ask_gauge_or_process_but_never_plan_one():
+    """The AI tab's chat is the analysis agent: the three reads are on its
+    list, and the two writes are not, by the same exclusion every write
+    falls under. The Assistant on the screens offers the writes, each to the
+    person holding its capability."""
+    from fsmes.services import agent
+    from fsmes.services import capabilities as caps
+
+    analyst = {"plant.read", "audit.read"}
+    offered = {t["name"] for t in agent.catalogue(analyst, for_kind=agent.ANALYSIS)}
+    assert {"gage_studies", "gage_study", "gauge_or_process"} <= offered
+    assert not {"plan_gage_study", "record_study_reading"} & offered
+
+    engineer = {"plant.read", "quality.study", "quality.record"}
+    assert caps.holders("quality.study") == ["Administrator"]
+    floor = {t["name"] for t in agent.catalogue(engineer, for_kind=agent.FLOOR)}
+    assert {"plan_gage_study", "record_study_reading"} <= floor
+    operator = {t["name"] for t in agent.catalogue({"plant.read", "quality.record"},
+                                                   for_kind=agent.FLOOR)}
+    assert "record_study_reading" in operator and "plan_gage_study" not in operator
