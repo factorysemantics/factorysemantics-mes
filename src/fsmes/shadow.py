@@ -91,7 +91,7 @@ class Outbound:
 #: `allowed`    — it runs, because nothing about the plant leaves this box
 #:                by it, and nothing outside this MES changes.
 #:
-#: **38 entries.** The count is stated because a register that quietly loses
+#: **39 entries.** The count is stated because a register that quietly loses
 #: a row is worse than no register, and `tests/test_shadow_mode.py` scans the
 #: source for outbound primitives and fails on any call site not covered by
 #: an entry here.
@@ -447,6 +447,16 @@ REGISTER: tuple[Outbound, ...] = (
         verdict="allowed",
         note="the scoring harness drives fake plants; nothing it touches is "
              "real, and it is not part of a plant deployment",
+    ),
+    Outbound(
+        name="sim.gage_study",
+        where="fsmes.cli:sim_gage_study",
+        reaches="a simulated plant's own API, on this box",
+        verdict="allowed",
+        note="`fsmes sim-gage-study` signs in to a plant on loopback and plans "
+             "and reads scripted gauge studies through its API, as a quality "
+             "engineer would. It refuses any address that is not this machine, "
+             "and it reaches nothing outside the MES it writes to",
     ),
     Outbound(
         name="lab.experiments",
