@@ -50,10 +50,6 @@ def over_a_card(scene: dict) -> list[bool]:
         shown.append(card)
     return shown
 
-# The lab fleet, the public demo and the stock demo ports: a class is never
-# filmed on a plant somebody else is looking at.
-NOT_OURS = {8090, 8110, 8120, 8140, 9030, 5433, 5434, 4944, 4945}
-
 # What no caption, card or note may carry: a calendar date, a year, a month's
 # name. The class is about any plant on any day.
 A_DATE = re.compile(
@@ -269,7 +265,7 @@ def test_it_is_filmed_on_a_scratch_cutlery_plant_on_loopback_and_never_on_one_so
 
     assert scene["plant"]["pack"] == "labs/cutlery"
     assert base.hostname == "127.0.0.1"
-    assert base.port not in NOT_OURS
+    assert base.port not in runner.PORTS_THAT_BELONG_TO_SOMETHING_ELSE
     # It writes, so it must be refused anywhere but loopback.
     assert scene["allow_writes"]
     runner.refuse_to_write_off_this_box(scene)

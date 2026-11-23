@@ -34,10 +34,6 @@ POINTS_AT_NOTHING_ON_SCREEN = {
     "It looks again. The reply is filmed as it came.",
 }
 
-# The lab fleet, the public demo and the stock demo ports: a class is never
-# filmed on a plant somebody else is looking at.
-NOT_OURS = {8090, 8110, 8120, 8140, 9030, 5433, 5434, 4944, 4945}
-
 # What no caption, card or note may carry: a calendar date, a year, a month's
 # name. The class is about any plant on any day.
 A_DATE = re.compile(
@@ -276,12 +272,12 @@ def test_the_honest_limits_are_said_in_the_folders_own_words(scene):
     assert "never quoted" in honesty and "defines no shifts" in honesty
 
 
-def test_it_is_filmed_on_a_scratch_plant_on_loopback_and_writes_only_its_two_questions(scene):
+def test_it_is_filmed_on_a_scratch_plant_on_loopback_and_writes_only_its_two_questions(runner, scene):
     base = urlparse(scene["base"])
     fills = [step for step in scene["step"] if step["do"] == "fill"]
 
     assert base.hostname == "127.0.0.1"
-    assert base.port not in NOT_OURS
+    assert base.port not in runner.PORTS_THAT_BELONG_TO_SOMETHING_ELSE
     assert scene["plant"]["pack"] == "labs/cutlery"
     assert scene.get("allow_writes") is True
     assert [step["selector"] for step in fills] == ["#explore-input", "#explore-input"]
