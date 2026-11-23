@@ -1,0 +1,27 @@
+{
+  "about": "Three gauge studies with a scripted cause each, for `fsmes sim-gage-study labs/cutlery/gage_studies.json all`. Never part of the everyday shift. The materials and the first two tolerances are this pack's (masterdata/quality_specs.json); bolster width is not specified in the pack, so the third case adds that specification, and its production checks are the only ones on that chart. `expect` is the answer key: the study's band, the source that dominates it, and the answer to 'is it the gauge or the process?'.",
+  "cases": [
+    {"name": "worn-gauge", "study": "GS-WORN-MIC", "gauge": "MIC-07",
+     "gauge_name": "Micrometer 0-25 mm, fork cell", "gauge_kind": "micrometer",
+     "resolution": 0.001, "material": "UT-FORK", "characteristic": "thickness_mm", "unit": "mm",
+     "lower": 1.9, "upper": 2.3, "part_span": 0.75, "repeatability_sd": 0.03,
+     "biases": {"Ana": 0.0, "Ben": 0.003, "Cleo": -0.002},
+     "story": "The micrometer's anvil is worn: the same part, read three times by the same person, gives three different numbers.",
+     "expect": {"band": "not acceptable", "dominant": "repeatability", "gauge_or_process": "gauge"}},
+    {"name": "one-appraiser", "study": "GS-ONE-READER", "gauge": "DEP-03",
+     "gauge_name": "Depth gauge, spoon bowls", "gauge_kind": "depth gauge",
+     "resolution": 0.001, "material": "UT-SPOON", "characteristic": "bowl_depth_mm", "unit": "mm",
+     "lower": 8.5, "upper": 9.5, "part_span": 0.8, "repeatability_sd": 0.006,
+     "biases": {"Ana": 0.0, "Ben": 0.005, "Cleo": 0.12},
+     "story": "The gauge is good; Cleo seats it differently from Ana and Ben and reads about 0.12 mm deep on every part.",
+     "expect": {"band": "not acceptable", "dominant": "reproducibility", "gauge_or_process": "gauge"}},
+    {"name": "wandering-process", "study": "GS-GOOD-CAL", "gauge": "CAL-12",
+     "gauge_name": "Digital caliper, knife cell", "gauge_kind": "caliper",
+     "resolution": 0.001, "material": "UT-KNIFE", "characteristic": "bolster_width_mm", "unit": "mm",
+     "lower": 11.5, "upper": 12.5, "part_span": 0.8, "repeatability_sd": 0.005,
+     "biases": {"Ana": 0.0, "Ben": 0.002, "Cleo": -0.002},
+     "production": {"count": 100, "wander": 0.15, "spread": 0.14}, "adds_spec": true,
+     "story": "A good caliper on a process that wanders: the study passes, and the parts it measures are still too wide for the tolerance.",
+     "expect": {"band": "acceptable", "dominant": "part", "gauge_or_process": "process"}}
+  ]
+}

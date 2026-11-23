@@ -1,48 +1,37 @@
-"""Three scripted gauge studies, and the answer each one must come to.
+"""Scripted gauge studies, and the answer each one must come to.
 
 A gauge study is something people do on purpose, off the line, on a day a
 quality engineer picks. The everyday simulated shift never does one, and
 nothing in `sim/operations.py` calls this module. It runs only when somebody
-asks for it (`fsmes sim-gage-study`), against a plant somebody named, and it
-writes what a quality engineer and three appraisers would: a gauge on the
-register and its calibration, the plan, ninety readings, and, for the third
-case only, a run of production checks measured with the gauge that passed.
+asks for it (`fsmes sim-gage-study <file> <case>`), against a plant somebody
+named, and it writes what a quality engineer and the appraisers would: a
+gauge on the register and its calibration, the plan, the readings, and, for
+a case that has them, a run of production checks measured with that gauge.
 
+The cases are a plant's data, not the product's: a JSON file in the plant's
+pack names each case's gauge, material, characteristic and tolerance, the
+gauge's own spread, each appraiser's bias, and the answer key (`expect`).
 The causes are scripted; the arithmetic is not. Each case draws its readings
-from a seeded random generator: every part's true size, and on top of it
-the gauge's own spread, each appraiser's own bias, and the resolution the
-reading is rounded to. Then the MES works out the study the way it would
-for real readings. `ANSWER_KEY` says what the study and "gauge or process"
-should conclude. The tests check that they do, for several seeds, so a key
-that only holds for the seed it was written with fails.
+from a seeded random generator - every part's true size, and on top of it
+the gauge's spread, each appraiser's bias, and the resolution the reading is
+rounded to - and the MES works the study out as it would for real readings.
+The tests check the key holds for several seeds, so a key that only holds
+for the seed it was written with fails.
 
-* **worn-gauge**: a micrometer on fork thickness whose anvil has worn. The
-  same person measuring the same part three times gets three different
-  numbers. Repeatability dominates, and the study is not acceptable.
-* **one-appraiser**: a depth gauge on spoon bowls. The gauge is good, but
-  one of the three appraisers seats it differently and reads about a tenth
-  of a millimetre deep. Reproducibility dominates, and the study is not
-  acceptable.
-* **wandering-process**: a good caliper on knife bolster width. The study
-  passes, and the production checks taken with that caliper still have a
-  Cpk under 1.33, because the process wanders and is wide. The answer is
-  the process, not the gauge.
-
-The materials, characteristics and tolerances are the cutlery pack's
-(`labs/cutlery/masterdata/quality_specs.json`). The exception is bolster
-width, which the pack does not specify and the everyday floor never
-measures. Case three adds that specification, so that its production checks
-are the only ones on that chart and nothing in the everyday shift changes.
-A specification that is already there with other limits is refused, never
-changed.
+A case may add the specification it needs (`adds_spec`), so that its
+production checks are the only ones on that chart and nothing in the
+everyday shift changes. A specification that is already there with other
+limits is refused, never changed.
 """
 
 from __future__ import annotations
 
+import json
 import math
 import random
 from dataclasses import dataclass, field
 from datetime import date, timedelta
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -64,50 +53,29 @@ class Case:
     repeatability_sd: float        # the gauge's own spread, one reading to the next
     biases: dict[str, float]       # appraiser -> what they add to every reading
     story: str
+    #: What the study must conclude: band, dominant source, gauge or process.
+    expect: dict = field(default_factory=dict)
     #: Production checks taken with this gauge: (how many, wander amplitude,
     #: spread). None for a case whose point is the study alone.
     production: tuple[int, float, float] | None = None
     adds_spec: bool = False        # the pack does not have it; this case adds it
     parts: int = 10
     trials: int = 3
-    extra: dict = field(default_factory=dict)
 
 
-CASES: dict[str, Case] = {c.name: c for c in (
-    Case(name="worn-gauge", study="GS-WORN-MIC", gauge="MIC-07",
-         gauge_name="Micrometer 0-25 mm, fork cell", gauge_kind="micrometer",
-         resolution=0.001, material="UT-FORK", characteristic="thickness_mm", unit="mm",
-         lower=1.9, upper=2.3, part_span=0.75, repeatability_sd=0.03,
-         biases={"Ana": 0.0, "Ben": 0.003, "Cleo": -0.002},
-         story="The micrometer's anvil is worn: the same part, read three times by the "
-               "same person, gives three different numbers."),
-    Case(name="one-appraiser", study="GS-ONE-READER", gauge="DEP-03",
-         gauge_name="Depth gauge, spoon bowls", gauge_kind="depth gauge",
-         resolution=0.001, material="UT-SPOON", characteristic="bowl_depth_mm", unit="mm",
-         lower=8.5, upper=9.5, part_span=0.8, repeatability_sd=0.006,
-         biases={"Ana": 0.0, "Ben": 0.005, "Cleo": 0.12},
-         story="The gauge is good; Cleo seats it differently from Ana and Ben and reads "
-               "about 0.12 mm deep on every part."),
-    Case(name="wandering-process", study="GS-GOOD-CAL", gauge="CAL-12",
-         gauge_name="Digital caliper, knife cell", gauge_kind="caliper",
-         resolution=0.001, material="UT-KNIFE", characteristic="bolster_width_mm", unit="mm",
-         lower=11.5, upper=12.5, part_span=0.8, repeatability_sd=0.005,
-         biases={"Ana": 0.0, "Ben": 0.002, "Cleo": -0.002},
-         production=(100, 0.15, 0.14), adds_spec=True,
-         story="A good caliper on a process that wanders: the study passes, and the "
-               "parts it measures are still too wide for the tolerance."),
-)}
-
-#: What each case must conclude: the study's band, which source dominates it,
-#: and the answer to "is it the gauge or the process?".
-ANSWER_KEY: dict[str, dict] = {
-    "worn-gauge": {"study": "GS-WORN-MIC", "band": "not acceptable",
-                   "dominant": "repeatability", "gauge_or_process": "gauge"},
-    "one-appraiser": {"study": "GS-ONE-READER", "band": "not acceptable",
-                      "dominant": "reproducibility", "gauge_or_process": "gauge"},
-    "wandering-process": {"study": "GS-GOOD-CAL", "band": "acceptable",
-                          "dominant": "part", "gauge_or_process": "process"},
-}
+def load(path: str | Path) -> dict[str, Case]:
+    """The cases a plant's file describes, by name."""
+    raw = json.loads(Path(path).read_text(encoding="utf-8"))
+    cases = {}
+    for entry in raw["cases"]:
+        entry = dict(entry)
+        made = entry.pop("production", None)
+        production = (int(made["count"]), float(made["wander"]), float(made["spread"])) if made else None
+        case = Case(production=production, **entry)
+        if set(case.expect) != {"band", "dominant", "gauge_or_process"}:
+            raise ValueError(f"{case.name}: `expect` names band, dominant and gauge_or_process")
+        cases[case.name] = case
+    return cases
 
 
 def _round(value: float, resolution: float) -> float:
@@ -167,14 +135,13 @@ def _ok(response, what: str):
     return response.json()
 
 
-def run(client, name: str, *, seed: int = 7, today: date | None = None) -> dict:
+def run(client, case: Case, *, seed: int = 7, today: date | None = None) -> dict:
     """Make one case on a plant, through its API, and return what the MES concluded.
 
     `client` is a signed-in HTTP client (httpx, or a TestClient) holding
     `masterdata.write`, `quality.close_nc`, `quality.study` and
     `quality.record`, which is a quality engineer's set.
     """
-    case = CASES[name]
     today = today or date.today()
     gauges = _ok(client.get(f"/quality/gauges?q={case.gauge}"), "read the gauge register")
     if not any(g["code"] == case.gauge for g in gauges["gauges"]):
@@ -192,7 +159,7 @@ def run(client, name: str, *, seed: int = 7, today: date | None = None) -> dict:
     if spec is None:
         if not case.adds_spec:
             raise Refused(f"{case.material} has no {case.characteristic} specification; "
-                          "this case uses the cutlery pack's and adds none")
+                          "this case uses the plant's own and adds none")
         _ok(client.post("/quality/specs", json={
             "material": case.material, "characteristic": case.characteristic,
             "unit": case.unit, "min_value": case.lower, "max_value": case.upper}),
@@ -222,8 +189,8 @@ def run(client, name: str, *, seed: int = 7, today: date | None = None) -> dict:
                             params={"material": case.material,
                                     "characteristic": case.characteristic}),
                  "ask gauge or process")
-    return {"case": name, "study": study, "gauge_or_process": answer,
-            "expected": ANSWER_KEY[name]}
+    return {"case": case.name, "study": study, "gauge_or_process": answer,
+            "expected": case.expect}
 
 
 def matches_key(outcome: dict) -> list[str]:

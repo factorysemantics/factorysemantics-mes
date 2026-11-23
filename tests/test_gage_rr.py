@@ -7,6 +7,7 @@ engineer asks first: is it the gauge or the process?
 """
 
 from datetime import date, timedelta
+from pathlib import Path
 
 import pytest
 from tests.test_gage_rr_worked_example import DATA
@@ -151,7 +152,8 @@ def test_a_good_gauge_on_a_process_out_of_control_says_it_is_the_process(bench, 
     from fsmes.services import spc
     from fsmes.sim import gage_study
 
-    case = replace(gage_study.CASES["wandering-process"], lower=-3.0, upper=3.0,
+    cases = gage_study.load(Path(__file__).resolve().parents[1] / "labs" / "cutlery" / "gage_studies.json")
+    case = replace(cases["wandering-process"], lower=-3.0, upper=3.0,
                    biases={"A": 0.0, "B": 0.0, "C": 0.0}, repeatability_sd=0.01)
     code = plan(bench)["code"]
     gage_rr.record(bench, code, readings=gage_study.readings(case), actor="op")

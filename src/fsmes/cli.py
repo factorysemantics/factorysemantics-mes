@@ -3209,7 +3209,9 @@ def sim_generate(
 
 @app.command("sim-gage-study")
 def sim_gage_study(
-    case: str = typer.Argument(..., help="worn-gauge, one-appraiser, wandering-process, or all."),
+    cases: Path = typer.Argument(..., exists=True, dir_okay=False,
+                                 help="The plant's file of scripted studies, e.g. a pack's gage_studies.json."),
+    case: str = typer.Argument(..., help="One case's name from that file, or all."),
     base: str | None = typer.Option(None, help="The plant to write to, e.g. http://127.0.0.1:8040 - "
                                        "loopback only."),
     user: str = typer.Option("ADMIN", help="Who plans and records: needs quality.study."),
@@ -3218,15 +3220,16 @@ def sim_gage_study(
     seed: int = typer.Option(7, help="The same seed gives the same readings."),
     answer: bool = typer.Option(False, "--answer", help="Print the answer key and write nothing."),
 ) -> None:
-    """Make a scripted gauge study on a plant: a worn gauge, one appraiser
-    reading differently, or a good gauge on a wandering process.
+    """Make scripted gauge studies on a plant - a worn gauge, one appraiser
+    reading differently, a good gauge on a wandering process - from the
+    cases a plant's file describes.
 
     Never part of the everyday shift: a study is a decision somebody makes on
     a day they choose. The causes are scripted; the conclusions are the
     MES's own, and this prints each beside its answer key.
 
-        fsmes sim-gage-study all --base http://127.0.0.1:8040
-        fsmes sim-gage-study all --answer
+        fsmes sim-gage-study labs/cutlery/gage_studies.json all --base http://127.0.0.1:8040
+        fsmes sim-gage-study labs/cutlery/gage_studies.json all --answer
     """
     import json as _json
     from urllib.parse import urlparse
@@ -3235,12 +3238,13 @@ def sim_gage_study(
 
     from fsmes.sim import gage_study
 
-    names = sorted(gage_study.CASES) if case == "all" else [case]
-    unknown = [n for n in names if n not in gage_study.CASES]
+    known = gage_study.load(cases)
+    names = sorted(known) if case == "all" else [case]
+    unknown = [n for n in names if n not in known]
     if unknown:
-        raise typer.BadParameter(f"no such case: {unknown[0]} ({', '.join(sorted(gage_study.CASES))})")
+        raise typer.BadParameter(f"no such case: {unknown[0]} ({', '.join(sorted(known))})")
     if answer:
-        typer.echo(_json.dumps({n: gage_study.ANSWER_KEY[n] for n in names}, indent=2))
+        typer.echo(_json.dumps({n: known[n].expect for n in names}, indent=2))
         return
     if not base or urlparse(base).hostname not in ("127.0.0.1", "localhost", "::1"):
         raise typer.BadParameter("a simulated study is written to a plant on this machine only")
@@ -3251,7 +3255,7 @@ def sim_gage_study(
         client.headers["Authorization"] = f"Bearer {login.json()['token']}"
         failed = 0
         for name in names:
-            outcome = gage_study.run(client, name, seed=seed)
+            outcome = gage_study.run(client, known[name], seed=seed)
             wrong = gage_study.matches_key(outcome)
             failed += bool(wrong)
             typer.echo(f"{name}: {outcome['study']['code']} - "
