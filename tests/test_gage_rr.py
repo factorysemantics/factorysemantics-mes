@@ -141,6 +141,26 @@ def test_a_bad_study_says_it_is_the_gauge(bench):
     assert out["answer"] == "gauge" and out["study"]["code"] == code
 
 
+
+def test_a_good_gauge_on_a_process_out_of_control_says_it_is_the_process(bench, monkeypatch):
+    """The chart withholds Cpk while the process is out of control. With a
+    gauge that passed its study, that is the process's trouble - said as
+    such, not as not known."""
+    from dataclasses import replace
+
+    from fsmes.services import spc
+    from fsmes.sim import gage_study
+
+    case = replace(gage_study.CASES["wandering-process"], lower=-3.0, upper=3.0,
+                   biases={"A": 0.0, "B": 0.0, "C": 0.0}, repeatability_sd=0.01)
+    code = plan(bench)["code"]
+    gage_rr.record(bench, code, readings=gage_study.readings(case), actor="op")
+    monkeypatch.setattr(spc, "chart", lambda *a, **k: {
+        "stable": False, "capability": None, "verdict": "out of control"})
+    out = gage_rr.gauge_or_process(bench, "FG-COLA", "width")
+    assert out["study"]["band"] == "acceptable"
+    assert out["answer"] == "process" and "not in control" in out["verdict"]
+
 # ---------------------------------------------------------------- the tools
 
 

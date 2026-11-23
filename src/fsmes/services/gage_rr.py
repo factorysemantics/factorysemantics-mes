@@ -566,6 +566,15 @@ def gauge_or_process(session: Session, material: str, characteristic: str) -> di
                             f"of the variation in the measurement, mostly {who}. Fix the "
                             "measurement before adjusting the process - a Cpk read through "
                             "this gauge is partly the gauge's.")}
+    if cpk is None and process["stable"] is False:
+        # The chart withholds capability while the process is out of
+        # control - and an out-of-control process measured by a gauge that
+        # passed is the process's trouble, not an unknown.
+        return {**out, "answer": "process",
+                "verdict": (f"The process: the gauge passed its study ({newest.code}, "
+                            f"{brief['gauge_rr_pct']:.1f} %), and the chart says the process "
+                            "is not in control, so capability is withheld until it is. Look "
+                            "at the machine, the material and the method - not the gauge.")}
     if cpk is None:
         return {**out, "answer": "not known",
                 "verdict": (f"The gauge is fine (study {newest.code}, "
