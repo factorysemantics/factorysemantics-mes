@@ -181,8 +181,9 @@ def validate(session: Session, severity: str) -> str:
     """The severity a new non-conformance will be written with, or a refusal
     naming the list it was not on.
 
-    Called on the write path and nowhere else. **Existing rows are never read
-    and never rewritten** - a non-conformance raised last March under a word
+    Called on the write path and nowhere else: raising one, and a reviewer
+    grading one (`quality.review_nc`). **The vocabulary never reads or rewrites
+    existing rows** - a non-conformance raised last March under a word
     this plant has since stopped using keeps that word, which is the same rule
     the downtime vocabulary keeps about an interval it labelled.
     """

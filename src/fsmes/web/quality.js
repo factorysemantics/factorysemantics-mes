@@ -568,6 +568,22 @@ const STEP_WORDS = {
   closed: "closed",
 };
 
+/* The plant's severities, read once at boot for the review's grade. Empty
+   when the plant has none of its own, and then no grade is offered. */
+let severityNames = {};
+
+function gradeSelect(nc) {
+  const codes = Object.keys(severityNames);
+  if (!codes.length) return null;
+  const select = el("select", "nc-grade");
+  select.setAttribute("aria-label", `Severity of ${nc.code}`);
+  select.dataset.assist = "nc-grade";
+  if (!codes.includes(nc.severity)) select.appendChild(new Option(nc.severity, nc.severity));
+  for (const code of codes) select.appendChild(new Option(severityNames[code], code));
+  select.value = nc.severity;
+  return select;
+}
+
 function ncButton(nc, label, run, done) {
   const button = el("button", "ghost", label);
   button.type = "button";
@@ -725,9 +741,15 @@ function drawNcs() {
     }
     const actions = el("div", "nc-actions");
     if (steps.includes("review")) {
+      // The grade is given here, where somebody first reads the record: the
+      // ones the MES raised itself all start at the plant's default. Offered
+      // only when the plant has its own list; the server checks it again.
+      const grade = gradeSelect(nc);
       const review = ncButton(nc, "Take under review", () =>
-        api(`/quality/nonconformances/${nc.code}/review`, { method: "POST" }), "taken under review");
+        api(`/quality/nonconformances/${nc.code}/review`, { method: "POST",
+          body: grade && grade.value !== nc.severity ? { severity: grade.value } : {} }), "taken under review");
       review.dataset.assist = "nc-review";
+      if (grade) actions.appendChild(grade);
       actions.appendChild(review);
     }
     if (steps.includes("disposition")) {
@@ -887,6 +909,7 @@ $("#n-q").addEventListener("input", () => {
   wireDisposition();
   wireRaiseForm();
   readUrl();
+  severityNames = ((await api("/quality/severities").catch(() => null)) || {}).names || {};
   await refresh();
   setInterval(refresh, REFRESH_MS);
 })();

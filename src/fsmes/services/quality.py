@@ -617,13 +617,26 @@ def get_nc(session: Session, code: str) -> NonConformance:
     return nc
 
 
-def review_nc(session: Session, code: str, actor: str = "system") -> NonConformance:
-    """Somebody has picked this up. open -> under review."""
+def review_nc(session: Session, code: str, actor: str = "system",
+              severity: str | None = None) -> NonConformance:
+    """Somebody has picked this up. open -> under review.
+
+    `severity` is the grade the reviewer gives it. Every record the MES raises
+    itself starts at the plant's default, and the review is where somebody
+    first reads it, so that is where it is graded. Checked against the plant's
+    own list before anything changes - a refused grade leaves the record open
+    and unread, not picked up under the old one. Left out, it keeps the grade
+    it had. The audit entry carries the grade before and after either way.
+    """
+    from fsmes.services import severities
+
     nc = get_nc(session, code)
     if nc.status is not NcStatus.OPEN:
         raise Conflict(f"non-conformance {code} is {nc.status.value}, not open")
-    before = nc.status.value
+    graded = severities.validate(session, severity.strip()) if severity and severity.strip() else nc.severity
+    before = {"status": nc.status.value, "severity": nc.severity}
     nc.status = NcStatus.UNDER_REVIEW
+    nc.severity = graded
     nc.reviewed_by = actor
     nc.reviewed_at = utcnow()
     audit.record(
@@ -632,8 +645,8 @@ def review_nc(session: Session, code: str, actor: str = "system") -> NonConforma
         action="nonconformance.under_review",
         entity_type="nonconformance",
         entity_id=code,
-        before={"status": before},
-        after={"status": nc.status.value},
+        before=before,
+        after={"status": nc.status.value, "severity": nc.severity},
     )
     return nc
 

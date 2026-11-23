@@ -731,10 +731,15 @@ def raise_nc(body: RaiseNcIn, db: DbDep, actor: ActorDep) -> dict:
     return {"code": nc.code, "severity": nc.severity, "order": order}
 
 
+class ReviewIn(BaseModel):
+    #: The grade the reviewer gives it, one of the plant's severities. Left out, it keeps its own.
+    severity: str | None = None
+
+
 @router.post("/nonconformances/{code}/review", dependencies=[require("quality.close_nc")])
-def review_nc(code: str, db: DbDep, actor: ActorDep) -> dict:
-    """Somebody has picked it up. Recorded against them, with the time."""
-    nc = quality.review_nc(db, code, actor)
+def review_nc(code: str, db: DbDep, actor: ActorDep, body: ReviewIn | None = None) -> dict:
+    """Somebody has picked it up, and may grade it. Recorded against them, with the time."""
+    nc = quality.review_nc(db, code, actor, severity=body.severity if body else None)
     return _nc_out(nc)
 
 
