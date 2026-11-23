@@ -37,6 +37,7 @@ PAGE_FILES: dict[str, str] = {
     "/dashboard/maintenance": "maintenance.html",
     "/dashboard/schedule": "schedule.html",
     "/dashboard/gauges": "gauges.html",
+    "/dashboard/gauges/studies": "gage-studies.html",
     "/dashboard/spc": "spc.html",
     "/dashboard/trace": "trace.html",
     "/dashboard/masterdata": "masterdata.html",

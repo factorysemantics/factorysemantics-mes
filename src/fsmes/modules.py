@@ -928,6 +928,9 @@ REGISTRY: tuple[Module, ...] = (
                  "capable, and which are two different questions."),
             Page("/dashboard/gauges", "gauges.html",
                  "The gauge register, calibration, and what a failed one invalidated."),
+            Page("/dashboard/gauges/studies", "gage-studies.html",
+                 "Gauge studies (gage R&R): how much of a gauge's spread is the "
+                 "gauge, the people and the parts, and the verdict - or why not."),
             Page("/dashboard/severities", "severities.html",
                  "Quality: the plant's own words for how bad a finding is - what "
                  "is on the list, what is drafted, what was retired, and the form "
