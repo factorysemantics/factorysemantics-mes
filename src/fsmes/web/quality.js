@@ -53,7 +53,7 @@ const filters = {
   // specifications
   sQ: "", sMaterial: "", sOffset: 0,
   // non-conformances
-  nStatus: NC_DEFAULT_SCOPE, nQ: "", nFrom: "", nTo: "", nOffset: 0,
+  nStatus: NC_DEFAULT_SCOPE, nSeverity: "", nQ: "", nFrom: "", nTo: "", nOffset: 0,
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -112,7 +112,7 @@ const URL_KEYS = [
   ["h_material", "hMaterial"], ["h_char", "hChar"], ["h_result", "hResult"],
   ["h_from", "hFrom"], ["h_to", "hTo"],
   ["s_q", "sQ"], ["s_material", "sMaterial"],
-  ["n_q", "nQ"], ["n_from", "nFrom"], ["n_to", "nTo"],
+  ["n_severity", "nSeverity"], ["n_q", "nQ"], ["n_from", "nFrom"], ["n_to", "nTo"],
 ];
 
 function readUrl() {
@@ -572,6 +572,21 @@ const STEP_WORDS = {
    when the plant has none of its own, and then no grade is offered. */
 let severityNames = {};
 
+/* "Find the worst ones first": the list narrowed to one of the plant's
+   severities. A plant with no list of its own still raises minor and major
+   (an SPC rule 1 is major), so those two are offered there. A word from the
+   address bar that is not offered is kept, so a link still means what it said. */
+function fillSeverityFilter() {
+  const select = $("#n-severity");
+  const words = Object.keys(severityNames).length ? severityNames : { major: "major", minor: "minor" };
+  select.replaceChildren(new Option("Any severity", ""),
+    ...Object.entries(words).map(([code, name]) => new Option(name, code)));
+  if (filters.nSeverity && !(filters.nSeverity in words)) {
+    select.appendChild(new Option(filters.nSeverity, filters.nSeverity));
+  }
+  select.value = filters.nSeverity;
+}
+
 function gradeSelect(nc) {
   const codes = Object.keys(severityNames);
   if (!codes.length) return null;
@@ -657,6 +672,7 @@ function ncFilters() {
   // Repeatable, one value each - "still open" is three states, and the API
   // answers a comma list with a 422.
   for (const one of filters.nStatus.split(",").filter(Boolean)) p.append("status", one);
+  if (filters.nSeverity) p.append("severity", filters.nSeverity);
   if (filters.nQ) p.set("q", filters.nQ);
   if (filters.nFrom) p.set("since", filters.nFrom);
   if (filters.nTo) p.set("until", filters.nTo);
@@ -680,7 +696,7 @@ function drawNcs() {
   const page = ncPage;
   filters.nOffset = page.offset;
   const what = NC_SCOPES[filters.nStatus] || "in any status";
-  const ncNarrowed = Boolean(filters.nQ || filters.nFrom || filters.nTo);
+  const ncNarrowed = Boolean(filters.nSeverity || filters.nQ || filters.nFrom || filters.nTo);
   $("#n-count").textContent = `— ${page.items.length} of ${page.total.toLocaleString()} ${what}${ncNarrowed ? " matching" : ""}`;
   exportNcs(ncFor, page.total);
   if (!page.items.length) {
@@ -894,6 +910,7 @@ $("#h-clear").addEventListener("click", () => {
 });
 
 $("#n-status").addEventListener("change", () => { filters.nStatus = $("#n-status").value; filters.nOffset = 0; writeUrl(); refresh(); });
+$("#n-severity").addEventListener("change", () => { filters.nSeverity = $("#n-severity").value; filters.nOffset = 0; writeUrl(); refresh(); });
 $("#n-from").addEventListener("change", () => { filters.nFrom = $("#n-from").value; filters.nOffset = 0; writeUrl(); refresh(); });
 $("#n-to").addEventListener("change", () => { filters.nTo = $("#n-to").value; filters.nOffset = 0; writeUrl(); refresh(); });
 let ncTyping = null;
@@ -910,6 +927,7 @@ $("#n-q").addEventListener("input", () => {
   wireRaiseForm();
   readUrl();
   severityNames = ((await api("/quality/severities").catch(() => null)) || {}).names || {};
+  fillSeverityFilter();
   await refresh();
   setInterval(refresh, REFRESH_MS);
 })();
