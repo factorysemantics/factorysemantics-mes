@@ -31,7 +31,7 @@ import pytest
 from fsmes import mcp_server
 from fsmes.db import utcnow
 from fsmes.domain import EquipmentState, EquipmentStateName, TagValue
-from fsmes.mcp.quality import _without_trend_points
+from fsmes.mcp.quality import _point_as_the_screen_shows, _without_trend_points
 from fsmes.services import agent, auth, gauges, masterdata, quality
 
 #: Fourteen settled samples of five and then one that sits high, forty seconds
@@ -193,7 +193,9 @@ def test_each_dossier_tool_names_every_block_its_answer_carries(wired, flagged, 
 def test_the_sample_tool_hands_over_the_dossier_the_panel_is_given(wired, flagged):
     """Key for key against the route, with the drawable series asked for, so
     the pass-through is held to being one. The only key the tool adds is
-    `plant`, which a route serving one plant has no reason to say."""
+    `plant`, which a route serving one plant has no reason to say; the only
+    thing it changes is a capability the SPC screen withholds, withheld the
+    same way (`test_the_chat_withholds_a_cpk_the_spc_screen_withholds.py`)."""
     row, _checks = flagged
     answer = mcp_server.spc_sample("testplant", material=MATERIAL,
                                    characteristic=CHARACTERISTIC, sample_id=row.id,
@@ -201,7 +203,7 @@ def test_the_sample_tool_hands_over_the_dossier_the_panel_is_given(wired, flagge
     assert "error" not in answer, answer
     served = wired.get(f"/quality/spc/{MATERIAL}/{CHARACTERISTIC}/sample/{row.id}")
     assert served.status_code == 200, served.text
-    assert {k: v for k, v in answer.items() if k != "plant"} == served.json()
+    assert {k: v for k, v in answer.items() if k != "plant"} == _point_as_the_screen_shows(served.json())
 
 
 def test_the_point_tool_answers_for_one_reading_by_the_check_on_the_chart(wired, flagged):
@@ -215,7 +217,7 @@ def test_the_point_tool_answers_for_one_reading_by_the_check_on_the_chart(wired,
     assert "error" not in answer, answer
     served = wired.get(f"/quality/spc/{MATERIAL}/{CHARACTERISTIC}/point/{check.id}")
     assert served.status_code == 200, served.text
-    assert {k: v for k, v in answer.items() if k != "plant"} == served.json()
+    assert {k: v for k, v in answer.items() if k != "plant"} == _point_as_the_screen_shows(served.json())
     assert answer["reading"]["check"] == check.id
 
 

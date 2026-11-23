@@ -128,6 +128,39 @@ def _dossier_query(before_minutes: float | None, after_minutes: float | None,
     return ("?" + "&".join(f"{name}={value}" for name, value in asked)) if asked else ""
 
 
+#: What the model is handed where the SPC screen prints "withheld".
+#:
+#: The chart's payload carries Cp, Cpk and Pp whether or not the process is in
+#: control; the screen hides all three while it is not (`web/spc.js`, the facts
+#: row), because a capability figure describes a process that no longer exists.
+#: On 2026-11-22 the AI tab said a knife's Cpk "sits at 1.126" while the SPC
+#: page beside it said withheld - the same chart, two answers. So the tools
+#: hand the model what the screen shows: the block stays, so the chart drawn in
+#: the conversation still says withheld in words, and the figures do not.
+CAPABILITY_WITHHELD = (
+    "Withheld while the process is out of control, as the SPC screen withholds "
+    "it: a capability figure describes a process that no longer exists. Do not "
+    "quote, estimate or work out a Cp, Cpk or Pp for this chart; say it is "
+    "withheld and why, and that the signals come first."
+)
+
+
+def _capability_as_the_screen_shows(block: Any) -> Any:
+    """A chart with its capability figures withheld when it is out of control,
+    the way the SPC screen withholds them, and said to be withheld."""
+    if (isinstance(block, dict) and block.get("stable") is False
+            and isinstance(block.get("capability"), dict)):
+        return {**block, "capability": {"withheld": CAPABILITY_WITHHELD}}
+    return block
+
+
+def _point_as_the_screen_shows(answer: Any) -> Any:
+    """A point's or a sample's answer, its `chart` block withheld the same way."""
+    if isinstance(answer, dict) and isinstance(answer.get("chart"), dict):
+        return {**answer, "chart": _capability_as_the_screen_shows(answer["chart"])}
+    return answer
+
+
 def register(mcp, call, write, identify) -> dict:
     @mcp.tool()
     def spc_chart(plant: str, material: str, characteristic: str, limit: int = 200,
@@ -156,8 +189,8 @@ def register(mcp, call, write, identify) -> dict:
         `spc_sample` answers one point at a time, and reading all of them to
         describe a chart spends the conversation on bottles rather than on
         limits. `readings=true` adds them back whole."""
-        answer = call(plant, "GET",
-                      f"/quality/spc/{material}/{characteristic}?limit={limit}")
+        answer = _capability_as_the_screen_shows(call(
+            plant, "GET", f"/quality/spc/{material}/{characteristic}?limit={limit}"))
         return {"plant": plant,
                 **(answer if readings else _without_sample_readings(answer))}
 
@@ -200,7 +233,7 @@ def register(mcp, call, write, identify) -> dict:
         path = (f"/quality/spc/{quote(material, safe='')}/"
                 f"{quote(characteristic, safe='')}/point/{int(check_id)}"
                 + _dossier_query(before_minutes, after_minutes, neighbour_hours))
-        answer = call(plant, "GET", path)
+        answer = _point_as_the_screen_shows(call(plant, "GET", path))
         return {"plant": plant,
                 **(answer if trends else _without_trend_points(answer))}
 
@@ -235,7 +268,7 @@ def register(mcp, call, write, identify) -> dict:
         path = (f"/quality/spc/{quote(material, safe='')}/"
                 f"{quote(characteristic, safe='')}/sample/{int(sample_id)}"
                 + _dossier_query(before_minutes, after_minutes, neighbour_hours))
-        answer = call(plant, "GET", path)
+        answer = _point_as_the_screen_shows(call(plant, "GET", path))
         return {"plant": plant,
                 **(answer if trends else _without_trend_points(answer))}
 
