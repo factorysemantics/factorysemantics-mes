@@ -120,6 +120,12 @@ PROPOSED: dict[str, dict] = {
                                "reason": "Annual service"},
     "produce_units": {"material": "FG-COLA", "count": 5, "order": "WO-1001",
                       "machine": "PACK01"},
+    # REF-01 and GS-SHOW are made in the fixture below: the plan walk picks
+    # the gauge from a list drawn from the register, and the reading walk ends
+    # on a grid the screen draws only for a study still collecting.
+    "plan_gage_study": {"gauge": "REF-01", "material": "FG-COLA",
+                        "characteristic": "brix", "parts": 10},
+    "record_study_reading": {"study": "GS-SHOW"},
 }
 
 #: How long the Configuration page's own sections are held back in the last
@@ -149,7 +155,16 @@ def plant(tmp_path_factory):
     from fsmes.db import Base, make_engine
     from fsmes.domain import RecommendedAdjustment
     from fsmes.seed import seed_demo_plant
-    from fsmes.services import auth, documents, quality, reasons, severities, triggers
+    from fsmes.services import (
+        auth,
+        documents,
+        gage_rr,
+        gauges,
+        quality,
+        reasons,
+        severities,
+        triggers,
+    )
 
     path = tmp_path_factory.mktemp("show-me") / "plant.db"
     url = f"sqlite:///{path}"
@@ -207,6 +222,15 @@ def plant(tmp_path_factory):
                 minimum=55.0, maximum=70.0,
                 rationale="Two degrees down; the last batch ran hot.",
                 proposed_by="ADMIN"))
+            # A calibrated gauge and a study still collecting, for the two
+            # gauge-study walks: a planned study is the only one with a grid.
+            gauges.register(session, code="REF-01", name="Refractometer", resolution=0.1,
+                            interval_days=365, actor="ADMIN")
+            gauges.calibrate(session, "REF-01", result="pass", performed_by="lab",
+                             actor="ADMIN")
+            gage_rr.plan(session, code="GS-SHOW", gauge="REF-01", material="FG-COLA",
+                         characteristic="brix", parts=2, appraisers=["Ana", "Ben"],
+                         trials=2, actor="ADMIN")
             session.commit()
 
         sock = socket.socket()
