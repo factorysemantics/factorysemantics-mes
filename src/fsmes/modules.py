@@ -918,6 +918,7 @@ REGISTRY: tuple[Module, ...] = (
         # has no such route today, and the ordering is here so that the day it
         # grows one, nothing has to be found out the hard way.
         routers=(Mount("fsmes.api.routers.severities", "/quality", ("quality",)),
+                 Mount("fsmes.api.routers.gage_studies", "/quality", ("quality",)),
                  Mount("fsmes.api.routers.quality", "/quality", ("quality",))),
         pages=(
             Page("/dashboard/quality", "quality.html",
@@ -1067,7 +1068,7 @@ REGISTRY: tuple[Module, ...] = (
                 edit_here=True,
                 pack_keys=("[quality] containment_max_depth",)),
         ),
-        tools=("fsmes.mcp.quality", "fsmes.mcp.severities"),
+        tools=("fsmes.mcp.quality", "fsmes.mcp.severities", "fsmes.mcp.gage_rr"),
         tables=("quality_specs", "quality_checks", "quality_samples",
                 "quality_counts", "non_conformances", "spc_signals", "gauges",
                 "calibrations", "nc_severities", "gauge_studies",
