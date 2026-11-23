@@ -135,6 +135,14 @@ def test_with_no_study_the_gauge_or_the_process_is_not_known(bench):
     assert out["answer"] == "not known" and "no complete gauge study" in out["verdict"]
 
 
+def test_a_characteristic_the_plant_does_not_use_is_named_with_the_ones_it_does(bench):
+    """The chat on the AI tab once asked for "bolster width" where the plant
+    says bolster_width_mm, and was told there was no study and no chart - true
+    of a name nobody uses, and no help. The answer names the real ones."""
+    out = gage_rr.gauge_or_process(bench, "FG-COLA", "Width")
+    assert out["answer"] == "not known" and "width" in out["known_characteristics"]
+    assert "no characteristic called 'Width'" in out["verdict"] and "width" in out["verdict"]
+
 def test_a_bad_study_says_it_is_the_gauge(bench):
     code = plan(bench)["code"]
     fill(bench, code)

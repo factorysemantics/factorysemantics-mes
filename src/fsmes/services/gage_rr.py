@@ -522,6 +522,21 @@ def gauge_or_process(session: Session, material: str, characteristic: str) -> di
     from fsmes.services import spc
 
     mat = _material(session, material)
+    named = set(session.scalars(select(QualitySpec.characteristic)
+                                .where(QualitySpec.material_id == mat.id)))
+    studied = set(session.scalars(select(GaugeStudy.characteristic)
+                                  .where(GaugeStudy.material_id == mat.id)))
+    if characteristic not in named | studied:
+        # A name the plant does not use is not a characteristic with no
+        # study: say which names it does use, so the next question is right.
+        known = sorted(named | studied)
+        return {"material": material, "characteristic": characteristic, "study": None,
+                "process": None, "answer": "not known", "known_characteristics": known,
+                "convention": CONVENTION,
+                "verdict": (f"Not known: {material} has no characteristic called "
+                            f"{characteristic!r}. Its characteristics are "
+                            + (", ".join(known) if known else "none") + " - ask again "
+                            "with one of those names.")}
     newest = session.scalar(
         select(GaugeStudy).where(GaugeStudy.material_id == mat.id,
                                  GaugeStudy.characteristic == characteristic,

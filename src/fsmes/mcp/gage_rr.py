@@ -43,7 +43,11 @@ def register(mcp, call, write, identify) -> dict:
     @mcp.tool()
     def gauge_or_process(plant: str, material: str, characteristic: str) -> dict:
         """Is a characteristic's trouble the gauge or the process? The newest
-        complete gauge study beside the control chart's capability. `answer`
+        complete gauge study beside the control chart's capability.
+        `characteristic` is the plant's own name for it, exactly as the
+        specification or `gage_studies` lists it (`bolster_width_mm`, not
+        "bolster width"); a name the plant does not use comes back with
+        `known_characteristics`, and you ask again with one of those. `answer`
         is gauge, process, neither, or not known - and not known (no study, or
         a withheld one) is said as not known, never as fine."""
         query = urlencode({"material": material, "characteristic": characteristic})
