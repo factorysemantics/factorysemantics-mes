@@ -147,7 +147,8 @@ SCHEMA: tuple[Section, ...] = (
             "MES_UNS_SITE"),
     )),
     Section("modules", "Which optional modules this plant serves. One boolean per "
-            "module; anything not named keeps the product default, which is on.",
+            "module; anything not named keeps the product default, which is on - "
+            "except an opt-in module such as gauge_studies, which is off until named.",
             open_keys="a module name from `fsmes.modules` - the kernel cannot be named"),
     Section("words", "This plant's own word for a display label. Display only: a "
             "term a number depends on is refused.",
@@ -991,7 +992,9 @@ def module_spec(pack: Pack) -> str:
     Written `all` first and then each module the pack switches off or on, so a
     plant that names nothing serves exactly what it served before packs
     existed - and so a module this pack has never heard of, added by a later
-    release, arrives switched on rather than silently missing.
+    release, arrives switched on rather than silently missing. An opt-in
+    module (`fsmes.modules.OPT_IN_NAMES`) is the exception: `all` leaves it
+    out, so it is on only where this table says `true`.
     """
     table = pack.table("modules")
     if not table:

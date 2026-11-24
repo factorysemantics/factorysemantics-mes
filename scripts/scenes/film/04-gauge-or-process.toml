@@ -6,7 +6,10 @@
 # narrator to rewrite.
 #
 # The plant is the cutlery pack, brought up by hand on 127.0.0.1:8040 (OPC
-# 4844) the way the recorder brings up its own, and the three studies are
+# 4844) the way the recorder brings up its own. Gauge studies are an opt-in
+# module since 2026-11-24 and the pack switches them on (`[modules]
+# gauge_studies = true` in labs/cutlery/plant.toml); a plant without that line
+# has no Gauge studies screen to film, and the three studies are
 # written into it before the camera rolls by the simulator that scripts them
 # (src/fsmes/sim/gage_study.py, the cases in labs/cutlery/gage_studies.json), as ADMIN, the plant's first account:
 #

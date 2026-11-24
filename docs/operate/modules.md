@@ -7,7 +7,8 @@ narrower than it sounds.
 
 Nothing here changes anything for a plant that does not use it. With no
 setting, every module is on, which is what every plant had before the setting
-existed.
+existed — except the **opt-in** modules, which a plant switches on by name
+(below). There is one so far: `gauge_studies`.
 
 ## The setting
 
@@ -15,8 +16,9 @@ One environment variable, `MES_MODULES`, read left to right:
 
 | Value | Means |
 |---|---|
-| `all` | every module. This is the default |
-| `all,-quality` | every module except quality |
+| `all` | every module except the opt-in ones. This is the default |
+| `all,gauge_studies` | that, and gauge studies |
+| `all,-quality` | every module except quality (and the opt-in ones) |
 | `all,-quality,-erp` | every module except those two |
 | `quality,maintenance` | the kernel, plus those two, and nothing else optional |
 
@@ -64,12 +66,12 @@ hole. It also means switching a module off does **not** reclaim disk.
 
 ## The modules
 
-Twenty-three modules, of which **nine are the kernel** and cannot be switched
+Twenty-four modules, of which **nine are the kernel** and cannot be switched
 off — master data, routings, orders, dispatch, execution, equipment, audit,
 auth and the dashboard front door. A plant without those is not an MES, and
 asking for it is refused.
 
-The **fourteen a plant may switch** are:
+The **fifteen a plant may switch** are:
 
 | Module | What goes with it |
 |---|---|
@@ -87,10 +89,27 @@ The **fourteen a plant may switch** are:
 | `kpis` | the OEE and order KPI routes |
 | `assist` | the in-screen assistant |
 | `design` | the design partner (a development tool) |
+| `gauge_studies` | gauge studies (gage R&R): the Gauge studies screen, its routes and tools. **Opt-in**, and needs `quality` |
 
 The authoritative list is `src/fsmes/modules.py`, which also says, per module,
 which routers it mounts, which screens it serves, which agent tools it
 registers and which tables its rows live in.
+
+## Switching an opt-in module on
+
+Since 2026-11-24 a new strategic module can be **opt-in**: `all` leaves it out,
+and a plant that wants it writes its name. In a pack:
+
+```toml
+[modules]
+gauge_studies = true
+```
+
+or by hand, `MES_MODULES=all,gauge_studies`. A module that needs another
+(`gauge_studies` needs `quality`) is refused at start-up when that one is off,
+with both names in the message. Switching it off again keeps its rows, as for
+any module; the chat on the AI tab is told it is switched off, so asked about
+it, it says so rather than that the plant has none.
 
 ## Turning one off
 
@@ -126,7 +145,8 @@ coa           = false
 
 becomes `all,-serialization,-coa`. `all` is written first and the pack's own
 words after it, so a module added by a later release arrives switched **on**
-rather than silently missing from a plant that has never heard of it. A
+rather than silently missing from a plant that has never heard of it — unless
+it is opt-in, in which case it stays off until the pack names it. A
 module name this version does not have, or a kernel module, is refused by
 `fsmes pack check` before the plant ever starts.
 
