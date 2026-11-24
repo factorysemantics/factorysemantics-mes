@@ -165,6 +165,20 @@ def work_center_of(session: Session, equipment: Equipment) -> Equipment | None:
     return None
 
 
+def work_center_in(nodes: dict[int, Equipment], node: Equipment | None) -> Equipment | None:
+    """`work_center_of` over an equipment tree already read into `nodes`
+    ({id: row}): the form a rollup over the whole plant uses, so that it
+    costs one read of `equipment` and not a relationship load per row.
+    """
+    seen: set[int] = set()
+    while node is not None and node.id not in seen:   # a loop would hang the plant
+        if node.level == EquipmentLevel.WORK_CENTER:
+            return node
+        seen.add(node.id)
+        node = nodes.get(node.parent_id) if node.parent_id else None
+    return None
+
+
 def cost_center(session: Session, equipment: Equipment) -> str | None:
     """The cost center this machine's work is accounted to.
 
@@ -408,14 +422,8 @@ def home_work_centers(session: Session) -> dict[str, str | None]:
     nodes = {eq.id: eq for eq in session.scalars(select(Equipment))}
 
     def centre(node_id: int | None) -> str | None:
-        node = nodes.get(node_id) if node_id else None
-        seen: set[int] = set()
-        while node is not None and node.id not in seen:
-            if node.level == EquipmentLevel.WORK_CENTER:
-                return node.code
-            seen.add(node.id)
-            node = nodes.get(node.parent_id) if node.parent_id else None
-        return None
+        line = work_center_in(nodes, nodes.get(node_id) if node_id else None)
+        return line.code if line else None
 
     return {p.code: centre(p.home_equipment_id) for p in session.scalars(select(Person))}
 

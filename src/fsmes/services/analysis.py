@@ -115,17 +115,8 @@ def line_of_each(db: Session) -> dict[int, Equipment]:
     # The floor's own predicate, in SQL: `retired_at` is a deferred column,
     # and reading it off each row is a query per machine.
     floor = db.scalars(select(Equipment.id).where(masterdata.on_the_floor())).all()
-    out: dict[int, Equipment] = {}
-    for eq in (everything[i] for i in floor):
-        seen = {eq.id}
-        up = everything.get(eq.parent_id)
-        while up is not None and up.id not in seen:   # a cycle would hang the plant
-            if up.level == EquipmentLevel.WORK_CENTER:
-                out[eq.id] = up
-                break
-            seen.add(up.id)
-            up = everything.get(up.parent_id)
-    return out
+    lines = {i: masterdata.work_center_in(everything, everything[i]) for i in floor}
+    return {i: line for i, line in lines.items() if line is not None}
 
 
 def _line_and_units(db: Session, line_code: str | None) -> tuple[Equipment, list[Equipment]]:
