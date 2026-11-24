@@ -31,6 +31,7 @@ from fsmes.domain import (
     ProductionLog,
     WorkOrder,
 )
+from fsmes.services import analysis
 from fsmes.services import connection as connection_service
 from fsmes.services import equipment as equipment_service
 from fsmes.services import line as line_service
@@ -205,11 +206,9 @@ def _build_summary(db: Session, oee_hours: float | None, line: str | None = None
     oees = equipment_service.oee_many(db, scope, oee_hours)
 
     if machine_sort == "oee":
-        matching = sorted(matching, key=lambda eq: (
-            oees[eq.code]["oee"] is None,
-            oees[eq.code]["oee"] or 0,
-            eq.code,
-        ))
+        # Ranked the way the Analysis screen ranks, by the one key there is.
+        matching = sorted(matching, key=lambda eq: analysis.worst_oee_first(
+            oees[eq.code]["oee"], eq.code))
 
     limit = machine_limit if machine_limit is not None else max(len(matching), 1)
     offset = machine_offset if machine_offset < len(matching) else 0
