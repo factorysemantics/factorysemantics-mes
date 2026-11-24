@@ -31,11 +31,10 @@ from fsmes.domain import (
     ProductionLog,
     WorkOrder,
 )
-from fsmes.services import analysis
+from fsmes.services import analysis, line_clock, masterdata, workorders
 from fsmes.services import connection as connection_service
 from fsmes.services import equipment as equipment_service
 from fsmes.services import line as line_service
-from fsmes.services import line_clock, masterdata, workorders
 from fsmes.services import review as review_service
 
 router = APIRouter()
