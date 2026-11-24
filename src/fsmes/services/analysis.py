@@ -356,6 +356,17 @@ def _overlap(state: EquipmentState, start: datetime, end: datetime) -> float:
     return max(0.0, (hi - lo).total_seconds())
 
 
+def worst_oee_first(oee: float | None, code: str, too_new: bool = False) -> tuple:
+    """The key every ranking of machines by OEE sorts on: worst first.
+
+    A machine with no figure is not ranked as a zero - it goes under every
+    rated one, still listed (unknown is not zero); one too new to rate goes
+    under the rest; ties break on the machine's code, so the order holds
+    still from one refresh to the next.
+    """
+    return (oee is None, too_new, oee if oee is not None else 0.0, code)
+
+
 def oee_breakdown(db: Session, line_code: str | None = None, hours: float | None = None,
                   shift: str | None = None) -> dict:
     """OEE per station with every loss named, plus the line rollup.
@@ -528,8 +539,7 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float | None
         # that lost the most this shift is the top row. A machine with no
         # figure is not ranked as a zero - it goes under every rated one,
         # still listed, its reason on the row (unknown is not zero).
-        stations.sort(key=lambda s: (s["oee"] is None, s["too_new"],
-                                     s["oee"] if s["oee"] is not None else 0.0, s["code"]))
+        stations.sort(key=lambda s: worst_oee_first(s["oee"], s["code"], s["too_new"]))
     produced = sum(s["good_qty"] for s in stations)
     scrapped = sum(s["scrap_qty"] for s in stations)
     rated = [s["oee"] for s in stations if s["oee"] is not None]
