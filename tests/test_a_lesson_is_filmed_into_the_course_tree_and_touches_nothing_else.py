@@ -19,7 +19,6 @@ runner's own code.
 from __future__ import annotations
 
 import hashlib
-import importlib.util
 import json
 import sys
 from pathlib import Path
@@ -27,18 +26,8 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[1]
-RUNNER = REPO / "scripts" / "record-scene.py"
 COURSE = REPO / "scripts" / "course" / "course.toml"
 SCENES = REPO / "scripts" / "scenes"
-
-
-@pytest.fixture(scope="module")
-def runner():
-    """`scripts/record-scene.py`, imported by path because of the hyphen."""
-    spec = importlib.util.spec_from_file_location("record_scene_course", RUNNER)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 @pytest.fixture()

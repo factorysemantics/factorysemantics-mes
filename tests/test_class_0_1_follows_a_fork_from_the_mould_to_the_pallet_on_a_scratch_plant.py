@@ -9,14 +9,12 @@ browser: the scene is loaded and walked the way the recorder walks it.
 
 from __future__ import annotations
 
-import importlib.util
 from pathlib import Path
 from urllib.parse import urlparse
 
 import pytest
 
 REPO = Path(__file__).resolve().parents[1]
-RUNNER = REPO / "scripts" / "record-scene.py"
 SCENE = REPO / "scripts" / "scenes" / "course" / "01-01-what-a-factory-does-all-day.toml"
 # The caption lines of the take studio voiced, as that take's script file
 # wrote them: the second filming says exactly these, in this order.
@@ -36,15 +34,6 @@ POINTS_AT_NOTHING_ON_SCREEN = {
     "A gap stays a gap. It is not counted as running, and it is not counted as stopped.",
 }
 ON_SCREEN = ("hook", "screen", "refuses")
-
-
-@pytest.fixture(scope="module")
-def runner():
-    """`scripts/record-scene.py`, imported by path because of the hyphen."""
-    spec = importlib.util.spec_from_file_location("record_scene_class_0_1", RUNNER)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 @pytest.fixture(scope="module")

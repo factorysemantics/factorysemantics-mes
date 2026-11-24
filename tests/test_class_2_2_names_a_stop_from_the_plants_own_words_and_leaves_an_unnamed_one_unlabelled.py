@@ -16,7 +16,6 @@ scene is loaded and walked the way the recorder walks it.
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import re
 from pathlib import Path
@@ -27,7 +26,6 @@ import pytest
 from fsmes import modules
 
 REPO = Path(__file__).resolve().parents[1]
-RUNNER = REPO / "scripts" / "record-scene.py"
 SCENE = REPO / "scripts" / "scenes" / "course" / "03-02-downtime-and-reason-codes.toml"
 PACK = REPO / "labs" / "cutlery"
 MACHINE = "FORK1_Mold"
@@ -44,15 +42,6 @@ A_DATE = re.compile(
     r"\b(19|20)\d\d\b|\b\d{1,2}/\d{1,2}/\d{2,4}\b|"
     r"\b(January|February|March|April|May|June|July|August|September|October|November|December)\b"
 )
-
-
-@pytest.fixture(scope="module")
-def runner():
-    """`scripts/record-scene.py`, imported by path because of the hyphen."""
-    spec = importlib.util.spec_from_file_location("record_scene_class_2_2", RUNNER)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 @pytest.fixture(scope="module")

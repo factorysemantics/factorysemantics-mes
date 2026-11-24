@@ -14,7 +14,6 @@ walked the way the recorder walks it.
 
 from __future__ import annotations
 
-import importlib.util
 import re
 from pathlib import Path
 from urllib.parse import urlparse
@@ -24,7 +23,6 @@ import pytest
 from fsmes import modules
 
 REPO = Path(__file__).resolve().parents[1]
-RUNNER = REPO / "scripts" / "record-scene.py"
 SCENE = REPO / "scripts" / "scenes" / "course" / "07-01-the-chat-on-the-ai-tab.toml"
 MACHINE = "FORK1_Mold"
 # The one line over the screen that is about nothing drawn there: the agent
@@ -43,15 +41,6 @@ A_DATE = re.compile(
 
 # What the take may never show or say: the key itself, or where it is kept.
 A_KEY = re.compile(r"sk-ant-|ANTHROPIC_API_KEY=|\.config/fsmes")
-
-
-@pytest.fixture(scope="module")
-def runner():
-    """`scripts/record-scene.py`, imported by path because of the hyphen."""
-    spec = importlib.util.spec_from_file_location("record_scene_class_6_1", RUNNER)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 @pytest.fixture(scope="module")

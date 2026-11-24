@@ -11,7 +11,6 @@ before.
 
 from __future__ import annotations
 
-import importlib.util
 import shutil
 import subprocess
 from pathlib import Path
@@ -19,19 +18,9 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[1]
-RUNNER = REPO / "scripts" / "record-scene.py"
 FILM = REPO / "scripts" / "scenes" / "film"
 
 needs_ffmpeg = pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="no ffmpeg on this machine")
-
-
-@pytest.fixture(scope="module")
-def runner():
-    """`scripts/record-scene.py`, imported by path because of the hyphen."""
-    spec = importlib.util.spec_from_file_location("record_scene", RUNNER)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def scene_file(tmp_path: Path, top: str) -> Path:

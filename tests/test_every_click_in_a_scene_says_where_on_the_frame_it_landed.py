@@ -26,7 +26,6 @@ size is read from the file's own header.
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import threading
 import urllib.parse
@@ -37,8 +36,6 @@ import pytest
 
 pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
-REPO = Path(__file__).resolve().parents[1]
-RUNNER = REPO / "scripts" / "record-scene.py"
 
 REPORT = "<script>addEventListener('click', (e) => fetch(`/clicked?x=${e.clientX}&y=${e.clientY}`), true)</script>"
 BUTTONS = (
@@ -122,14 +119,6 @@ js = "!!document.querySelector('#there')"
 do = "click"
 selector = "#there"
 """
-
-
-@pytest.fixture(scope="module")
-def runner():
-    spec = importlib.util.spec_from_file_location("record_scene", RUNNER)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 @pytest.fixture()

@@ -11,21 +11,9 @@ here.
 
 from __future__ import annotations
 
-import importlib.util
 from pathlib import Path
 
 import pytest
-
-REPO = Path(__file__).resolve().parents[1]
-RUNNER = REPO / "scripts" / "record-scene.py"
-
-
-@pytest.fixture(scope="module")
-def runner():
-    spec = importlib.util.spec_from_file_location("record_scene_sign_in", RUNNER)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def write_scene(tmp_path: Path, steps: str, top: str = "") -> Path:

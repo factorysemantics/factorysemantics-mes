@@ -23,7 +23,6 @@ arithmetic on a scene file and runs anywhere.
 
 from __future__ import annotations
 
-import importlib.util
 import shutil
 import subprocess
 from pathlib import Path
@@ -31,7 +30,6 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[1]
-RUNNER = REPO / "scripts" / "record-scene.py"
 SCENES = REPO / "scripts" / "scenes"
 SCENE = SCENES / "02-spc-on-the-line.toml"
 
@@ -41,15 +39,6 @@ THE_LONGEST_A_CLIP_MAY_BE = 45.0
 THE_HEAVIEST_A_GIF_MAY_BE = 10_000_000
 
 needs_ffmpeg = pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="no ffmpeg on this machine")
-
-
-@pytest.fixture(scope="module")
-def runner():
-    """`scripts/record-scene.py`, imported by path because of the hyphen."""
-    spec = importlib.util.spec_from_file_location("record_scene", RUNNER)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 # ------------------------------------------------------------------ the clip

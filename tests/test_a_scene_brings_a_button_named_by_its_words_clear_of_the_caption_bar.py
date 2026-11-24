@@ -11,15 +11,10 @@ plant is needed.
 
 from __future__ import annotations
 
-import importlib.util
-from pathlib import Path
-
 import pytest
 
 pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
-REPO = Path(__file__).resolve().parents[1]
-RUNNER = REPO / "scripts" / "record-scene.py"
 
 VIEWPORT = {"width": 800, "height": 600}
 # The Release button at the very foot of a page too short to scroll it higher.
@@ -27,14 +22,6 @@ PAGE = (
     "<!doctype html><body style='margin:0'><div style='height:560px'>the order</div>"
     "<div id='order-actions'><button>Hold…</button><button>Release</button></div>"
 )
-
-
-@pytest.fixture(scope="module")
-def runner():
-    spec = importlib.util.spec_from_file_location("record_scene_clear_of_caption", RUNNER)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def test_a_button_named_with_has_text_at_the_foot_of_a_page_ends_up_above_the_caption_bar(runner, tmp_path):

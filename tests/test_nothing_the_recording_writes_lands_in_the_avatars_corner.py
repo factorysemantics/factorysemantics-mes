@@ -18,7 +18,6 @@ the take runs, must refuse that take as well.
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import shutil
 import subprocess
@@ -31,8 +30,6 @@ import pytest
 
 pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
-REPO = Path(__file__).resolve().parents[1]
-RUNNER = REPO / "scripts" / "record-scene.py"
 WIDTH, HEIGHT = 1280, 720
 
 #: A caption long enough to wrap to two lines, which is when a bar too wide would show it.
@@ -89,14 +86,6 @@ name = "row"
 scroll_to = "#row"
 scroll_block = "start"
 """
-
-
-@pytest.fixture(scope="module")
-def runner():
-    spec = importlib.util.spec_from_file_location("record_scene_corner", RUNNER)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 @pytest.fixture()

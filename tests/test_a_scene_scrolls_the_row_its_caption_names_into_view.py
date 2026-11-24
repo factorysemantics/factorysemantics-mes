@@ -11,15 +11,10 @@ in Chromium against pages of that shape; no plant is needed.
 
 from __future__ import annotations
 
-import importlib.util
-from pathlib import Path
-
 import pytest
 
 pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
-REPO = Path(__file__).resolve().parents[1]
-RUNNER = REPO / "scripts" / "record-scene.py"
 
 ROWS = "".join(
     f"<li style='height:30px'>LOT-{'CAP' if n == 80 else 'WATER'}-001 — row {n}</li>" for n in range(100)
@@ -30,14 +25,6 @@ SHORT_PAGE = f"<!doctype html><body style='margin:0'><div style='height:900px'>t
 PAGE = SHORT_PAGE + "<div style='height:900px'></div>"
 VIEWPORT = {"width": 800, "height": 600}
 CAPTION_BAR = 110
-
-
-@pytest.fixture(scope="module")
-def runner():
-    spec = importlib.util.spec_from_file_location("record_scene", RUNNER)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def _row(page, text: str) -> dict:
