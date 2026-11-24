@@ -54,6 +54,12 @@ from fsmes.services import auth
 # number; the tests that are *about* the zone set their own and say so.
 os.environ.setdefault("MES_PLANT_TIMEZONE", "UTC")
 
+# WHICH MODULES THE SUITE SERVES. Every one this version ships, the opt-in
+# ones included, so a test of gauge studies finds their routes, screen and
+# tools without each test switching them on. The tests that are *about* the
+# bare default set MES_MODULES themselves and say so (test_module_wall.py).
+os.environ.setdefault("MES_MODULES", "all,gauge_studies")
+
 TEST_DATABASE_URL = os.environ.get("MES_TEST_DATABASE_URL", "").strip()
 # The default: a private in-memory database per test.
 IN_MEMORY_SQLITE = not TEST_DATABASE_URL

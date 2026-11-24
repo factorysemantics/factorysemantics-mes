@@ -66,20 +66,27 @@ def with_modules(monkeypatch, session):
 # ------------------------------------------------------------------ default
 
 
-def test_a_plant_that_has_never_heard_of_the_setting_serves_every_module():
-    """The promise that makes this safe to land: nothing changes for anyone
-    today. Everything else in this file describes a plant that opted in."""
+def test_a_plant_that_has_never_heard_of_the_setting_serves_every_module_but_the_opt_in_ones(
+        monkeypatch):
+    """The promise that made this safe to land: nothing changes for a plant
+    that never set it. Since 2026-11-24 one module is opt-in - gauge studies,
+    which a plant names to get - and every other module is on, as before.
+    (The suite's own environment switches gauge studies on, so it is cleared
+    here: this is the plant that said nothing.)"""
+    monkeypatch.delenv("MES_MODULES", raising=False)
     assert Settings().modules == "all"
-    assert len(registry.enabled()) == len(registry.REGISTRY)
-    assert registry.disabled() == ()
+    assert len(registry.enabled()) == len(registry.REGISTRY) - len(registry.OPT_IN_NAMES)
+    assert [m.name for m in registry.disabled()] == list(registry.OPT_IN_NAMES) == ["gauge_studies"]
 
 
 def test_the_registry_says_how_many_modules_there_are_and_how_many_can_be_switched():
-    """Every list states its total. Twenty-three modules: nine kernel, which
-    a plant may not switch off, and fourteen it may."""
-    assert len(registry.REGISTRY) == 23
+    """Every list states its total. Twenty-four modules: nine kernel, which
+    a plant may not switch off, and fifteen it may - one of them, gauge
+    studies, off until a plant names it."""
+    assert len(registry.REGISTRY) == 24
     assert len(registry.KERNEL_NAMES) == 9
-    assert len(registry.OPTIONAL_NAMES) == 14
+    assert len(registry.OPTIONAL_NAMES) == 15
+    assert len(registry.OPT_IN_NAMES) == 1
     assert len(registry.KERNEL_NAMES) + len(registry.OPTIONAL_NAMES) == len(registry.REGISTRY)
 
     mounts = sum(len(m.routers) for m in registry.REGISTRY)
@@ -89,14 +96,18 @@ def test_the_registry_says_how_many_modules_there_are_and_how_many_can_be_switch
     # the machine router ends with `/{code}` and would swallow it, `quality`
     # for the same structural reason before it has such a route - and
     # `analysis` mounts the rate order its parts mix is measured against.
-    # Twenty-seven since `quality` mounted gauge studies on 2026-11-22.
+    # Twenty-seven since `quality` mounted gauge studies on 2026-11-22, and
+    # still twenty-seven since that router became `gauge_studies`' own on
+    # 2026-11-24.
     assert mounts == 27, f"{mounts} routers in the registry; the app mounted 24 before it existed"
     # Fourteen tool files across twelve modules that ship one: `equipment` and
     # `quality` each have a second for their vocabulary, mirroring the second
     # router and the screen that drafts it, `dashboard` has the one that reads
     # and writes any domain's live settings, and `analysis` has the four
     # analyses that were HTTP-only until the agent needed to read them.
-    # Fifteen since `quality` shipped gauge studies' tools on 2026-11-22.
+    # Fifteen since `quality` shipped gauge studies' tools on 2026-11-22; the
+    # file is `gauge_studies`' own since 2026-11-24, so thirteen modules ship
+    # one and the default plant registers twelve of them.
     assert tools == 15, f"{tools} tool files in the registry; the MCP server registered 14"
 
 
@@ -258,7 +269,8 @@ def test_every_table_the_registry_names_is_a_real_table():
     # on 2026-10-11: a characteristic the plant counts keeps its lots there too.
     # 29 since the rate order and its lines joined analysis on 2026-10-30: the
     # target the parts mix is measured against. 31 since gauge studies and
-    # their readings joined quality on 2026-11-22.
+    # their readings joined quality on 2026-11-22 (and `gauge_studies`, their
+    # own module, on 2026-11-24 - the same 31).
     assert optional == 31, (
         f"{optional} of {len(known)} tables belong to a module a plant may switch off")
 

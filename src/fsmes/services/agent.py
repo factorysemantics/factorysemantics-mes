@@ -339,6 +339,30 @@ def not_this_kinds(tool: str, kind: Kind) -> dict | None:
     return None
 
 
+def switched_off_note() -> str:
+    """The modules with tools of their own that this plant has switched off.
+
+    Their tools are not in the catalogue, so without this the model asked
+    about one would find nothing to call and answer from nothing. Said up
+    front, with the total, so the answer is "switched off on this plant"
+    rather than "this plant has none" - which is not true, and is not the
+    same as off: a switched-off module keeps its rows.
+    """
+    from fsmes import modules
+    from fsmes.config import get_settings
+
+    with_tools = [m for m in modules.REGISTRY if m.tools]
+    off = [m for m in get_settings().disabled_modules() if m.tools]
+    if not off:
+        return ""
+    names = "; ".join(f"{m.title} (`{m.name}`)" for m in off)
+    return (f"\n\nSwitched off on this plant - {len(off)} of the {len(with_tools)} "
+            f"modules that bring tools of their own: {names}. Their tools are not "
+            "here. Asked about one, say it is switched off on this plant and that "
+            "an administrator can switch it on; never say the plant has none of it, "
+            "and never answer it from memory.")
+
+
 def withheld_note(capabilities: set[str],
                   roles: dict[str, list[str]] | None = None) -> str:
     """Every write action this person is not offered, one line each, with the
@@ -357,7 +381,11 @@ def withheld_note(capabilities: set[str],
     from fsmes.services import capabilities as caps
 
     offered = {t["name"] for t in catalogue(capabilities)}
-    every = sorted(set(NEEDS) | set(PER_CALL_NEEDS))
+    # Only the actions this server has: a tool whose module is switched off is
+    # not somebody else's to do, it is not on this plant - `switched_off_note`
+    # says that, and listing it here with "who holds it" would be wrong.
+    registered = {t.name for t in registry_tools()}
+    every = sorted((set(NEEDS) | set(PER_CALL_NEEDS)) & registered)
     lines = []
     for tool in every:
         if tool in offered:
@@ -1275,7 +1303,7 @@ def open_session(user: str, plant: str, capabilities: set[str], *,
         # Same rule for the same reason: nothing to draw without a read.
         tools += chart_tools()
     note = (withheld_note(set(capabilities), roles) if the_kind.writes
-            else no_write_note(the_kind))
+            else no_write_note(the_kind)) + switched_off_note()
     sess = Session(id=uuid.uuid4().hex[:12], user=user, plant=plant,
                    capabilities=set(capabilities), tools=tools,
                    kind=the_kind.name,

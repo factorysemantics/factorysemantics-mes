@@ -143,6 +143,12 @@ def run(client, case: Case, *, seed: int = 7, today: date | None = None) -> dict
     `quality.record`, which is a quality engineer's set.
     """
     today = today or date.today()
+    # Asked before anything is written: on a plant without the module the
+    # gauge would be registered and calibrated and then the study refused.
+    if client.get("/quality/gage-studies").status_code == 404:
+        raise Refused("gauge studies are switched off on this plant - nothing was "
+                      "written. Its pack switches them on with `[modules] "
+                      "gauge_studies = true` (or MES_MODULES=all,gauge_studies).")
     gauges = _ok(client.get(f"/quality/gauges?q={case.gauge}"), "read the gauge register")
     if not any(g["code"] == case.gauge for g in gauges["gauges"]):
         _ok(client.post("/quality/gauges", json={

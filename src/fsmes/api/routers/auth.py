@@ -5,6 +5,7 @@ from fastapi import APIRouter, Request, Response
 from pydantic import BaseModel
 from sqlalchemy import select
 
+from fsmes import modules
 from fsmes.api.deps import SESSION_COOKIE, ActorDep, DbDep, ReadDbDep, UserDep, require
 from fsmes.config import get_settings
 from fsmes.domain import Person
@@ -70,6 +71,8 @@ def me(user: UserDep, db: DbDep) -> dict:
         "role": role,
         "name": person.name if person else user["sub"],
         "capabilities": sorted(auth.capabilities_for(db, role)),
+        # The screens of modules this plant has off, so the nav leaves them out.
+        "pages_off": list(modules.pages_off(get_settings().modules)),
     }
 
 

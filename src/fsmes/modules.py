@@ -33,12 +33,13 @@ from dataclasses import dataclass, field
 #: The setting that filters this registry. Its value is a comma-separated
 #: list read left to right, each item one of:
 #:
-#:   ``all``     every module in this file
+#:   ``all``     every module in this file a plant does not have to ask for
 #:   ``<name>``  switch that module on
 #:   ``-<name>`` switch that module off
 #:
-#: so ``all`` (the default) is every module on, ``all,-quality`` is everything
-#: except quality, and ``quality,maintenance`` is those two and nothing else
+#: so ``all`` (the default) is every module on except the opt-in ones,
+#: ``all,-quality`` is that without quality, ``all,gauge_studies`` is that and
+#: gauge studies, and ``quality,maintenance`` is those two and nothing else
 #: optional. Kernel modules are not filtered and naming one is refused rather
 #: than quietly ignored, because a plant that thinks it turned off its audit
 #: trail and did not should hear about it.
@@ -228,6 +229,20 @@ class Module:
     master data, routings, orders, dispatch, execution, audit and auth, and a
     plant without them is not an MES."""
 
+    opt_in: bool = False
+    """Off until a plant names it. `all` leaves an opt-in module out, so it
+    comes on only when `MES_MODULES` (or a pack's `[modules]` table) writes
+    its name. Scott, 2026-11-23: every strategic module from now on can be
+    switched off for a plant, carries its own tables and tests, and its tools
+    load only when it is on - and a plant that has not asked for one does not
+    get it with a bare default. The modules from before that rule are not
+    opt-in, so `all` still means for them what it always meant."""
+
+    requires: tuple[str, ...] = ()
+    """The optional modules this one cannot be served without. Switching it
+    on with one of them off is refused at start-up, by name, rather than
+    serving screens whose every fetch would answer 404."""
+
     routers: tuple[Mount, ...] = ()
     pages: tuple[Page, ...] = ()
 
@@ -253,8 +268,8 @@ class Module:
 
 
 #: Every module, in the order the app mounts them. Nine are the kernel and
-#: fourteen are optional; the totals are asserted below so this comment cannot
-#: drift away from the list.
+#: fifteen are optional, one of them opt-in; the totals are asserted in
+#: `tests/test_module_wall.py` so this comment cannot drift away from the list.
 REGISTRY: tuple[Module, ...] = (
     # ----------------------------------------------------------- the kernel
     Module(
@@ -912,13 +927,15 @@ REGISTRY: tuple[Module, ...] = (
     Module(
         name="quality",
         title="Specifications, checks, non-conformances and gauges",
+        # Gauge studies (gage R&R) were mounted here from 2026-11-22 to
+        # 2026-11-24 and are the `gauge_studies` module below now: their own
+        # router, screen, tools and tables, served only on a plant that asks.
         # The severities are mounted first, for the reason the downtime
         # vocabulary is mounted before `routers.equipment`: a router that ends
         # with `/{code}` reads any single segment as one of its own. This one
         # has no such route today, and the ordering is here so that the day it
         # grows one, nothing has to be found out the hard way.
         routers=(Mount("fsmes.api.routers.severities", "/quality", ("quality",)),
-                 Mount("fsmes.api.routers.gage_studies", "/quality", ("quality",)),
                  Mount("fsmes.api.routers.quality", "/quality", ("quality",))),
         pages=(
             Page("/dashboard/quality", "quality.html",
@@ -928,9 +945,6 @@ REGISTRY: tuple[Module, ...] = (
                  "capable, and which are two different questions."),
             Page("/dashboard/gauges", "gauges.html",
                  "The gauge register, calibration, and what a failed one invalidated."),
-            Page("/dashboard/gauges/studies", "gage-studies.html",
-                 "Gauge studies (gage R&R): how much of a gauge's spread is the "
-                 "gauge, the people and the parts, and the verdict - or why not."),
             Page("/dashboard/severities", "severities.html",
                  "Quality: the plant's own words for how bad a finding is - what "
                  "is on the list, what is drafted, what was retired, and the form "
@@ -1071,11 +1085,28 @@ REGISTRY: tuple[Module, ...] = (
                 edit_here=True,
                 pack_keys=("[quality] containment_max_depth",)),
         ),
-        tools=("fsmes.mcp.quality", "fsmes.mcp.severities", "fsmes.mcp.gage_rr"),
+        tools=("fsmes.mcp.quality", "fsmes.mcp.severities"),
         tables=("quality_specs", "quality_checks", "quality_samples",
                 "quality_counts", "non_conformances", "spc_signals", "gauges",
-                "calibrations", "nc_severities", "gauge_studies",
-                "gauge_study_readings"),
+                "calibrations", "nc_severities"),
+    ),
+    Module(
+        name="gauge_studies",
+        title="Gauge studies (gage R&R)",
+        # The first module a plant has to ask for. It reads the gauge register
+        # and the specifications, which are quality's, so it needs quality on.
+        # Its routes keep the `/quality/gage-studies` paths they had, so no
+        # bookmark, tool or script moves; mounted after quality's routers,
+        # which is safe because quality has no route that is a bare
+        # `/quality/{param}` to swallow them.
+        opt_in=True,
+        requires=("quality",),
+        routers=(Mount("fsmes.api.routers.gage_studies", "/quality", ("quality",)),),
+        pages=(Page("/dashboard/gauges/studies", "gage-studies.html",
+                    "Gauge studies (gage R&R): how much of a gauge's spread is the "
+                    "gauge, the people and the parts, and the verdict - or why not."),),
+        tools=("fsmes.mcp.gage_rr",),
+        tables=("gauge_studies", "gauge_study_readings"),
     ),
     Module(
         name="kpis",
@@ -1324,6 +1355,8 @@ BY_NAME: dict[str, Module] = {m.name: m for m in REGISTRY}
 ALL_NAMES: tuple[str, ...] = tuple(m.name for m in REGISTRY)
 KERNEL_NAMES: frozenset[str] = frozenset(m.name for m in REGISTRY if m.kernel)
 OPTIONAL_NAMES: tuple[str, ...] = tuple(m.name for m in REGISTRY if not m.kernel)
+#: The modules a plant has to name: `all` does not include them.
+OPT_IN_NAMES: tuple[str, ...] = tuple(m.name for m in REGISTRY if m.opt_in)
 
 
 class UnknownModule(ValueError):
@@ -1339,8 +1372,10 @@ def resolve(spec: str | None = None) -> frozenset[str]:
 
     Read left to right so later items win: `all,-quality` is everything but
     quality, and `all,-quality,quality` is everything. An empty or missing
-    value means the default, which is everything - nothing changes for a plant
-    that has never heard of this setting.
+    value means the default, `all`, which is every module except the opt-in
+    ones (`OPT_IN_NAMES`): those come on only where the value names them, as
+    `all,gauge_studies` does. A module switched on without a module it
+    `requires` is refused, by name, rather than served half.
     """
     text = (spec if spec is not None else DEFAULT).strip()
     if not text:
@@ -1352,7 +1387,7 @@ def resolve(spec: str | None = None) -> frozenset[str]:
         if not item:
             continue
         if item == "all":
-            on |= set(ALL_NAMES)
+            on |= {m.name for m in REGISTRY if not m.opt_in}
             continue
         off = item.startswith("-")
         name = item[1:].strip() if off else item
@@ -1370,6 +1405,14 @@ def resolve(spec: str | None = None) -> frozenset[str]:
             on.discard(name)
         else:
             on.add(name)
+    for module in REGISTRY:
+        missing = [need for need in module.requires if module.name in on and need not in on]
+        if missing:
+            raise UnknownModule(
+                f"{SETTING} switches {module.name!r} on and {', '.join(map(repr, missing))} "
+                f"off, and {module.name} cannot be served without "
+                f"{'it' if len(missing) == 1 else 'them'}: switch "
+                f"{', '.join(missing)} on as well, or {module.name} off.")
     return frozenset(on)
 
 
@@ -1384,6 +1427,16 @@ def disabled(spec: str | None = None) -> tuple[Module, ...]:
     answer, so anything reporting the state can state its total."""
     names = resolve(spec)
     return tuple(m for m in REGISTRY if m.name not in names)
+
+
+def pages_off(spec: str | None = None) -> tuple[str, ...]:
+    """The dashboard paths of every module that is off, in registry order.
+
+    What the navigation leaves out: a chip that opens onto a 404 looks broken
+    rather than absent. A plant that serves everything gets an empty tuple and
+    the navigation it always had.
+    """
+    return tuple(page.path for module in disabled(spec) for page in module.pages)
 
 
 def config_sections(domain: str, served: tuple[Module, ...] | None = None

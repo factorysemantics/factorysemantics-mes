@@ -35,6 +35,12 @@ profile  = "laptop"
 #
 # (The crew's lab adds its own, on its own cluster.)
 
+# Gauge studies are an opt-in module (2026-11-24): `all` leaves them out, so
+# this plant - the one whose scripted studies are gage_studies.json beside it,
+# and the one the film "Gauge or process" is shot on - names them.
+[modules]
+gauge_studies = true
+
 [serve]
 api_host     = "127.0.0.1"
 api_port     = 8040
