@@ -32,7 +32,7 @@ def test_every_address_of_the_local_model_points_nowhere_during_a_test():
 
 
 def test_no_other_module_knows_where_the_local_model_is():
-    knowing = sorted(str(path.relative_to(SRC)) for path in SRC.rglob("*.py")
+    knowing = sorted(path.relative_to(SRC).as_posix() for path in SRC.rglob("*.py")
                      if re.search(REAL, path.read_text(encoding="utf-8")))
     assert knowing == ["services/ai_status.py", "services/assistant.py",
                        "services/design.py", "services/drafting.py",
