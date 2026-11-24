@@ -33,7 +33,7 @@ If it exists, call it. These are the ones that keep being written again:
 
 | You want | The one copy |
 |---|---|
-| the line a machine is on | `services/masterdata.work_center_of` |
+| the line a machine is on | `services/masterdata.work_center_of` (over a tree already read: `work_center_in`) |
 | a machine's cost center | `services/masterdata.cost_center` |
 | a machine by code, or a 404 | `services/masterdata.get_equipment` |
 | an xlsx download of a list | `api/export.spreadsheet` + `FS.exportXlsx` in `web/common.js` |
