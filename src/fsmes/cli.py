@@ -3255,7 +3255,11 @@ def sim_gage_study(
         client.headers["Authorization"] = f"Bearer {login.json()['token']}"
         failed = 0
         for name in names:
-            outcome = gage_study.run(client, known[name], seed=seed)
+            try:
+                outcome = gage_study.run(client, known[name], seed=seed)
+            except gage_study.Refused as exc:
+                typer.echo(f"{name}: refused - {exc}", err=True)
+                raise typer.Exit(1) from None
             wrong = gage_study.matches_key(outcome)
             failed += bool(wrong)
             typer.echo(f"{name}: {outcome['study']['code']} - "

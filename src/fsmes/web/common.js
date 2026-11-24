@@ -538,7 +538,11 @@
 
   function renderNav(nav, active, who) {
     const caps = who.capabilities || [];
-    const allowed = (entry) => entry.cap === null || caps.includes(entry.cap);
+    /* A screen whose module this plant has switched off is not served, so
+       its chip is not shown either: a chip onto a 404 looks broken. */
+    const off = new Set(who.pages_off || []);
+    const allowed = (entry) => !off.has(entry.href.split("?")[0])
+      && (entry.cap === null || caps.includes(entry.cap));
 
     nav.textContent = "";
     let current = null;

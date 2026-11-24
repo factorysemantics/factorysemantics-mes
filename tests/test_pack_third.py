@@ -124,9 +124,19 @@ def _every_path(monkeypatch) -> dict:
     """What a plant with every module on documents. Built inside the test
     because by the time it runs, this process's environment *is* the third
     plant's - which is the whole point of the fixture."""
+    before = os.environ.get("MES_MODULES")
     monkeypatch.setenv("MES_MODULES", "all")
     get_settings.cache_clear()
-    return create_app().openapi()["paths"]
+    try:
+        return create_app().openapi()["paths"]
+    finally:
+        # monkeypatch puts the variable back after the test, but the cached
+        # settings would keep `all` for every later test in the process.
+        if before is None:
+            monkeypatch.delenv("MES_MODULES")
+        else:
+            monkeypatch.setenv("MES_MODULES", before)
+        get_settings.cache_clear()
 
 
 def test_the_api_document_describes_neither_module(from_the_pack, monkeypatch):
@@ -211,10 +221,11 @@ def test_the_third_pack_disagrees_with_the_format_and_not_only_with_the_line():
 
 
 def test_switching_two_modules_off_is_still_a_plant_and_not_a_different_product():
-    """Twenty-three modules, nine of them kernel. This plant serves
-    twenty-one, and the nine it could never switch off are all there."""
+    """Twenty-four modules, nine of them kernel and one opt-in (gauge
+    studies, which this pack does not name). This plant serves twenty-one,
+    and the nine it could never switch off are all there."""
     on = registry.resolve(fmt.module_spec(fmt.read(PACK)))
-    assert len(on) == len(registry.REGISTRY) - 2
+    assert len(on) == len(registry.REGISTRY) - 2 - len(registry.OPT_IN_NAMES) == 21
     assert on >= registry.KERNEL_NAMES
     assert {m.name for m in registry.disabled(fmt.module_spec(fmt.read(PACK)))} == {
-        "serialization", "coa"}
+        "serialization", "coa", "gauge_studies"}
