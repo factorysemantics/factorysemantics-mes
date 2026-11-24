@@ -883,10 +883,8 @@ $("#form-quality").addEventListener("submit", async (event) => {
       method: "POST",
       body: { material, characteristic, value: Number(form.get("value")), order: null, equipment: equipment || null, gauge: gauge || null },
     });
-    toast(
-      result.result === "pass" ? "Check passed." : `Out of spec — ${result.non_conformance} opened.`,
-      result.result === "pass" ? "good" : "bad"
-    );
+    const said = FS.checkSaid(result);
+    toast(said.message, said.kind);
     event.target.reset();
     await refresh();
   } catch (error) {

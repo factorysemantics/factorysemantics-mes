@@ -339,6 +339,37 @@
     }).catch(() => { /* the toast stays up; a stuck message beats a lost one */ });
   };
 
+  /* ---------- what a recorded check set off ----------
+     `POST /quality/checks` answers with the result, the non-conformance an
+     out-of-spec reading opened, and `spc`: the chart rules the reading
+     tripped, each with the hold it raised. Every door that records a check
+     says it in these words (structure report 2026-11-18, C3). A chart
+     signal is said first, because a reading can be in spec and still a
+     finding: "in spec" alone would be the truth and not the whole of it.
+     {message, kind} for the toast; `detail` for a screen that shows more,
+     null when there is nothing to add. */
+  FS.checkSaid = function checkSaid(out) {
+    const value = FS.fmt.qty(out.value);
+    const decides = "a supervisor decides what happens to the material on the Quality screen.";
+    const signal = (out.spc || [])[0];
+    if (signal) {
+      return {
+        message: `SPC rule ${signal.rule} — ${signal.nonconformance} raised.`, kind: "bad",
+        detail: `${value} is ${out.result === "fail" ? "out of spec" : "in spec"}, `
+              + `but the control chart fired rule ${signal.rule}: ${signal.what}. `
+              + `Non-conformance ${signal.nonconformance} was raised; ${decides}`,
+      };
+    }
+    if (out.non_conformance) {
+      return {
+        message: `${value} is out of spec — ${out.non_conformance} raised.`, kind: "bad",
+        detail: `${value} was outside the specification. `
+              + `Non-conformance ${out.non_conformance} was raised; ${decides}`,
+      };
+    }
+    return { message: `Recorded ${value} — in spec.`, kind: "good", detail: null };
+  };
+
   /* ---------- paging ----------
      One renderer for the {items,total,limit,offset,has_more} envelope, so
      "Showing 50 of 18,347" reads the same on every list. */

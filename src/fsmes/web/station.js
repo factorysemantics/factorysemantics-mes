@@ -598,33 +598,11 @@ function wireQuality() {
         gauge: $("#q-gauge").value.trim() || null,
       }});
       $("#q-value").value = "";
+      const said = FS.checkSaid(out);
+      toast(said.message, said.kind);
       const raised = $("#q-raised");
-      const signal = (out.spc || [])[0];
-      if (signal) {
-        // In spec and still a finding: the chart judged the series, not the
-        // reading. Saying only "in spec" here would be the truth and not the
-        // whole of it.
-        toast(`SPC rule ${signal.rule} — ${signal.nonconformance} raised.`, "bad");
-        raised.textContent = `${fmt.qty(out.value)} is ${out.result === "fail" ? "out of spec" : "in spec"}, `
-                           + `but the control chart fired rule ${signal.rule}: ${signal.what}. `
-                           + `Non-conformance ${signal.nonconformance} was raised; a supervisor decides `
-                           + `what happens to the material on the Quality screen.`;
-        raised.classList.remove("hidden");
-        await renderRecent();
-        return;
-      }
-      if (out.non_conformance) {
-        // The MES raising one is the system working. Say which one it is, by
-        // code, so the supervisor can find it on the Quality screen.
-        toast(`${fmt.qty(out.value)} is out of spec — ${out.non_conformance} raised.`, "bad");
-        raised.textContent = `${fmt.qty(out.value)} was outside the specification. `
-                           + `Non-conformance ${out.non_conformance} was raised; a supervisor `
-                           + `decides what happens to the material on the Quality screen.`;
-        raised.classList.remove("hidden");
-      } else {
-        toast(`Recorded ${fmt.qty(out.value)} — in spec.`);
-        raised.classList.add("hidden");
-      }
+      raised.textContent = said.detail || "";
+      raised.classList.toggle("hidden", !said.detail);
       await renderRecent();
     } catch (err) {
       toast(err.message, "bad");

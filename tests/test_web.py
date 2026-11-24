@@ -218,7 +218,10 @@ def test_the_station_says_which_non_conformance_its_reading_raised():
     who is not told which one has been left to wonder whether anything
     happened at all."""
     js = (WEB / "station.js").read_text(encoding="utf-8")
-    assert "out.non_conformance" in js
+    # The words live in `FS.checkSaid`, one copy for every door that records
+    # a check (test_every_door_that_records_a_check_says_what_it_set_off.py).
+    assert "FS.checkSaid(out)" in js
+    assert "out.non_conformance" in (WEB / "common.js").read_text(encoding="utf-8")
     assert 'id="q-raised"' in (WEB / "station.html").read_text(encoding="utf-8")
 
 
