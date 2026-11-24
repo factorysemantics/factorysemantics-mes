@@ -1621,6 +1621,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#switching-an-opt-in-module-on" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Switching an opt-in module on
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#turning-one-off" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4528,6 +4539,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#switching-an-opt-in-module-on" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Switching an opt-in module on
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#turning-one-off" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4592,7 +4614,8 @@ those parts of the MES — and what exactly "off" means, because the answer is
 narrower than it sounds.</p>
 <p>Nothing here changes anything for a plant that does not use it. With no
 setting, every module is on, which is what every plant had before the setting
-existed.</p>
+existed — except the <strong>opt-in</strong> modules, which a plant switches on by name
+(below). There is one so far: <code>gauge_studies</code>.</p>
 <h2 id="the-setting">The setting<a class="headerlink" href="#the-setting" title="Permanent link">&para;</a></h2>
 <p>One environment variable, <code>MES_MODULES</code>, read left to right:</p>
 <table>
@@ -4605,11 +4628,15 @@ existed.</p>
 <tbody>
 <tr>
 <td><code>all</code></td>
-<td>every module. This is the default</td>
+<td>every module except the opt-in ones. This is the default</td>
+</tr>
+<tr>
+<td><code>all,gauge_studies</code></td>
+<td>that, and gauge studies</td>
 </tr>
 <tr>
 <td><code>all,-quality</code></td>
-<td>every module except quality</td>
+<td>every module except quality (and the opt-in ones)</td>
 </tr>
 <tr>
 <td><code>all,-quality,-erp</code></td>
@@ -4658,11 +4685,11 @@ retention rule, a regulator — turning it off is not the tool. Its rows are
 still in the database and still in every backup.</p>
 </div>
 <h2 id="the-modules">The modules<a class="headerlink" href="#the-modules" title="Permanent link">&para;</a></h2>
-<p>Twenty-three modules, of which <strong>nine are the kernel</strong> and cannot be switched
+<p>Twenty-four modules, of which <strong>nine are the kernel</strong> and cannot be switched
 off — master data, routings, orders, dispatch, execution, equipment, audit,
 auth and the dashboard front door. A plant without those is not an MES, and
 asking for it is refused.</p>
-<p>The <strong>fourteen a plant may switch</strong> are:</p>
+<p>The <strong>fifteen a plant may switch</strong> are:</p>
 <table>
 <thead>
 <tr>
@@ -4727,11 +4754,26 @@ asking for it is refused.</p>
 <td><code>design</code></td>
 <td>the design partner (a development tool)</td>
 </tr>
+<tr>
+<td><code>gauge_studies</code></td>
+<td>gauge studies (gage R&amp;R): the Gauge studies screen, its routes and tools. <strong>Opt-in</strong>, and needs <code>quality</code></td>
+</tr>
 </tbody>
 </table>
 <p>The authoritative list is <code>src/fsmes/modules.py</code>, which also says, per module,
 which routers it mounts, which screens it serves, which agent tools it
 registers and which tables its rows live in.</p>
+<h2 id="switching-an-opt-in-module-on">Switching an opt-in module on<a class="headerlink" href="#switching-an-opt-in-module-on" title="Permanent link">&para;</a></h2>
+<p>Since 2026-11-24 a new strategic module can be <strong>opt-in</strong>: <code>all</code> leaves it out,
+and a plant that wants it writes its name. In a pack:</p>
+<div class="highlight"><pre><span></span><code><span class="k">[modules]</span>
+<span class="n">gauge_studies</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+</code></pre></div>
+<p>or by hand, <code>MES_MODULES=all,gauge_studies</code>. A module that needs another
+(<code>gauge_studies</code> needs <code>quality</code>) is refused at start-up when that one is off,
+with both names in the message. Switching it off again keeps its rows, as for
+any module; the chat on the AI tab is told it is switched off, so asked about
+it, it says so rather than that the plant has none.</p>
 <h2 id="turning-one-off">Turning one off<a class="headerlink" href="#turning-one-off" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="nv">MES_MODULES</span><span class="o">=</span>all,-serialization<span class="w"> </span>fsmes<span class="w"> </span>serve
 </code></pre></div>
@@ -4753,7 +4795,8 @@ a plant that sets <code>MES_MODULES</code> by hand is setting the same thing:</p
 </code></pre></div>
 <p>becomes <code>all,-serialization,-coa</code>. <code>all</code> is written first and the pack's own
 words after it, so a module added by a later release arrives switched <strong>on</strong>
-rather than silently missing from a plant that has never heard of it. A
+rather than silently missing from a plant that has never heard of it — unless
+it is opt-in, in which case it stays off until the pack names it. A
 module name this version does not have, or a kernel module, is refused by
 <code>fsmes pack check</code> before the plant ever starts.</p>
 <p><code>labs/multiplant/finewire</code> is the plant that does it: a wire-drawing hall
