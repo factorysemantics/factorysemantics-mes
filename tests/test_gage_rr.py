@@ -151,13 +151,9 @@ def test_a_bad_study_says_it_is_the_gauge(bench):
 
 
 
-def test_a_good_gauge_on_a_process_out_of_control_says_it_is_the_process(bench, monkeypatch):
-    """The chart withholds Cpk while the process is out of control. With a
-    gauge that passed its study, that is the process's trouble - said as
-    such, not as not known."""
+def _a_good_study(bench):
     from dataclasses import replace
 
-    from fsmes.services import spc
     from fsmes.sim import gage_study
 
     cases = gage_study.load(Path(__file__).resolve().parents[1] / "labs" / "cutlery" / "gage_studies.json")
@@ -165,11 +161,46 @@ def test_a_good_gauge_on_a_process_out_of_control_says_it_is_the_process(bench, 
                    biases={"A": 0.0, "B": 0.0, "C": 0.0}, repeatability_sd=0.01)
     code = plan(bench)["code"]
     gage_rr.record(bench, code, readings=gage_study.readings(case), actor="op")
+    return code
+
+
+def test_a_good_gauge_on_a_process_out_of_control_says_it_is_the_process(bench, monkeypatch):
+    """The chart withholds Cpk while the process is out of control. With a
+    gauge that passed its study, that is the process's trouble - said as
+    such, not as not known."""
+    from fsmes.services import spc
+
+    _a_good_study(bench)
     monkeypatch.setattr(spc, "chart", lambda *a, **k: {
         "stable": False, "capability": None, "verdict": "out of control"})
     out = gage_rr.gauge_or_process(bench, "FG-COLA", "width")
     assert out["study"]["band"] == "acceptable"
     assert out["answer"] == "process" and "not in control" in out["verdict"]
+
+
+def test_a_chart_out_of_control_hands_out_no_cpk_even_when_it_computed_one(bench, monkeypatch):
+    from fsmes.services import spc
+
+    _a_good_study(bench)
+    monkeypatch.setattr(spc, "chart", lambda *a, **k: {
+        "stable": False, "capability": {"cpk": 1.126, "cp": 1.4}, "verdict": "out of control"})
+    out = gage_rr.gauge_or_process(bench, "FG-COLA", "width")
+    assert out["answer"] == "process"
+    assert out["process"]["cpk"] is None and out["process"]["cp"] is None
+    assert "withheld" in out["process"]["capability_note"]
+    assert "1.13" not in out["verdict"] and "1.126" not in out["verdict"]
+
+
+def test_a_chart_in_control_still_carries_its_cpk(bench, monkeypatch):
+    from fsmes.services import spc
+
+    _a_good_study(bench)
+    monkeypatch.setattr(spc, "chart", lambda *a, **k: {
+        "stable": True, "capability": {"cpk": 1.8, "cp": 1.9}, "verdict": "in control"})
+    out = gage_rr.gauge_or_process(bench, "FG-COLA", "width")
+    assert out["answer"] == "neither"
+    assert (out["process"]["cpk"], out["process"]["cp"]) == (1.8, 1.9)
+    assert "capability_note" not in out["process"] and "1.80" in out["verdict"]
 
 # ---------------------------------------------------------------- the tools
 

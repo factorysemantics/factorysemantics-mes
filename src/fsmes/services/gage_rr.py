@@ -70,6 +70,12 @@ CONVENTION = ("bands are the industry's convention (AIAG MSA): under 10 % "
               "acceptable, 10-30 % may be acceptable depending on the use, "
               "over 30 % not acceptable; at least 5 distinct categories")
 
+CAPABILITY_WITHHELD = ("Cp and Cpk are withheld while the control chart is out of "
+                       "control, as the SPC screen withholds them: a capability figure "
+                       "describes a process that no longer exists. Do not quote, "
+                       "estimate or work one out; say it is withheld until the chart "
+                       "is back in control.")
+
 
 # --------------------------------------------------------------------------
 # The arithmetic. Pure: numbers in, numbers out, nothing read or written.
@@ -545,11 +551,16 @@ def gauge_or_process(session: Session, material: str, characteristic: str) -> di
     capable, _marginal = spc.cpk_bars(session)
     try:
         chart = spc.chart(session, material, characteristic)
-        cap = chart.get("capability")
-        process = {"stable": chart.get("stable"),
+        # The chart's own verdict decides, as on the SPC screen: no capability
+        # figure leaves here while the process is out of control.
+        stable = chart.get("stable")
+        cap = chart.get("capability") if stable is not False else None
+        process = {"stable": stable,
                    "cpk": cap.get("cpk") if cap else None,
                    "cp": cap.get("cp") if cap else None,
                    "cpk_capable": capable, "chart_verdict": chart.get("verdict")}
+        if stable is False:
+            process["capability_note"] = CAPABILITY_WITHHELD
     except NotFound:
         process = {"stable": None, "cpk": None, "cp": None, "cpk_capable": capable,
                    "chart_verdict": "no production readings charted"}

@@ -95,3 +95,16 @@ def test_a_specification_with_other_limits_is_refused_not_changed(engineer):
     spec = engineer.get("/quality/specs", params={"material": "UT-KNIFE",
                                                   "characteristic": "bolster_width_mm"}).json()
     assert (spec["items"][0]["min_value"], spec["items"][0]["max_value"]) == (11.0, 13.0)
+
+
+def test_a_good_caliper_on_a_drifting_process_says_process_and_quotes_no_cpk(engineer):
+    """The SPC screen withholds capability while the chart is out of control;
+    the answer to "the gauge or the process?" withholds it the same way, and
+    says so, rather than quoting the Cpk the screen does not show."""
+    answer = gage_study.run(engineer, CASES["wandering-process"])["gauge_or_process"]
+    process = answer["process"]
+    assert answer["answer"] == "process", answer["verdict"]
+    assert process["stable"] is False
+    assert process["cpk"] is None and process["cp"] is None
+    assert "withheld while the control chart is out of control" in process["capability_note"]
+    assert "withheld" in answer["verdict"] and "Cpk is" not in answer["verdict"]
