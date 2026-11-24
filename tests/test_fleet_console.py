@@ -193,8 +193,9 @@ def test_the_console_shows_two_packs_running_different_modules_from_one_codebase
     different modules enabled, and for the console to show both."""
     fleet = {p["name"]: p for p in watching.look()["plants"]}
 
-    assert fleet["bottling"]["modules_off"] == []
-    assert set(fleet["finewire"]["modules_off"]) == {"serialization", "coa"}
+    # Neither pack names gauge studies, an opt-in module since 2026-11-24.
+    assert fleet["bottling"]["modules_off"] == ["gauge_studies"]
+    assert set(fleet["finewire"]["modules_off"]) == {"serialization", "coa", "gauge_studies"}
     assert fleet["bottling"]["modules_total"] == fleet["finewire"]["modules_total"]
     assert len(fleet["finewire"]["modules_on"]) == len(fleet["bottling"]["modules_on"]) - 2
 
