@@ -75,6 +75,32 @@ def _the_suite_writes_no_agent_records_to_this_machine(tmp_path, monkeypatch):
     monkeypatch.setattr(agent, "TURN_FILE", tmp_path / "agent-turns.jsonl")
 
 
+#: Where the suite's local model "is": port 1, where nothing listens, so a call
+#: is refused at once. CI has no local model; a developer's box does.
+NO_LOCAL_MODEL = "http://127.0.0.1:1"
+
+
+@pytest.fixture(autouse=True)
+def _the_suite_never_wakes_a_real_local_model(monkeypatch):
+    """No test reaches the chat model running on this machine.
+
+    Every module that asks the local model has its address as a constant,
+    `127.0.0.1:11434`. On a developer's box something listens there: a test
+    that took the cloud key away fell back to it, two real generate calls put
+    5.5 GB on the graphics card for five minutes after the suite ended, and a
+    voice build on the same box failed for it (2026-11-23). In CI nothing
+    listens, so every test already passes without a real model; here it is
+    made the same. A test about the local model points it at its own fake,
+    and that still wins - an autouse fixture is applied before the test's own.
+    """
+    from fsmes.services import ai_status, assistant, design, drafting
+    from fsmes.sim import rollup, triage
+
+    monkeypatch.setattr(ai_status, "OLLAMA_URL", NO_LOCAL_MODEL)
+    for module in (assistant, design, drafting, rollup, triage):
+        monkeypatch.setattr(module, "OLLAMA", NO_LOCAL_MODEL)
+
+
 def _empty(engine: Engine) -> None:
     """Remove every row from every table the domain model declares."""
     if engine.dialect.name == "postgresql":
