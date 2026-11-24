@@ -11,15 +11,10 @@ always was. This drives the runner's own stage in Chromium; no plant is needed.
 
 from __future__ import annotations
 
-import importlib.util
-from pathlib import Path
-
 import pytest
 
 pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
-REPO = Path(__file__).resolve().parents[1]
-RUNNER = REPO / "scripts" / "record-scene.py"
 
 VIEWPORT = {"width": 800, "height": 600}
 # A maintenance list that is the last thing on a page a little taller than the window.
@@ -32,14 +27,6 @@ TALL = (
     "<!doctype html><body style='margin:0'><div style='height:900px'>above</div>"
     "<div id='detail-panel' style='height:1200px'>the order</div><div style='height:2000px'></div>"
 )
-
-
-@pytest.fixture(scope="module")
-def runner():
-    spec = importlib.util.spec_from_file_location("record_scene_scroll_room", RUNNER)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def test_the_last_row_of_a_short_page_ends_up_above_the_caption_bar(runner, tmp_path):

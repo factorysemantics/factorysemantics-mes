@@ -18,28 +18,17 @@ line up, and that does not need a picture.
 
 from __future__ import annotations
 
-import importlib.util
 import re
 from pathlib import Path
 
 import pytest
 
 REPO = Path(__file__).resolve().parents[1]
-RUNNER = REPO / "scripts" / "record-scene.py"
 SCENE = REPO / "scripts" / "scenes" / "02-spc-on-the-line.toml"
 
 #: The published GIF's frame rate, the fastest the ladder in the runner will
 #: use. A caption held for four seconds is forty frames of it.
 FRAMES_PER_SECOND = 10
-
-
-@pytest.fixture(scope="module")
-def runner():
-    """`scripts/record-scene.py`, imported by path because of the hyphen."""
-    spec = importlib.util.spec_from_file_location("record_scene", RUNNER)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 class StageOnPaper:

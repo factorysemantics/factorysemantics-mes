@@ -12,16 +12,12 @@ a second.
 
 from __future__ import annotations
 
-import importlib.util
 import time
-from pathlib import Path
 
 import pytest
 
 pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
-REPO = Path(__file__).resolve().parents[1]
-RUNNER = REPO / "scripts" / "record-scene.py"
 
 #: The keys a plain `say` mark has always had; studio reads them.
 PLAIN_SAY_KEYS = {"at", "what", "kind", "part", "line", "hold"}
@@ -73,14 +69,6 @@ hold = 0.4
 at = "#m-q"
 style = "spotlight"
 """
-
-
-@pytest.fixture(scope="module")
-def runner():
-    spec = importlib.util.spec_from_file_location("record_scene_cursor", RUNNER)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 @pytest.fixture(scope="module")

@@ -13,15 +13,10 @@ Chromium against pages of that shape; no plant is needed.
 
 from __future__ import annotations
 
-import importlib.util
-from pathlib import Path
-
 import pytest
 
 pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
-REPO = Path(__file__).resolve().parents[1]
-RUNNER = REPO / "scripts" / "record-scene.py"
 
 VIEWPORT = {"width": 1280, "height": 720}
 ORIGIN = "http://scene.test/"
@@ -41,14 +36,6 @@ PINNED = (
     "<!doctype html><body style='margin:0'>"
     "<button id='pinned' style='position:fixed;right:20px;bottom:20px'>Issue</button>"
 )
-
-
-@pytest.fixture(scope="module")
-def runner():
-    spec = importlib.util.spec_from_file_location("record_scene_avatars_corner", RUNNER)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def a_page(pw, runner, body: str):

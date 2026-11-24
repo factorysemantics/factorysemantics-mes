@@ -388,3 +388,22 @@ def serve_plant(tmp_path_factory):
             yield served
 
     return _serve_plant
+
+
+@pytest.fixture(scope="module")
+def runner():
+    """`scripts/record-scene.py`, imported by path because of the hyphen.
+
+    The one copy (`test_the_recorder_is_loaded_in_one_place.py`): 31 test
+    files each kept their own. Module-scoped, as every copy was, so each
+    test file gets a fresh recorder and a patch made in one cannot leak into
+    another.
+    """
+    import importlib.util
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[1] / "scripts" / "record-scene.py"
+    spec = importlib.util.spec_from_file_location("record_scene", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module

@@ -21,28 +21,13 @@ browser opens rather than after the take is in the can.
 
 from __future__ import annotations
 
-import importlib.util
-from pathlib import Path
-
 import pytest
-
-REPO = Path(__file__).resolve().parents[1]
-RUNNER = REPO / "scripts" / "record-scene.py"
 
 #: A plant on some other machine, at one of the ports a plant somebody else
 #: started tends to answer on. The address is a documentation one (RFC 5737)
 #: and not any real plant's: what the test needs is an address that is not
 #: this box, and nothing is gained by writing down one that answers.
 A_PLANT_SOMEBODY_ELSE_IS_WATCHING = "http://198.51.100.7:8110"
-
-
-@pytest.fixture(scope="module")
-def runner():
-    """`scripts/record-scene.py`, imported by path because of the hyphen."""
-    spec = importlib.util.spec_from_file_location("record_scene", RUNNER)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 @pytest.mark.parametrize(

@@ -13,15 +13,10 @@ shapes; no plant is needed.
 
 from __future__ import annotations
 
-import importlib.util
-from pathlib import Path
-
 import pytest
 
 pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
-REPO = Path(__file__).resolve().parents[1]
-RUNNER = REPO / "scripts" / "record-scene.py"
 
 VIEWPORT = {"width": 1280, "height": 720}
 ORIGIN = "http://scene.test/"
@@ -75,14 +70,6 @@ EVERYTHING = (
     "<!doctype html><body style='margin:0'>"
     "<div id='all' style='position:absolute;left:4px;top:4px;right:4px;bottom:4px'>all of it</div>"
 )
-
-
-@pytest.fixture(scope="module")
-def runner():
-    spec = importlib.util.spec_from_file_location("record_scene_label_outside", RUNNER)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 @pytest.fixture()

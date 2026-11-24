@@ -18,14 +18,12 @@ card is painted onto a page that is only a stand-in, and ffmpeg is never run.
 
 from __future__ import annotations
 
-import importlib.util
 import json
 from pathlib import Path
 
 import pytest
 
 REPO = Path(__file__).resolve().parents[1]
-RUNNER = REPO / "scripts" / "record-scene.py"
 SCENE = REPO / "scripts" / "scenes" / "course" / "01-02-never-invent-production.toml"
 
 EXPLAIN = """FILL01 — Refill Station 01
@@ -47,15 +45,6 @@ EXPLAIN = """FILL01 — Refill Station 01
   coverage                       63.6%
   availability (run ÷ observed)  100.0%
 """
-
-
-@pytest.fixture(scope="module")
-def runner():
-    """`scripts/record-scene.py`, imported by path because of the hyphen."""
-    spec = importlib.util.spec_from_file_location("record_scene_lesson_1_2", RUNNER)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def scene_file(tmp_path: Path, body: str) -> Path:
