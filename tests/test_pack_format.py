@@ -13,6 +13,7 @@ let past.
 """
 
 import json
+import os
 import shutil
 from pathlib import Path
 
@@ -316,7 +317,14 @@ def applied(tmp_path, monkeypatch):
     shutil.copytree(source, directory)
     monkeypatch.setenv("MES_DATABASE_URL", f"sqlite:///{(tmp_path / 'plant.db').as_posix()}")
     monkeypatch.setenv("MES_PLANT_TIMEZONE", "UTC")
+    # `apply` writes the pack's whole environment into this process
+    # (MES_MODULES, MES_PLANT_NAME, ...); monkeypatch only puts back what it
+    # set itself. Since gauge studies became opt-in (2026-11-24) the leaked
+    # `MES_MODULES=all` switched them off for the rest of the suite.
+    before = dict(os.environ)
     yield directory, tmp_path
+    os.environ.clear()
+    os.environ.update(before)
     for cache in (get_settings, get_engine, get_sessionmaker):
         cache.cache_clear()
 
