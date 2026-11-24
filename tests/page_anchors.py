@@ -33,6 +33,7 @@ PAGE_FILES = {
     "/dashboard/triggers": "triggers.html",
     "/dashboard/adjustments": "adjustments.html",
     "/dashboard/trace": "trace.html",
+    "/dashboard/gauges/studies": "gage-studies.html",
     # One file serves every workspace's Configuration page and reads the
     # workspace out of its own address, so the authored step names the
     # template and the proposal fills it in.

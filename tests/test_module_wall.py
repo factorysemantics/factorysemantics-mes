@@ -89,13 +89,15 @@ def test_the_registry_says_how_many_modules_there_are_and_how_many_can_be_switch
     # the machine router ends with `/{code}` and would swallow it, `quality`
     # for the same structural reason before it has such a route - and
     # `analysis` mounts the rate order its parts mix is measured against.
-    assert mounts == 26, f"{mounts} routers in the registry; the app mounted 24 before it existed"
+    # Twenty-seven since `quality` mounted gauge studies on 2026-11-22.
+    assert mounts == 27, f"{mounts} routers in the registry; the app mounted 24 before it existed"
     # Fourteen tool files across twelve modules that ship one: `equipment` and
     # `quality` each have a second for their vocabulary, mirroring the second
     # router and the screen that drafts it, `dashboard` has the one that reads
     # and writes any domain's live settings, and `analysis` has the four
     # analyses that were HTTP-only until the agent needed to read them.
-    assert tools == 14, f"{tools} tool files in the registry; the MCP server registered 14"
+    # Fifteen since `quality` shipped gauge studies' tools on 2026-11-22.
+    assert tools == 15, f"{tools} tool files in the registry; the MCP server registered 14"
 
 
 # ----------------------------------------------------------------- routes
@@ -255,8 +257,9 @@ def test_every_table_the_registry_names_is_a_real_table():
     # roster and the supervisor's dispatch rules. 27 since quality_counts joined
     # on 2026-10-11: a characteristic the plant counts keeps its lots there too.
     # 29 since the rate order and its lines joined analysis on 2026-10-30: the
-    # target the parts mix is measured against.
-    assert optional == 29, (
+    # target the parts mix is measured against. 31 since gauge studies and
+    # their readings joined quality on 2026-11-22.
+    assert optional == 31, (
         f"{optional} of {len(known)} tables belong to a module a plant may switch off")
 
 

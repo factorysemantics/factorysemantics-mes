@@ -32,6 +32,7 @@ PAGES = [
     ("schedule.html", "schedule.js"),
     ("spc.html", "spc.js"),
     ("gauges.html", "gauges.js"),
+    ("gage-studies.html", "gage-studies.js"),
     ("trace.html", "trace.js"),
     ("masterdata.html", "masterdata.js"),
     ("triggers.html", "triggers.js"),

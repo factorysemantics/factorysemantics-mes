@@ -2324,6 +2324,82 @@ SURFACES: dict[str, dict] = {
                      "body": "Your day is in the list, and the board plans around it."},
     },
     # ------------------------------------------------------------- serial units
+    "plan_gage_study": {
+        "title": "Plan a gauge study (gage R&R)",
+        "needs": "quality.study",
+        "pages": ["/dashboard/gauges/studies"],
+        "example": "Plan a gauge study of {gauge} on {material} {characteristic}",
+        "steps": [
+            {"page": "/dashboard/gauges/studies", "anchor": "gage-plan-gauge",
+             "needs": "quality.study", "fill": {"value": "{gauge}"},
+             "title": "Which gauge",
+             "body": (
+                 "{gauge}. The study judges this one instrument, so it should be "
+                 "in calibration: a study on a gauge past its due date is not judged."
+             )},
+            {"page": "/dashboard/gauges/studies", "anchor": "gage-plan-material",
+             "needs": "quality.study", "fill": {"value": "{material}"},
+             "title": "Which product",
+             "body": "{material}. The tolerance is copied from its specification."},
+            {"page": "/dashboard/gauges/studies", "anchor": "gage-plan-characteristic",
+             "needs": "quality.study", "fill": {"value": "{characteristic}"},
+             "title": "Which characteristic",
+             "body": "{characteristic}: the measured one, as the specification names it."},
+            {"page": "/dashboard/gauges/studies", "anchor": "gage-plan-appraisers",
+             "needs": "quality.study",
+             "title": "Who measures",
+             "body": (
+                 "Two or more people, comma separated - the ones who use this gauge "
+                 "on the line. A study takes them off the floor for a while, which "
+                 "is why planning one is yours to decide."
+             )},
+            {"page": "/dashboard/gauges/studies", "anchor": "gage-plan-parts",
+             "needs": "quality.study", "fill": {"value": "{parts}", "default": "10"},
+             "title": "How many parts",
+             "body": (
+                 "Ten is usual. Pick them from across the range the process makes: "
+                 "parts that all look alike make any gauge look poor."
+             )},
+            {"page": "/dashboard/gauges/studies", "anchor": "gage-plan-submit",
+             "needs": "quality.study",
+             "title": "Press Plan",
+             "body": "You press it, not me - it is planned under your own name."},
+        ],
+        "evidence": {"page": "/dashboard/gauges/studies", "anchor": "gage-study-list",
+                     "title": "It is on the list, planned",
+                     "body": "The new row reads planned, with none of its readings in yet."},
+    },
+    "record_study_reading": {
+        "title": "Record a gauge study reading",
+        "needs": "quality.record",
+        "pages": ["/dashboard/gauges/studies"],
+        "example": "Record {study}: part 1, appraiser A, trial 1",
+        "steps": [
+            {"page": "/dashboard/gauges/studies", "anchor": "gage-study-list",
+             "title": "Pick {study}",
+             "body": "Press its row; the readings grid opens below."},
+            {"page": "/dashboard/gauges/studies", "anchor": "gage-study-grid",
+             "needs": "quality.record",
+             "title": "Type the reading",
+             "body": (
+                 "One row per part, one column per appraiser and trial. A reading "
+                 "already taken is shown and cannot be typed over."
+             )},
+            {"page": "/dashboard/gauges/studies", "anchor": "gage-grid-save",
+             "needs": "quality.record",
+             "title": "Press Save",
+             "body": (
+                 "Saved under your name. A study reading is never a production check "
+                 "and is on no control chart."
+             )},
+        ],
+        "evidence": {"page": "/dashboard/gauges/studies", "anchor": "gage-study-result",
+                     "title": "The count, then the verdict",
+                     "body": (
+                         "The grid says how many of the plan are in; with the last one "
+                         "the study completes itself and the result appears here."
+                     )},
+    },
     "produce_units": {
         "title": "Produce serialised units",
         "needs": "production.book",

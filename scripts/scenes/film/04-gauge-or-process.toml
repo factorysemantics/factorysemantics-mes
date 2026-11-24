@@ -1,0 +1,375 @@
+# Gauge or process: three gauge studies with a cause scripted into each, then
+# the same question asked in the chat on the AI tab.
+#
+# The screen part of a film, not a class: one take with marks, which a
+# narrator cuts and voices afterwards. The captions are a first draft for the
+# narrator to rewrite.
+#
+# The plant is the cutlery pack, brought up by hand on 127.0.0.1:8040 (OPC
+# 4844) the way the recorder brings up its own, and the three studies are
+# written into it before the camera rolls by the simulator that scripts them
+# (src/fsmes/sim/gage_study.py, the cases in labs/cutlery/gage_studies.json), as ADMIN, the plant's first account:
+#
+#   fsmes sim-gage-study labs/cutlery/gage_studies.json all --base http://127.0.0.1:8040
+#
+# That is a quality engineer's work done off camera: a gauge registered and
+# calibrated, a study planned, ninety readings, and for the third case a
+# hundred production checks taken with the caliper that passed. This file has
+# no `[plant]` because the recorder cannot run that before it rolls. The
+# chat on the AI tab answers only on a plant started with ANTHROPIC_API_KEY
+# in its environment; the take writes only the chat question, which is why it
+# sets `allow_writes`.
+#
+#   python scripts/record-scene.py scripts/scenes/film/04-gauge-or-process.toml
+
+name = "gauge-or-process"
+title = "Gauge or process"
+out = "~/Work/gifs/strategy-gage-rr/04-gauge-or-process"
+base = "http://127.0.0.1:8040"
+badge = "pre-alpha · simulated plant · v{version}"
+user = "WALK-ENG"
+password = "walk-lab-only"
+# About four and a half minutes scripted, and up to two minutes of the chat
+# thinking, which the narrator cuts between the marks either side of it.
+budget_seconds = 420
+gif_skip_seconds = 2.0
+gif_seconds = 40.0
+width = 1280
+height = 720
+
+allow_writes = true
+
+notes = [
+  "A simulated cutlery plant. The three gauge studies were written into it off camera by `fsmes sim-gage-study labs/cutlery/gage_studies.json all`, each with a scripted cause: a worn micrometer, one appraiser seating a depth gauge differently, a good caliper on a process that wanders. The readings are drawn from a seeded generator; the MES computes the study from them as it would from real ones.",
+  "The ANOVA method is the crossed one in the AIAG MSA manual, checked in the repository against its published 10 parts x 3 appraisers x 3 trials example. The 10 % and 30 % bands are the usual convention, not a law, and the screen says so.",
+  "The chat's answer is the model's own and differs from take to take; no caption quotes it.",
+  "The take is the lab account WALK-ENG, an MES engineer. It writes one chat question, and tries one plan the MES refuses, which writes nothing.",
+]
+
+# ----------------------------------------------------------------- the hook
+
+[[step]]
+part = "hook"
+do = "slide"
+name = "title"
+title = "Is it the gauge, or the process?"
+lines = [
+  "A reading out of spec has two suspects: the part, and the gauge.",
+  "A gauge study tells them apart. Simulated plant, scripted causes.",
+]
+hold = 8.0
+
+[[step]]
+do = "mark"
+name = "the-question"
+
+# --------------------------------------------------------------- the screen
+
+[[step]]
+part = "screen"
+do = "goto"
+url = "/dashboard/gauges/studies?study=GS-WORN-MIC"
+settle = 2
+
+[[step]]
+do = "wait_for"
+js = "/not acceptable/i.test(document.querySelector('#study-verdict').textContent) && !!document.querySelector('#study-chart svg') && document.querySelectorAll('#studies-table tbody tr').length >= 3"
+
+[[step]]
+do = "say"
+line = "Quality, then Gauge studies. Three studies on this simulated plant, each with a cause written into the script."
+at = "#studies-table"
+label = "three studies"
+hold = 8.0
+
+[[step]]
+do = "say"
+line = "Each one is ten parts, three appraisers and three trials. Every appraiser measures every part three times: ninety readings."
+at = "#studies-table tbody tr:has(td:text-is(\"GS-WORN-MIC\")) td:nth-child(4)"
+hold = 8.0
+
+[[step]]
+do = "mark"
+name = "three-studies"
+
+[[step]]
+do = "say"
+line = "The first: a micrometer on fork thickness. The MES gives its verdict in words. Not acceptable."
+at = "#study-verdict"
+hold = 8.0
+
+[[step]]
+do = "say"
+line = "One chart: how much of the spread each source accounts for. Repeatability is the gauge disagreeing with itself."
+at = "#study-chart"
+label = "the gauge"
+hold = 9.0
+
+[[step]]
+do = "mark"
+name = "worn-gauge"
+
+[[step]]
+do = "say"
+line = "Here it is in the table: one person, one part, three readings, three different numbers. A worn anvil does that."
+at = "#components-table tbody tr:has(td:text-is(\"Repeatability — the gauge\"))"
+hold = 9.0
+
+[[step]]
+do = "say"
+line = "And the gauge's share of the tolerance. A gauge that uses up this much of the tolerance cannot tell a good part from a bad one near the limits."
+at = "#components-table tbody tr:has(td:text-is(\"Gauge R&R\")) td:last-child"
+hold = 9.0
+
+[[step]]
+do = "say"
+line = "Distinct categories: how many sizes of part this gauge can tell apart. The 10 and 30 percent bands are named as convention, not law."
+at = "#study-convention"
+hold = 9.0
+
+[[step]]
+do = "say"
+line = "Below, every reading, by part, appraiser and trial. A study still being read has empty cells here to type into."
+at = "#grid-table thead"
+hold = 8.0
+scroll_to = "#grid-table"
+scroll_block = "start"
+scroll_offset = 200
+
+[[step]]
+do = "mark"
+name = "the-grid"
+
+[[step]]
+do = "click"
+selector = "#studies-table tbody tr:has(td:text-is(\"GS-ONE-READER\"))"
+scroll_to = "#studies-table"
+scroll_block = "start"
+scroll_offset = 160
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#study-title').textContent.includes('GS-ONE-READER') && /not acceptable/i.test(document.querySelector('#study-verdict').textContent)"
+
+[[step]]
+do = "say"
+line = "The second: a depth gauge on spoon bowls. Not acceptable either, but for a different reason."
+at = "#study-verdict"
+hold = 8.0
+
+[[step]]
+do = "say"
+line = "This time reproducibility is the long bar. The gauge agrees with itself. The people reading it do not agree with each other."
+at = "#study-chart"
+label = "the people"
+hold = 9.0
+
+[[step]]
+do = "say"
+line = "The verdict names who: one appraiser reads deeper than the others on every part. In the script, she seats the gauge differently."
+at = "#study-verdict"
+hold = 9.0
+
+[[step]]
+do = "say"
+line = "So the fix is the method and some training, not a new gauge. Buying a gauge would not have helped."
+at = "#components-table tbody tr:has(td:text-is(\"Reproducibility — the people\"))"
+hold = 8.0
+
+[[step]]
+do = "mark"
+name = "one-appraiser"
+
+[[step]]
+do = "click"
+selector = "#studies-table tbody tr:has(td:text-is(\"GS-GOOD-CAL\"))"
+scroll_to = "#studies-table"
+scroll_block = "start"
+scroll_offset = 160
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#study-title').textContent.includes('GS-GOOD-CAL') && /acceptable/i.test(document.querySelector('#study-verdict').textContent) && !/not acceptable/i.test(document.querySelector('#study-verdict').textContent)"
+
+[[step]]
+do = "say"
+line = "The third: a caliper on knife bolster width. This gauge passes."
+at = "#study-verdict"
+hold = 8.0
+
+[[step]]
+do = "say"
+line = "Nearly all of the spread is the parts themselves. This gauge can tell good parts from bad."
+at = "#study-chart"
+label = "the parts"
+hold = 9.0
+
+[[step]]
+do = "mark"
+name = "good-gauge"
+
+[[step]]
+do = "goto"
+url = "/dashboard/spc?spec=UT-KNIFE%7Cbolster_width_mm"
+settle = 3
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#f-n').textContent.trim() !== '—' && document.querySelector('#verdict').textContent.trim() !== '—'"
+timeout = 30
+
+[[step]]
+do = "say"
+line = "And yet: the knives' control chart, measured with that same caliper. The process is out of control."
+at = "#verdict"
+hold = 9.0
+
+[[step]]
+do = "say"
+line = "So the MES withholds Cpk: a capability figure means nothing while the process drifts. The gauge has been cleared, so this spread is real. The trouble is the process."
+at = "#f-cpk"
+hold = 10.0
+
+[[step]]
+do = "mark"
+name = "the-process"
+
+# ------------------------------------------------------------ a refusal
+
+[[step]]
+part = "refuses"
+do = "goto"
+url = "/dashboard/gauges/studies?study=GS-GOOD-CAL"
+settle = 2
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#plan-gauge').options.length >= 3 && document.querySelector('#study-title').textContent.includes('GS-GOOD-CAL')"
+scroll_to = "#plan-form"
+scroll_block = "start"
+scroll_offset = 260
+
+[[step]]
+do = "say"
+line = "Planning a study is a quality engineer's decision. The MES refuses a plan that could never separate the gauge from the people."
+at = "#plan-form"
+hold = 8.0
+
+[[step]]
+do = "fill"
+selector = "#plan-material"
+text = "UT-FORK"
+
+[[step]]
+do = "fill"
+selector = "#plan-characteristic"
+text = "thickness_mm"
+
+[[step]]
+do = "fill"
+selector = "#plan-appraisers"
+text = "Ana"
+
+[[step]]
+do = "click"
+selector = "#plan-submit"
+
+[[step]]
+do = "wait_for"
+selector = "#plan-refused"
+text = "at least 2 appraisers"
+
+[[step]]
+do = "say"
+line = "One appraiser: refused, and it says why. With one person there is nothing to compare, so reproducibility could never be measured."
+at = "#plan-refused"
+hold = 9.0
+
+[[step]]
+do = "mark"
+name = "refused"
+
+[[step]]
+do = "say"
+line = "It also withholds a verdict it cannot stand behind: too few parts, parts that do not span the tolerance, a gauge out of calibration."
+at = "#plan-parts"
+hold = 9.0
+
+# ------------------------------------------------------------- the AI tab
+
+[[step]]
+part = "know"
+do = "click"
+selector = "header nav a:text-is(\"AI\")"
+
+[[step]]
+do = "wait_for"
+js = "!!document.querySelector('button.tab[data-tab=\"explore\"]') && !document.querySelector('#ai-tabs').classList.contains('hidden')"
+
+[[step]]
+do = "click"
+selector = "button.tab[data-tab=\"explore\"]"
+
+[[step]]
+do = "wait_for"
+selector = "#explore-state"
+text = "is answering"
+
+[[step]]
+do = "say"
+line = "Now the same question, asked in the chat on the AI tab. The chat reads the plant's records, gauge studies included, and writes nothing."
+at = "#explore-input"
+hold = 9.0
+
+[[step]]
+do = "fill"
+selector = "#explore-input"
+text = "Fork thickness on UT-FORK and bolster width on UT-KNIFE: for each, is our trouble the gauge or the process?"
+
+[[step]]
+do = "click"
+selector = "#explore-send"
+
+[[step]]
+do = "mark"
+name = "asked"
+
+[[step]]
+do = "say"
+line = "It looks the studies and the charts up on its own. That takes a few seconds."
+hold = 1.0
+
+[[step]]
+do = "wait_for"
+js = "document.querySelectorAll('#explore-log .explore-next').length >= 1 && document.querySelector('#explore-cost').textContent.includes('That answer cost')"
+timeout = 150
+scroll_to = "#explore-log .explore-msg.me"
+scroll_block = "start"
+scroll_offset = 200
+
+[[step]]
+do = "say"
+line = "Its answer, in its own words, starting here. The words change every time you ask, so this film does not read them out."
+at = "#explore-log .explore-msg.bot > :first-child"
+hold = 10.0
+
+[[step]]
+do = "say"
+line = "Above the answer, the records it read: the studies and the chart, the same ones on the screens you just saw. Check it there."
+at = "#explore-log .explore-trace"
+hold = 8.0
+
+[[step]]
+do = "mark"
+name = "the-answer"
+
+[[step]]
+do = "slide"
+name = "end"
+title = "Gauge or process"
+lines = [
+  "A study splits the spread: gauge, people, parts.",
+  "Simulated plant, scripted causes.",
+  "Next: attribute studies, linearity and bias, stability.",
+]
+hold = 8.0

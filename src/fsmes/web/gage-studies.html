@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gauge studies — FactorySemantics MES</title>
+<link rel="stylesheet" href="/static/themes.css">
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/station.css">
+<link rel="stylesheet" href="/static/machine.css">
+<link rel="stylesheet" href="/static/assist.css">
+<script>
+  /* Before first paint: a daylight user must never see a flash of the
+     dark control-room palette. */
+  try {
+    document.documentElement.setAttribute(
+      "data-theme", localStorage.getItem("fsmes-theme") || "control-room");
+  } catch (e) { /* private window: the default stands */ }
+</script>
+<link rel="stylesheet" href="/static/design.css">
+</head>
+<body>
+<div id="app">
+  <header data-nav="gauges/studies"></header>
+
+  <section class="kpis">
+    <div class="kpi"><span class="kpi-label">Gauge studies</span><span id="kpi-studies" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Complete</span><span id="kpi-complete" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Collecting readings</span><span id="kpi-collecting" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Planned</span><span id="kpi-planned" class="kpi-value">—</span></div>
+  </section>
+
+  <p id="banner" class="banner hidden"></p>
+
+  <main class="object-main" data-assist="gage-studies-page">
+    <section class="panel">
+      <h2>Studies <span id="studies-count" class="muted"></span> <span class="muted">— how much of what a gauge reports is the gauge</span></h2>
+      <div class="table-wrap"><table id="studies-table" class="row-select" data-assist="gage-study-list">
+        <thead><tr><th>Study</th><th>Gauge</th><th>Characteristic</th><th>Plan</th><th>State</th><th class="num">Readings</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </section>
+
+    <section id="study-panel" class="panel hidden" data-assist="gage-study-result">
+      <h2>Study <span id="study-title"></span> <span id="study-sub" class="muted"></span></h2>
+      <div id="study-verdict" class="reason"></div>
+      <ul id="study-withheld" class="queue"></ul>
+      <div id="study-chart"></div>
+      <div class="table-wrap"><table id="components-table">
+        <thead><tr><th>Source</th><th class="num">Variance</th><th class="num">Std dev</th>
+          <th class="num">% contribution</th><th class="num">% study variation</th><th class="num">% tolerance</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <p id="study-convention" class="muted small"></p>
+
+      <h3>Readings <span id="grid-count" class="muted"></span></h3>
+      <p class="muted small">One row per part; one column per appraiser and trial. A reading
+        already taken is shown and never overwritten. Study readings are never production
+        checks and are on no control chart.</p>
+      <form id="grid-form" data-assist="gage-study-grid">
+        <div class="table-wrap"><table id="grid-table"><thead></thead><tbody></tbody></table></div>
+        <div class="row" data-needs-cap="quality.record">
+          <button id="grid-save" data-assist="gage-grid-save">Save the readings typed</button>
+          <span id="grid-note" class="muted small"></span>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel" data-needs-cap="quality.study">
+      <h2>Plan a study <span class="muted">— every appraiser measures every part, each trial in an order they do not see</span></h2>
+      <form id="plan-form" class="stack" data-assist="gage-study-plan">
+        <div class="row">
+          <select id="plan-gauge" aria-label="Gauge" required data-assist="gage-plan-gauge"></select>
+          <input id="plan-material" placeholder="Material" aria-label="Material" required data-assist="gage-plan-material">
+          <input id="plan-characteristic" placeholder="Characteristic" aria-label="Characteristic" required data-assist="gage-plan-characteristic">
+          <input id="plan-appraisers" placeholder="Appraisers, comma separated" aria-label="Appraisers" required data-assist="gage-plan-appraisers">
+          <input id="plan-parts" type="number" min="2" value="10" aria-label="Parts" data-assist="gage-plan-parts">
+          <input id="plan-trials" type="number" min="2" value="3" aria-label="Trials" data-assist="gage-plan-trials">
+          <input id="plan-purpose" placeholder="Why (optional)" aria-label="Purpose">
+          <button id="plan-submit" data-assist="gage-plan-submit">Plan</button>
+        </div>
+        <p id="plan-refused" class="refused" aria-live="polite"></p>
+        <p class="muted small">Ten parts, three appraisers, three trials is the usual plan. Pick
+          parts from across the range the process makes: parts that all look alike make any
+          gauge look poor, and the study will say so rather than judge it.</p>
+      </form>
+    </section>
+  </main>
+
+  <p class="screen-source">studies /quality/gage-studies · one /quality/gage-studies/{code} ·
+    readings /quality/gage-studies/{code}/readings</p>
+</div>
+<div id="toast" class="toast hidden"></div>
+<script src="/static/common.js"></script>
+<script src="/static/kit.js"></script>
+<script src="/static/gage-studies.js"></script>
+<script src="/static/assist.js"></script>
+<script src="/static/themes.js"></script>
+<script src="/static/design.js"></script>
+</body>
+</html>

@@ -918,6 +918,7 @@ REGISTRY: tuple[Module, ...] = (
         # has no such route today, and the ordering is here so that the day it
         # grows one, nothing has to be found out the hard way.
         routers=(Mount("fsmes.api.routers.severities", "/quality", ("quality",)),
+                 Mount("fsmes.api.routers.gage_studies", "/quality", ("quality",)),
                  Mount("fsmes.api.routers.quality", "/quality", ("quality",))),
         pages=(
             Page("/dashboard/quality", "quality.html",
@@ -927,6 +928,9 @@ REGISTRY: tuple[Module, ...] = (
                  "capable, and which are two different questions."),
             Page("/dashboard/gauges", "gauges.html",
                  "The gauge register, calibration, and what a failed one invalidated."),
+            Page("/dashboard/gauges/studies", "gage-studies.html",
+                 "Gauge studies (gage R&R): how much of a gauge's spread is the "
+                 "gauge, the people and the parts, and the verdict - or why not."),
             Page("/dashboard/severities", "severities.html",
                  "Quality: the plant's own words for how bad a finding is - what "
                  "is on the list, what is drafted, what was retired, and the form "
@@ -1067,10 +1071,11 @@ REGISTRY: tuple[Module, ...] = (
                 edit_here=True,
                 pack_keys=("[quality] containment_max_depth",)),
         ),
-        tools=("fsmes.mcp.quality", "fsmes.mcp.severities"),
+        tools=("fsmes.mcp.quality", "fsmes.mcp.severities", "fsmes.mcp.gage_rr"),
         tables=("quality_specs", "quality_checks", "quality_samples",
                 "quality_counts", "non_conformances", "spc_signals", "gauges",
-                "calibrations", "nc_severities"),
+                "calibrations", "nc_severities", "gauge_studies",
+                "gauge_study_readings"),
     ),
     Module(
         name="kpis",

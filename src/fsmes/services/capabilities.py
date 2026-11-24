@@ -90,6 +90,13 @@ CAPABILITIES: dict[str, str] = {
     # often they asked for help, are two different acts, and two acts should not
     # share one gate - which is what an analysis over a table built to debug an
     # assistant would otherwise be.
+    # A gauge study is a quality engineer's experiment: which gauge, which
+    # parts, who measures, how often. Split from `quality.define` because
+    # the agent's default role drafts the quality vocabulary, and planning a
+    # study takes appraisers off the floor for an hour - a person decides
+    # that. Recording the study's readings is `quality.record`, like any
+    # other measurement.
+    "quality.study":     "Plan a gauge study (gage R&R): which gauge, which parts, who measures",
     "people.analyse":    "Name a person in an analysis: see a rollup broken down by "
                          "account rather than by role, workcenter or shift",
 }
@@ -119,7 +126,7 @@ _ADMIN = (*_SUPERVISOR, "masterdata.write", "users.manage",
           "documents.approve", "maintenance.plan",
           "scheduling.plan", "triggers.approve", "adjustments.approve",
           "process.define", "process.approve",
-          "quality.define", "quality.approve",
+          "quality.define", "quality.approve", "quality.study",
           "erp.define",
           # The administrator holds everything, so a new capability lands here
           # and a plant that has not redefined the role gets it on upgrade.

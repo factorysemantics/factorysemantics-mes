@@ -53,6 +53,7 @@
       { href: "/dashboard/quality", label: "Quality", cap: null },
       { href: "/dashboard/spc", label: "SPC", cap: null },
       { href: "/dashboard/gauges", label: "Gauges", cap: null },
+      { href: "/dashboard/gauges/studies", label: "Gauge studies", cap: null },
       { href: "/dashboard/trace", label: "Trace", cap: null },
       { href: "/dashboard/coa", label: "Certificates", cap: null },
       { href: "/dashboard/config/quality", label: "Configuration", cap: null },

@@ -39,6 +39,9 @@ from fsmes.domain.gauges import (
     CalibrationResult,
     Gauge,
     GaugeStatus,
+    GaugeStudy,
+    StudyReading,
+    StudyState,
 )
 from fsmes.domain.idempotency import IdempotencyKey
 from fsmes.domain.inbound import InboundEvent, InboundKind, InboundWatermark
@@ -143,6 +146,7 @@ __all__ = [
     "ExceptionKind",
     "Gauge",
     "GaugeStatus",
+    "GaugeStudy",
     "IdempotencyKey",
     "InboundEvent",
     "InboundKind",
@@ -190,6 +194,8 @@ __all__ = [
     "Skill",
     "SlotKind",
     "SpcSignal",
+    "StudyReading",
+    "StudyState",
     "TagValue",
     "Trigger",
     "TriggerCondition",

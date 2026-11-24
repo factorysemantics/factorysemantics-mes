@@ -436,3 +436,18 @@ non-conformances and not a measurement: the chart's point is the share, so
 record_count is the tool. The defects are how the lot broke down and the sum of
 them is the twenty - which is the thing a person reading the p chart opens a
 point to see (decision 0041)."""
+
+[[case]]
+id = "operator-refused-planning-a-gauge-study"
+request = "plan a gauge study on the brix refractometer, me and Ben measuring"
+screen = "/dashboard/gauges/studies"
+expect = "refuse"
+tool = "plan_gage_study"
+mentions = ["quality.study"]
+contains_any = [["Administrator"]]
+note = """An administrator's call since 2026-11-22: a study takes the people who
+use the gauge off the floor for a while, so planning one is the quality
+engineer's decision, not the person at the machine's. The operator may record a
+study's readings (`quality.record`); there is no case proposing a plan because
+the demo plant this suite is written about has no gauge register to plan one
+on, which is the same reason as the calibration case above."""

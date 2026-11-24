@@ -116,6 +116,10 @@ NEEDS: dict[str, str] = {
     # putting a certificate in force, and quarantining, releasing or scrapping
     # an identified unit.
     "calibrate_gauge": "quality.close_nc",
+    # A gauge study: planning one is the quality engineer's (not in the
+    # agent's default role); its readings are measurements like any other.
+    "plan_gage_study": "quality.study",
+    "record_study_reading": "quality.record",
     "issue_certificate": "quality.close_nc",
     "issue_pallet_certificate": "quality.close_nc",
     "set_unit_status": "quality.close_nc",
