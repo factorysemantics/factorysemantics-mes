@@ -47,7 +47,8 @@ def _said(tmp_path, answers):
     harness = tmp_path / "harness.js"
     harness.write_text(_HARNESS, encoding="utf-8")
     out = subprocess.run([NODE, str(harness), str(WEB / "common.js"), json.dumps(answers)],
-                         capture_output=True, text=True, timeout=30, check=True)
+                         capture_output=True, text=True, encoding="utf-8",
+                         timeout=30, check=True)
     return json.loads(out.stdout)
 
 
