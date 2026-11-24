@@ -232,23 +232,16 @@ function renderRoutings() {
   window.FS.pager($("#r-pager"), page, (offset) => { routingOffset = offset; renderRoutings(); });
 }
 
-/* The cost center a machine's work bills to, the way the server reads it
-   (`services/masterdata.cost_center`): a machine with none takes its cell's,
-   a cell with none takes its line's. The engineer asked "which cost center
-   does this step bill to" while defining a routing (walk, 2026-11-12/13);
-   the plant sets it once per line, so the machine's own column is blank on
-   most plants and reading only that would say "unknown" for a step that does
-   bill somewhere. "unknown" only when nothing up the tree says. */
+/* The cost center a machine's work bills to, as the server reads it
+   (`bills_to`, from `services/masterdata.cost_center`): a machine with none
+   takes its cell's, a cell with none takes its line's. The engineer asked
+   "which cost center does this step bill to" while defining a routing (walk,
+   2026-11-12/13); the plant sets it once per line, so the machine's own
+   column is blank on most plants. "unknown" only when nothing up the tree
+   says. */
 function costCenterOf(code) {
-  const byCode = new Map(equipment.map((e) => [e.code, e]));
-  const seen = new Set();
-  let node = byCode.get(code);
-  while (node && !seen.has(node.code)) {
-    if (node.cost_center) return node.cost_center;
-    seen.add(node.code);
-    node = node.parent ? byCode.get(node.parent) : null;
-  }
-  return "unknown";
+  const node = equipment.find((e) => e.code === code);
+  return (node && node.bills_to) || "unknown";
 }
 
 function addOperationRow(seq) {

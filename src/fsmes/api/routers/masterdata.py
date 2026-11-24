@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from fsmes.api.deps import ActorDep, DbDep, require
 from fsmes.domain import Equipment, EquipmentLevel, Material, MaterialType, Person, Routing
@@ -29,9 +30,11 @@ class EquipmentOut(BaseModel):
     parent: str | None
     ideal_cycle_seconds: float | None
     cost_center: str | None = None
+    # The one its work bills to, inherited up the tree (`masterdata.cost_center`).
+    bills_to: str | None = None
 
 
-def _equipment_out(eq: Equipment) -> EquipmentOut:
+def _equipment_out(db: Session, eq: Equipment) -> EquipmentOut:
     return EquipmentOut(
         code=eq.code,
         name=eq.name,
@@ -39,6 +42,7 @@ def _equipment_out(eq: Equipment) -> EquipmentOut:
         parent=eq.parent.code if eq.parent else None,
         ideal_cycle_seconds=eq.ideal_cycle_seconds,
         cost_center=eq.cost_center,
+        bills_to=masterdata.cost_center(db, eq),
     )
 
 
@@ -58,7 +62,7 @@ def list_equipment(
     if q:
         like = f"%{q}%"
         query = query.where(Equipment.code.ilike(like) | Equipment.name.ilike(like))
-    return [_equipment_out(eq) for eq in db.scalars(query)]
+    return [_equipment_out(db, eq) for eq in db.scalars(query)]
 
 
 @router.post("/equipment", status_code=201, dependencies=[require("masterdata.write")])
@@ -73,7 +77,7 @@ def create_equipment(body: EquipmentIn, db: DbDep, actor: ActorDep) -> Equipment
         cost_center=body.cost_center,
         actor=actor,
     )
-    return _equipment_out(eq)
+    return _equipment_out(db, eq)
 
 
 class MaterialIn(BaseModel):
