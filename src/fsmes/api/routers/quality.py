@@ -573,6 +573,9 @@ def list_ncs(
     db: DbDep,
     status: list[NcStatus] | None = Query(
         None, description="Repeatable. A non-conformance in any of these states is returned."),
+    severity: list[str] | None = Query(
+        None, description="Repeatable. Only these severities, the plant's own words - "
+                          "a filter, not a ranking, because the product does not know which word is worse."),
     q: str | None = Query(None, description="Match a code or a description."),
     since: str | None = Query(None, description="Raised at or after this. " + _A_DAY_IS_A_PLANT_DAY),
     until: str | None = Query(None, description="Raised at or before this. " + _A_DAY_IS_A_PLANT_DAY),
@@ -593,6 +596,8 @@ def list_ncs(
     query = select(NonConformance).order_by(NonConformance.id.desc())
     if status:
         query = query.where(NonConformance.status.in_(status))
+    if severity:
+        query = query.where(NonConformance.severity.in_(severity))
     if q:
         like = f"%{q}%"
         query = query.where(NonConformance.code.ilike(like) | NonConformance.description.ilike(like))
@@ -631,6 +636,9 @@ def export_ncs(
     db: DbDep,
     status: list[NcStatus] | None = Query(
         None, description="Repeatable. A non-conformance in any of these states is returned."),
+    severity: list[str] | None = Query(
+        None, description="Repeatable. Only these severities, the plant's own words - "
+                          "a filter, not a ranking, because the product does not know which word is worse."),
     q: str | None = Query(None, description="Match a code or a description."),
     since: str | None = Query(None, description="Raised at or after this. " + _A_DAY_IS_A_PLANT_DAY),
     until: str | None = Query(None, description="Raised at or before this. " + _A_DAY_IS_A_PLANT_DAY),
@@ -641,7 +649,7 @@ def export_ncs(
     An empty cell is a step not taken yet - a hold nobody has reviewed has
     no reviewer - and never a guess at one.
     """
-    rows = export.every_page(list_ncs, db=db, status=status, q=q, since=since, until=until)
+    rows = export.every_page(list_ncs, db=db, status=status, severity=severity, q=q, since=since, until=until)
     return export.spreadsheet("non-conformances", "Non-conformances", NC_EXPORT,
                               reversed(rows), range_=export.span(since, until))
 
@@ -731,10 +739,15 @@ def raise_nc(body: RaiseNcIn, db: DbDep, actor: ActorDep) -> dict:
     return {"code": nc.code, "severity": nc.severity, "order": order}
 
 
+class ReviewIn(BaseModel):
+    #: The grade the reviewer gives it, one of the plant's severities. Left out, it keeps its own.
+    severity: str | None = None
+
+
 @router.post("/nonconformances/{code}/review", dependencies=[require("quality.close_nc")])
-def review_nc(code: str, db: DbDep, actor: ActorDep) -> dict:
-    """Somebody has picked it up. Recorded against them, with the time."""
-    nc = quality.review_nc(db, code, actor)
+def review_nc(code: str, db: DbDep, actor: ActorDep, body: ReviewIn | None = None) -> dict:
+    """Somebody has picked it up, and may grade it. Recorded against them, with the time."""
+    nc = quality.review_nc(db, code, actor, severity=body.severity if body else None)
     return _nc_out(nc)
 
 

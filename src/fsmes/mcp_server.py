@@ -600,13 +600,17 @@ def raise_nonconformance(plant: str, description: str, severity: str | None = No
 
 
 @mcp.tool()
-def review_nonconformance(plant: str, code: str, dry_run: bool = False,
+def review_nonconformance(plant: str, code: str, severity: str | None = None, dry_run: bool = False,
                  on_behalf_of: str | None = None, client_ref: str | None = None) -> dict:
     """Take a non-conformance under review - a supervisor action saying somebody
-    has picked it up. Recorded against them with the time."""
+    has picked it up. Recorded against them with the time. `severity` grades
+    it, one of the plant's severities (`GET /quality/severities`); left out,
+    it keeps the grade it was raised with."""
     _identity.set((on_behalf_of.upper() if on_behalf_of else None, client_ref))
-    return _write(plant, f"/quality/nonconformances/{code}/review", {}, dry_run,
-                  f"take non-conformance {code} under review")
+    return _write(plant, f"/quality/nonconformances/{code}/review",
+                  {"severity": severity} if severity else {}, dry_run,
+                  f"take non-conformance {code} under review"
+                  + (f" as {severity}" if severity else ""))
 
 
 @mcp.tool()
