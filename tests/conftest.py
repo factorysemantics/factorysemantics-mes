@@ -81,6 +81,24 @@ def _the_suite_writes_no_agent_records_to_this_machine(tmp_path, monkeypatch):
     monkeypatch.setattr(agent, "TURN_FILE", tmp_path / "agent-turns.jsonl")
 
 
+@pytest.fixture(autouse=True)
+def _the_cached_settings_follow_the_modules_the_environment_names():
+    """A test that changes `MES_MODULES` and builds settings from it leaves
+    them cached after monkeypatch has put the variable back. Before gauge
+    studies became opt-in (2026-11-24) the stale `all` served the same
+    modules as the suite's own value, so nobody saw it; now it switches
+    gauge studies off for every later test in the process. Before each test
+    (autouse fixtures are set up ahead of the test's own, so ahead of the
+    app it builds), settings that no longer name what the environment names
+    are dropped.
+    """
+    from fsmes.config import get_settings
+
+    if get_settings.cache_info().currsize and (
+            get_settings().modules != os.environ.get("MES_MODULES", "all")):
+        get_settings.cache_clear()
+
+
 #: Where the suite's local model "is": port 1, where nothing listens, so a call
 #: is refused at once. CI has no local model; a developer's box does.
 NO_LOCAL_MODEL = "http://127.0.0.1:1"
