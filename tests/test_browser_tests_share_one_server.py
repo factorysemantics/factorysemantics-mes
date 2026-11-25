@@ -25,7 +25,6 @@ ALLOWED: frozenset[str] = frozenset({
     "test_a_plant_books_while_its_dashboard_is_read.py",
     "test_a_walk_waits_for_a_control_the_page_is_still_drawing.py",
     "test_all_machines_on_shift_analysis_in_a_browser.py",
-    "test_an_orders_work_instructions_link_opens_the_procedure_for_what_it_makes.py",
     "test_auth.py",
     "test_clicking_a_block_on_the_state_timeline_opens_the_records_behind_it.py",
     "test_clicking_a_lot_on_the_spc_chart_opens_which_defects.py",
