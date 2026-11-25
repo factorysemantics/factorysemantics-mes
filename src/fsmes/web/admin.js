@@ -14,6 +14,7 @@ const el = (tag, cls, text) => {
 let me = null;
 let roles = [];
 let capabilities = [];
+let peopleWarned = false;   // the people-and-roles toast, once per page
 let materials = [];
 let userTotal = 0;
 let userHasMore = false;
@@ -353,11 +354,29 @@ async function refresh() {
                                         offset: String(userOffset) });
     if (userFilterRole) query.set("role", userFilterRole);
     if (userFilterText) query.set("q", userFilterText);
-    const [rolesOut, users, routingsOut] = await Promise.all([
+    /* Settled one by one: routings are master data and the routing form
+       needs nothing from people or roles. Under Promise.all one refused
+       `/admin/...` call blanked the routing list too (the engineer's walk,
+       every night from 2026-11-22). */
+    const [rolesOut, usersOut, routingsOut] = await Promise.allSettled([
       api("/admin/roles"), api(`/admin/users?${query}`), api("/masterdata/routings"),
     ]);
-    roles = rolesOut;
-    routings = routingsOut;
+    const settled = [rolesOut, usersOut, routingsOut];
+    if (settled.some((r) => r.reason && r.reason.message === "signed out")) return;
+    if (routingsOut.status === "fulfilled") {
+      routings = routingsOut.value;
+      renderRoutings();
+    }
+    FS.live(routingsOut.status === "fulfilled" || rolesOut.status === "fulfilled");
+    if (rolesOut.status === "rejected" || usersOut.status === "rejected") {
+      if (!peopleWarned) {
+        peopleWarned = true;
+        toast("Could not load people and roles — the routings still work; reload the page, or ask an admin to check your access.", "bad");
+      }
+      return;
+    }
+    roles = rolesOut.value;
+    const users = usersOut.value;
     userTotal = users.total;
     userHasMore = users.has_more;
     renderRoles();
@@ -369,8 +388,6 @@ async function refresh() {
     const keep = roleSelect.value;
     roleSelect.replaceChildren(new Option("Any role", ""), ...roles.map((r) => new Option(r.name, r.code)));
     if ([...roleSelect.options].some((o) => o.value === keep)) roleSelect.value = keep;
-    renderRoutings();
-    FS.live(true);
   } catch (err) {
     FS.live(false);
   }
@@ -392,12 +409,17 @@ async function refresh() {
     $("#admin-main").classList.toggle("hidden", !allowed);
     if (!allowed) { FS.live(true); return; }
 
-    const [caps, mats, equip] = await Promise.all([
+    /* The capability list is only for defining a role; the routing form
+       needs materials and machines alone, so a refused capability list
+       leaves the role checkboxes empty and nothing else. */
+    const [caps, mats, equip] = await Promise.allSettled([
       api("/admin/capabilities"), api("/masterdata/materials"), api("/masterdata/equipment"),
     ]);
-    capabilities = caps.capabilities;
-    materials = mats;
-    equipment = equip;
+    if (mats.status === "rejected") throw mats.reason;
+    if (equip.status === "rejected") throw equip.reason;
+    capabilities = caps.status === "fulfilled" ? caps.value.capabilities : [];
+    materials = mats.value;
+    equipment = equip.value;
   } catch (err) {
     if (err && err.message === "signed out") return;
     FS.live(false);
