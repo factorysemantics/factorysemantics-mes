@@ -46,7 +46,6 @@ ALLOWED: frozenset[str] = frozenset({
     "test_the_floors_book_output_form_says_what_the_booking_moved.py",
     "test_the_gauges_screen_shows_the_two_scales_and_when_each_was_calibrated.py",
     "test_the_panel_can_ask_the_other_agent.py",
-    "test_the_panel_keeps_one_brain_through_a_failed_turn.py",
     "test_the_parts_mix_panel_and_the_last_play_window_in_a_browser.py",
     "test_the_screens_that_show_a_characteristic_inspected_five_at_a_time.py",
     "test_the_station_redraws_only_what_changed.py",

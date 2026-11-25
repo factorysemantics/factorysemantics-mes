@@ -16,23 +16,16 @@ the switch lives in `render()` in `assist.js`:
 3. The panel only ever hands over to the local model when the reply says the
    agent is genuinely off — and when it does, it says which brain is talking.
 
-Same shape as `test_a_walk_waits_for_a_control_the_page_is_still_drawing.py`:
-a seeded plant on a loopback port of the operating system's choosing, driven
-by Chromium, touching nothing anyone else is running. The model is scripted in
-this process — the server runs on a thread of it — so no key is used and
-nothing leaves the box.
+A seeded plant served by `serve_plant` from `tests/conftest.py` on a loopback
+port of the operating system's choosing, driven by Chromium, touching nothing
+anyone else is running. The model is scripted in this process — the server
+runs on a thread of it — so no key is used and nothing leaves the box.
 
 LOOPBACK ONLY, deliberately. Nothing here is timing-shaped: the assertions are
 about which endpoint answered, and a slow network changes nothing about that.
 """
 
-import json
-import socket
-import threading
-import time
-
 import pytest
-from sqlalchemy.orm import Session
 
 from fsmes.services import agent
 
@@ -97,23 +90,15 @@ def script():
 
 
 @pytest.fixture(scope="module")
-def plant(tmp_path_factory):
-    """A seeded demo plant with the cloud brain switched on and scripted.
+def plant(serve_plant, tmp_path_factory):
+    """A seeded demo plant with the cloud brain switched on and scripted,
+    served by conftest's `serve_plant`.
 
     The server runs on a thread of this process, so patching the model here
     patches the one the endpoint calls. No key is read and no request leaves
     the machine: `_call_model` never runs.
     """
-    import uvicorn
-
-    from fsmes import config, db
-    from fsmes.api.app import create_app
-    from fsmes.db import Base, make_engine
-    from fsmes.seed import seed_demo_plant
-    from fsmes.services import auth
-
-    path = tmp_path_factory.mktemp("one-brain") / "plant.db"
-    url = f"sqlite:///{path}"
+    usage = tmp_path_factory.mktemp("one-brain-usage")
 
     def scripted_model(sess):
         step = SCRIPT.pop(0)
@@ -122,60 +107,15 @@ def plant(tmp_path_factory):
         return step
 
     with pytest.MonkeyPatch.context() as env:
-        env.setenv("MES_DATABASE_URL", url)
         env.setenv("ANTHROPIC_API_KEY", "not-a-key-the-model-is-scripted")
         env.setenv("MES_AGENT_BRAIN", "claude")
         env.setattr(agent, "sdk_installed", lambda: True)
         env.setattr(agent, "_call_model", scripted_model)
         env.setattr(agent, "execute", _preview)
-        env.setattr(agent, "USAGE_FILE", path.parent / "usage.jsonl")
-        env.setattr(agent, "TURN_FILE", path.parent / "turns.jsonl")
-        config.get_settings.cache_clear()
-        db.get_engine.cache_clear()
-        db.get_sessionmaker.cache_clear()
-
-        engine = make_engine(url)
-        Base.metadata.create_all(engine)
-        with Session(engine, expire_on_commit=False) as session:
-            seed_demo_plant(session)
-            auth.ensure_builtin_roles(session)
-            session.commit()
-
-        sock = socket.socket()
-        sock.bind(("127.0.0.1", 0))
-        server = uvicorn.Server(uvicorn.Config(
-            create_app(), log_level="warning", lifespan="on"))
-        thread = threading.Thread(
-            target=lambda: server.run(sockets=[sock]), daemon=True)
-        thread.start()
-        try:
-            port = sock.getsockname()[1]
-            base = f"http://127.0.0.1:{port}"
-            _wait_until_answering(base)
-            yield base
-        finally:
-            server.should_exit = True
-            thread.join(timeout=10)
-            engine.dispose()
-
-    config.get_settings.cache_clear()
-    db.get_engine.cache_clear()
-    db.get_sessionmaker.cache_clear()
-
-
-def _wait_until_answering(base: str, seconds: float = 20.0) -> None:
-    import urllib.error
-    import urllib.request
-
-    deadline = time.monotonic() + seconds
-    while time.monotonic() < deadline:
-        try:
-            with urllib.request.urlopen(f"{base}/health", timeout=1) as reply:
-                if reply.status == 200:
-                    return
-        except (urllib.error.URLError, OSError):
-            time.sleep(0.1)
-    raise AssertionError(f"the plant at {base} never answered /health")
+        env.setattr(agent, "USAGE_FILE", usage / "usage.jsonl")
+        env.setattr(agent, "TURN_FILE", usage / "turns.jsonl")
+        with serve_plant(name="one-brain") as served:
+            yield served
 
 
 @pytest.fixture(scope="module")
@@ -198,11 +138,7 @@ def playwright():
 def admin(playwright, plant):
     _pw, chromium = playwright
     context = chromium.new_context(viewport={"width": 1400, "height": 900})
-    reply = context.request.post(
-        f"{plant}/auth/login",
-        data=json.dumps({"code": "ADMIN", "password": "admin"}),
-        headers={"Content-Type": "application/json"})
-    assert reply.ok, f"sign-in as ADMIN failed: {reply.status}"
+    plant.sign_in(context)
     yield context
     context.close()
 
@@ -254,7 +190,7 @@ def test_the_message_typed_over_a_proposal_is_answered_by_the_agent(admin, plant
         _response(_text(ITS_OWN_WORDS)),
         _response(_text(AFTER_THE_ERROR)),
     ]
-    page = _panel(admin, plant)
+    page = _panel(admin, plant.base)
     try:
         _say(page, f"Change {SETTING} to CR")
         page.wait_for_selector(".assist-card", state="visible", timeout=20000)
@@ -289,7 +225,7 @@ def test_one_failed_turn_does_not_hand_the_rest_of_the_page_to_the_local_model(
         "raise",
         _response(_text(AFTER_THE_ERROR)),
     ]
-    page = _panel(admin, plant)
+    page = _panel(admin, plant.base)
     try:
         _say(page, "what is running?")
         _wait_for_bot_line(page, "Bottling is running")
@@ -317,7 +253,7 @@ def test_a_plant_whose_agent_is_off_says_which_brain_is_answering(admin, plant, 
     requests for changes is what silence bought last time."""
     with pytest.MonkeyPatch.context() as off:
         off.delenv("ANTHROPIC_API_KEY", raising=False)
-        page = _panel(admin, plant)
+        page = _panel(admin, plant.base)
         try:
             classes, label = _brain_chip(page)
             assert "on" not in classes and label == "local"
