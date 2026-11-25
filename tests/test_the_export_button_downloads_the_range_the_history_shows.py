@@ -9,9 +9,6 @@ six milliseconds.
 """
 
 import io
-import json
-import socket
-import threading
 import time
 import zipfile
 from datetime import datetime
@@ -19,7 +16,6 @@ from pathlib import Path
 from xml.etree import ElementTree
 
 import pytest
-from sqlalchemy.orm import Session
 
 pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
@@ -27,70 +23,27 @@ DELAY_SECONDS = 0.8
 NS = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 
 
+def _september_and_either_side(session) -> None:
+    """Five checks in September, two outside it on either side."""
+    from fsmes.services import quality
+
+    for day in (1, 8, 15, 22, 30):
+        check, _nc, _ = quality.record_check(session, material_code="FG-COLA",
+                                             characteristic="brix", value=10.2, actor="ines")
+        check.ts = datetime(2026, 9, day, 10, 0)
+    for when in (datetime(2026, 8, 31, 10, 0), datetime(2026, 10, 1, 10, 0)):
+        check, _nc, _ = quality.record_check(session, material_code="FG-COLA",
+                                             characteristic="brix", value=10.2, actor="ines")
+        check.ts = when
+
+
 @pytest.fixture(scope="module")
-def plant(tmp_path_factory):
-    import uvicorn
-
-    from fsmes import config, db
-    from fsmes.api.app import create_app
-    from fsmes.db import Base, make_engine
-    from fsmes.seed import seed_demo_plant
-    from fsmes.services import auth, quality
-
-    path = tmp_path_factory.mktemp("export-xlsx") / "plant.db"
-    url = f"sqlite:///{path}"
-    with pytest.MonkeyPatch.context() as env:
-        env.setenv("MES_DATABASE_URL", url)
-        config.get_settings.cache_clear()
-        db.get_engine.cache_clear()
-        db.get_sessionmaker.cache_clear()
-        engine = make_engine(url)
-        Base.metadata.create_all(engine)
-        with Session(engine, expire_on_commit=False) as session:
-            seed_demo_plant(session)
-            auth.ensure_builtin_roles(session)
-            # Five in September, two outside it on either side.
-            for day in (1, 8, 15, 22, 30):
-                check, _nc, _ = quality.record_check(session, material_code="FG-COLA",
-                                                     characteristic="brix", value=10.2, actor="ines")
-                check.ts = datetime(2026, 9, day, 10, 0)
-            for when in (datetime(2026, 8, 31, 10, 0), datetime(2026, 10, 1, 10, 0)):
-                check, _nc, _ = quality.record_check(session, material_code="FG-COLA",
-                                                     characteristic="brix", value=10.2, actor="ines")
-                check.ts = when
-            session.commit()
-
-        sock = socket.socket()
-        sock.bind(("127.0.0.1", 0))
-        server = uvicorn.Server(uvicorn.Config(create_app(), log_level="warning", lifespan="on"))
-        thread = threading.Thread(target=lambda: server.run(sockets=[sock]), daemon=True)
-        thread.start()
-        try:
-            base = f"http://127.0.0.1:{sock.getsockname()[1]}"
-            _wait_until_answering(base)
-            yield base
-        finally:
-            server.should_exit = True
-            thread.join(timeout=10)
-            engine.dispose()
-    config.get_settings.cache_clear()
-    db.get_engine.cache_clear()
-    db.get_sessionmaker.cache_clear()
-
-
-def _wait_until_answering(base: str, seconds: float = 20.0) -> None:
-    import urllib.error
-    import urllib.request
-
-    deadline = time.monotonic() + seconds
-    while time.monotonic() < deadline:
-        try:
-            with urllib.request.urlopen(f"{base}/health", timeout=1) as reply:
-                if reply.status == 200:
-                    return
-        except (urllib.error.URLError, OSError):
-            time.sleep(0.1)
-    raise AssertionError(f"the plant at {base} never answered /health")
+def plant(serve_plant):
+    """The demo plant with those seven checks, served by `tests/conftest.py`.
+    A plant of this file's own: the shared one may hold brix checks of other
+    tests' making, and this file counts every one in its range."""
+    with serve_plant(_september_and_either_side, name="export-xlsx") as served:
+        yield served
 
 
 @pytest.fixture(scope="module")
@@ -111,14 +64,11 @@ def browser():
 def test_export_downloads_every_check_of_the_chosen_range(browser, plant):
     context = browser.new_context(viewport={"width": 1400, "height": 1000}, accept_downloads=True)
     try:
-        reply = context.request.post(
-            f"{plant}/auth/login", data=json.dumps({"code": "ADMIN", "password": "admin"}),
-            headers={"Content-Type": "application/json"})
-        assert reply.ok, f"sign-in failed: {reply.status}"
+        plant.sign_in(context)
         page = context.new_page()
         page.route("**/quality/checks?*",
                    lambda route: (time.sleep(DELAY_SECONDS), route.continue_()))
-        page.goto(f"{plant}/dashboard/quality", wait_until="load", timeout=30000)
+        page.goto(f"{plant.base}/dashboard/quality", wait_until="load", timeout=30000)
 
         page.fill("#h-from", "2026-09-01")
         page.dispatch_event("#h-from", "change")

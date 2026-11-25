@@ -43,7 +43,6 @@ ALLOWED: frozenset[str] = frozenset({
     "test_the_chart_comes_into_the_chat_and_stays_clickable.py",
     "test_the_dashboard_says_which_node_answered_and_who_reads_the_machines.py",
     "test_the_energy_panel_is_drawn_only_on_a_plant_that_reports_power.py",
-    "test_the_export_button_downloads_the_range_the_history_shows.py",
     "test_the_floors_book_output_form_says_what_the_booking_moved.py",
     "test_the_gauges_screen_shows_the_two_scales_and_when_each_was_calibrated.py",
     "test_the_panel_can_ask_the_other_agent.py",
