@@ -38,6 +38,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 import fsmes.domain  # noqa: F401  (register all tables)
+from fsmes import identity
 from fsmes.api.app import create_app
 from fsmes.config import get_settings
 from fsmes.db import Base
@@ -339,7 +340,7 @@ def test_the_drifting_scales_readings_run_high_until_it_is_calibrated(plant):
         # the comparison is of the two instruments and not of two samples.
         for instrument in floor.bench.instruments("fill_weight"):
             readings[instrument.code] = [
-                instrument.read(truth, rng=random.Random(3), today=date.today())
+                instrument.read(truth, rng=random.Random(3), today=identity.today())
                 for _ in range(40)]
         the_week_passes(plant)
         await floor.read_the_register()
@@ -349,7 +350,7 @@ def test_the_drifting_scales_readings_run_high_until_it_is_calibrated(plant):
         await floor.read_the_register()
         for instrument in floor.bench.instruments("fill_weight"):
             after[instrument.code] = [
-                instrument.read(truth, rng=random.Random(3), today=date.today())
+                instrument.read(truth, rng=random.Random(3), today=identity.today())
                 for _ in range(40)]
 
     on_the_floor(plant, work)
@@ -374,7 +375,10 @@ def test_the_calibration_the_supervisor_records_is_on_the_gauges_own_register(pl
 
     on_the_floor(plant, work)
     gauge = plant.scalar(select(Gauge).where(Gauge.code == DRIFTING))
-    assert gauge.last_calibrated == date.today()
+    # The plant's day, the clock `gauges.calibrate` stamps with. Not this
+    # box's: the plant here is on UTC, and from 18:00 Central the box's
+    # date is the day before.
+    assert gauge.last_calibrated == identity.today()
     assert [c.performed_by for c in gauge.calibrations] == [SUPERVISOR]
     assert gauge.calibrations[0].notes, "a calibration with no note says nothing"
 
