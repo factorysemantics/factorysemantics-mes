@@ -536,6 +536,33 @@ def test_a_walk_onto_a_form_whose_page_is_still_fetching_waits_for_it(admin, pla
 
 
 
+def test_the_ring_follows_its_control_when_the_control_moves(admin, plant):
+    """The ring stays round the control after the page moves it.
+
+    The ring was placed once, a quarter of a second after the step's smooth
+    scroll began, and moved again only on a window scroll. On GitHub's runner
+    the close-a-finding walk twice timed out with the ring short of its
+    control (#300, #303): a scroll that had not settled at 260 ms, or a list
+    drawn again under it, left the ring where the control used to be, and nothing
+    moved it. A person on a slow plant PC sees the same thing. So this moves
+    the ringed control sideways - no scroll at all - and the ring has to go
+    with it.
+    """
+    surface = assistant.surface_for("close_nonconformance", PROPOSED["close_nonconformance"])
+    step = surface["steps"][0]
+    walk = {"title": surface["title"], "steps": [step]}
+    page = _open_walk(admin, plant, walk)
+    try:
+        _coach(page, 1, step["title"])
+        _ring_is_round(page, step["anchor"])
+        page.evaluate("""anchor => {
+            document.querySelector(`[data-assist="${anchor}"]`).style.marginLeft = '180px';
+        }""", step["anchor"])
+        _ring_is_round(page, step["anchor"], timeout=3000)
+    finally:
+        page.close()
+
+
 # ------------------------------------------ the walks to a signing control
 
 #: The five signing walks, and how far a browser can be driven along each
