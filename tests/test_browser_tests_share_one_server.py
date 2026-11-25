@@ -51,7 +51,6 @@ ALLOWED: frozenset[str] = frozenset({
     "test_the_station_redraws_only_what_changed.py",
     "test_the_station_says_when_no_order_is_open_on_the_plant.py",
     "test_the_supervisors_screen_reads_the_shift_and_writes_a_rule.py",
-    "test_the_trace_page_lists_the_orders_that_drew_on_a_lot.py",
     "test_ui_oee_above_rated.py",
 })
 

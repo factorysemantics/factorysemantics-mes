@@ -10,89 +10,39 @@ The where-used answer is held back half a second by a route intercept, so the
 assertions wait for the drawn state and not for the empty table that is
 there before the answer arrives (house rule 6).
 
-Same shape as `test_ui_oee_above_rated.py`: a seeded plant on a loopback port
-of the operating system's choosing, driven by Chromium.
+A seeded plant served by `serve_plant` from `tests/conftest.py` on a loopback
+port of the operating system's choosing, driven by Chromium.
 """
 
-import json
-import socket
-import threading
 import time
 
 import pytest
-from sqlalchemy.orm import Session
 
 pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
 
+def _two_orders_on_the_sugar_lot(session) -> None:
+    """One finished order that drew on LOT-SUGAR-001 at the mixer and made
+    WO-TRACE-1-FG, and one order still drawing on it."""
+    from fsmes.services import execution, workorders
+
+    first = workorders.create(session, code="WO-TRACE-1", material_code="FG-COLA", quantity=40)
+    workorders.release(session, "WO-TRACE-1")
+    execution.consume(session, order_code="WO-TRACE-1", lot_code="LOT-SUGAR-001", quantity=20, seq=10)
+    execution.create_lot(session, code="WO-TRACE-1-FG", material_code="FG-COLA", quantity=40,
+                         produced_by_order=first)
+    workorders.create(session, code="WO-TRACE-2", material_code="FG-COLA", quantity=40)
+    workorders.release(session, "WO-TRACE-2")
+    execution.consume(session, order_code="WO-TRACE-2", lot_code="LOT-SUGAR-001", quantity=7, seq=10)
+
+
 @pytest.fixture(scope="module")
-def plant(tmp_path_factory):
-    """A demo plant with one finished order that drew on LOT-SUGAR-001 at the
-    mixer and made WO-TRACE-1-FG, and one order still drawing on it."""
-    import uvicorn
-
-    from fsmes import config, db
-    from fsmes.api.app import create_app
-    from fsmes.db import Base, make_engine
-    from fsmes.seed import seed_demo_plant
-    from fsmes.services import auth, execution, workorders
-
-    path = tmp_path_factory.mktemp("trace-lot") / "plant.db"
-    url = f"sqlite:///{path}"
-
-    with pytest.MonkeyPatch.context() as env:
-        env.setenv("MES_DATABASE_URL", url)
-        config.get_settings.cache_clear()
-        db.get_engine.cache_clear()
-        db.get_sessionmaker.cache_clear()
-
-        engine = make_engine(url)
-        Base.metadata.create_all(engine)
-        with Session(engine, expire_on_commit=False) as session:
-            seed_demo_plant(session)
-            auth.ensure_builtin_roles(session)
-            first = workorders.create(session, code="WO-TRACE-1", material_code="FG-COLA", quantity=40)
-            workorders.release(session, "WO-TRACE-1")
-            execution.consume(session, order_code="WO-TRACE-1", lot_code="LOT-SUGAR-001", quantity=20, seq=10)
-            execution.create_lot(session, code="WO-TRACE-1-FG", material_code="FG-COLA", quantity=40,
-                                 produced_by_order=first)
-            workorders.create(session, code="WO-TRACE-2", material_code="FG-COLA", quantity=40)
-            workorders.release(session, "WO-TRACE-2")
-            execution.consume(session, order_code="WO-TRACE-2", lot_code="LOT-SUGAR-001", quantity=7, seq=10)
-            session.commit()
-
-        sock = socket.socket()
-        sock.bind(("127.0.0.1", 0))
-        server = uvicorn.Server(uvicorn.Config(create_app(), log_level="warning", lifespan="on"))
-        thread = threading.Thread(target=lambda: server.run(sockets=[sock]), daemon=True)
-        thread.start()
-        try:
-            base = f"http://127.0.0.1:{sock.getsockname()[1]}"
-            _wait_until_answering(base)
-            yield base
-        finally:
-            server.should_exit = True
-            thread.join(timeout=10)
-            engine.dispose()
-
-    config.get_settings.cache_clear()
-    db.get_engine.cache_clear()
-    db.get_sessionmaker.cache_clear()
-
-
-def _wait_until_answering(base: str, seconds: float = 20.0) -> None:
-    import urllib.error
-    import urllib.request
-
-    deadline = time.monotonic() + seconds
-    while time.monotonic() < deadline:
-        try:
-            with urllib.request.urlopen(f"{base}/health", timeout=1) as reply:
-                if reply.status == 200:
-                    return
-        except (urllib.error.URLError, OSError):
-            time.sleep(0.1)
-    raise AssertionError(f"the plant at {base} never answered /health")
+def plant(serve_plant):
+    """The demo plant with those two orders, served by `tests/conftest.py`.
+    A plant of this file's own: the shared one may hold other tests' draws
+    on the sugar lot, and this file counts every order that drew on it."""
+    with serve_plant(_two_orders_on_the_sugar_lot, name="trace-lot") as served:
+        yield served
 
 
 @pytest.fixture(scope="module")
@@ -110,13 +60,10 @@ def page(plant):
         with sync_playwright() as pw:
             chromium = pw.chromium.launch()
             context = chromium.new_context(viewport={"width": 1280, "height": 900})
-            reply = context.request.post(
-                f"{plant}/auth/login", data=json.dumps({"code": "ADMIN", "password": "admin"}),
-                headers={"Content-Type": "application/json"})
-            assert reply.ok, f"sign-in failed: {reply.status}"
+            plant.sign_in(context)
             open_page = context.new_page()
             open_page.route("**/trace/where-used/**", slowly)
-            open_page.goto(f"{plant}/dashboard/trace?lot=LOT-SUGAR-001", wait_until="load", timeout=30000)
+            open_page.goto(f"{plant.base}/dashboard/trace?lot=LOT-SUGAR-001", wait_until="load", timeout=30000)
             open_page.wait_for_function(
                 "document.querySelector('#l-orders-count').textContent.includes('2 order(s)')", timeout=15000)
             yield open_page
