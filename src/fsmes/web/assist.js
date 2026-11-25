@@ -593,6 +593,7 @@
   function endWalk(finished) {
     stopWaiting();
     sessionStorage.removeItem(KEY);
+    if (following) { cancelAnimationFrame(following); following = 0; }
     if (ring) { ring.remove(); ring = null; }
     if (coach) { coach.remove(); coach = null; }
     const wasGuide = walk && walk.guide;
@@ -851,17 +852,7 @@
     if (!ring) { ring = el("div", "assist-ring"); document.body.appendChild(ring); }
     if (!coach) { coach = el("div", "assist-coach"); document.body.appendChild(coach); }
 
-    if (target) {
-      const r = target.getBoundingClientRect();
-      const pad = 6;
-      Object.assign(ring.style, {
-        display: "block",
-        left: `${r.left - pad}px`, top: `${r.top - pad}px`,
-        width: `${r.width + pad * 2}px`, height: `${r.height + pad * 2}px`,
-      });
-    } else {
-      ring.style.display = "none";
-    }
+    if (!target) ring.style.display = "none";
 
     coach.textContent = "";
     coach.appendChild(el("div", "step",
@@ -922,28 +913,56 @@
     row.appendChild(next);
     coach.appendChild(row);
 
-    // Place the coach card near the ring without covering it.
-    const cr = coach.getBoundingClientRect();
     if (target) {
-      const r = target.getBoundingClientRect();
-      const below = r.bottom + 14;
-      const fits = below + cr.height < window.innerHeight - 10;
-      coach.style.top = fits ? `${below}px` : `${Math.max(10, r.top - cr.height - 14)}px`;
-      coach.style.left = `${Math.min(Math.max(10, r.left), window.innerWidth - cr.width - 10)}px`;
+      place(target);
+      follow();
     } else {
+      const cr = coach.getBoundingClientRect();
       coach.style.top = "80px";
       coach.style.left = `${Math.max(10, window.innerWidth - cr.width - 20)}px`;
     }
   }
 
-  const reposition = () => { if (walk) showStep(); };
-  window.addEventListener("resize", reposition);
-  window.addEventListener("scroll", () => {
-    if (!walk || !ring || ring.style.display === "none") return;
-    const step = walk.guide.steps[walk.index];
-    const target = stepTarget(step);
-    if (target) paint(target, step, null, walk.index);
-  }, { passive: true });
+  /* The ring round this control, and the coach card near it without
+     covering it. Only positions: the card's words are paint()'s. */
+  function place(target) {
+    const r = target.getBoundingClientRect();
+    const pad = 6;
+    Object.assign(ring.style, {
+      display: "block",
+      left: `${r.left - pad}px`, top: `${r.top - pad}px`,
+      width: `${r.width + pad * 2}px`, height: `${r.height + pad * 2}px`,
+    });
+    const cr = coach.getBoundingClientRect();
+    const below = r.bottom + 14;
+    const fits = below + cr.height < window.innerHeight - 10;
+    coach.style.top = fits ? `${below}px` : `${Math.max(10, r.top - cr.height - 14)}px`;
+    coach.style.left = `${Math.min(Math.max(10, r.left), window.innerWidth - cr.width - 10)}px`;
+  }
+
+  /* The ring follows its control for as long as the step is up. It used to
+     be placed once, 260 ms into the smooth scroll, and again only on a window
+     scroll: a scroll still running at 260 ms, a scroller that is not the
+     window, or a list drawn again under the control left it where the control
+     used to be (GitHub's runner, #300 and #303). One frame at a time, it
+     finds the control again and moves only if the control did. */
+  let following = 0;
+  let placedAt = "";
+  function follow() {
+    if (following) return;
+    const frame = () => {
+      following = 0;
+      if (!walk || !ring || !coach || ring.style.display === "none") return;
+      const target = stepTarget(walk.guide.steps[walk.index]);
+      if (target) {
+        const r = target.getBoundingClientRect();
+        const at = `${r.left},${r.top},${r.width},${r.height},${window.innerWidth},${window.innerHeight}`;
+        if (at !== placedAt) { placedAt = at; place(target); }
+      }
+      following = requestAnimationFrame(frame);
+    };
+    following = requestAnimationFrame(frame);
+  }
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && walk) endWalk(false);
