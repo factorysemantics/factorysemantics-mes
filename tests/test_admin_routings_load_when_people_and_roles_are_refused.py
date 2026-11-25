@@ -21,7 +21,7 @@ from urllib.parse import urlparse
 
 import pytest
 
-pytestmark = [pytest.mark.browser]
+pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
 
 def _refused(url: str) -> bool:
