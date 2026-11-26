@@ -11,8 +11,9 @@ What it promises, in code rather than in the prompt:
 
 - **A step cap.** Every action is a step; at the cap the tools stop acting
   and say "call finish". The run cannot walk on past it.
-- **No admin.** Any request to `/admin/...` is aborted in the browser and a
-  `go` there is refused, whatever role the account has.
+- **No admin changes.** A request under `/admin/...` that is not a GET or a
+  HEAD is aborted in the browser, and a `go` there is refused, whatever role
+  the account has. Screens may read people and roles; nothing changes them.
 - **Evidence.** A screenshot after every step, named
   `<date>-<slug>-before-N.png`, and one line per step in a log beside them.
 - **One verdict.** `finish` writes the walk's result once, as JSON, for the
@@ -45,14 +46,30 @@ RISKS = ("UI", "data", "schema")
 CAP_REACHED = ("The step cap ({cap} steps) is reached; nothing more was done. "
                "Call finish now with what you found.")
 
-# A route a walk never opens, whatever the account's role: the walker acts
-# as a person on the floor, and accounts, roles and settings are not theirs.
+# A route a walk never changes anything under, whatever the account's role:
+# the walker acts as a person on the floor, and accounts, roles and settings
+# are not theirs to change. Reading them is allowed (Scott, 2026-11-25, via
+# the steward: "may look at people and roles but not change them") - the
+# engineer's Admin page could not even list them while every request there
+# was refused. A read cannot change the plant: every GET and HEAD gets a
+# database session that refuses writes (`fsmes.db.read_only_session`), and
+# none of the three reads there returns a password hash or a key.
 FORBIDDEN_PREFIXES = ("/admin",)
+READS = frozenset({"GET", "HEAD"})
 
 
 def forbidden(url: str) -> bool:
     path = urlparse(url).path or "/"
     return any(path == p or path.startswith(p + "/") for p in FORBIDDEN_PREFIXES)
+
+
+async def guard(route) -> None:
+    """Let a read under administration through; abort anything that writes."""
+    request = route.request
+    if forbidden(request.url) and request.method.upper() not in READS:
+        await route.abort()
+    else:
+        await route.continue_()
 
 
 @dataclass
@@ -181,7 +198,7 @@ class PlaywrightDriver:
             raise RuntimeError(f"sign-in as {self.account!r} failed: {reply.status}")
         await self.context.route(
             lambda url: forbidden(url) and urlparse(url).netloc == urlparse(self.base).netloc,
-            lambda route: route.abort())
+            guard)
         self.page = await self.context.new_page()
         self.page.on("download", lambda d: self.downloads.append(d.suggested_filename))
         await self.page.goto(f"{self.base}/", wait_until="load", timeout=30000)
