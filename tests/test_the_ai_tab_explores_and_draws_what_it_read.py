@@ -33,14 +33,11 @@ race in it, and is looked at on loopback only.
 """
 
 import json
-import socket
-import threading
 import time
 from types import SimpleNamespace
 from urllib.parse import quote
 
 import pytest
-from sqlalchemy.orm import Session
 
 from fsmes.services import agent
 
@@ -183,19 +180,10 @@ EXPANDED = [
 
 
 @pytest.fixture(scope="module")
-def plant(tmp_path_factory):
+def plant(tmp_path_factory, serve_plant):
     """A seeded demo plant with the analysis agent on, its reads standing in for
     the plant's own, and a model that plays the exchange above."""
-    import uvicorn
-
-    from fsmes import config, db
-    from fsmes.api.app import create_app
-    from fsmes.db import Base, make_engine
-    from fsmes.seed import seed_demo_plant
-    from fsmes.services import auth
-
-    path = tmp_path_factory.mktemp("explore") / "plant.db"
-    url = f"sqlite:///{path}"
+    records = tmp_path_factory.mktemp("explore-records")
     script: list = []
 
     def scripted(sess):
@@ -208,61 +196,16 @@ def plant(tmp_path_factory):
             return A_PARETO
         return {"plant": plant, "total": 0, "showing": 0}
 
-    with pytest.MonkeyPatch.context() as env:
-        env.setenv("MES_DATABASE_URL", url)
-        env.setenv("ANTHROPIC_API_KEY", "not-a-key-the-model-is-scripted")
-        env.setenv("MES_AGENT_BRAIN", "claude")
-        env.setenv("MES_ANALYSIS_BRAIN", "claude")
-        env.setattr(agent, "sdk_installed", lambda: True)
-        env.setattr(agent, "_call_model", scripted)
-        env.setattr(agent, "execute", served)
-        env.setattr(agent, "USAGE_FILE", path.parent / "usage.jsonl")
-        env.setattr(agent, "TURN_FILE", path.parent / "turns.jsonl")
-        config.get_settings.cache_clear()
-        db.get_engine.cache_clear()
-        db.get_sessionmaker.cache_clear()
-
-        engine = make_engine(url)
-        Base.metadata.create_all(engine)
-        with Session(engine, expire_on_commit=False) as session:
-            seed_demo_plant(session)
-            auth.ensure_builtin_roles(session)
-            session.commit()
-
-        sock = socket.socket()
-        sock.bind(("127.0.0.1", 0))
-        server = uvicorn.Server(uvicorn.Config(
-            create_app(), log_level="warning", lifespan="on"))
-        thread = threading.Thread(target=lambda: server.run(sockets=[sock]), daemon=True)
-        thread.start()
-        try:
-            port = sock.getsockname()[1]
-            base = f"http://127.0.0.1:{port}"
-            _wait_until_answering(base)
-            yield SimpleNamespace(base=base, script=script)
-        finally:
-            server.should_exit = True
-            thread.join(timeout=10)
-            engine.dispose()
-
-    config.get_settings.cache_clear()
-    db.get_engine.cache_clear()
-    db.get_sessionmaker.cache_clear()
-
-
-def _wait_until_answering(base: str, seconds: float = 20.0) -> None:
-    import urllib.error
-    import urllib.request
-
-    deadline = time.monotonic() + seconds
-    while time.monotonic() < deadline:
-        try:
-            with urllib.request.urlopen(f"{base}/health", timeout=1) as reply:
-                if reply.status == 200:
-                    return
-        except (urllib.error.URLError, OSError):
-            time.sleep(0.1)
-    raise AssertionError(f"the plant at {base} never answered /health")
+    env = {"ANTHROPIC_API_KEY": "not-a-key-the-model-is-scripted",
+           "MES_AGENT_BRAIN": "claude", "MES_ANALYSIS_BRAIN": "claude"}
+    with pytest.MonkeyPatch.context() as mine:
+        mine.setattr(agent, "sdk_installed", lambda: True)
+        mine.setattr(agent, "_call_model", scripted)
+        mine.setattr(agent, "execute", served)
+        mine.setattr(agent, "USAGE_FILE", records / "usage.jsonl")
+        mine.setattr(agent, "TURN_FILE", records / "turns.jsonl")
+        with serve_plant(name="explore", env=env) as plant:
+            yield SimpleNamespace(base=plant.base, script=script)
 
 
 @pytest.fixture(scope="module")

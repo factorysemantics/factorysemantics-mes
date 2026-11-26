@@ -46,9 +46,6 @@ Chromium for, and a Playwright file marked only `slow` is a test nothing runs.
 """
 
 import json
-import socket
-import threading
-import time
 from types import SimpleNamespace
 from urllib.parse import parse_qs, urlparse
 
@@ -203,7 +200,7 @@ def _opens_the_sample_then_answers(words):
 
 
 @pytest.fixture(scope="module")
-def plant(tmp_path_factory):
+def plant(tmp_path_factory, serve_plant):
     """A bottling-shaped plant whose newest sample came back high, with the
     analysis agent on and its reads standing in for the plant's own.
 
@@ -212,18 +209,12 @@ def plant(tmp_path_factory):
     the chat draws here is drawn from the trimmed payload, which is the one the
     model is actually handed.
     """
-    import uvicorn
-
-    from fsmes import config, db
-    from fsmes.api.app import create_app
-    from fsmes.db import Base, make_engine, utcnow
+    from fsmes import db
+    from fsmes.db import utcnow
     from fsmes.mcp.quality import _without_sample_readings
-    from fsmes.seed import seed_demo_plant
-    from fsmes.services import auth, gauges, quality
+    from fsmes.services import gauges, quality
     from fsmes.services import spc as spc_service
 
-    path = tmp_path_factory.mktemp("chatchart") / "plant.db"
-    url = f"sqlite:///{path}"
     script: list = []
     #: What the tests hold of this plant. Built before the reads are served
     #: because `served` reads `shape_chart` off it: a test that needs the
@@ -252,97 +243,61 @@ def plant(tmp_path_factory):
         return {"plant": plant, "total": 0, "showing": 0,
                 "note": f"{name} is not what this file is about"}
 
-    with pytest.MonkeyPatch.context() as env:
-        env.setenv("MES_DATABASE_URL", url)
-        env.setenv("MES_PLANT_TIMEZONE", "UTC")
-        env.setenv("ANTHROPIC_API_KEY", "not-a-key-the-model-is-scripted")
-        env.setenv("MES_AGENT_BRAIN", "claude")
-        env.setenv("MES_ANALYSIS_BRAIN", "claude")
-        env.setattr(agent, "sdk_installed", lambda: True)
-        env.setattr(agent, "_call_model", scripted)
-        env.setattr(agent, "execute", served)
-        env.setattr(agent, "USAGE_FILE", path.parent / "usage.jsonl")
-        env.setattr(agent, "TURN_FILE", path.parent / "turns.jsonl")
-        config.get_settings.cache_clear()
-        db.get_engine.cache_clear()
-        db.get_sessionmaker.cache_clear()
+    records = tmp_path_factory.mktemp("chatchart-records")
+    settled = shifted = None
 
-        engine = make_engine(url)
-        Base.metadata.create_all(engine)
-        with Session(engine, expire_on_commit=False) as session:
-            seed_demo_plant(session)
-            auth.ensure_builtin_roles(session)
-            gauges.register(session, code="HEIGHT-01", name="Bench height gauge",
-                            kind="height gauge", resolution=0.1, interval_days=180,
-                            location="MIX01", actor="test")
-            gauges.calibrate(session, "HEIGHT-01", result="pass",
-                             performed_by="QA-LEAD", performed_on=utcnow().date(),
-                             certificate="CERT-HEIGHT-01", actor="test")
-            quality.create_spec(session, material_code="FG-COLA",
-                                characteristic="fill_height", unit="mm",
-                                min_value=139.0, max_value=145.0, sample_size=5,
-                                actor="test")
-            # The second characteristic of the same material, charted the same
-            # way - a sample of five - so that the only thing telling its
-            # chart apart from the fill-height one is the characteristic.
-            quality.create_spec(session, material_code="FG-COLA",
-                                characteristic=OTHER_CHARACTERISTIC, unit="Nm",
-                                min_value=1.0, max_value=2.0, sample_size=5,
-                                actor="test")
+    def seed(session):
+        nonlocal settled, shifted
+        gauges.register(session, code="HEIGHT-01", name="Bench height gauge",
+                        kind="height gauge", resolution=0.1, interval_days=180,
+                        location="MIX01", actor="test")
+        gauges.calibrate(session, "HEIGHT-01", result="pass",
+                         performed_by="QA-LEAD", performed_on=utcnow().date(),
+                         certificate="CERT-HEIGHT-01", actor="test")
+        quality.create_spec(session, material_code="FG-COLA",
+                            characteristic="fill_height", unit="mm",
+                            min_value=139.0, max_value=145.0, sample_size=5,
+                            actor="test")
+        # The second characteristic of the same material, charted the same
+        # way - a sample of five - so that the only thing telling its
+        # chart apart from the fill-height one is the characteristic.
+        quality.create_spec(session, material_code="FG-COLA",
+                            characteristic=OTHER_CHARACTERISTIC, unit="Nm",
+                            min_value=1.0, max_value=2.0, sample_size=5,
+                            actor="test")
 
-            def sample(values, characteristic="fill_height"):
-                row, _checks, _nc, _signals = quality.record_sample(
-                    session, material_code="FG-COLA", characteristic=characteristic,
-                    values=values, gauge_code="HEIGHT-01", equipment_code="MIX01",
-                    actor="OP-NIGHT")
-                session.flush()
-                return row.id
+        def sample(values, characteristic="fill_height"):
+            row, _checks, _nc, _signals = quality.record_sample(
+                session, material_code="FG-COLA", characteristic=characteristic,
+                values=values, gauge_code="HEIGHT-01", equipment_code="MIX01",
+                actor="OP-NIGHT")
+            session.flush()
+            return row.id
 
-            settled = [sample(STEADY_LOW if turn % 2 else STEADY_HIGH)
-                       for turn in range(SAMPLES)]
-            shifted = sample(SHIFTED)
-            for turn in range(OTHER_SAMPLES):
-                sample(TORQUE_LOW if turn % 2 else TORQUE_HIGH,
-                       characteristic=OTHER_CHARACTERISTIC)
-            session.commit()
+        settled = [sample(STEADY_LOW if turn % 2 else STEADY_HIGH)
+                   for turn in range(SAMPLES)]
+        shifted = sample(SHIFTED)
+        for turn in range(OTHER_SAMPLES):
+            sample(TORQUE_LOW if turn % 2 else TORQUE_HIGH,
+                   characteristic=OTHER_CHARACTERISTIC)
 
-        sock = socket.socket()
-        sock.bind(("127.0.0.1", 0))
-        server = uvicorn.Server(uvicorn.Config(
-            create_app(), log_level="warning", lifespan="on"))
-        thread = threading.Thread(target=lambda: server.run(sockets=[sock]),
-                                  daemon=True)
-        thread.start()
-        try:
-            base = f"http://127.0.0.1:{sock.getsockname()[1]}"
-            _wait_until_answering(base)
-            handle.base = base
+    env = {
+        "MES_PLANT_TIMEZONE": "UTC",
+        "ANTHROPIC_API_KEY": "not-a-key-the-model-is-scripted",
+        "MES_AGENT_BRAIN": "claude",
+        "MES_ANALYSIS_BRAIN": "claude",
+    }
+    with pytest.MonkeyPatch.context() as mine:
+        mine.setattr(agent, "sdk_installed", lambda: True)
+        mine.setattr(agent, "_call_model", scripted)
+        mine.setattr(agent, "execute", served)
+        mine.setattr(agent, "USAGE_FILE", records / "usage.jsonl")
+        mine.setattr(agent, "TURN_FILE", records / "turns.jsonl")
+        with serve_plant(seed, name="chatchart", env=env) as plant:
+            handle.base = plant.base
             handle.shifted = shifted
             handle.settled = settled
             yield handle
-        finally:
-            server.should_exit = True
-            thread.join(timeout=10)
-            engine.dispose()
-
-    config.get_settings.cache_clear()
-    db.get_engine.cache_clear()
-    db.get_sessionmaker.cache_clear()
-
-
-def _wait_until_answering(base: str, seconds: float = 20.0) -> None:
-    import urllib.error
-    import urllib.request
-
-    deadline = time.monotonic() + seconds
-    while time.monotonic() < deadline:
-        try:
-            with urllib.request.urlopen(f"{base}/health", timeout=1) as reply:
-                if reply.status == 200:
-                    return
-        except (urllib.error.URLError, OSError):
-            time.sleep(0.1)
-    raise AssertionError(f"the plant at {base} never answered /health")
 
 
 @pytest.fixture(scope="module")

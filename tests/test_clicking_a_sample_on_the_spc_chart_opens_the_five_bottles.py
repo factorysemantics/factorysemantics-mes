@@ -26,14 +26,11 @@ Chromium for, and a Playwright file marked only `slow` is a test nothing runs.
 """
 
 import re
-import socket
-import threading
 from datetime import timedelta
 from urllib.parse import parse_qs, urlparse
 
 import pytest
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
@@ -69,7 +66,7 @@ SAMPLE_SECONDS = 5
 
 
 @pytest.fixture(scope="module")
-def plant(tmp_path_factory):
+def plant(tmp_path_factory, serve_plant):
     """A bottling-shaped plant whose newest sample is the one after a changeover.
 
     Everything the panel is meant to find is written down with its own stamp:
@@ -85,11 +82,7 @@ def plant(tmp_path_factory):
     integration will have them apart, and *the window is the stretch the five
     bottles span* is the claim the panel rests on.
     """
-    import uvicorn
-
-    from fsmes import config, db
-    from fsmes.api.app import create_app
-    from fsmes.db import Base, make_engine, utcnow
+    from fsmes.db import utcnow
     from fsmes.domain import (
         Equipment,
         EquipmentState,
@@ -99,140 +92,96 @@ def plant(tmp_path_factory):
         MaintenanceStatus,
         TagValue,
     )
-    from fsmes.seed import seed_demo_plant
-    from fsmes.services import auth, gauges, quality
+    from fsmes.services import gauges, quality
 
-    path = tmp_path_factory.mktemp("spcsample") / "plant.db"
-    url = f"sqlite:///{path}"
+    shifted_id = None
 
-    with pytest.MonkeyPatch.context() as env:
-        env.setenv("MES_DATABASE_URL", url)
-        env.setenv("MES_PLANT_TIMEZONE", "UTC")
-        config.get_settings.cache_clear()
-        db.get_engine.cache_clear()
-        db.get_sessionmaker.cache_clear()
+    def seed(session):
+        nonlocal shifted_id
+        today = utcnow().date()
+        for code, name, days in (("HEIGHT-01", "Bench height gauge", 14),
+                                 ("HEIGHT-02", "Line height gauge", 200)):
+            gauges.register(session, code=code, name=name, kind="height gauge",
+                            resolution=0.1, interval_days=180, location="MIX01",
+                            actor="test")
+            gauges.calibrate(session, code, result="pass", performed_by="QA-LEAD",
+                             performed_on=today - timedelta(days=days),
+                             certificate=f"CERT-{code}", actor="test")
+        quality.create_spec(session, material_code="FG-COLA",
+                            characteristic="fill_height", unit="mm",
+                            min_value=139.0, max_value=145.0, sample_size=5,
+                            actor="test")
 
-        engine = make_engine(url)
-        Base.metadata.create_all(engine)
-        with Session(engine, expire_on_commit=False) as session:
-            seed_demo_plant(session)
-            auth.ensure_builtin_roles(session)
-            today = utcnow().date()
-            for code, name, days in (("HEIGHT-01", "Bench height gauge", 14),
-                                     ("HEIGHT-02", "Line height gauge", 200)):
-                gauges.register(session, code=code, name=name, kind="height gauge",
-                                resolution=0.1, interval_days=180, location="MIX01",
-                                actor="test")
-                gauges.calibrate(session, code, result="pass", performed_by="QA-LEAD",
-                                 performed_on=today - timedelta(days=days),
-                                 certificate=f"CERT-{code}", actor="test")
-            quality.create_spec(session, material_code="FG-COLA",
-                                characteristic="fill_height", unit="mm",
-                                min_value=139.0, max_value=145.0, sample_size=5,
-                                actor="test")
+        def sample(values, gauge="HEIGHT-01"):
+            row, checks, _nc, _signals = quality.record_sample(
+                session, material_code="FG-COLA", characteristic="fill_height",
+                values=values, gauge_code=gauge, equipment_code="MIX01",
+                actor="OP-NIGHT")
+            session.flush()
+            return row, checks
 
-            def sample(values, gauge="HEIGHT-01"):
-                row, checks, _nc, _signals = quality.record_sample(
-                    session, material_code="FG-COLA", characteristic="fill_height",
-                    values=values, gauge_code=gauge, equipment_code="MIX01",
-                    actor="OP-NIGHT")
-                session.flush()
-                return row, checks
+        for turn in range(SAMPLES):
+            sample(STEADY_LOW if turn % 2 else STEADY_HIGH)
+        # One sample on the other gauge, reading half a millimetre high:
+        # the drifting-instrument story, which is what the neighbours
+        # table is for.
+        sample([v + 0.5 for v in STEADY_HIGH], gauge="HEIGHT-02")
+        shifted, checks = sample(SHIFTED)
+        at = shifted.ts
+        for offset, check in zip(range(4, -1, -1), checks, strict=True):
+            check.ts = at - timedelta(minutes=offset)
 
-            for turn in range(SAMPLES):
-                sample(STEADY_LOW if turn % 2 else STEADY_HIGH)
-            # One sample on the other gauge, reading half a millimetre high:
-            # the drifting-instrument story, which is what the neighbours
-            # table is for.
-            sample([v + 0.5 for v in STEADY_HIGH], gauge="HEIGHT-02")
-            shifted, checks = sample(SHIFTED)
-            at = shifted.ts
-            for offset, check in zip(range(4, -1, -1), checks, strict=True):
-                check.ts = at - timedelta(minutes=offset)
+        mixer = session.scalar(select(Equipment).where(Equipment.code == "MIX01"))
+        packer = session.scalar(select(Equipment).where(Equipment.code == "PACK01"))
+        session.add_all([
+            # Watching this machine since long before the window, so the
+            # minutes the panel asks for are minutes it can answer for.
+            EquipmentState(equipment_id=mixer.id, state=EquipmentStateName.IDLE,
+                           started_at=at - timedelta(hours=3),
+                           ended_at=at - timedelta(minutes=13)),
+            # A stop nobody named (house rule 3), then the changeover that
+            # ended forty seconds before the sample, then running.
+            EquipmentState(equipment_id=mixer.id, state=EquipmentStateName.DOWN,
+                           started_at=at - timedelta(minutes=13),
+                           ended_at=at - timedelta(minutes=12)),
+            EquipmentState(equipment_id=mixer.id, state=EquipmentStateName.SETUP,
+                           reason="Product change", reason_code="changeover",
+                           started_at=at - timedelta(minutes=12),
+                           ended_at=at - timedelta(seconds=40)),
+            EquipmentState(equipment_id=mixer.id, state=EquipmentStateName.RUNNING,
+                           started_at=at - timedelta(seconds=40)),
+            # And the station beside it, which changed size six minutes
+            # before these five bottles were taken and which neither panel
+            # could name until 2026-10-07.
+            EquipmentState(equipment_id=packer.id, state=EquipmentStateName.IDLE,
+                           started_at=at - timedelta(hours=3),
+                           ended_at=at - timedelta(minutes=11)),
+            EquipmentState(equipment_id=packer.id, state=EquipmentStateName.SETUP,
+                           reason="Size change", reason_code="changeover",
+                           started_at=at - timedelta(minutes=11),
+                           ended_at=at - timedelta(minutes=6)),
+            EquipmentState(equipment_id=packer.id, state=EquipmentStateName.RUNNING,
+                           started_at=at - timedelta(minutes=6)),
+            MaintenanceOrder(
+                code="MO-FILLER", equipment_id=mixer.id,
+                kind=MaintenanceKind.CORRECTIVE, status=MaintenanceStatus.IN_PROGRESS,
+                summary="Filler nozzle seal weeping", raised_at=at - timedelta(hours=2),
+                started_at=at - timedelta(hours=1)),
+        ])
+        moment = at - timedelta(minutes=20)
+        while moment <= at + timedelta(minutes=4):
+            session.add(TagValue(equipment_id=mixer.id, tag="MIX01.Temperature",
+                                 ts=moment, value_num=62.0))
+            if moment <= at - timedelta(minutes=8):
+                # And then nothing: a stale value is not a steady one.
+                session.add(TagValue(equipment_id=mixer.id, tag="MIX01.Pressure",
+                                     ts=moment, value_num=2.6))
+            moment += timedelta(seconds=SAMPLE_SECONDS)
+        shifted_id = shifted.id
 
-            mixer = session.scalar(select(Equipment).where(Equipment.code == "MIX01"))
-            packer = session.scalar(select(Equipment).where(Equipment.code == "PACK01"))
-            session.add_all([
-                # Watching this machine since long before the window, so the
-                # minutes the panel asks for are minutes it can answer for.
-                EquipmentState(equipment_id=mixer.id, state=EquipmentStateName.IDLE,
-                               started_at=at - timedelta(hours=3),
-                               ended_at=at - timedelta(minutes=13)),
-                # A stop nobody named (house rule 3), then the changeover that
-                # ended forty seconds before the sample, then running.
-                EquipmentState(equipment_id=mixer.id, state=EquipmentStateName.DOWN,
-                               started_at=at - timedelta(minutes=13),
-                               ended_at=at - timedelta(minutes=12)),
-                EquipmentState(equipment_id=mixer.id, state=EquipmentStateName.SETUP,
-                               reason="Product change", reason_code="changeover",
-                               started_at=at - timedelta(minutes=12),
-                               ended_at=at - timedelta(seconds=40)),
-                EquipmentState(equipment_id=mixer.id, state=EquipmentStateName.RUNNING,
-                               started_at=at - timedelta(seconds=40)),
-                # And the station beside it, which changed size six minutes
-                # before these five bottles were taken and which neither panel
-                # could name until 2026-10-07.
-                EquipmentState(equipment_id=packer.id, state=EquipmentStateName.IDLE,
-                               started_at=at - timedelta(hours=3),
-                               ended_at=at - timedelta(minutes=11)),
-                EquipmentState(equipment_id=packer.id, state=EquipmentStateName.SETUP,
-                               reason="Size change", reason_code="changeover",
-                               started_at=at - timedelta(minutes=11),
-                               ended_at=at - timedelta(minutes=6)),
-                EquipmentState(equipment_id=packer.id, state=EquipmentStateName.RUNNING,
-                               started_at=at - timedelta(minutes=6)),
-                MaintenanceOrder(
-                    code="MO-FILLER", equipment_id=mixer.id,
-                    kind=MaintenanceKind.CORRECTIVE, status=MaintenanceStatus.IN_PROGRESS,
-                    summary="Filler nozzle seal weeping", raised_at=at - timedelta(hours=2),
-                    started_at=at - timedelta(hours=1)),
-            ])
-            moment = at - timedelta(minutes=20)
-            while moment <= at + timedelta(minutes=4):
-                session.add(TagValue(equipment_id=mixer.id, tag="MIX01.Temperature",
-                                     ts=moment, value_num=62.0))
-                if moment <= at - timedelta(minutes=8):
-                    # And then nothing: a stale value is not a steady one.
-                    session.add(TagValue(equipment_id=mixer.id, tag="MIX01.Pressure",
-                                         ts=moment, value_num=2.6))
-                moment += timedelta(seconds=SAMPLE_SECONDS)
-            session.commit()
-            shifted_id = shifted.id
-
-        sock = socket.socket()
-        sock.bind(("127.0.0.1", 0))
-        server = uvicorn.Server(uvicorn.Config(
-            create_app(), log_level="warning", lifespan="on"))
-        thread = threading.Thread(target=lambda: server.run(sockets=[sock]), daemon=True)
-        thread.start()
-        try:
-            base = f"http://127.0.0.1:{sock.getsockname()[1]}"
-            _wait_until_answering(base)
-            yield base, shifted_id
-        finally:
-            server.should_exit = True
-            thread.join(timeout=10)
-            engine.dispose()
-
-    config.get_settings.cache_clear()
-    db.get_engine.cache_clear()
-    db.get_sessionmaker.cache_clear()
-
-
-def _wait_until_answering(base: str, seconds: float = 20.0) -> None:
-    import time
-    import urllib.error
-    import urllib.request
-
-    deadline = time.monotonic() + seconds
-    while time.monotonic() < deadline:
-        try:
-            with urllib.request.urlopen(f"{base}/health", timeout=1) as reply:
-                if reply.status == 200:
-                    return
-        except (urllib.error.URLError, OSError):
-            time.sleep(0.1)
-    raise AssertionError(f"the plant at {base} never answered /health")
+    env = {"MES_PLANT_TIMEZONE": "UTC"}
+    with serve_plant(seed, name="spcsample", env=env) as plant:
+        yield plant.base, shifted_id
 
 
 @pytest.fixture(scope="module")

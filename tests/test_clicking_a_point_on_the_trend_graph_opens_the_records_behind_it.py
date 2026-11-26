@@ -28,13 +28,10 @@ Chromium for, and a Playwright file marked only `slow` is a test nothing runs.
 """
 
 import json
-import socket
-import threading
 from datetime import UTC, time, timedelta
 
 import pytest
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
@@ -68,7 +65,7 @@ def _epoch_ms(moment) -> int:
 
 
 @pytest.fixture(scope="module")
-def plant(tmp_path_factory):
+def plant(tmp_path_factory, serve_plant):
     """A mixer with two tags in two units over a window that has finished.
 
     Everything a block of the panel is about is declared here: a temperature in
@@ -82,11 +79,7 @@ def plant(tmp_path_factory):
     and a window that has finished cannot be made out of intervals that start at
     this second.
     """
-    import uvicorn
-
-    from fsmes import config, db
-    from fsmes.api.app import create_app
-    from fsmes.db import Base, make_engine, utcnow
+    from fsmes.db import utcnow
     from fsmes.domain import (
         Equipment,
         EquipmentState,
@@ -97,12 +90,9 @@ def plant(tmp_path_factory):
         ShiftPattern,
         TagValue,
     )
-    from fsmes.seed import seed_demo_plant
-    from fsmes.services import auth, quality, workorders
+    from fsmes.services import quality, workorders
 
     room = tmp_path_factory.mktemp("trendpoint")
-    path = room / "plant.db"
-    url = f"sqlite:///{path}"
 
     # The tag manifest and the tag map, as a plant that has written its units
     # down has them. The unit on a tag is the only reason this chart has two
@@ -119,131 +109,91 @@ def plant(tmp_path_factory):
         {"equipment": "MIX01", "object": "MIX01", "cycle_seconds": 4.0},
     ]}), encoding="utf-8")
 
-    with pytest.MonkeyPatch.context() as env:
-        env.setenv("MES_DATABASE_URL", url)
-        env.setenv("MES_PLANT_TIMEZONE", "UTC")
-        env.setenv("MES_REPLAY_DIR", str(replay))
-        env.setenv("MES_TAG_MAP_FILE", str(tag_map))
-        config.get_settings.cache_clear()
-        db.get_engine.cache_clear()
-        db.get_sessionmaker.cache_clear()
+    end = (utcnow() - timedelta(minutes=ENDED_MINUTES_AGO)).replace(
+        microsecond=0, second=0)
+    start = end - timedelta(minutes=SPAN_MINUTES)
 
-        engine = make_engine(url)
-        Base.metadata.create_all(engine)
-        end = (utcnow() - timedelta(minutes=ENDED_MINUTES_AGO)).replace(
-            microsecond=0, second=0)
-        start = end - timedelta(minutes=SPAN_MINUTES)
-        with Session(engine, expire_on_commit=False) as session:
-            seed_demo_plant(session)
-            auth.ensure_builtin_roles(session)
+    def seed(session):
 
-            # Three shifts covering the whole clock, every day of the week, so
-            # that "this shift" and "last shift" name a shift whatever hour a CI
-            # runner starts at. A plant with no patterns has no current shift,
-            # and the control would then be offering a window that errors.
-            session.add_all([
-                ShiftPattern(code="DAY", name="Day", starts=time(6, 0),
-                             ends=time(14, 0), days="1111111"),
-                ShiftPattern(code="EVE", name="Evening", starts=time(14, 0),
-                             ends=time(22, 0), days="1111111"),
-                ShiftPattern(code="NIGHT", name="Night", starts=time(22, 0),
-                             ends=time(6, 0), days="1111111"),
-            ])
+        # Three shifts covering the whole clock, every day of the week, so
+        # that "this shift" and "last shift" name a shift whatever hour a CI
+        # runner starts at. A plant with no patterns has no current shift,
+        # and the control would then be offering a window that errors.
+        session.add_all([
+            ShiftPattern(code="DAY", name="Day", starts=time(6, 0),
+                         ends=time(14, 0), days="1111111"),
+            ShiftPattern(code="EVE", name="Evening", starts=time(14, 0),
+                         ends=time(22, 0), days="1111111"),
+            ShiftPattern(code="NIGHT", name="Night", starts=time(22, 0),
+                         ends=time(6, 0), days="1111111"),
+        ])
 
-            mixer = session.scalar(select(Equipment).where(Equipment.code == "MIX01"))
+        mixer = session.scalar(select(Equipment).where(Equipment.code == "MIX01"))
 
-            # The two lines. Temperature across the whole window, stepping up two
-            # degrees at the halfway mark; pressure in bar, on the other scale.
-            at = start
-            half = start + timedelta(minutes=SPAN_MINUTES // 2)
-            while at <= end:
-                session.add(TagValue(equipment_id=mixer.id, tag="MIX01.Temperature",
-                                     ts=at, value_num=62.0 if at < half else 64.0))
-                session.add(TagValue(equipment_id=mixer.id, tag="MIX01.Pressure",
-                                     ts=at, value_num=2.6))
-                at += timedelta(seconds=SAMPLE_SECONDS)
+        # The two lines. Temperature across the whole window, stepping up two
+        # degrees at the halfway mark; pressure in bar, on the other scale.
+        at = start
+        half = start + timedelta(minutes=SPAN_MINUTES // 2)
+        while at <= end:
+            session.add(TagValue(equipment_id=mixer.id, tag="MIX01.Temperature",
+                                 ts=at, value_num=62.0 if at < half else 64.0))
+            session.add(TagValue(equipment_id=mixer.id, tag="MIX01.Pressure",
+                                 ts=at, value_num=2.6))
+            at += timedelta(seconds=SAMPLE_SECONDS)
 
-            session.add_all([
-                # Watched since long before the window, so the ninety minutes the
-                # panel asks about are ninety it can answer for.
-                EquipmentState(equipment_id=mixer.id, state=EquipmentStateName.RUNNING,
-                               started_at=start - timedelta(hours=2),
-                               ended_at=start + timedelta(minutes=STOP_AT)),
-                # A stop nobody named - house rule 3 - then a changeover somebody
-                # did, then running again.
-                EquipmentState(equipment_id=mixer.id, state=EquipmentStateName.DOWN,
-                               started_at=start + timedelta(minutes=STOP_AT),
-                               ended_at=start + timedelta(minutes=SETUP_AT)),
-                EquipmentState(equipment_id=mixer.id, state=EquipmentStateName.SETUP,
-                               reason="Product change", reason_code="changeover",
-                               started_at=start + timedelta(minutes=SETUP_AT),
-                               ended_at=start + timedelta(minutes=RUNNING_AT)),
-                EquipmentState(equipment_id=mixer.id, state=EquipmentStateName.RUNNING,
-                               started_at=start + timedelta(minutes=RUNNING_AT)),
-                # Link 2's shape: raised before the window, given to somebody, and
-                # never started because it needs the line stopped.
-                MaintenanceOrder(
-                    code="MO-CHILLER", equipment_id=mixer.id,
-                    kind=MaintenanceKind.PREVENTIVE,
-                    status=MaintenanceStatus.ASSIGNED,
-                    summary="Chiller condenser clean",
-                    reason="Needs the line stopped; no window this shift",
-                    raised_at=start - timedelta(hours=3), started_at=None),
-            ])
+        session.add_all([
+            # Watched since long before the window, so the ninety minutes the
+            # panel asks about are ninety it can answer for.
+            EquipmentState(equipment_id=mixer.id, state=EquipmentStateName.RUNNING,
+                           started_at=start - timedelta(hours=2),
+                           ended_at=start + timedelta(minutes=STOP_AT)),
+            # A stop nobody named - house rule 3 - then a changeover somebody
+            # did, then running again.
+            EquipmentState(equipment_id=mixer.id, state=EquipmentStateName.DOWN,
+                           started_at=start + timedelta(minutes=STOP_AT),
+                           ended_at=start + timedelta(minutes=SETUP_AT)),
+            EquipmentState(equipment_id=mixer.id, state=EquipmentStateName.SETUP,
+                           reason="Product change", reason_code="changeover",
+                           started_at=start + timedelta(minutes=SETUP_AT),
+                           ended_at=start + timedelta(minutes=RUNNING_AT)),
+            EquipmentState(equipment_id=mixer.id, state=EquipmentStateName.RUNNING,
+                           started_at=start + timedelta(minutes=RUNNING_AT)),
+            # Link 2's shape: raised before the window, given to somebody, and
+            # never started because it needs the line stopped.
+            MaintenanceOrder(
+                code="MO-CHILLER", equipment_id=mixer.id,
+                kind=MaintenanceKind.PREVENTIVE,
+                status=MaintenanceStatus.ASSIGNED,
+                summary="Chiller condenser clean",
+                reason="Needs the line stopped; no window this shift",
+                raised_at=start - timedelta(hours=3), started_at=None),
+        ])
 
-            # The job that was open. Started through the service, so the order and
-            # its operation are in the states the service puts them in, then moved
-            # back into the window - which is where it has to have been running.
-            workorders.create(session, code="WO-TREND", material_code="FG-COLA",
-                              quantity=120)
-            workorders.release(session, "WO-TREND")
-            operation = workorders.start_operation(session, "WO-TREND", 10)
-            operation.started_at = start - timedelta(minutes=10)
-            order = workorders.get(session, "WO-TREND")
-            order.started_at = start - timedelta(minutes=10)
+        # The job that was open. Started through the service, so the order and
+        # its operation are in the states the service puts them in, then moved
+        # back into the window - which is where it has to have been running.
+        workorders.create(session, code="WO-TREND", material_code="FG-COLA",
+                          quantity=120)
+        workorders.release(session, "WO-TREND")
+        operation = workorders.start_operation(session, "WO-TREND", 10)
+        operation.started_at = start - timedelta(minutes=10)
+        order = workorders.get(session, "WO-TREND")
+        order.started_at = start - timedelta(minutes=10)
 
-            # And what the lab measured while it ran: one brix reading above the
-            # specification, taken inside the window.
-            check, _nc, _signals = quality.record_check(
-                session, material_code="FG-COLA", characteristic="brix",
-                value=12.4, equipment_code="MIX01", actor="OP-NIGHT")
-            check.ts = start + timedelta(minutes=SETUP_AT + 2)
-            session.commit()
+        # And what the lab measured while it ran: one brix reading above the
+        # specification, taken inside the window.
+        check, _nc, _signals = quality.record_check(
+            session, material_code="FG-COLA", characteristic="brix",
+            value=12.4, equipment_code="MIX01", actor="OP-NIGHT")
+        check.ts = start + timedelta(minutes=SETUP_AT + 2)
 
-        sock = socket.socket()
-        sock.bind(("127.0.0.1", 0))
-        server = uvicorn.Server(uvicorn.Config(
-            create_app(), log_level="warning", lifespan="on"))
-        thread = threading.Thread(target=lambda: server.run(sockets=[sock]), daemon=True)
-        thread.start()
-        try:
-            base = f"http://127.0.0.1:{sock.getsockname()[1]}"
-            _wait_until_answering(base)
-            yield base, start, end
-        finally:
-            server.should_exit = True
-            thread.join(timeout=10)
-            engine.dispose()
-
-    config.get_settings.cache_clear()
-    db.get_engine.cache_clear()
-    db.get_sessionmaker.cache_clear()
-
-
-def _wait_until_answering(base: str, seconds: float = 20.0) -> None:
-    import time as clock
-    import urllib.error
-    import urllib.request
-
-    deadline = clock.monotonic() + seconds
-    while clock.monotonic() < deadline:
-        try:
-            with urllib.request.urlopen(f"{base}/health", timeout=1) as reply:
-                if reply.status == 200:
-                    return
-        except (urllib.error.URLError, OSError):
-            clock.sleep(0.1)
-    raise AssertionError(f"the plant at {base} never answered /health")
+    env = {
+        "MES_PLANT_TIMEZONE": "UTC",
+        "MES_REPLAY_DIR": str(replay),
+        "MES_TAG_MAP_FILE": str(tag_map),
+    }
+    with serve_plant(seed, name="trendpoint-plant", env=env) as plant:
+        yield plant.base, start, end
 
 
 @pytest.fixture(scope="module")

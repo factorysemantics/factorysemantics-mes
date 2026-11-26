@@ -36,14 +36,11 @@ Chromium for, and a Playwright file marked only `slow` is a test nothing runs.
 """
 
 import re
-import socket
-import threading
 from datetime import timedelta
 from urllib.parse import parse_qs, urlparse
 
 import pytest
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
@@ -115,7 +112,7 @@ IN_BAND, TOO_COLD = 4.0, 1.4
 
 
 @pytest.fixture(scope="module")
-def plant(tmp_path_factory):
+def plant(tmp_path_factory, serve_plant):
     """A bottling-shaped plant whose characteristic is counted, not measured.
 
     Everything the panel is meant to find is written down with its own stamp:
@@ -130,11 +127,7 @@ def plant(tmp_path_factory):
     two and a half hours; this fixture is about what the chart does once it
     has limits, not about how many lots it waits for.
     """
-    import uvicorn
-
-    from fsmes import config, db
-    from fsmes.api.app import create_app
-    from fsmes.db import Base, make_engine, utcnow
+    from fsmes.db import utcnow
     from fsmes.domain import (
         Equipment,
         EquipmentState,
@@ -144,157 +137,113 @@ def plant(tmp_path_factory):
         MaintenanceStatus,
         TagValue,
     )
-    from fsmes.seed import seed_demo_plant
-    from fsmes.services import auth, plant_settings, quality
+    from fsmes.services import plant_settings, quality
 
-    path = tmp_path_factory.mktemp("spclot") / "plant.db"
-    url = f"sqlite:///{path}"
+    counts = None
 
-    with pytest.MonkeyPatch.context() as env:
-        env.setenv("MES_DATABASE_URL", url)
-        env.setenv("MES_PLANT_TIMEZONE", "UTC")
-        config.get_settings.cache_clear()
-        db.get_engine.cache_clear()
-        db.get_sessionmaker.cache_clear()
+    def seed(session):
+        nonlocal counts
+        plant_settings.write(session, domain="quality", key="spc_min_points",
+                             written=str(len(LOTS)), actor="test")
+        quality.create_spec(session, material_code="FG-COLA",
+                            characteristic="sent_back", unit="",
+                            counted=True, actor="test")
 
-        engine = make_engine(url)
-        Base.metadata.create_all(engine)
-        with Session(engine, expire_on_commit=False) as session:
-            seed_demo_plant(session)
-            auth.ensure_builtin_roles(session)
-            plant_settings.write(session, domain="quality", key="spc_min_points",
-                                 written=str(len(LOTS)), actor="test")
-            quality.create_spec(session, material_code="FG-COLA",
-                                characteristic="sent_back", unit="",
-                                counted=True, actor="test")
+        now = utcnow()
+        #: The ten stretches end one after another and the last of them
+        #: ends now, so the newest lot is the one a reader meets.
+        def stretch(turn):
+            ends = now - timedelta(minutes=STRETCH_MINUTES * (len(LOTS) - 1 - turn))
+            return ends - timedelta(minutes=STRETCH_MINUTES), ends
 
-            now = utcnow()
-            #: The ten stretches end one after another and the last of them
-            #: ends now, so the newest lot is the one a reader meets.
-            def stretch(turn):
-                ends = now - timedelta(minutes=STRETCH_MINUTES * (len(LOTS) - 1 - turn))
-                return ends - timedelta(minutes=STRETCH_MINUTES), ends
+        rows = []
+        for turn, (inspected, rejected) in enumerate(LOTS):
+            started, ended = stretch(turn)
+            lot = f"4711-Q{turn + 1:02d}"
+            if lot == UNCODED_LOT:
+                # Nobody coded these. Null, and the panel says so.
+                defects = None
+            elif lot == WRONG_LOT:
+                defects = WRONG_DEFECTS
+            else:
+                # Skewed caps are this line's ordinary complaint, so the
+                # stretch that went wrong stands out by WHAT was wrong
+                # with it and not only by how much.
+                defects = [{"code": "cap_skew", "count": rejected - rejected // 4},
+                           {"code": "label_off", "count": rejected // 4}]
+            count, _nc, _signals = quality.record_count(
+                session, material_code="FG-COLA", characteristic="sent_back",
+                inspected=inspected, rejected=rejected, lot_ref=lot,
+                defects=defects, equipment_code="MIX01",
+                started_at=started, ended_at=ended, actor="QI01")
+            # `record_count` stamps the row when it is written, and this
+            # fixture writes ten of them in one second. The stamp a reader
+            # sees is when the stretch ended.
+            count.ts = ended
+            session.flush()
+            rows.append(count)
 
-            rows = []
-            for turn, (inspected, rejected) in enumerate(LOTS):
-                started, ended = stretch(turn)
-                lot = f"4711-Q{turn + 1:02d}"
-                if lot == UNCODED_LOT:
-                    # Nobody coded these. Null, and the panel says so.
-                    defects = None
-                elif lot == WRONG_LOT:
-                    defects = WRONG_DEFECTS
-                else:
-                    # Skewed caps are this line's ordinary complaint, so the
-                    # stretch that went wrong stands out by WHAT was wrong
-                    # with it and not only by how much.
-                    defects = [{"code": "cap_skew", "count": rejected - rejected // 4},
-                               {"code": "label_off", "count": rejected // 4}]
-                count, _nc, _signals = quality.record_count(
-                    session, material_code="FG-COLA", characteristic="sent_back",
-                    inspected=inspected, rejected=rejected, lot_ref=lot,
-                    defects=defects, equipment_code="MIX01",
-                    started_at=started, ended_at=ended, actor="QI01")
-                # `record_count` stamps the row when it is written, and this
-                # fixture writes ten of them in one second. The stamp a reader
-                # sees is when the stretch ended.
-                count.ts = ended
-                session.flush()
-                rows.append(count)
+        wrong = rows[WRONG]
+        cold_from, cold_to = wrong.started_at, wrong.ended_at
 
-            wrong = rows[WRONG]
-            cold_from, cold_to = wrong.started_at, wrong.ended_at
+        mixer = session.scalar(select(Equipment).where(Equipment.code == "MIX01"))
+        packer = session.scalar(select(Equipment).where(Equipment.code == "PACK01"))
+        watched_from = rows[0].started_at - timedelta(hours=1)
+        session.add_all([
+            # Watched since before the first stretch, so the minutes the
+            # panel asks about are minutes it can answer for.
+            EquipmentState(equipment_id=mixer.id, state=EquipmentStateName.RUNNING,
+                           started_at=watched_from,
+                           ended_at=cold_from - timedelta(minutes=9)),
+            # The chiller trip: a stop nobody labelled, then a utility
+            # stop that ended four minutes before the stretch that went
+            # wrong was counted.
+            EquipmentState(equipment_id=mixer.id, state=EquipmentStateName.DOWN,
+                           started_at=cold_from - timedelta(minutes=9),
+                           ended_at=cold_from - timedelta(minutes=8)),
+            EquipmentState(equipment_id=mixer.id, state=EquipmentStateName.DOWN,
+                           reason="Chiller trip", reason_code="utility",
+                           started_at=cold_from - timedelta(minutes=8),
+                           ended_at=cold_from - timedelta(minutes=4)),
+            EquipmentState(equipment_id=mixer.id, state=EquipmentStateName.RUNNING,
+                           started_at=cold_from - timedelta(minutes=4)),
+            # And the station beside it, which changed size inside the
+            # same stretch - named, with no claim that it is the cause.
+            EquipmentState(equipment_id=packer.id, state=EquipmentStateName.RUNNING,
+                           started_at=watched_from,
+                           ended_at=cold_from + timedelta(minutes=2)),
+            EquipmentState(equipment_id=packer.id, state=EquipmentStateName.SETUP,
+                           reason="Size change", reason_code="changeover",
+                           started_at=cold_from + timedelta(minutes=2),
+                           ended_at=cold_from + timedelta(minutes=6)),
+            EquipmentState(equipment_id=packer.id, state=EquipmentStateName.RUNNING,
+                           started_at=cold_from + timedelta(minutes=6)),
+            MaintenanceOrder(
+                code="MO-CHILLER", equipment_id=mixer.id,
+                kind=MaintenanceKind.CORRECTIVE,
+                status=MaintenanceStatus.IN_PROGRESS,
+                summary="Chiller short-cycling on the glycol loop",
+                raised_at=cold_from - timedelta(minutes=8),
+                started_at=cold_from - timedelta(minutes=6)),
+        ])
+        # Two process values across the whole history, so any lot's window
+        # is a window this plant can answer for. The product temperature
+        # falls below the band for the stretch that went wrong and comes
+        # back after it; the line pressure does not move at all, which is
+        # what makes the first one worth looking at.
+        moment = watched_from
+        while moment <= now + timedelta(minutes=10):
+            cold = cold_from <= moment <= cold_to
+            session.add(TagValue(equipment_id=mixer.id, tag="MIX01.ProductTemp",
+                                 ts=moment, value_num=TOO_COLD if cold else IN_BAND))
+            session.add(TagValue(equipment_id=mixer.id, tag="MIX01.Pressure",
+                                 ts=moment, value_num=2.6))
+            moment += timedelta(seconds=TAG_SECONDS)
+        counts = {row.lot_ref: row.id for row in rows}
 
-            mixer = session.scalar(select(Equipment).where(Equipment.code == "MIX01"))
-            packer = session.scalar(select(Equipment).where(Equipment.code == "PACK01"))
-            watched_from = rows[0].started_at - timedelta(hours=1)
-            session.add_all([
-                # Watched since before the first stretch, so the minutes the
-                # panel asks about are minutes it can answer for.
-                EquipmentState(equipment_id=mixer.id, state=EquipmentStateName.RUNNING,
-                               started_at=watched_from,
-                               ended_at=cold_from - timedelta(minutes=9)),
-                # The chiller trip: a stop nobody labelled, then a utility
-                # stop that ended four minutes before the stretch that went
-                # wrong was counted.
-                EquipmentState(equipment_id=mixer.id, state=EquipmentStateName.DOWN,
-                               started_at=cold_from - timedelta(minutes=9),
-                               ended_at=cold_from - timedelta(minutes=8)),
-                EquipmentState(equipment_id=mixer.id, state=EquipmentStateName.DOWN,
-                               reason="Chiller trip", reason_code="utility",
-                               started_at=cold_from - timedelta(minutes=8),
-                               ended_at=cold_from - timedelta(minutes=4)),
-                EquipmentState(equipment_id=mixer.id, state=EquipmentStateName.RUNNING,
-                               started_at=cold_from - timedelta(minutes=4)),
-                # And the station beside it, which changed size inside the
-                # same stretch - named, with no claim that it is the cause.
-                EquipmentState(equipment_id=packer.id, state=EquipmentStateName.RUNNING,
-                               started_at=watched_from,
-                               ended_at=cold_from + timedelta(minutes=2)),
-                EquipmentState(equipment_id=packer.id, state=EquipmentStateName.SETUP,
-                               reason="Size change", reason_code="changeover",
-                               started_at=cold_from + timedelta(minutes=2),
-                               ended_at=cold_from + timedelta(minutes=6)),
-                EquipmentState(equipment_id=packer.id, state=EquipmentStateName.RUNNING,
-                               started_at=cold_from + timedelta(minutes=6)),
-                MaintenanceOrder(
-                    code="MO-CHILLER", equipment_id=mixer.id,
-                    kind=MaintenanceKind.CORRECTIVE,
-                    status=MaintenanceStatus.IN_PROGRESS,
-                    summary="Chiller short-cycling on the glycol loop",
-                    raised_at=cold_from - timedelta(minutes=8),
-                    started_at=cold_from - timedelta(minutes=6)),
-            ])
-            # Two process values across the whole history, so any lot's window
-            # is a window this plant can answer for. The product temperature
-            # falls below the band for the stretch that went wrong and comes
-            # back after it; the line pressure does not move at all, which is
-            # what makes the first one worth looking at.
-            moment = watched_from
-            while moment <= now + timedelta(minutes=10):
-                cold = cold_from <= moment <= cold_to
-                session.add(TagValue(equipment_id=mixer.id, tag="MIX01.ProductTemp",
-                                     ts=moment, value_num=TOO_COLD if cold else IN_BAND))
-                session.add(TagValue(equipment_id=mixer.id, tag="MIX01.Pressure",
-                                     ts=moment, value_num=2.6))
-                moment += timedelta(seconds=TAG_SECONDS)
-            session.commit()
-            counts = {row.lot_ref: row.id for row in rows}
-
-        sock = socket.socket()
-        sock.bind(("127.0.0.1", 0))
-        server = uvicorn.Server(uvicorn.Config(
-            create_app(), log_level="warning", lifespan="on"))
-        thread = threading.Thread(target=lambda: server.run(sockets=[sock]), daemon=True)
-        thread.start()
-        try:
-            base = f"http://127.0.0.1:{sock.getsockname()[1]}"
-            _wait_until_answering(base)
-            yield base, counts
-        finally:
-            server.should_exit = True
-            thread.join(timeout=10)
-            engine.dispose()
-
-    config.get_settings.cache_clear()
-    db.get_engine.cache_clear()
-    db.get_sessionmaker.cache_clear()
-
-
-def _wait_until_answering(base: str, seconds: float = 20.0) -> None:
-    import time
-    import urllib.error
-    import urllib.request
-
-    deadline = time.monotonic() + seconds
-    while time.monotonic() < deadline:
-        try:
-            with urllib.request.urlopen(f"{base}/health", timeout=1) as reply:
-                if reply.status == 200:
-                    return
-        except (urllib.error.URLError, OSError):
-            time.sleep(0.1)
-    raise AssertionError(f"the plant at {base} never answered /health")
+    env = {"MES_PLANT_TIMEZONE": "UTC"}
+    with serve_plant(seed, name="spclot", env=env) as plant:
+        yield plant.base, counts
 
 
 @pytest.fixture(scope="module")

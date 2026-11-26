@@ -318,9 +318,13 @@ def _wait_until_answering(base: str, seconds: float = 20.0) -> None:
 
 
 @contextmanager
-def _serve(directory, seed=None):
+def _serve(directory, seed=None, env=None, demo=True):
     """Seed the demo plant (and `seed(session)`, if given) into a file
-    database under `directory` and serve it until the block ends."""
+    database under `directory` and serve it until the block ends.
+
+    `env` sets environment variables for as long as the plant is served
+    (a value of None unsets one); `demo=False` leaves the demo plant out,
+    for a plant built from a pack, whose `seed` makes everything."""
     import socket
     import threading
 
@@ -330,8 +334,13 @@ def _serve(directory, seed=None):
     from fsmes.db import make_engine
 
     url = f"sqlite:///{directory / 'plant.db'}"
-    with pytest.MonkeyPatch.context() as env:
-        env.setenv("MES_DATABASE_URL", url)
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setenv("MES_DATABASE_URL", url)
+        for name, value in (env or {}).items():
+            if value is None:
+                patch.delenv(name, raising=False)
+            else:
+                patch.setenv(name, value)
         config.get_settings.cache_clear()
         db.get_engine.cache_clear()
         db.get_sessionmaker.cache_clear()
@@ -339,7 +348,8 @@ def _serve(directory, seed=None):
         engine = make_engine(url)
         Base.metadata.create_all(engine)
         with Session(engine, expire_on_commit=False) as s:
-            seed_demo_plant(s)
+            if demo:
+                seed_demo_plant(s)
             auth.ensure_builtin_roles(s)
             if seed is not None:
                 seed(s)
@@ -380,11 +390,13 @@ def live_server(tmp_path_factory):
 def serve_plant(tmp_path_factory):
     """`with serve_plant(seed) as plant:` - a plant of this test's own: the
     demo plant plus whatever `seed(session)` adds, served until the block
-    ends. Call it from a module-scoped fixture."""
+    ends. Call it from a module-scoped fixture. `env={"MES_X": "1"}` sets
+    variables while it is served (None unsets one); `demo=False` serves
+    only what `seed` makes."""
 
     @contextmanager
-    def _serve_plant(seed=None, name: str = "plant"):
-        with _serve(tmp_path_factory.mktemp(name), seed) as served:
+    def _serve_plant(seed=None, name: str = "plant", env=None, demo=True):
+        with _serve(tmp_path_factory.mktemp(name), seed, env, demo) as served:
             yield served
 
     return _serve_plant

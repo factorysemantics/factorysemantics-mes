@@ -19,12 +19,9 @@ from __future__ import annotations
 
 import json
 import math
-import socket
-import threading
 from pathlib import Path
 
 import pytest
-from sqlalchemy.orm import Session
 
 pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
@@ -35,77 +32,25 @@ SIZES = [(1400, 900), (800, 1200)]
 
 
 @pytest.fixture(scope="module")
-def plant(tmp_path_factory):
-    import uvicorn
-
-    from fsmes import config, db
-    from fsmes.api.app import create_app
-    from fsmes.db import Base, make_engine
+def plant(tmp_path_factory, serve_plant):
     from fsmes.integrations.opc.tag_map import load_tag_map
     from fsmes.pack import masterdata as pack_masterdata
-    from fsmes.seed import seed_demo_plant
     from fsmes.seed_kepsim import seed_kepsim_line
-    from fsmes.services import auth
 
-    root = tmp_path_factory.mktemp("line3dfit")
     layout = json.loads((REPO / "config" / "line_layout.json").read_text(encoding="utf-8"))
     bodyshop = json.loads((BODYSHOP / "line_layout.json").read_text(encoding="utf-8"))
     layout["lines"]["BS1"] = bodyshop["lines"]["BS1"]
-    layout_file = root / "line_layout.json"
+    layout_file = tmp_path_factory.mktemp("line3dfit") / "line_layout.json"
     layout_file.write_text(json.dumps(layout), encoding="utf-8")
-    url = f"sqlite:///{root / 'plant.db'}"
 
-    with pytest.MonkeyPatch.context() as env:
-        env.setenv("MES_DATABASE_URL", url)
-        env.setenv("MES_PLANT_TIMEZONE", "UTC")
-        env.setenv("MES_LINE_LAYOUT_FILE", str(layout_file))
-        config.get_settings.cache_clear()
-        db.get_engine.cache_clear()
-        db.get_sessionmaker.cache_clear()
+    def seed(session):
+        seed_kepsim_line(session, tag_map=KEPSIM_MAP)
+        cycles = {m.equipment: m.cycle_seconds for m in load_tag_map(BODYSHOP / "tag_map.json")}
+        pack_masterdata.seed(session, BODYSHOP / "masterdata", cycles)
 
-        engine = make_engine(url)
-        Base.metadata.create_all(engine)
-        with Session(engine, expire_on_commit=False) as session:
-            seed_demo_plant(session)
-            auth.ensure_builtin_roles(session)
-            seed_kepsim_line(session, tag_map=KEPSIM_MAP)
-            cycles = {m.equipment: m.cycle_seconds for m in load_tag_map(BODYSHOP / "tag_map.json")}
-            pack_masterdata.seed(session, BODYSHOP / "masterdata", cycles)
-            session.commit()
-
-        sock = socket.socket()
-        sock.bind(("127.0.0.1", 0))
-        server = uvicorn.Server(uvicorn.Config(create_app(), log_level="warning", lifespan="on"))
-        thread = threading.Thread(target=lambda: server.run(sockets=[sock]), daemon=True)
-        thread.start()
-        try:
-            base = f"http://127.0.0.1:{sock.getsockname()[1]}"
-            _wait_until_answering(base)
-            yield base
-        finally:
-            server.should_exit = True
-            thread.join(timeout=10)
-            engine.dispose()
-
-    config.get_settings.cache_clear()
-    db.get_engine.cache_clear()
-    db.get_sessionmaker.cache_clear()
-
-
-def _wait_until_answering(base: str, seconds: float = 20.0) -> None:
-    import time
-    import urllib.error
-    import urllib.request
-
-    deadline = time.monotonic() + seconds
-    while time.monotonic() < deadline:
-        try:
-            with urllib.request.urlopen(f"{base}/health", timeout=1) as reply:
-                if reply.status == 200:
-                    return
-        except (urllib.error.URLError, OSError):
-            time.sleep(0.1)
-    raise AssertionError(f"the plant at {base} never answered /health")
+    env = {"MES_PLANT_TIMEZONE": "UTC", "MES_LINE_LAYOUT_FILE": str(layout_file)}
+    with serve_plant(seed, name="line3dfit", env=env) as served:
+        yield served.base
 
 
 @pytest.fixture(scope="module")
