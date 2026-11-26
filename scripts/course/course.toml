@@ -91,6 +91,12 @@ label = "1.1"
 slug = "equipment-and-cost-centers"
 title = "Equipment — the plant as a tree, and cost centers"
 one_line = "Every machine has one place in the tree, and every place can carry the cost center its time and scrap are charged to."
+outcomes = [
+  "Read a machine's place in the tree, from the company down to its line, and the cost center it bills to.",
+  "Say why a cost center is set once, on the line, and how every machine under the line takes it.",
+  "Add a line and a machine in Master data, and say what the form refuses and the one thing it does not.",
+]
+scene = "scripts/scenes/course/02-01-equipment-and-cost-centers.toml"
 
 [[module.lesson]]
 order = 2
