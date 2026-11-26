@@ -36,7 +36,7 @@ def isolated(tmp_path, monkeypatch):
 
 def test_there_are_three_personas_and_the_supervisors_first_task_is_the_xlsx_export():
     names = walk.personas()
-    assert names == ["engineer", "operator", "supervisor"], f"{len(names)} persona(s): {names}"
+    assert names == ["engineer", "operator", "quality-engineer", "supervisor"], f"{len(names)} persona(s): {names}"
     loaded = {n: walk.load(n) for n in names}
     # The supervisor and the operator walk five tasks each; the engineer walks
     # the ones Scott said "walk it" to from his own complaints (2026-11-10).
@@ -46,6 +46,14 @@ def test_there_are_three_personas_and_the_supervisors_first_task_is_the_xlsx_exp
         "replay-real-opc-into-test",
         "routing-to-cost-centers",
         "new-user-groups-shifts",
+        "connect-opc-ua-server",
+        "test-then-prod-update",
+    ]
+    # The quality engineer walks what Scott said "walk it" to on 2026-11-26.
+    assert [t.slug for t in loaded["quality-engineer"].tasks] == [
+        "rank-ncr-severity",
+        "guide-adjust-control-limits",
+        "gauges-and-gage-rr",
     ]
     supervisor = loaded["supervisor"]
     assert supervisor.tasks[0].slug == "export-quality-xlsx"
@@ -59,7 +67,10 @@ def test_each_persona_signs_in_as_its_own_lab_account_with_the_role_that_job_hol
     # The engineer who sets up tags and connections holds the keys in a real
     # plant; the walk has to reach the same screens that person would.
     assert roles[walk.load("engineer").account] == "admin"
-    assert len({walk.load(n).account for n in walk.personas()}) == 3
+    # The quality engineer reviews, grades and closes non-conformances: what a
+    # supervisor holds, and never the keys.
+    assert roles[walk.load("quality-engineer").account] == "supervisor"
+    assert len({walk.load(n).account for n in walk.personas()}) == 4
 
 
 def test_a_persona_file_missing_a_field_is_refused_and_the_field_is_named(tmp_path):
@@ -71,7 +82,7 @@ def test_a_persona_file_missing_a_field_is_refused_and_the_field_is_named(tmp_pa
 
 
 def test_an_unknown_persona_is_refused_with_the_ones_there_are():
-    with pytest.raises(walk.WalkError, match="3 known: engineer, operator, supervisor"):
+    with pytest.raises(walk.WalkError, match="4 known: engineer, operator, quality-engineer, supervisor"):
         walk.load("plant-manager")
 
 

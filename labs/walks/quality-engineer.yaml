@@ -1,0 +1,45 @@
+# A pretend quality engineer, walked through the lab plant by `fsmes walk`.
+#
+# Each task is one sentence, said the way the plant's owner would say it to a
+# new hire; `expect` is what a working MES would have shown at the end. The
+# tasks here come from Scott's own complaints about the job, through pm's
+# complaint desk, and are walked only on his "walk it" (2026-11-26, all three).
+#
+# The account is a lab account (plant.LAB_USERS) with the supervisor role,
+# never an admin: the product has no quality-engineer role of its own, and
+# the person who reviews, grades and closes a nonconformance in a plant this
+# size holds what a supervisor holds. Its password comes from the environment
+# variable named here, or the lab-only default when that is unset - never
+# from this file.
+
+persona: quality-engineer
+role: quality engineer
+account: WALK-QE
+password_env: FSMES_WALK_PASSWORD
+who: >-
+  Owns quality at Cutlery Works: the checks on fork, spoon and knife
+  dimensions, the control charts, the nonconformance reports and what is done
+  about each one. Answers to customers when a pallet is questioned. Lives in
+  spreadsheets and control charts, and has used this MES for a week.
+
+tasks:
+  - slug: rank-ncr-severity
+    task: Open a nonconformance report and mark how severe it is, then find the worst ones first.
+    expect: >-
+      Each report carries a severity you set, and the list sorts so the most
+      severe come first.
+
+  - slug: guide-adjust-control-limits
+    task: Change the control limits on a measurement, using only the assistant's guide to find your way.
+    expect: >-
+      The assistant walks you step by step to the limits screen, you change
+      them, and the new limits show on the chart with who changed them and
+      when.
+
+  - slug: gauges-and-gage-rr
+    task: >-
+      Record which gauge took each inspection reading, then run a gauge study
+      to see if the gauge or the people are the problem.
+    expect: >-
+      Every reading shows its gauge, and a gauge study shows how much of the
+      spread comes from the gauge, the people and the parts.
