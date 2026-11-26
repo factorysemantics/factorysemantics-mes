@@ -1,0 +1,696 @@
+# Class 1.2 of the course, *Materials and bills of material*: anything the
+# plant buys, makes or ships is a material, and a bill of material says what
+# goes into one unit of it.
+#
+# Class 1.3 (routings) is the steps; this class is the ingredients. It reads
+# the cutlery plant's eight materials by type, then writes the bills of
+# material the pack does not ship, from the pallet down to the resin and the
+# paper plate, one level at a time, on the Master data screen. It films what
+# the screen cannot do (change a line, show a quantity under 0.005) and what
+# the bill form does not check, and ends on what the Floor does refuse: a lot
+# of a material the plant has never heard of. Filmed on a scratch cutlery
+# plant, every screen as the product draws it.
+
+name = "materials-and-bills-of-material"
+title = "Materials and bills of material"
+lesson = "1.2"
+take_is = "lesson"
+part = "hook"
+base = "http://127.0.0.1:8040"
+badge = "pre-alpha · simulated plant · v{version}"
+# Four and a half to six minutes, as the outline says this class runs.
+budget_seconds = 360
+gif_skip_seconds = 2.0
+width = 1280
+height = 720
+# Writing a bill of material is a write: the class presses Add component, and
+# books a lot in on the Floor (which is refused).
+allow_writes = true
+what_is_written = "which is how the class writes its bills of material: each Add component is a real `POST` to the take's own scratch plant, and the seven lines really are in its bills afterwards. The lot of RAW-PLAET was refused and wrote nothing."
+
+notes = [
+  "The plant was started from the cutlery pack, at ten times wall clock, a minute or two before the camera rolled. Materials and bills are master data, so nothing had to run first; the speed only shows in the banner across the top of the pages.",
+  "The pack has eight materials and not one bill of material: every material's bill reads \"No components.\" on a fresh plant. The class says so and writes the bills itself, top down, on the Master data screen. They stay on the scratch plant, which is deleted when the take ends.",
+  "Every figure in the bills is the pack's own: 240 wraps to a pallet, a stack and a plate to a wrap, a fork, a spoon and a knife to a stack (the pack's README), and 3.9 grams of resin to a fork, the middle of UT-FORK's weight specification (3.6 to 4.2 g). Each line enters at operation 10, the first step of the routing that makes its parent. The resin line is written for the fork only; the class says the spoon and the knife would take their own.",
+  "The bill-of-material table rounds every quantity to two decimal places, so the fork's 0.0039 kg of resin is drawn as 0. The bill holds 0.0039; the class films the 0 as the product draws it and says what is behind it. It is a gap for the product, not something the recording works around.",
+  "The screen has no way to change or remove a line of a bill once it is added, so the outline's \"change the plate and watch nothing else move\" is taught by reading the pallet's bill again after the wrap's is written: the plate is in the wrap's bill and nowhere in the pallet's.",
+  "The bill form does not check what it is given: on this plant it took a quantity of zero, a negative quantity, an operation the parent's routing does not have, and a material as a component of itself. The class says so in one line rather than filming a bad bill.",
+  "The card that multiplies down the levels is the class's own arithmetic, said as such: the screen shows one level of a bill at a time.",
+  "The class is clicked through, as a person would go. Master data is opened by address in the hook, and the Floor twice, each straight after a card, because a card is the recorder's own page and has no menu. Everything else is reached by Engineering, the Master data tab, the Materials tab, the type filter and the rows of the materials table.",
+  "Every line said over the screen has a box round the thing it is about, with a few words on a tab where words help. Rows and cells of a table are boxed without a tab: every spot for one would cover the table's words. The product's message after a save is boxed without a tab for the same reason.",
+  "At any speed but 1x every 2D page carries the product's REPLAY 10× banner across its top. It is filmed as the product draws it.",
+  "The opening beat is a plain card with words on it. There is no artwork of a pallet, a sack of resin or a person.",
+]
+
+honesty = [
+  "the cutlery pack ships no bill of material at all; the class writes the seven lines itself, from the pack's own figures, on the take's scratch plant",
+  "the bill-of-material table rounds to two decimal places, so 0.0039 kg of resin per fork is drawn as 0; the class says the bill holds 0.0039 and the screen does not show it",
+  "a line of a bill cannot be changed or removed on this screen, so the class shows that the pallet's bill does not move by reading it again, not by changing the plate",
+  "the bill form takes a quantity of zero, an operation the routing does not have and a material inside itself; the class says so and does not film a bad bill",
+  "the screen shows one level of a bill at a time; the card that multiplies down to 936 grams of resin is the class's own arithmetic",
+  "the plant is a scratch plant a few minutes old, replaying at ten times wall clock, which is the banner across the top of the pages",
+]
+
+[plant]
+pack = "labs/cutlery"
+speed = 10
+roll_when_timeout_seconds = 600
+
+# ----------------------------------------------------------------- the hook
+
+[[step]]
+do = "slide"
+name = "one-pallet"
+title = "One pallet, all the way down"
+lines = [
+  "A pallet of wrapped cutlery sets leaves the dock",
+  "A sack of resin and a stack of paper plates came in at the other end",
+  "What went into the one, to make the other?",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "A pallet of wrapped cutlery leaves the dock. Resin and paper plates came in at the other end. What went into it?"
+
+[[step]]
+do = "mark"
+name = "one-pallet"
+
+[[step]]
+do = "goto"
+url = "/dashboard/masterdata"
+settle = 2
+
+[[step]]
+do = "click"
+selector = "button.tab[data-tab=\"materials\"]"
+
+[[step]]
+do = "wait_for"
+selector = "#mat-table tbody"
+text = "PALLET"
+scroll_to = "#mat-count"
+scroll_block = "start"
+scroll_offset = 215
+
+[[step]]
+do = "say"
+line = "The pallet is a material in the MES, with its own code. So are the resin and the plate."
+at = "#mat-table td:text-is(\"PALLET\")"
+
+[[step]]
+do = "mark"
+name = "the-pallet-is-a-material"
+
+# ----------------------------------------------------------------- the idea
+
+[[step]]
+part = "idea"
+do = "slide"
+name = "four-words"
+title = "Four words"
+lines = [
+  "Raw: bought and used up, like resin",
+  "Intermediate: made and used here, like a fork",
+  "Finished: shipped, like a pallet",
+  "Bill of material: what goes into one unit, and how much",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "A material is anything the plant buys, makes or ships. Raw is what the plant buys and uses up: resin, paper plates. Intermediate is what it makes and uses itself: a fork, a stack."
+
+[[step]]
+do = "say"
+line = "Finished is what it ships. And a bill of material, a BOM for short, says what goes into one unit of a material, and how much."
+
+[[step]]
+do = "mark"
+name = "four-words"
+
+[[step]]
+do = "slide"
+name = "one-level"
+title = "One level at a time"
+lines = [
+  "A bill names the components of one unit, and how many of each",
+  "Each line can name the operation the component enters at",
+  "A component can have a bill of its own: read down, level by level",
+]
+hold = 1.5
+
+
+[[step]]
+do = "say"
+line = "Each line can say which operation uses the component up, so the right material waits at the right machine."
+
+[[step]]
+do = "say"
+line = "A bill is one level: the pallet's names wraps, not forks. Each wrap has a bill of its own. Read down, and you reach the resin."
+
+[[step]]
+do = "mark"
+name = "one-level"
+
+# ------------------------------------------------------------ on the screen
+
+# A card is the recorder's own page and has no menu, so the camera comes back
+# from the cards to the Floor by address; everything after is reached by menus,
+# tabs and rows.
+[[step]]
+part = "screen"
+do = "goto"
+url = "/dashboard"
+settle = 2
+
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"Engineering\")"
+
+[[step]]
+do = "click"
+selector = ".subnav a:text-is(\"Master data\")"
+
+[[step]]
+do = "click"
+selector = "button.tab[data-tab=\"materials\"]"
+
+[[step]]
+do = "wait_for"
+selector = "#mat-count"
+text = "8 of 8"
+scroll_to = "#mat-count"
+scroll_block = "start"
+scroll_offset = 215
+
+[[step]]
+do = "say"
+line = "Engineering, Master data, Materials. This plant has eight."
+at = "#mat-count"
+label = "Eight"
+
+[[step]]
+do = "choose"
+selector = "#mat-filter-type"
+value = "raw"
+
+[[step]]
+do = "wait_for"
+selector = "#mat-count"
+text = "2 of 2 matching, 8 in the plant"
+
+[[step]]
+do = "say"
+line = "Two are raw: the resin, in kilograms, and the paper plate, counted one by one."
+at = "#mat-table tbody"
+
+[[step]]
+do = "choose"
+selector = "#mat-filter-type"
+value = "intermediate"
+
+[[step]]
+do = "wait_for"
+selector = "#mat-count"
+text = "4 of 4 matching, 8 in the plant"
+
+[[step]]
+do = "say"
+line = "Four are intermediate: fork, spoon, knife, and the stack of all three."
+at = "#mat-table tbody"
+
+[[step]]
+do = "choose"
+selector = "#mat-filter-type"
+value = "finished"
+
+[[step]]
+do = "wait_for"
+selector = "#mat-count"
+text = "2 of 2 matching, 8 in the plant"
+
+[[step]]
+do = "say"
+line = "And two are finished: the wrapped set on its plate, and the pallet it ships on."
+at = "#mat-table tbody"
+
+[[step]]
+do = "mark"
+name = "two-finished"
+
+# The pallet's bill, empty: the pack ships none. The list stays on finished,
+# where the pallet and the wrap both are.
+[[step]]
+do = "click"
+selector = "#mat-table td:text-is(\"PALLET\")"
+
+[[step]]
+do = "wait_for"
+selector = "#bom-title"
+text = "PALLET"
+scroll_to = "#bom-form"
+scroll_block = "end"
+scroll_offset = 140
+
+[[step]]
+do = "say"
+line = "The pallet's bill opens below. It is empty: this simulated plant came with no bills at all."
+at = "#bom-table tbody"
+
+[[step]]
+do = "mark"
+name = "no-bill-yet"
+
+[[step]]
+do = "say"
+line = "So we write them, from the top. A pallet holds 240 wrapped sets, put on at operation 10, the palletizer."
+at = "#bom-form"
+label = "Add a line"
+
+[[step]]
+do = "choose"
+selector = "#bom-component"
+value = "WRAP"
+
+[[step]]
+do = "fill"
+selector = "#bom-qty"
+text = "240"
+
+[[step]]
+do = "fill"
+selector = "#bom-seq"
+text = "10"
+
+[[step]]
+do = "click"
+selector = "#bom-submit"
+
+[[step]]
+do = "wait_for"
+selector = "#bom-table tbody"
+text = "WRAP"
+
+[[step]]
+do = "say"
+line = "One line: 240 WRAP, at operation 10. That is the whole of the pallet's bill."
+at = "#bom-table tbody tr:nth-child(1)"
+
+[[step]]
+do = "mark"
+name = "the-pallets-bill"
+
+# One level down: the wrap.
+[[step]]
+do = "click"
+selector = "#mat-table td:text-is(\"WRAP\")"
+
+[[step]]
+do = "wait_for"
+selector = "#bom-title"
+text = "WRAP"
+scroll_to = "#bom-form"
+scroll_block = "end"
+scroll_offset = 140
+
+[[step]]
+do = "say"
+line = "One level down, the wrap: a stack sealed onto a paper plate, one of each, at the wrapper."
+at = "#bom-title"
+
+[[step]]
+do = "choose"
+selector = "#bom-component"
+value = "STACK-3"
+
+[[step]]
+do = "fill"
+selector = "#bom-qty"
+text = "1"
+
+[[step]]
+do = "fill"
+selector = "#bom-seq"
+text = "10"
+
+[[step]]
+do = "click"
+selector = "#bom-submit"
+
+[[step]]
+do = "wait_for"
+selector = "#bom-table tbody"
+text = "STACK-3"
+
+[[step]]
+do = "choose"
+selector = "#bom-component"
+value = "RAW-PLATE"
+
+[[step]]
+do = "fill"
+selector = "#bom-qty"
+text = "1"
+
+[[step]]
+do = "fill"
+selector = "#bom-seq"
+text = "10"
+
+[[step]]
+do = "click"
+selector = "#bom-submit"
+
+[[step]]
+do = "wait_for"
+selector = "#bom-table tbody"
+text = "RAW-PLATE"
+
+[[step]]
+do = "say"
+line = "Two lines. The paper plate is a raw material: it comes in from outside, and this is where it goes in."
+at = "#bom-table tbody tr:nth-child(1)"
+
+[[step]]
+do = "mark"
+name = "the-wraps-bill"
+
+# Down again: the stack, among the intermediates.
+[[step]]
+do = "choose"
+selector = "#mat-filter-type"
+value = "intermediate"
+
+[[step]]
+do = "wait_for"
+selector = "#mat-count"
+text = "4 of 4 matching, 8 in the plant"
+
+[[step]]
+do = "click"
+selector = "#mat-table td:text-is(\"STACK-3\")"
+
+[[step]]
+do = "wait_for"
+selector = "#bom-title"
+text = "STACK-3"
+scroll_to = "#bom-form"
+scroll_block = "end"
+scroll_offset = 140
+
+[[step]]
+do = "say"
+line = "The stack: a fork, a spoon and a knife, one of each, at the stacker."
+at = "#bom-title"
+
+[[step]]
+do = "choose"
+selector = "#bom-component"
+value = "UT-FORK"
+
+[[step]]
+do = "fill"
+selector = "#bom-qty"
+text = "1"
+
+[[step]]
+do = "fill"
+selector = "#bom-seq"
+text = "10"
+
+[[step]]
+do = "click"
+selector = "#bom-submit"
+
+[[step]]
+do = "wait_for"
+selector = "#bom-table tbody"
+text = "UT-FORK"
+
+[[step]]
+do = "choose"
+selector = "#bom-component"
+value = "UT-SPOON"
+
+[[step]]
+do = "fill"
+selector = "#bom-qty"
+text = "1"
+
+[[step]]
+do = "fill"
+selector = "#bom-seq"
+text = "10"
+
+[[step]]
+do = "click"
+selector = "#bom-submit"
+
+[[step]]
+do = "wait_for"
+selector = "#bom-table tbody"
+text = "UT-SPOON"
+
+[[step]]
+do = "choose"
+selector = "#bom-component"
+value = "UT-KNIFE"
+
+[[step]]
+do = "fill"
+selector = "#bom-qty"
+text = "1"
+
+[[step]]
+do = "fill"
+selector = "#bom-seq"
+text = "10"
+
+[[step]]
+do = "click"
+selector = "#bom-submit"
+
+[[step]]
+do = "wait_for"
+selector = "#bom-table tbody"
+text = "UT-KNIFE"
+
+[[step]]
+do = "mark"
+name = "the-stacks-bill"
+
+# The bottom: the fork and its resin.
+[[step]]
+do = "click"
+selector = "#mat-table td:text-is(\"UT-FORK\")"
+
+[[step]]
+do = "wait_for"
+selector = "#bom-title"
+text = "UT-FORK"
+scroll_to = "#bom-form"
+scroll_block = "end"
+scroll_offset = 140
+
+[[step]]
+do = "say"
+line = "And the bottom: the fork is moulded from resin, at the mould, operation 10. A fork weighs 3.9 grams, the middle of its weight spec."
+at = "#bom-title"
+
+[[step]]
+do = "choose"
+selector = "#bom-component"
+value = "RAW-PP"
+
+[[step]]
+do = "say"
+line = "Resin is bought in kilograms, and a bill uses the component's own unit: 0.0039 kilograms."
+at = "#bom-component"
+label = "Resin, in kg"
+
+[[step]]
+do = "fill"
+selector = "#bom-qty"
+text = "0.0039"
+
+[[step]]
+do = "fill"
+selector = "#bom-seq"
+text = "10"
+
+[[step]]
+do = "click"
+selector = "#bom-submit"
+
+[[step]]
+do = "wait_for"
+selector = "#bom-table tbody"
+text = "RAW-PP"
+
+[[step]]
+do = "say"
+line = "The quantity reads 0. The table rounds to two places: the bill holds 0.0039, and this screen cannot show it. A gap, written down."
+at = "#bom-table tbody tr:nth-child(1) td:nth-child(2)"
+
+[[step]]
+do = "mark"
+name = "the-resin-reads-zero"
+
+
+# What moved when the wrap's bill was written: nothing on the pallet's.
+[[step]]
+do = "choose"
+selector = "#mat-filter-type"
+value = "finished"
+
+[[step]]
+do = "wait_for"
+selector = "#mat-count"
+text = "2 of 2 matching, 8 in the plant"
+
+[[step]]
+do = "click"
+selector = "#mat-table td:text-is(\"PALLET\")"
+
+[[step]]
+do = "wait_for"
+selector = "#bom-title"
+text = "PALLET"
+scroll_to = "#bom-form"
+scroll_block = "end"
+scroll_offset = 140
+
+[[step]]
+do = "say"
+line = "Back to the pallet. Still one line: 240 wraps. Everything we wrote below it moved nothing here."
+at = "#bom-table tbody tr:nth-child(1)"
+
+[[step]]
+do = "say"
+line = "Because a bill is one level, a new plate is changed once, in the wrap's bill, and the pallet never needs to know."
+at = "#bom-title"
+
+[[step]]
+do = "mark"
+name = "the-pallet-did-not-move"
+
+[[step]]
+do = "say"
+line = "This screen adds a line, but cannot change or remove one."
+at = "#bom-submit"
+label = "Adds only"
+
+[[step]]
+do = "say"
+line = "And it checks little: it takes a quantity of zero, or a material inside itself. Read each line before you add it."
+at = "#bom-form"
+
+[[step]]
+do = "mark"
+name = "it-checks-very-little"
+
+[[step]]
+do = "slide"
+name = "read-down"
+title = "Read down the levels"
+lines = [
+  "One pallet: 240 wraps",
+  "240 wraps: 240 stacks and 240 paper plates",
+  "240 stacks: 240 forks, 240 spoons and 240 knives",
+  "240 forks: 240 × 3.9 g = 936 g of resin",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Read down, and one pallet takes 240 paper plates, and 936 grams of resin for its forks alone."
+
+[[step]]
+do = "say"
+line = "The screen shows one level at a time. This multiplying is ours, not the screen's."
+
+[[step]]
+do = "mark"
+name = "read-down"
+
+# -------------------------------------------------------------- it refuses
+
+[[step]]
+part = "refuses"
+do = "goto"
+url = "/dashboard"
+settle = 2
+
+[[step]]
+do = "fill"
+selector = "#form-lot input[name=\"code\"]"
+text = "LOT-DOCK-0001"
+scroll_to = "#form-lot"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "fill"
+selector = "#form-lot input[name=\"material\"]"
+text = "RAW-PLAET"
+
+[[step]]
+do = "fill"
+selector = "#form-lot input[name=\"quantity\"]"
+text = "5000"
+
+[[step]]
+do = "say"
+line = "What the plant does refuse: plates at the dock, booked in on the Floor, with one slip of the finger."
+at = "#form-lot input[name=\"material\"]"
+label = "A typo"
+
+[[step]]
+do = "click"
+selector = "#form-lot button"
+
+[[step]]
+do = "wait_for"
+selector = "#toast"
+text = "not found"
+
+[[step]]
+do = "say"
+line = "Refused: RAW-PLAET is not a material here. A lot of something the plant has never heard of is a typo, not a delivery."
+hold = 1.0
+at = "#toast"
+
+[[step]]
+do = "mark"
+name = "refused-unknown-material"
+
+[[step]]
+do = "hold"
+seconds = 4.5
+
+# ------------------------------------------------------------ you now know
+
+[[step]]
+part = "know"
+do = "slide"
+name = "you-now-know"
+title = "You now know how to"
+lines = [
+  "Say what a material is, anything the plant buys, makes or ships, and tell raw, intermediate and finished apart.",
+  "Read a bill of material one level at a time, from the pallet down to the resin and the paper plate.",
+  "Write a bill in Master data, and say what the form does not check and what the Floor refuses.",
+]
+
+[[step]]
+do = "say"
+line = "Everything has a code, and every bill is one level. You now know how to do three things."
+
+[[step]]
+do = "mark"
+name = "you-now-know"
+
+[[step]]
+do = "hold"
+seconds = 3
