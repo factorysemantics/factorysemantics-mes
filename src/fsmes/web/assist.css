@@ -13,6 +13,16 @@
 .assist-launch:hover { filter: brightness(1.08); }
 .assist-launch:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
 
+/* The launchers float over the bottom-right corner, where pages put their
+   last buttons: a routing's third step had its remove button under Design,
+   even scrolled to the end (card routing-to-cost-centers, 2026-11-26). So a
+   page that shows them keeps room at its end for them, and a control
+   scrolled or tabbed into view stops above them. Room only, nothing moves.
+   The Assistant: 18 + 41 tall + 13 clear. Design, above it, adds its own
+   room in design.css. */
+html:has(body > .assist-launch) { scroll-padding-bottom: 72px; }
+body:has(> .assist-launch) { padding-bottom: 72px; }
+
 .assist-panel {
   position: fixed; right: 18px; bottom: 18px; z-index: 41;
   width: min(380px, calc(100vw - 36px));

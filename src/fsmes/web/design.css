@@ -10,6 +10,10 @@
 }
 .design-launch:hover { background: var(--panel-2); }
 .design-launch:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+/* Above the Assistant's launcher, so the page keeps more room at its end
+   (assist.css says why): 66 + 38 tall + 12 clear. */
+html:has(body > .design-launch) { scroll-padding-bottom: 116px; }
+body:has(> .design-launch) { padding-bottom: 116px; }
 
 .design-panel {
   position: fixed; right: 18px; bottom: 18px; z-index: 42;
