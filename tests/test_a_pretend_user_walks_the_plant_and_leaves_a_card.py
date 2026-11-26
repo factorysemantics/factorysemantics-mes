@@ -316,6 +316,46 @@ def test_administration_is_refused_whatever_the_role():
     assert not walk_browser.forbidden("http://h:8110/administrative-notes")
 
 
+
+class _Route:
+    """What the browser hands the walk's guard: a request and two answers."""
+
+    def __init__(self, method, url):
+        self.request = type("Request", (), {"method": method, "url": url})()
+        self.answer = None
+
+    async def abort(self):
+        self.answer = "aborted"
+
+    async def continue_(self):
+        self.answer = "let through"
+
+
+def _guarded(method, url):
+    route = _Route(method, url)
+    asyncio.run(walk_browser.guard(route))
+    return route.answer
+
+
+@pytest.mark.parametrize("method", ["GET", "HEAD"])
+def test_a_walk_may_read_people_and_roles(method):
+    """Scott, 2026-11-25, via the steward: the walker may look at people and
+    roles but not change them. The engineer's "new user, groups, shifts"
+    card stuck on an Admin page whose lists the walk itself had refused."""
+    for path in ("/admin/users?limit=25", "/admin/roles", "/admin/capabilities"):
+        assert _guarded(method, f"http://h:8140{path}") == "let through", path
+
+
+@pytest.mark.parametrize("method", ["POST", "PUT", "PATCH", "DELETE"])
+def test_a_walk_still_never_changes_people_or_roles(method):
+    for path in ("/admin/roles", "/admin/roles/OPERATOR", "/admin/users/WALK-OP/role"):
+        assert _guarded(method, f"http://h:8140{path}") == "aborted", path
+
+
+def test_a_walk_outside_administration_is_let_through_whatever_the_method():
+    assert _guarded("POST", "http://h:8140/production/book") == "let through"
+    assert _guarded("GET", "http://h:8140/dashboard/admin") == "let through"
+
 def test_one_a_day_is_per_plant_so_bottling_and_machining_are_both_walked(tmp_path):
     quiet = {"echo": lambda *_: None, "when": "2026-11-09", "task": "book-output"}
     first = walk.run("operator", "http://127.0.0.1:8110", tmp_path / "a",
