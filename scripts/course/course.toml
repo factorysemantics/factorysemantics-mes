@@ -104,6 +104,12 @@ label = "1.2"
 slug = "materials-and-bills-of-material"
 title = "Materials and bills of material"
 one_line = "Anything the plant buys, makes or ships, and what goes into one unit of it."
+outcomes = [
+  "Say what a material is, anything the plant buys, makes or ships, and tell raw, intermediate and finished apart.",
+  "Read a bill of material one level at a time, from the pallet down to the resin and the paper plate.",
+  "Write a bill in Master data, and say what the form does not check and what the Floor refuses.",
+]
+scene = "scripts/scenes/course/02-02-materials-and-bills-of-material.toml"
 
 [[module.lesson]]
 order = 3
