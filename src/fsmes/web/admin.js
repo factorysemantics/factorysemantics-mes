@@ -262,6 +262,20 @@ function addOperationRow(seq) {
   remove.type = "button";
   remove.addEventListener("click", () => row.remove());
 
+  /* Each box says which step it is: four rows of unnamed boxes read the
+     same to a screen reader, and the engineer's walk could not tell step
+     20's from step 10's (card routing-to-cost-centers, 2026-11-26). The
+     names follow the step number when it is changed. */
+  const name = () => {
+    const step = seqInput.value || "?";
+    seqInput.setAttribute("aria-label", `Step ${step} number`);
+    nameInput.setAttribute("aria-label", `Step ${step} operation`);
+    machine.setAttribute("aria-label", `Step ${step} machine`);
+    remove.setAttribute("aria-label", `Remove step ${step}`);
+  };
+  seqInput.addEventListener("input", name);
+  name();
+
   row.append(seqInput, nameInput, machine, remove);
   $("#ops").appendChild(row);
 }
