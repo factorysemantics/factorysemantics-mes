@@ -25,12 +25,9 @@ Marked `browser` as well as `slow`: `pytest -m browser` is the tier CI runs
 Chromium for, and a Playwright file marked only `slow` is a test nothing runs.
 """
 
-import socket
-import threading
 from pathlib import Path
 
 import pytest
-from sqlalchemy.orm import Session
 
 pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
@@ -43,77 +40,26 @@ HELD_BACK_MS = 1200
 
 
 @pytest.fixture(scope="module")
-def plant(tmp_path_factory):
+def plant(serve_plant):
     """A plant seeded from the bottling pack, served on a port nobody chose."""
-    import uvicorn
-
-    from fsmes import config, db
-    from fsmes.api.app import create_app
-    from fsmes.db import Base, make_engine
     from fsmes.integrations.opc.tag_map import load_tag_map
     from fsmes.pack import masterdata
     from fsmes.services import auth
 
-    path = tmp_path_factory.mktemp("gauges") / "plant.db"
-    url = f"sqlite:///{path}"
+    def seed(session):
+        cycles = {m.equipment: m.cycle_seconds
+                  for m in load_tag_map(BOTTLING / "tag_map.json")}
+        masterdata.seed(session, BOTTLING / "masterdata", cycles)
+        # A pack seeds a plant, not its people: who may sign in is the
+        # fleet's business and a pack holds no password. So this test
+        # makes the one account it needs.
+        auth.create_user(session, code="ADMIN", name="Plant administrator",
+                         password="admin", role="admin")
 
-    with pytest.MonkeyPatch.context() as env:
-        env.setenv("MES_DATABASE_URL", url)
-        env.setenv("MES_PLANT_TIMEZONE", "UTC")
-        for leaked in ("MES_MODULES", "MES_WORDS", "MES_PLANT_NAME", "MES_TAG_MAP_FILE"):
-            env.delenv(leaked, raising=False)
-        config.get_settings.cache_clear()
-        db.get_engine.cache_clear()
-        db.get_sessionmaker.cache_clear()
-
-        engine = make_engine(url)
-        Base.metadata.create_all(engine)
-        with Session(engine, expire_on_commit=False) as session:
-            cycles = {m.equipment: m.cycle_seconds
-                      for m in load_tag_map(BOTTLING / "tag_map.json")}
-            masterdata.seed(session, BOTTLING / "masterdata", cycles)
-            auth.ensure_builtin_roles(session)
-            # A pack seeds a plant, not its people: who may sign in is the
-            # fleet's business and a pack holds no password. So this test
-            # makes the one account it needs.
-            auth.create_user(session, code="ADMIN", name="Plant administrator",
-                             password="admin", role="admin")
-            session.commit()
-
-        sock = socket.socket()
-        sock.bind(("127.0.0.1", 0))
-        server = uvicorn.Server(uvicorn.Config(
-            create_app(), log_level="warning", lifespan="on"))
-        thread = threading.Thread(target=lambda: server.run(sockets=[sock]), daemon=True)
-        thread.start()
-        try:
-            base = f"http://127.0.0.1:{sock.getsockname()[1]}"
-            _wait_until_answering(base)
-            yield base
-        finally:
-            server.should_exit = True
-            thread.join(timeout=10)
-            engine.dispose()
-
-    config.get_settings.cache_clear()
-    db.get_engine.cache_clear()
-    db.get_sessionmaker.cache_clear()
-
-
-def _wait_until_answering(base: str, seconds: float = 20.0) -> None:
-    import time
-    import urllib.error
-    import urllib.request
-
-    deadline = time.monotonic() + seconds
-    while time.monotonic() < deadline:
-        try:
-            with urllib.request.urlopen(f"{base}/health", timeout=1) as reply:
-                if reply.status == 200:
-                    return
-        except (urllib.error.URLError, OSError):
-            time.sleep(0.1)
-    raise AssertionError(f"the plant at {base} never answered /health")
+    env = {"MES_PLANT_TIMEZONE": "UTC", "MES_MODULES": None, "MES_WORDS": None,
+           "MES_PLANT_NAME": None, "MES_TAG_MAP_FILE": None}
+    with serve_plant(seed, name="gauges", env=env, demo=False) as served:
+        yield served.base
 
 
 @pytest.fixture(scope="module")

@@ -7,10 +7,11 @@ each time. `tests/conftest.py` now holds one copy: the `live_server` fixture
 (the demo plant, served once for the run) and `serve_plant` (a plant with
 rows of the test's own). A new browser test uses one of them.
 
-Read from the source, like `test_core_purity.py`: a test file that imports
-`uvicorn` is starting its own server. The files below did so on 2026-11-14
-and may until each is moved onto the fixture; moving them is its own piece
-of work, and each one moved comes out of this list.
+Read from the source, like `test_core_purity.py`: a test file that calls
+`uvicorn.Server` or `uvicorn.run` is starting its own server. Importing
+uvicorn is not: `test_auth.py` reads uvicorn's defaults to pin what the
+operate page promises about proxies, and starts nothing. Thirty files did
+start their own on 2026-11-14; all but one have moved onto the fixture.
 """
 
 import ast
@@ -18,37 +19,39 @@ from pathlib import Path
 
 TESTS = Path(__file__).resolve().parent
 
-#: Test files that start their own server today, by path under `tests/`.
-#: Shrinks; never grows.
-ALLOWED: frozenset[str] = frozenset({
-    "test_a_plant_books_while_its_dashboard_is_read.py",
-    "test_auth.py",
-    "test_clicking_a_lot_on_the_spc_chart_opens_which_defects.py",
-    "test_clicking_a_point_on_the_spc_chart_opens_the_records_behind_it.py",
-    "test_clicking_a_point_on_the_trend_graph_opens_the_records_behind_it.py",
-    "test_clicking_a_sample_on_the_spc_chart_opens_the_five_bottles.py",
-    "test_the_3d_view_draws_the_plants_own_model_and_keeps_its_shape_when_one_fails.py",
-    "test_the_3d_view_fits_the_whole_line_with_labels_you_can_read.py",
-    "test_the_ai_tab_explores_and_draws_what_it_read.py",
-    "test_the_ai_tab_says_what_the_assistant_costs_without_local_ai.py",
-    "test_the_chart_comes_into_the_chat_and_stays_clickable.py",
-    "test_the_gauges_screen_shows_the_two_scales_and_when_each_was_calibrated.py",
-    "test_the_panel_can_ask_the_other_agent.py",
-    "test_the_supervisors_screen_reads_the_shift_and_writes_a_rule.py",
-})
+#: The one file that starts its own server and stays that way, and why.
+#: Never grows: a new reason is a new conversation, not a new line.
+STAYS: dict[str, str] = {
+    "test_a_plant_books_while_its_dashboard_is_read.py":
+        "the lab's six-hour reproduction runs it as `python -m`, outside pytest, "
+        "where no fixture exists",
+}
 
 MESSAGE = "use the `live_server` fixture in `tests/conftest.py`"
 
 
-def _starts_its_own_server(path: Path) -> bool:
-    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+def _starts_a_server(source: str, filename: str = "<test>") -> bool:
+    """True when the source calls `uvicorn.Server(...)` or `uvicorn.run(...)`,
+    by attribute or by a name imported from uvicorn."""
+    tree = ast.parse(source, filename=filename)
+    starters = {"Server", "run"}
+    imported = {alias.asname or alias.name for node in ast.walk(tree)
+                if isinstance(node, ast.ImportFrom) and (node.module or "").split(".")[0] == "uvicorn"
+                for alias in node.names if alias.name in starters}
     for node in ast.walk(tree):
-        if isinstance(node, ast.Import) and any(
-                alias.name.split(".")[0] == "uvicorn" for alias in node.names):
+        if not isinstance(node, ast.Call):
+            continue
+        called = node.func
+        if (isinstance(called, ast.Attribute) and called.attr in starters
+                and isinstance(called.value, ast.Name) and called.value.id == "uvicorn"):
             return True
-        if isinstance(node, ast.ImportFrom) and (node.module or "").split(".")[0] == "uvicorn":
+        if isinstance(called, ast.Name) and called.id in imported:
             return True
     return False
+
+
+def _starts_its_own_server(path: Path) -> bool:
+    return _starts_a_server(path.read_text(encoding="utf-8"), str(path))
 
 
 def _test_files() -> list[Path]:
@@ -58,17 +61,30 @@ def _test_files() -> list[Path]:
 def test_no_new_test_file_starts_its_own_server():
     offenders = [path.relative_to(TESTS).as_posix() for path in _test_files()
                  if _starts_its_own_server(path)]
-    new = sorted(set(offenders) - ALLOWED)
+    new = sorted(set(offenders) - set(STAYS))
     assert not new, f"{new} start their own server - {MESSAGE}"
 
 
-def test_a_file_moved_onto_the_shared_server_leaves_the_list():
-    """The list is what is left to move, so a file that no longer starts a
-    server, or no longer exists, comes out of it."""
-    still = {path.relative_to(TESTS).as_posix() for path in _test_files()
-             if _starts_its_own_server(path)}
-    done = sorted(ALLOWED - still)
-    assert not done, f"no longer start their own server; take them out of ALLOWED: {done}"
+def test_the_file_that_stays_still_starts_its_own_server():
+    """A file that no longer starts a server, or no longer exists, comes out
+    of `STAYS`, so the list never holds a reason nothing needs."""
+    gone = sorted(name for name in STAYS
+                  if not (TESTS / name).exists() or not _starts_its_own_server(TESTS / name))
+    assert not gone, f"no longer start their own server; take them out of STAYS: {gone}"
+
+
+def test_reading_uvicorns_defaults_is_not_starting_a_server():
+    """`test_auth.py` builds a `uvicorn.Config` to read its proxy defaults and
+    never serves it; the fence counts servers started, not imports."""
+    assert not _starts_its_own_server(TESTS / "test_auth.py")
+    assert not _starts_a_server("import uvicorn\nuvicorn.Config('app:make', factory=True)\n")
+
+
+def test_every_way_of_starting_a_server_is_seen():
+    assert _starts_a_server("import uvicorn\nuvicorn.Server(uvicorn.Config(app)).run()\n")
+    assert _starts_a_server("import uvicorn\nuvicorn.run(app, port=0)\n")
+    assert _starts_a_server("from uvicorn import Server, Config\nServer(Config(app))\n")
+    assert _starts_a_server("from uvicorn import run as serve\nserve(app)\n")
 
 
 def test_the_shared_server_is_the_one_in_conftest():

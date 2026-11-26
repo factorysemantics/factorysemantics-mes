@@ -31,12 +31,8 @@ is the mistake #112 made.
 """
 
 import json
-import socket
-import threading
-import time
 
 import pytest
-from sqlalchemy.orm import Session
 
 pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
@@ -87,72 +83,19 @@ def bill(usage_file):
 
 
 @pytest.fixture(scope="module")
-def plant(tmp_path_factory, usage_file):
+def plant(serve_plant, usage_file):
     """A seeded demo plant with a month's agent bill behind it, over HTTP."""
-    import uvicorn
+    from fsmes.services import agent
 
-    from fsmes import config, db
-    from fsmes.api.app import create_app
-    from fsmes.db import Base, make_engine
-    from fsmes.seed import seed_demo_plant
-    from fsmes.services import agent, auth
-
-    path = tmp_path_factory.mktemp("ai-status-screen") / "plant.db"
-    url = f"sqlite:///{path}"
-
-    with pytest.MonkeyPatch.context() as env:
-        env.setenv("MES_DATABASE_URL", url)
-        env.setenv("MES_AGENT_MONTHLY_USD", CAP_USD)
-        env.setenv("MES_AGENT_BRAIN", "auto")
-        # Not a key. `available()` only checks that the variable is set, and
-        # nothing in this file sends a message, so no model is ever reached.
-        env.setenv("ANTHROPIC_API_KEY", "not-a-key-nothing-here-calls-a-model")
-        env.setattr(agent, "sdk_installed", lambda: True)
-        env.setattr(agent, "USAGE_FILE", usage_file)
-        config.get_settings.cache_clear()
-        db.get_engine.cache_clear()
-        db.get_sessionmaker.cache_clear()
-
-        engine = make_engine(url)
-        Base.metadata.create_all(engine)
-        with Session(engine, expire_on_commit=False) as session:
-            seed_demo_plant(session)
-            auth.ensure_builtin_roles(session)
-            session.commit()
-
-        sock = socket.socket()
-        sock.bind(("127.0.0.1", 0))
-        server = uvicorn.Server(uvicorn.Config(
-            create_app(), log_level="warning", lifespan="on"))
-        thread = threading.Thread(target=lambda: server.run(sockets=[sock]), daemon=True)
-        thread.start()
-        try:
-            base = f"http://127.0.0.1:{sock.getsockname()[1]}"
-            _wait_until_answering(base)
-            yield base
-        finally:
-            server.should_exit = True
-            thread.join(timeout=10)
-            engine.dispose()
-
-    config.get_settings.cache_clear()
-    db.get_engine.cache_clear()
-    db.get_sessionmaker.cache_clear()
-
-
-def _wait_until_answering(base: str, seconds: float = 20.0) -> None:
-    import urllib.error
-    import urllib.request
-
-    deadline = time.monotonic() + seconds
-    while time.monotonic() < deadline:
-        try:
-            with urllib.request.urlopen(f"{base}/health", timeout=1) as reply:
-                if reply.status == 200:
-                    return
-        except (urllib.error.URLError, OSError):
-            time.sleep(0.1)
-    raise AssertionError(f"the plant at {base} never answered /health")
+    env = {"MES_AGENT_MONTHLY_USD": CAP_USD, "MES_AGENT_BRAIN": "auto",
+           # Not a key. `available()` only checks that the variable is set, and
+           # nothing in this file sends a message, so no model is ever reached.
+           "ANTHROPIC_API_KEY": "not-a-key-nothing-here-calls-a-model"}
+    with pytest.MonkeyPatch.context() as mine:
+        mine.setattr(agent, "sdk_installed", lambda: True)
+        mine.setattr(agent, "USAGE_FILE", usage_file)
+        with serve_plant(name="ai-status-screen", env=env) as served:
+            yield served.base
 
 
 @pytest.fixture(scope="module")
