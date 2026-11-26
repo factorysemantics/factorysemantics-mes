@@ -1,0 +1,571 @@
+# Class 1.1 of the course, *Equipment — the plant as a tree, and cost
+# centers*: every machine has one place in the tree, and every place can
+# carry the cost center its time and scrap are charged to.
+#
+# Class 0.1 already walked the tree from the company down to a fork's line.
+# This class is about two things it passed over: the one place a machine has
+# (its parent), and the cost center it bills to, set once on the line and
+# taken by every machine under it. It reads both on a machine's page, on the
+# Machines tree and in Master data, adds a line and a machine of its own, and
+# then shows what the form refuses and the one thing it does not. Filmed on a
+# scratch cutlery plant, every screen as the product draws it.
+
+name = "equipment-and-cost-centers"
+title = "Equipment — the plant as a tree, and cost centers"
+lesson = "1.1"
+take_is = "lesson"
+part = "hook"
+base = "http://127.0.0.1:8040"
+badge = "pre-alpha · simulated plant · v{version}"
+# Four and a half to six minutes, as the outline says this class runs.
+budget_seconds = 360
+gif_skip_seconds = 2.0
+width = 1280
+height = 720
+# Adding a line and a machine is a write: the class presses Add on the form.
+allow_writes = true
+what_is_written = "which is how the class adds its equipment: each Add is a real `POST` to the take's own scratch plant, and FORK4LINE, FORK4_MOLD and LOOSE_PRESS really are in its tree afterwards. The refused press wrote nothing."
+
+notes = [
+  "The plant was started from the cutlery pack, at ten times wall clock, a minute or two before the camera rolled. Equipment is master data, so nothing had to run first; the speed only shows in the banner across the top of the pages.",
+  "The pack's tree is one company, one site, four areas, sixty-one lines and eighty-three machines. Every line carries a cost center of its own and not one machine does: the plant sets it once per line, which is what the class teaches. The Machines tree shows each machine the code it bills to, read up the tree; Master data shows only what each row carries itself, so there the machines read a dash. The class shows both and says which is which.",
+  "The line and the machine the class adds, FORK4LINE and FORK4_MOLD, are codes the pack does not have, in the pack's own moulding area, with a cost center, CC-MOULD10, that no line of the pack uses. The form writes every code in capitals, so the new machine is FORK4_MOLD where the pack's own are FORK1_Mold; the class types it in capitals rather than let the screen change it under the viewer.",
+  "The new machine has no tags and nothing on the simulated floor reports for it, so its page reads its state as unknown. That is the product saying it has not seen the machine; the class says so.",
+  "The class is clicked through, as a person would go. The machine's page is opened by address in the hook, and the Floor once straight after the cards, because a card is the recorder's own page and has no menu. The Machines tree is reached by Engineering, Master data by its tab under Engineering, and each machine's page by the link on its code.",
+  "Every line said over the screen has a box round the thing it is about, with a few words on a tab where words help; the new machine's cost center, which nobody typed, is the one spotlight. The product's message after a save is boxed without a tab: it is drawn over the equipment table, and every spot for a tab would cover the table's words. Boxes go on one cell or one small thing, never on a whole table row or a whole branch of the tree, which would reach into the narrator's corner.",
+  "The form does not refuse a machine with no parent: it takes it, and that machine bills to nothing. The class films it as the product draws it and says so; it is a gap for the product, not something the recording works around.",
+  "The product's message after a save is drawn higher on the screen than the product draws it, so that the recorder's caption bar does not cover it.",
+  "At any speed but 1x every 2D page carries the product's REPLAY 10× banner across its top. It is filmed as the product draws it.",
+  "The opening beat is a plain card with words on it. There is no artwork of a part, a machine or a person.",
+]
+
+honesty = [
+  "the form does not refuse a machine with no parent: LOOSE_PRESS is taken, hangs outside every line, and its cost center reads a dash; the class films that and says the screen will not make you give a parent",
+  "the form has no way to change a place once it is added, so a cost center is typed when the line is added or not from this screen; the class adds a new line rather than editing one of the pack's",
+  "a machine can carry its own cost center, which then beats its line's; no machine on this plant does, and the class says it rather than adding one",
+  "the plant is a scratch plant a few minutes old, replaying at ten times wall clock, which is the banner across the top of the pages; the new machine reports nothing because nothing on the simulated floor is wired to it",
+]
+
+[plant]
+pack = "labs/cutlery"
+speed = 10
+roll_when_timeout_seconds = 600
+
+# ----------------------------------------------------------------- the hook
+
+[[step]]
+do = "slide"
+name = "one-mould"
+title = "One mould, one place"
+lines = [
+  "The mould FORK1_Mold",
+  "On line FORK1, in the moulding area",
+  "Its hours and its scrap, charged to CC-MOULD01",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Every machine stands somewhere. This mould stands on line FORK1, in the moulding area."
+
+[[step]]
+do = "say"
+line = "And every hour it runs, and every fork it scraps, is charged to some budget. Which one?"
+
+[[step]]
+do = "mark"
+name = "one-mould"
+
+[[step]]
+do = "goto"
+url = "/dashboard/machine/FORK1_Mold"
+settle = 3
+
+[[step]]
+do = "wait_for"
+selector = "#m-cc"
+text = "CC-MOULD01"
+
+[[step]]
+do = "say"
+line = "Its own page says both: where it stands, and the budget it bills to, CC-MOULD01."
+at = "#m-cc"
+label = "Bills to"
+
+[[step]]
+do = "mark"
+name = "the-moulds-page"
+
+# ----------------------------------------------------------------- the idea
+
+[[step]]
+part = "idea"
+do = "slide"
+name = "three-words"
+title = "Three words"
+lines = [
+  "Equipment: any place in the plant's tree, from the company down to one machine",
+  "Work center: a line, the place work is planned and booked",
+  "Cost center: the budget a place's time and scrap are charged to",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Three words. Equipment is any place in the plant's tree: the company, a site, an area, a line, a machine."
+
+[[step]]
+do = "say"
+line = "A work center is a line. It is the level where work is planned and booked. The screens say work center; they mean the line."
+
+[[step]]
+do = "say"
+line = "A cost center is a budget in the accounts. The time a place runs, and the scrap it makes, are charged to it."
+
+[[step]]
+do = "mark"
+name = "three-words"
+
+[[step]]
+do = "slide"
+name = "set-once"
+title = "Set once, on the line"
+lines = [
+  "Each machine has one parent: the place above it",
+  "The line carries the cost center",
+  "Every machine under the line takes the line's",
+  "A machine carries its own only where the accounts really differ",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Every machine has exactly one parent, the place right above it. That one link is its place in the tree."
+
+[[step]]
+do = "say"
+line = "The cost center is set once, on the line. Every machine under the line takes it from there."
+
+[[step]]
+do = "say"
+line = "A machine carries its own only where the accounts really differ. So a new machine on a line needs nothing typed at all."
+
+[[step]]
+do = "mark"
+name = "set-once"
+
+# ------------------------------------------------------------ on the screen
+
+# A card is the recorder's own page and has no menu, so the camera comes back
+# from the cards to the Floor by address; everything after is reached by menus
+# and links.
+[[step]]
+part = "screen"
+do = "goto"
+url = "/dashboard"
+settle = 2
+
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"Engineering\")"
+
+[[step]]
+do = "wait_for"
+selector = "#tree"
+text = "FORK1LINE"
+scroll_to = "#tree"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "The plant's tree, on Engineering, Machines. Line FORK1 carries its cost center: CC-MOULD01."
+at = "#tree .node:has(a:text-is(\"FORK1LINE\")) .cc"
+label = "On the line"
+
+[[step]]
+do = "say"
+line = "The mould under it shows the same code. Nobody typed it there: the tree reads it up from the line."
+at = "#tree .node:has(a:text-is(\"FORK1_Mold\")) .cc"
+label = "From the line"
+
+[[step]]
+do = "mark"
+name = "the-tree"
+
+[[step]]
+do = "click"
+selector = ".subnav a:text-is(\"Master data\")"
+
+[[step]]
+do = "wait_for"
+selector = "#eq-table tbody"
+text = "FORK1LINE"
+
+[[step]]
+do = "fill"
+selector = "#eq-q"
+text = "FORK1"
+
+[[step]]
+do = "wait_for"
+selector = "#eq-count"
+text = "4 of 4 matching, 150 in the plant"
+scroll_to = "#eq-count"
+scroll_block = "start"
+scroll_offset = 215
+
+[[step]]
+do = "say"
+line = "Master data, Equipment: what the plant is made of. A hundred and fifty places; four match FORK1."
+at = "#eq-count"
+label = "150"
+
+[[step]]
+do = "say"
+line = "Here each row shows only what it carries itself. Line FORK1 carries CC-MOULD01."
+at = "#eq-table tbody tr:nth-child(1) td:nth-child(6)"
+label = "Set here"
+
+[[step]]
+do = "say"
+line = "The mould carries a dash: nothing of its own. Not one of this plant's eighty-three machines carries one."
+at = "#eq-table tbody tr:nth-child(2) td:nth-child(6)"
+label = "Nothing"
+
+[[step]]
+do = "say"
+line = "And its parent is FORK1LINE. That one cell is the mould's place in the tree."
+at = "#eq-table tbody tr:nth-child(2) td:nth-child(4)"
+label = "Parent"
+
+[[step]]
+do = "mark"
+name = "carried-and-billed"
+
+[[step]]
+do = "say"
+line = "Now a place of our own: a fourth fork line, FORK4, in the moulding area. The form is at the top."
+at = "#eq-form"
+
+[[step]]
+do = "fill"
+selector = "#eq-code"
+text = "FORK4LINE"
+scroll_to = "#eq-form"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "fill"
+selector = "#eq-name"
+text = "Moulding line FORK4"
+
+[[step]]
+do = "choose"
+selector = "#eq-level"
+value = "work_center"
+
+[[step]]
+do = "choose"
+selector = "#eq-parent"
+value = "MOULD-AREA"
+
+[[step]]
+do = "say"
+line = "Its level is line. Its parent is the moulding area, the place right above it."
+at = "#eq-parent"
+label = "Parent"
+
+[[step]]
+do = "fill"
+selector = "#eq-cc"
+text = "CC-MOULD10"
+
+[[step]]
+do = "say"
+line = "And its cost center, CC-MOULD10. Typed once, here, on the line."
+at = "#eq-cc"
+label = "Once"
+
+[[step]]
+do = "click"
+selector = "#eq-submit"
+
+[[step]]
+do = "wait_for"
+selector = "#toast"
+text = "FORK4LINE added"
+
+[[step]]
+do = "mark"
+name = "line-added"
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#eq-parent option')].some((o) => o.value === 'FORK4LINE')"
+
+[[step]]
+do = "fill"
+selector = "#eq-code"
+text = "FORK4_MOLD"
+
+[[step]]
+do = "fill"
+selector = "#eq-name"
+text = "FORK4 Mold"
+
+[[step]]
+do = "choose"
+selector = "#eq-level"
+value = "work_unit"
+
+[[step]]
+do = "choose"
+selector = "#eq-parent"
+value = "FORK4LINE"
+
+[[step]]
+do = "say"
+line = "Then a machine on it: the mould FORK4_MOLD, level machine, parent FORK4LINE."
+at = "#eq-parent"
+label = "On the line"
+
+[[step]]
+do = "say"
+line = "The cost center box we leave empty. The machine will take its line's."
+at = "#eq-cc"
+label = "Left empty"
+
+[[step]]
+do = "click"
+selector = "#eq-submit"
+
+[[step]]
+do = "wait_for"
+selector = "#toast"
+text = "FORK4_MOLD added"
+
+[[step]]
+do = "fill"
+selector = "#eq-q"
+text = "FORK4"
+
+[[step]]
+do = "wait_for"
+selector = "#eq-count"
+text = "2 of 2 matching, 152 in the plant"
+scroll_to = "#eq-count"
+scroll_block = "start"
+scroll_offset = 215
+
+[[step]]
+do = "say"
+line = "Both are in the plant now. The line carries CC-MOULD10; the machine carries nothing of its own."
+at = "#eq-table tbody tr:nth-child(2) td:nth-child(6)"
+label = "Nothing"
+
+[[step]]
+do = "mark"
+name = "fork4-in-the-table"
+
+[[step]]
+do = "click"
+selector = "#eq-table a:text-is(\"FORK4_MOLD\")"
+
+[[step]]
+do = "wait_for"
+selector = "#m-cc"
+text = "CC-MOULD10"
+
+[[step]]
+do = "say"
+line = "Its own page. Cost center CC-MOULD10. We never typed it on the machine: it came from the line."
+at = "#m-cc"
+label = "From the line"
+style = "spotlight"
+
+[[step]]
+do = "mark"
+name = "the-new-machine-bills-to-its-line"
+
+[[step]]
+do = "say"
+line = "And its place, left to right: Cutlery Co., Cutlery Works, Moulding, line FORK4, the mould."
+at = "#crumbs"
+label = "Its place"
+
+[[step]]
+do = "say"
+line = "Its state reads unknown. Nothing on this simulated floor reports for it yet, and the MES does not guess."
+at = "#m-state"
+label = "Unknown"
+
+[[step]]
+do = "mark"
+name = "unknown-until-it-reports"
+
+# -------------------------------------------------------------- it refuses
+
+[[step]]
+part = "refuses"
+do = "click"
+selector = ".subnav a:text-is(\"Master data\")"
+
+[[step]]
+do = "wait_for"
+selector = "#eq-table tbody"
+text = "FORK1LINE"
+
+[[step]]
+do = "say"
+line = "Now the form's limits. First, a machine with no parent at all: LOOSE_PRESS, the parent left at no parent."
+at = "#eq-parent"
+label = "No parent"
+
+[[step]]
+do = "fill"
+selector = "#eq-code"
+text = "LOOSE_PRESS"
+scroll_to = "#eq-form"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "fill"
+selector = "#eq-name"
+text = "A press with no place"
+
+[[step]]
+do = "click"
+selector = "#eq-submit"
+
+[[step]]
+do = "wait_for"
+selector = "#toast"
+text = "LOOSE_PRESS added"
+
+[[step]]
+do = "say"
+line = "Taken. The form does not refuse a machine with no place in the tree."
+hold = 1.0
+at = "#toast"
+
+[[step]]
+do = "mark"
+name = "no-parent-is-taken"
+
+[[step]]
+do = "hold"
+seconds = 3.0
+
+[[step]]
+do = "say"
+line = "What it does refuse is the same code twice. LOOSE_PRESS again."
+at = "#eq-code"
+
+[[step]]
+do = "fill"
+selector = "#eq-code"
+text = "LOOSE_PRESS"
+
+[[step]]
+do = "fill"
+selector = "#eq-name"
+text = "The same press, again"
+
+[[step]]
+do = "click"
+selector = "#eq-submit"
+
+[[step]]
+do = "wait_for"
+selector = "#toast"
+text = "already exists"
+
+# The refusal is said while the product's message is still up, so the still
+# carries both; the hold after it gives the line its reading time.
+[[step]]
+do = "say"
+line = "Refused: that code already exists. A code names one place, so every count lands on one machine."
+hold = 1.0
+at = "#toast"
+
+[[step]]
+do = "mark"
+name = "refused-same-code"
+
+[[step]]
+do = "hold"
+seconds = 4.5
+
+[[step]]
+do = "say"
+line = "And a machine under a machine cannot even be asked. The parent list holds only the company, the site, the areas and the lines."
+at = "#eq-parent"
+label = "No machines"
+
+[[step]]
+do = "fill"
+selector = "#eq-q"
+text = "LOOSE"
+
+[[step]]
+do = "wait_for"
+selector = "#eq-count"
+text = "1 of 1 matching, 153 in the plant"
+
+[[step]]
+do = "click"
+selector = "#eq-table a:text-is(\"LOOSE_PRESS\")"
+
+[[step]]
+do = "wait_for"
+selector = "#crumbs"
+text = "LOOSE_PRESS"
+
+[[step]]
+do = "say"
+line = "Its place is only its own name. No line above it, no area, no site."
+at = "#crumbs"
+label = "No place"
+
+[[step]]
+do = "say"
+line = "And its cost center is a dash. It bills to nobody, and the MES will not pick a budget for it."
+at = "#m-cc"
+label = "Unknown"
+
+[[step]]
+do = "mark"
+name = "a-machine-with-no-place"
+
+[[step]]
+do = "say"
+line = "So give every machine its parent when you add it. This screen will not make you."
+at = "#crumbs"
+
+# ------------------------------------------------------------ you now know
+
+[[step]]
+part = "know"
+do = "slide"
+name = "you-now-know"
+title = "You now know how to"
+lines = [
+  "Read a machine's place in the tree, from the company down to its line, and the cost center it bills to.",
+  "Say why a cost center is set once, on the line, and how every machine under the line takes it.",
+  "Add a line and a machine in Master data, and say what the form refuses and the one thing it does not.",
+]
+
+[[step]]
+do = "say"
+line = "That is equipment: one place for every machine, and one budget set on each line. You now know how to do three things."
+
+[[step]]
+do = "mark"
+name = "you-now-know"
+
+[[step]]
+do = "hold"
+seconds = 3
