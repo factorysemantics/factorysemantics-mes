@@ -44,13 +44,10 @@ it and never on a sleep. Three tests in three days went green on loopback and
 red on a slower machine for exactly that reason (#112, #113).
 """
 
-import socket
-import threading
 from datetime import timedelta
 
 import pytest
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
@@ -328,117 +325,66 @@ SHAPES = {
 # ------------------------------------------------------------------ the plant
 
 @pytest.fixture(scope="module")
-def plant(tmp_path_factory):
+def plant(serve_plant):
     """A demo plant with a shift's worth of states, stops and readings on it."""
-    import uvicorn
 
-    from fsmes import config, db
-    from fsmes.api.app import create_app
-    from fsmes.db import Base, make_engine, utcnow
-    from fsmes.domain import (
-        ConnectionStateName,
-        Equipment,
-        EquipmentState,
-        EquipmentStateName,
-        ProductionLog,
-        ProductionSource,
-        TagValue,
-    )
-    from fsmes.seed import seed_demo_plant
-    from fsmes.services import auth, connection, workorders
+    def _seed(session):
+        from fsmes.db import utcnow
+        from fsmes.domain import (
+            ConnectionStateName,
+            Equipment,
+            EquipmentState,
+            EquipmentStateName,
+            ProductionLog,
+            ProductionSource,
+            TagValue,
+        )
+        from fsmes.services import connection, workorders
+        now = utcnow()
+        order = workorders.create(session, code="WO-CHART", material_code="FG-COLA",
+                                  quantity=600)
+        workorders.release(session, "WO-CHART")
+        session.flush()
 
-    path = tmp_path_factory.mktemp("chartkit") / "plant.db"
-    url = f"sqlite:///{path}"
+        def unit(code):
+            return session.scalar(select(Equipment).where(Equipment.code == code))
 
-    with pytest.MonkeyPatch.context() as env:
-        env.setenv("MES_DATABASE_URL", url)
-        config.get_settings.cache_clear()
-        db.get_engine.cache_clear()
-        db.get_sessionmaker.cache_clear()
+        def state(code, name, *, ago, minutes, reason=None):
+            session.add(EquipmentState(
+                equipment_id=unit(code).id, state=name, reason=reason,
+                started_at=now - timedelta(minutes=ago),
+                ended_at=now - timedelta(minutes=ago - minutes)))
 
-        engine = make_engine(url)
-        Base.metadata.create_all(engine)
-        with Session(engine, expire_on_commit=False) as session:
-            seed_demo_plant(session)
-            auth.ensure_builtin_roles(session)
-            now = utcnow()
-            order = workorders.create(session, code="WO-CHART", material_code="FG-COLA",
-                                      quantity=600)
-            workorders.release(session, "WO-CHART")
-            session.flush()
+        # A shift with something to explain: running, a named changeover,
+        # and a stop nobody labelled - which the pareto has to report as
+        # unlabelled rather than file under a reason (house rule 3).
+        state("MIX01", EquipmentStateName.RUNNING, ago=120, minutes=60)
+        state("MIX01", EquipmentStateName.DOWN, ago=60, minutes=20, reason="changeover")
+        state("MIX01", EquipmentStateName.DOWN, ago=40, minutes=15)
+        state("MIX01", EquipmentStateName.RUNNING, ago=25, minutes=24)
+        state("PACK01", EquipmentStateName.RUNNING, ago=120, minutes=100)
+        state("PACK01", EquipmentStateName.DOWN, ago=20, minutes=12, reason="jam")
+        session.add(ProductionLog(
+            work_order_id=order.id, operation_id=order.operations[0].id,
+            equipment_id=unit("MIX01").id, good_qty=900.0, scrap_qty=30.0,
+            source=ProductionSource.OPC, ts=now - timedelta(minutes=30)))
+        # A stretch where the MES could not see the machine at all, so the
+        # timeline has an unknown interval to hatch (decision 0030).
+        connection.set_connection(
+            session, equipment_code="PACK01", state=ConnectionStateName.DISCONNECTED,
+            at=now - timedelta(minutes=50), detected_at=now - timedelta(minutes=48),
+            reason="no data from the tag")
+        connection.set_connection(
+            session, equipment_code="PACK01", state=ConnectionStateName.CONNECTED,
+            at=now - timedelta(minutes=35))
+        for i in range(40):
+            session.add(TagValue(
+                equipment_id=unit("MIX01").id, tag="MIX01.temperature",
+                value_num=60.0 + (i % 7) * 0.4,
+                ts=now - timedelta(minutes=120 - i * 3)))
 
-            def unit(code):
-                return session.scalar(select(Equipment).where(Equipment.code == code))
-
-            def state(code, name, *, ago, minutes, reason=None):
-                session.add(EquipmentState(
-                    equipment_id=unit(code).id, state=name, reason=reason,
-                    started_at=now - timedelta(minutes=ago),
-                    ended_at=now - timedelta(minutes=ago - minutes)))
-
-            # A shift with something to explain: running, a named changeover,
-            # and a stop nobody labelled - which the pareto has to report as
-            # unlabelled rather than file under a reason (house rule 3).
-            state("MIX01", EquipmentStateName.RUNNING, ago=120, minutes=60)
-            state("MIX01", EquipmentStateName.DOWN, ago=60, minutes=20, reason="changeover")
-            state("MIX01", EquipmentStateName.DOWN, ago=40, minutes=15)
-            state("MIX01", EquipmentStateName.RUNNING, ago=25, minutes=24)
-            state("PACK01", EquipmentStateName.RUNNING, ago=120, minutes=100)
-            state("PACK01", EquipmentStateName.DOWN, ago=20, minutes=12, reason="jam")
-            session.add(ProductionLog(
-                work_order_id=order.id, operation_id=order.operations[0].id,
-                equipment_id=unit("MIX01").id, good_qty=900.0, scrap_qty=30.0,
-                source=ProductionSource.OPC, ts=now - timedelta(minutes=30)))
-            # A stretch where the MES could not see the machine at all, so the
-            # timeline has an unknown interval to hatch (decision 0030).
-            connection.set_connection(
-                session, equipment_code="PACK01", state=ConnectionStateName.DISCONNECTED,
-                at=now - timedelta(minutes=50), detected_at=now - timedelta(minutes=48),
-                reason="no data from the tag")
-            connection.set_connection(
-                session, equipment_code="PACK01", state=ConnectionStateName.CONNECTED,
-                at=now - timedelta(minutes=35))
-            for i in range(40):
-                session.add(TagValue(
-                    equipment_id=unit("MIX01").id, tag="MIX01.temperature",
-                    value_num=60.0 + (i % 7) * 0.4,
-                    ts=now - timedelta(minutes=120 - i * 3)))
-            session.commit()
-
-        sock = socket.socket()
-        sock.bind(("127.0.0.1", 0))
-        server = uvicorn.Server(uvicorn.Config(
-            create_app(), log_level="warning", lifespan="on"))
-        thread = threading.Thread(target=lambda: server.run(sockets=[sock]), daemon=True)
-        thread.start()
-        try:
-            base = f"http://127.0.0.1:{sock.getsockname()[1]}"
-            _wait_until_answering(base)
-            yield base
-        finally:
-            server.should_exit = True
-            thread.join(timeout=10)
-            engine.dispose()
-
-    config.get_settings.cache_clear()
-    db.get_engine.cache_clear()
-    db.get_sessionmaker.cache_clear()
-
-
-def _wait_until_answering(base: str, seconds: float = 20.0) -> None:
-    import time
-    import urllib.error
-    import urllib.request
-
-    deadline = time.monotonic() + seconds
-    while time.monotonic() < deadline:
-        try:
-            with urllib.request.urlopen(f"{base}/health", timeout=1) as reply:
-                if reply.status == 200:
-                    return
-        except (urllib.error.URLError, OSError):
-            time.sleep(0.1)
-    raise AssertionError(f"the plant at {base} never answered /health")
+    with serve_plant(_seed, name="chartkit") as served:
+        yield served.base
 
 
 @pytest.fixture(scope="module")

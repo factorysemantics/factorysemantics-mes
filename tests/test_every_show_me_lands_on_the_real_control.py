@@ -24,12 +24,9 @@ Marked `browser`; run with `pytest -m browser`.
 """
 
 import json
-import socket
-import threading
 import time
 
 import pytest
-from sqlalchemy.orm import Session
 
 from fsmes.services import agent as agent_service
 from fsmes.services import assistant
@@ -144,128 +141,76 @@ def test_every_surface_has_arguments_to_walk_with():
 # ------------------------------------------------------------- a real plant
 
 @pytest.fixture(scope="module")
-def plant(tmp_path_factory):
+def plant(serve_plant):
     """A seeded demo plant, served over HTTP on a port nobody chose in advance.
     A file database rather than the suite's in-memory one, because the server
     answers on its own threads and must open the same rows."""
-    import uvicorn
 
-    from fsmes import config, db
-    from fsmes.api.app import create_app
-    from fsmes.db import Base, make_engine
-    from fsmes.domain import RecommendedAdjustment
-    from fsmes.seed import seed_demo_plant
-    from fsmes.services import (
-        auth,
-        documents,
-        gage_rr,
-        gauges,
-        quality,
-        reasons,
-        severities,
-        triggers,
-    )
+    def _seed(session):
+        from fsmes.domain import RecommendedAdjustment
+        from fsmes.services import (
+            documents,
+            gage_rr,
+            gauges,
+            quality,
+            reasons,
+            severities,
+            triggers,
+        )
+        # Two non-conformances, because the three walks about a finding
+        # point at buttons the quality screen only draws on a row that
+        # exists, and only draws the ones that make sense for where that
+        # finding has got to. A plant with an empty list would make those
+        # three tests pass by never rendering anything at all.
+        #
+        # NC-00001 is newly open: it can be reviewed and decided.
+        quality.open_nc(session, description="Brix 20.0 against a 9.5-11.5 band",
+                        severity="major", actor="ADMIN")
+        # NC-00002 has been decided, which is the only state from which
+        # anything is closed.
+        second = quality.open_nc(session, description="Label skewed on the neck",
+                                 severity="minor", actor="ADMIN")
+        session.flush()
+        quality.review_nc(session, second.code, actor="ADMIN")
+        quality.disposition_nc(session, second.code, disposition="use_as_is",
+                               reason="Inside the cosmetic tolerance.", actor="ADMIN")
+        # One of each thing a person may put in force, waiting. The five
+        # signing walks end on controls the screens draw per row, and a
+        # plant with nothing waiting draws none of them - so a walk onto
+        # an empty screen would pass by pointing at nothing.
+        reasons.define(session, code="jam_infeed", name="Jam at the infeed",
+                       description="Bottles bridging before the starwheel.",
+                       actor="ADMIN")
+        severities.define(session, code="cosmetic", name="Cosmetic",
+                          description="Marks a customer would see, and nothing more.",
+                          actor="ADMIN")
+        documents.create(session, code="WI-CHANGEOVER", title="Changeover",
+                         body="Stop the line. Purge the hopper.", actor="ADMIN")
+        triggers.create(session, code="T-WASH-HOT", name="Wash water too hot",
+                        tag="WashTemp", condition="above", threshold=80.0,
+                        actor="ADMIN")
+        # Written as a row rather than through `adjustments.propose`: the
+        # service refuses a tag the manifest does not carry, the demo
+        # plant publishes no manifest, and what is under test here is
+        # whether the queue draws an Approve button on a waiting row.
+        session.add(RecommendedAdjustment(
+            code="ADJ-00001", equipment_code="MIX01", tag="WashSetpoint",
+            drives="WashTemp", current_value=64.5, proposed_value=62.5,
+            minimum=55.0, maximum=70.0,
+            rationale="Two degrees down; the last batch ran hot.",
+            proposed_by="ADMIN"))
+        # A calibrated gauge and a study still collecting, for the two
+        # gauge-study walks: a planned study is the only one with a grid.
+        gauges.register(session, code="REF-01", name="Refractometer", resolution=0.1,
+                        interval_days=365, actor="ADMIN")
+        gauges.calibrate(session, "REF-01", result="pass", performed_by="lab",
+                         actor="ADMIN")
+        gage_rr.plan(session, code="GS-SHOW", gauge="REF-01", material="FG-COLA",
+                     characteristic="brix", parts=2, appraisers=["Ana", "Ben"],
+                     trials=2, actor="ADMIN")
 
-    path = tmp_path_factory.mktemp("show-me") / "plant.db"
-    url = f"sqlite:///{path}"
-
-    with pytest.MonkeyPatch.context() as env:
-        env.setenv("MES_DATABASE_URL", url)
-        config.get_settings.cache_clear()
-        db.get_engine.cache_clear()
-        db.get_sessionmaker.cache_clear()
-
-        engine = make_engine(url)
-        Base.metadata.create_all(engine)
-        with Session(engine, expire_on_commit=False) as session:
-            seed_demo_plant(session)
-            auth.ensure_builtin_roles(session)
-            # Two non-conformances, because the three walks about a finding
-            # point at buttons the quality screen only draws on a row that
-            # exists, and only draws the ones that make sense for where that
-            # finding has got to. A plant with an empty list would make those
-            # three tests pass by never rendering anything at all.
-            #
-            # NC-00001 is newly open: it can be reviewed and decided.
-            quality.open_nc(session, description="Brix 20.0 against a 9.5-11.5 band",
-                            severity="major", actor="ADMIN")
-            # NC-00002 has been decided, which is the only state from which
-            # anything is closed.
-            second = quality.open_nc(session, description="Label skewed on the neck",
-                                     severity="minor", actor="ADMIN")
-            session.flush()
-            quality.review_nc(session, second.code, actor="ADMIN")
-            quality.disposition_nc(session, second.code, disposition="use_as_is",
-                                   reason="Inside the cosmetic tolerance.", actor="ADMIN")
-            # One of each thing a person may put in force, waiting. The five
-            # signing walks end on controls the screens draw per row, and a
-            # plant with nothing waiting draws none of them - so a walk onto
-            # an empty screen would pass by pointing at nothing.
-            reasons.define(session, code="jam_infeed", name="Jam at the infeed",
-                           description="Bottles bridging before the starwheel.",
-                           actor="ADMIN")
-            severities.define(session, code="cosmetic", name="Cosmetic",
-                              description="Marks a customer would see, and nothing more.",
-                              actor="ADMIN")
-            documents.create(session, code="WI-CHANGEOVER", title="Changeover",
-                             body="Stop the line. Purge the hopper.", actor="ADMIN")
-            triggers.create(session, code="T-WASH-HOT", name="Wash water too hot",
-                            tag="WashTemp", condition="above", threshold=80.0,
-                            actor="ADMIN")
-            # Written as a row rather than through `adjustments.propose`: the
-            # service refuses a tag the manifest does not carry, the demo
-            # plant publishes no manifest, and what is under test here is
-            # whether the queue draws an Approve button on a waiting row.
-            session.add(RecommendedAdjustment(
-                code="ADJ-00001", equipment_code="MIX01", tag="WashSetpoint",
-                drives="WashTemp", current_value=64.5, proposed_value=62.5,
-                minimum=55.0, maximum=70.0,
-                rationale="Two degrees down; the last batch ran hot.",
-                proposed_by="ADMIN"))
-            # A calibrated gauge and a study still collecting, for the two
-            # gauge-study walks: a planned study is the only one with a grid.
-            gauges.register(session, code="REF-01", name="Refractometer", resolution=0.1,
-                            interval_days=365, actor="ADMIN")
-            gauges.calibrate(session, "REF-01", result="pass", performed_by="lab",
-                             actor="ADMIN")
-            gage_rr.plan(session, code="GS-SHOW", gauge="REF-01", material="FG-COLA",
-                         characteristic="brix", parts=2, appraisers=["Ana", "Ben"],
-                         trials=2, actor="ADMIN")
-            session.commit()
-
-        sock = socket.socket()
-        sock.bind(("127.0.0.1", 0))
-        server = uvicorn.Server(uvicorn.Config(
-            create_app(), log_level="warning", lifespan="on"))
-        thread = threading.Thread(target=lambda: server.run(sockets=[sock]), daemon=True)
-        thread.start()
-        try:
-            base = f"http://127.0.0.1:{sock.getsockname()[1]}"
-            _wait_until_answering(base)
-            yield base
-        finally:
-            server.should_exit = True
-            thread.join(timeout=10)
-            engine.dispose()
-
-    config.get_settings.cache_clear()
-    db.get_engine.cache_clear()
-    db.get_sessionmaker.cache_clear()
-
-
-def _wait_until_answering(base: str, seconds: float = 20.0) -> None:
-    import urllib.error
-    import urllib.request
-
-    deadline = time.monotonic() + seconds
-    while time.monotonic() < deadline:
-        try:
-            with urllib.request.urlopen(f"{base}/health", timeout=1) as reply:
-                if reply.status == 200:
-                    return
-        except (urllib.error.URLError, OSError):
-            time.sleep(0.1)
-    raise AssertionError(f"the plant at {base} never answered /health")
+    with serve_plant(_seed, name="show-me") as served:
+        yield served.base
 
 
 @pytest.fixture(scope="module")

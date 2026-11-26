@@ -24,12 +24,9 @@ Marked `browser` as well as `slow`: `pytest -m browser` is the tier CI runs
 Chromium for, and a Playwright file marked only `slow` is a test nothing runs.
 """
 
-import socket
-import threading
 from datetime import timedelta
 
 import pytest
-from sqlalchemy.orm import Session
 
 pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
@@ -57,7 +54,7 @@ def _sample(mean: float) -> list[float]:
 
 
 @pytest.fixture(scope="module")
-def plant(tmp_path_factory):
+def plant(serve_plant):
     """A demo plant with one sampled characteristic and fifteen samples on it.
 
     `fill_height`, five pieces at a time, 139 to 145 mm - the bottling pack's
@@ -69,93 +66,43 @@ def plant(tmp_path_factory):
     sampled characteristic with no samples yet is a screen that has to say
     which chart it is about before it has anything to draw.
     """
-    import uvicorn
 
-    from fsmes import config, db
-    from fsmes.api.app import create_app
-    from fsmes.db import Base, make_engine, utcnow
-    from fsmes.seed import seed_demo_plant
-    from fsmes.services import auth, gauges, quality
-
-    path = tmp_path_factory.mktemp("sampled") / "plant.db"
-    url = f"sqlite:///{path}"
+    def _seed(session):
+        from fsmes.db import utcnow
+        from fsmes.services import gauges, quality
+        gauges.register(session, code="HEIGHT-01", name="Bench height gauge",
+                        kind="height gauge", resolution=0.1, interval_days=180,
+                        location="MIX01", actor="test")
+        gauges.calibrate(session, "HEIGHT-01", result="pass", performed_by="QA-LEAD",
+                         performed_on=utcnow().date() - timedelta(days=10),
+                         certificate="CERT-HEIGHT-01", actor="test")
+        quality.create_spec(session, material_code="FG-COLA",
+                            characteristic="fill_height", unit="mm",
+                            min_value=139.0, max_value=145.0, sample_size=5,
+                            actor="test")
+        # Four at a time and not one reading taken: the state the lab
+        # plant was in when it drew the wrong heading.
+        quality.create_spec(session, material_code="FG-COLA",
+                            characteristic="crown_torque", unit="Nm",
+                            min_value=1.0, max_value=3.0, sample_size=4,
+                            actor="test")
+        for mean in MEANS:
+            quality.record_sample(session, material_code="FG-COLA",
+                                  characteristic="fill_height",
+                                  values=_sample(mean), gauge_code="HEIGHT-01",
+                                  equipment_code="MIX01", actor="OP-NIGHT")
+            session.flush()
+        for value in BRIX:
+            quality.record_check(session, material_code="FG-COLA",
+                                 characteristic="brix", value=value,
+                                 gauge_code="HEIGHT-01", equipment_code="MIX01",
+                                 actor="OP-NIGHT")
+            session.flush()
 
     with pytest.MonkeyPatch.context() as env:
-        env.setenv("MES_DATABASE_URL", url)
         env.setenv("MES_PLANT_TIMEZONE", "UTC")
-        config.get_settings.cache_clear()
-        db.get_engine.cache_clear()
-        db.get_sessionmaker.cache_clear()
-
-        engine = make_engine(url)
-        Base.metadata.create_all(engine)
-        with Session(engine, expire_on_commit=False) as session:
-            seed_demo_plant(session)
-            auth.ensure_builtin_roles(session)
-            gauges.register(session, code="HEIGHT-01", name="Bench height gauge",
-                            kind="height gauge", resolution=0.1, interval_days=180,
-                            location="MIX01", actor="test")
-            gauges.calibrate(session, "HEIGHT-01", result="pass", performed_by="QA-LEAD",
-                             performed_on=utcnow().date() - timedelta(days=10),
-                             certificate="CERT-HEIGHT-01", actor="test")
-            quality.create_spec(session, material_code="FG-COLA",
-                                characteristic="fill_height", unit="mm",
-                                min_value=139.0, max_value=145.0, sample_size=5,
-                                actor="test")
-            # Four at a time and not one reading taken: the state the lab
-            # plant was in when it drew the wrong heading.
-            quality.create_spec(session, material_code="FG-COLA",
-                                characteristic="crown_torque", unit="Nm",
-                                min_value=1.0, max_value=3.0, sample_size=4,
-                                actor="test")
-            for mean in MEANS:
-                quality.record_sample(session, material_code="FG-COLA",
-                                      characteristic="fill_height",
-                                      values=_sample(mean), gauge_code="HEIGHT-01",
-                                      equipment_code="MIX01", actor="OP-NIGHT")
-                session.flush()
-            for value in BRIX:
-                quality.record_check(session, material_code="FG-COLA",
-                                     characteristic="brix", value=value,
-                                     gauge_code="HEIGHT-01", equipment_code="MIX01",
-                                     actor="OP-NIGHT")
-                session.flush()
-            session.commit()
-
-        sock = socket.socket()
-        sock.bind(("127.0.0.1", 0))
-        server = uvicorn.Server(uvicorn.Config(
-            create_app(), log_level="warning", lifespan="on"))
-        thread = threading.Thread(target=lambda: server.run(sockets=[sock]), daemon=True)
-        thread.start()
-        try:
-            base = f"http://127.0.0.1:{sock.getsockname()[1]}"
-            _wait_until_answering(base)
-            yield base
-        finally:
-            server.should_exit = True
-            thread.join(timeout=10)
-            engine.dispose()
-
-    config.get_settings.cache_clear()
-    db.get_engine.cache_clear()
-    db.get_sessionmaker.cache_clear()
-
-
-def _wait_until_answering(base: str, seconds: float = 20.0) -> None:
-    import time
-    import urllib.error
-    import urllib.request
-
-    deadline = time.monotonic() + seconds
-    while time.monotonic() < deadline:
-        try:
-            with urllib.request.urlopen(f"{base}/health", timeout=1) as reply:
-                if reply.status == 200:
-                    return
-        except (urllib.error.URLError, OSError):
-            time.sleep(0.1)
-    raise AssertionError(f"the plant at {base} never answered /health")
+        with serve_plant(_seed, name="sampled") as served:
+            yield served.base
 
 
 @pytest.fixture(scope="module")

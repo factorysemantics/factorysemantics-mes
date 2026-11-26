@@ -20,13 +20,10 @@ Marked `browser` as well as `slow`: `pytest -m browser` is the tier CI runs
 Chromium for, and a Playwright file marked only `slow` is a test nothing runs.
 """
 
-import socket
-import threading
 from datetime import timedelta
 
 import pytest
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
@@ -48,7 +45,7 @@ AFTER_ORDER = "4712"
 
 
 @pytest.fixture(scope="module")
-def plant(tmp_path_factory):
+def plant(serve_plant):
     """A shift on the demo mixer with every block a test below clicks on.
 
     Reading down the clock, where `at` is when the fixture is built:
@@ -67,151 +64,101 @@ def plant(tmp_path_factory):
     specification; the machine's temperature either side of it; and a viewer
     account, because what the panel says when it refuses is part of the screen.
     """
-    import uvicorn
 
-    from fsmes import config, db
-    from fsmes.api.app import create_app
-    from fsmes.db import Base, make_engine, utcnow
-    from fsmes.domain import (
-        Equipment,
-        EquipmentState,
-        EquipmentStateName,
-        MaintenanceKind,
-        MaintenanceOrder,
-        MaintenanceStatus,
-        OperationStatus,
-        ProductionLog,
-        ProductionSource,
-        TagValue,
-    )
-    from fsmes.seed import seed_demo_plant
-    from fsmes.services import auth, quality, reasons, workorders
-    from fsmes.services import equipment as equipment_service
+    def _seed(session):
+        from fsmes.db import utcnow
+        from fsmes.domain import (
+            Equipment,
+            EquipmentState,
+            EquipmentStateName,
+            MaintenanceKind,
+            MaintenanceOrder,
+            MaintenanceStatus,
+            OperationStatus,
+            ProductionLog,
+            ProductionSource,
+            TagValue,
+        )
+        from fsmes.services import auth, quality, reasons, workorders
+        from fsmes.services import equipment as equipment_service
+        auth.create_user(session, code="LOOKER", name="Looker",
+                         password="looker-password", role="viewer")
+        at = utcnow()
+        first = (at - timedelta(minutes=100), at - timedelta(minutes=95))
+        second = (at - timedelta(minutes=80), at - timedelta(minutes=75))
+        setup = (at - timedelta(minutes=50), at - timedelta(minutes=46))
+        down = (at - timedelta(minutes=30), at - timedelta(minutes=20))
 
-    path = tmp_path_factory.mktemp("stopblock") / "plant.db"
-    url = f"sqlite:///{path}"
+        reasons.define(session, code="changeover", name="Changeover",
+                       description="Product change on the machine.", actor="ADMIN")
+        reasons.approve(session, "changeover", 1, actor="ADMIN")
+
+        mixer = session.scalar(select(Equipment).where(Equipment.code == "MIX01"))
+        for code, started, completed in (
+                (BEFORE_ORDER, at - timedelta(hours=3),
+                 setup[0] - timedelta(seconds=30)),
+                (AFTER_ORDER, setup[1] + timedelta(minutes=1), None)):
+            workorders.create(session, code=code, material_code="FG-COLA",
+                              quantity=1000)
+            order = workorders.release(session, code)
+            operation = order.operations[0]
+            operation.started_at = started
+            operation.completed_at = completed
+            operation.status = (OperationStatus.DONE if completed
+                                else OperationStatus.RUNNING)
+            session.flush()
+        for code, when, good in ((BEFORE_ORDER, setup[0] - timedelta(minutes=10), 500.0),
+                                 (AFTER_ORDER, setup[1] + timedelta(minutes=2), 20.0)):
+            order = workorders.get(session, code)
+            session.add(ProductionLog(
+                work_order_id=order.id, operation_id=order.operations[0].id,
+                equipment_id=mixer.id, good_qty=good, scrap_qty=0.0,
+                source=ProductionSource.OPC, ts=when))
+
+        for state, started, ended, reason in (
+                (EquipmentStateName.RUNNING, at - timedelta(hours=3), first[0], None),
+                (EquipmentStateName.DOWN, *first, None),
+                (EquipmentStateName.RUNNING, first[1], second[0], None),
+                (EquipmentStateName.DOWN, *second, None),
+                (EquipmentStateName.RUNNING, second[1], setup[0], None),
+                (EquipmentStateName.SETUP, *setup, None),
+                (EquipmentStateName.RUNNING, setup[1], down[0], None),
+                (EquipmentStateName.DOWN, *down, "planned maintenance MO-CHILL"),
+                (EquipmentStateName.RUNNING, down[1], None, None)):
+            session.add(EquipmentState(
+                equipment_id=mixer.id, state=state, reason=reason,
+                started_at=started, ended_at=ended))
+        session.flush()
+        # Somebody names the changeover afterwards, over the window they
+        # chose - the write the panel's own control posts to.
+        equipment_service.name_stops(
+            session, equipment_code="MIX01", start=setup[0], end=setup[1],
+            reason_code="changeover", reason="Changeover", actor="ANNA")
+
+        session.add(MaintenanceOrder(
+            code="MO-CHILL", equipment_id=mixer.id, kind=MaintenanceKind.PREVENTIVE,
+            status=MaintenanceStatus.IN_PROGRESS,
+            summary="Clean the chiller condenser", needs_stop=True,
+            raised_at=at - timedelta(hours=6),
+            started_at=down[0] - timedelta(minutes=2), performed_by="NILS"))
+
+        moment = setup[0] - timedelta(minutes=15)
+        while moment <= setup[1] + timedelta(minutes=5):
+            session.add(TagValue(equipment_id=mixer.id, tag="MIX01.Temperature",
+                                 ts=moment,
+                                 value_num=62.0 if moment < setup[0] else 58.5))
+            moment += timedelta(seconds=10)
+
+        for value in (14.0, 11.0):
+            check, _nc, _signals = quality.record_check(
+                session, material_code="FG-COLA", characteristic="brix",
+                value=value, equipment_code="MIX01", actor="OP-DAY")
+            check.ts = setup[1] + timedelta(minutes=5)
 
     with pytest.MonkeyPatch.context() as env:
-        env.setenv("MES_DATABASE_URL", url)
         env.setenv("MES_PLANT_TIMEZONE", "UTC")
-        config.get_settings.cache_clear()
-        db.get_engine.cache_clear()
-        db.get_sessionmaker.cache_clear()
-
-        engine = make_engine(url)
-        Base.metadata.create_all(engine)
-        with Session(engine, expire_on_commit=False) as session:
-            seed_demo_plant(session)
-            auth.ensure_builtin_roles(session)
-            auth.create_user(session, code="LOOKER", name="Looker",
-                             password="looker-password", role="viewer")
-            at = utcnow()
-            first = (at - timedelta(minutes=100), at - timedelta(minutes=95))
-            second = (at - timedelta(minutes=80), at - timedelta(minutes=75))
-            setup = (at - timedelta(minutes=50), at - timedelta(minutes=46))
-            down = (at - timedelta(minutes=30), at - timedelta(minutes=20))
-
-            reasons.define(session, code="changeover", name="Changeover",
-                           description="Product change on the machine.", actor="ADMIN")
-            reasons.approve(session, "changeover", 1, actor="ADMIN")
-
-            mixer = session.scalar(select(Equipment).where(Equipment.code == "MIX01"))
-            for code, started, completed in (
-                    (BEFORE_ORDER, at - timedelta(hours=3),
-                     setup[0] - timedelta(seconds=30)),
-                    (AFTER_ORDER, setup[1] + timedelta(minutes=1), None)):
-                workorders.create(session, code=code, material_code="FG-COLA",
-                                  quantity=1000)
-                order = workorders.release(session, code)
-                operation = order.operations[0]
-                operation.started_at = started
-                operation.completed_at = completed
-                operation.status = (OperationStatus.DONE if completed
-                                    else OperationStatus.RUNNING)
-                session.flush()
-            for code, when, good in ((BEFORE_ORDER, setup[0] - timedelta(minutes=10), 500.0),
-                                     (AFTER_ORDER, setup[1] + timedelta(minutes=2), 20.0)):
-                order = workorders.get(session, code)
-                session.add(ProductionLog(
-                    work_order_id=order.id, operation_id=order.operations[0].id,
-                    equipment_id=mixer.id, good_qty=good, scrap_qty=0.0,
-                    source=ProductionSource.OPC, ts=when))
-
-            for state, started, ended, reason in (
-                    (EquipmentStateName.RUNNING, at - timedelta(hours=3), first[0], None),
-                    (EquipmentStateName.DOWN, *first, None),
-                    (EquipmentStateName.RUNNING, first[1], second[0], None),
-                    (EquipmentStateName.DOWN, *second, None),
-                    (EquipmentStateName.RUNNING, second[1], setup[0], None),
-                    (EquipmentStateName.SETUP, *setup, None),
-                    (EquipmentStateName.RUNNING, setup[1], down[0], None),
-                    (EquipmentStateName.DOWN, *down, "planned maintenance MO-CHILL"),
-                    (EquipmentStateName.RUNNING, down[1], None, None)):
-                session.add(EquipmentState(
-                    equipment_id=mixer.id, state=state, reason=reason,
-                    started_at=started, ended_at=ended))
-            session.flush()
-            # Somebody names the changeover afterwards, over the window they
-            # chose - the write the panel's own control posts to.
-            equipment_service.name_stops(
-                session, equipment_code="MIX01", start=setup[0], end=setup[1],
-                reason_code="changeover", reason="Changeover", actor="ANNA")
-
-            session.add(MaintenanceOrder(
-                code="MO-CHILL", equipment_id=mixer.id, kind=MaintenanceKind.PREVENTIVE,
-                status=MaintenanceStatus.IN_PROGRESS,
-                summary="Clean the chiller condenser", needs_stop=True,
-                raised_at=at - timedelta(hours=6),
-                started_at=down[0] - timedelta(minutes=2), performed_by="NILS"))
-
-            moment = setup[0] - timedelta(minutes=15)
-            while moment <= setup[1] + timedelta(minutes=5):
-                session.add(TagValue(equipment_id=mixer.id, tag="MIX01.Temperature",
-                                     ts=moment,
-                                     value_num=62.0 if moment < setup[0] else 58.5))
-                moment += timedelta(seconds=10)
-
-            for value in (14.0, 11.0):
-                check, _nc, _signals = quality.record_check(
-                    session, material_code="FG-COLA", characteristic="brix",
-                    value=value, equipment_code="MIX01", actor="OP-DAY")
-                check.ts = setup[1] + timedelta(minutes=5)
-            session.commit()
-
-        sock = socket.socket()
-        sock.bind(("127.0.0.1", 0))
-        server = uvicorn.Server(uvicorn.Config(
-            create_app(), log_level="warning", lifespan="on"))
-        thread = threading.Thread(target=lambda: server.run(sockets=[sock]), daemon=True)
-        thread.start()
-        try:
-            base = f"http://127.0.0.1:{sock.getsockname()[1]}"
-            _wait_until_answering(base)
-            yield base
-        finally:
-            server.should_exit = True
-            thread.join(timeout=10)
-            engine.dispose()
-
-    config.get_settings.cache_clear()
-    db.get_engine.cache_clear()
-    db.get_sessionmaker.cache_clear()
-
-
-def _wait_until_answering(base: str, seconds: float = 20.0) -> None:
-    import time
-    import urllib.error
-    import urllib.request
-
-    deadline = time.monotonic() + seconds
-    while time.monotonic() < deadline:
-        try:
-            with urllib.request.urlopen(f"{base}/health", timeout=1) as reply:
-                if reply.status == 200:
-                    return
-        except (urllib.error.URLError, OSError):
-            time.sleep(0.1)
-    raise AssertionError(f"the plant at {base} never answered /health")
+        with serve_plant(_seed, name="stopblock") as served:
+            yield served.base
 
 
 @pytest.fixture(scope="module")

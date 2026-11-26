@@ -28,13 +28,10 @@ operating system's choosing, driven by Chromium, touching nothing anyone else
 is running.
 """
 
-import socket
-import threading
 from datetime import timedelta
 
 import pytest
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
@@ -46,81 +43,29 @@ MADE = 900
 
 
 @pytest.fixture(scope="module")
-def plant(tmp_path_factory):
+def plant(serve_plant):
     """A demo plant whose mixer made twice its rated rate for half an hour."""
-    import uvicorn
 
-    from fsmes import config, db
-    from fsmes.api.app import create_app
-    from fsmes.db import Base, make_engine, utcnow
-    from fsmes.domain import Equipment, EquipmentState, EquipmentStateName, ProductionLog
-    from fsmes.seed import seed_demo_plant
-    from fsmes.services import auth, workorders
+    def _seed(session):
+        from fsmes.db import utcnow
+        from fsmes.domain import Equipment, EquipmentState, EquipmentStateName, ProductionLog
+        from fsmes.services import workorders
+        mixer = session.scalar(select(Equipment).where(Equipment.code == MACHINE))
+        assert mixer.ideal_cycle_seconds == RATED_SECONDS
+        now = utcnow()
+        session.add(EquipmentState(
+            equipment_id=mixer.id, state=EquipmentStateName.RUNNING,
+            started_at=now - timedelta(minutes=RAN_MINUTES + 5),
+            ended_at=now - timedelta(minutes=5)))
+        order = workorders.create(session, code="WO-RATED", material_code="FG-COLA",
+                                  quantity=MADE)
+        session.flush()
+        session.add(ProductionLog(work_order_id=order.id, equipment_id=mixer.id,
+                                  good_qty=MADE, scrap_qty=0,
+                                  ts=now - timedelta(minutes=10)))
 
-    path = tmp_path_factory.mktemp("oee") / "plant.db"
-    url = f"sqlite:///{path}"
-
-    with pytest.MonkeyPatch.context() as env:
-        env.setenv("MES_DATABASE_URL", url)
-        config.get_settings.cache_clear()
-        db.get_engine.cache_clear()
-        db.get_sessionmaker.cache_clear()
-
-        engine = make_engine(url)
-        Base.metadata.create_all(engine)
-        with Session(engine, expire_on_commit=False) as session:
-            seed_demo_plant(session)
-            auth.ensure_builtin_roles(session)
-            mixer = session.scalar(select(Equipment).where(Equipment.code == MACHINE))
-            assert mixer.ideal_cycle_seconds == RATED_SECONDS
-            now = utcnow()
-            session.add(EquipmentState(
-                equipment_id=mixer.id, state=EquipmentStateName.RUNNING,
-                started_at=now - timedelta(minutes=RAN_MINUTES + 5),
-                ended_at=now - timedelta(minutes=5)))
-            order = workorders.create(session, code="WO-RATED", material_code="FG-COLA",
-                                      quantity=MADE)
-            session.flush()
-            session.add(ProductionLog(work_order_id=order.id, equipment_id=mixer.id,
-                                      good_qty=MADE, scrap_qty=0,
-                                      ts=now - timedelta(minutes=10)))
-            session.commit()
-
-        sock = socket.socket()
-        sock.bind(("127.0.0.1", 0))
-        server = uvicorn.Server(uvicorn.Config(
-            create_app(), log_level="warning", lifespan="on"))
-        thread = threading.Thread(target=lambda: server.run(sockets=[sock]), daemon=True)
-        thread.start()
-        try:
-            port = sock.getsockname()[1]
-            base = f"http://127.0.0.1:{port}"
-            _wait_until_answering(base)
-            yield base
-        finally:
-            server.should_exit = True
-            thread.join(timeout=10)
-            engine.dispose()
-
-    config.get_settings.cache_clear()
-    db.get_engine.cache_clear()
-    db.get_sessionmaker.cache_clear()
-
-
-def _wait_until_answering(base: str, seconds: float = 20.0) -> None:
-    import time
-    import urllib.error
-    import urllib.request
-
-    deadline = time.monotonic() + seconds
-    while time.monotonic() < deadline:
-        try:
-            with urllib.request.urlopen(f"{base}/health", timeout=1) as reply:
-                if reply.status == 200:
-                    return
-        except (urllib.error.URLError, OSError):
-            time.sleep(0.1)
-    raise AssertionError(f"the plant at {base} never answered /health")
+    with serve_plant(_seed, name="oee") as served:
+        yield served.base
 
 
 @pytest.fixture(scope="module")

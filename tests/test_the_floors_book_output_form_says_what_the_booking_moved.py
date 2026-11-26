@@ -18,83 +18,30 @@ Same shape as `test_the_trace_page_lists_the_orders_that_drew_on_a_lot.py`.
 """
 
 import json
-import socket
-import threading
 import time
 
 import pytest
-from sqlalchemy.orm import Session
 
 pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
 
 @pytest.fixture(scope="module")
-def plant(tmp_path_factory):
+def plant(serve_plant):
     """A demo plant with WO-BOOK running on both its steps (MIX01 op 10,
     PACK01 op 20), each already carrying counts of its own."""
-    import uvicorn
 
-    from fsmes import config, db
-    from fsmes.api.app import create_app
-    from fsmes.db import Base, make_engine
-    from fsmes.domain.execution import ProductionSource
-    from fsmes.seed import seed_demo_plant
-    from fsmes.services import auth, execution, workorders
+    def _seed(session):
+        from fsmes.domain.execution import ProductionSource
+        from fsmes.services import execution, workorders
+        workorders.create(session, code="WO-BOOK", material_code="FG-COLA", quantity=400)
+        workorders.release(session, "WO-BOOK")
+        for seq in (10, 20):
+            workorders.start_operation(session, "WO-BOOK", seq)
+        execution.report(session, order_code="WO-BOOK", seq=10, good=102, scrap=2, source=ProductionSource.OPC)
+        execution.report(session, order_code="WO-BOOK", seq=20, good=95, scrap=1, source=ProductionSource.OPC)
 
-    path = tmp_path_factory.mktemp("book-output") / "plant.db"
-    url = f"sqlite:///{path}"
-
-    with pytest.MonkeyPatch.context() as env:
-        env.setenv("MES_DATABASE_URL", url)
-        config.get_settings.cache_clear()
-        db.get_engine.cache_clear()
-        db.get_sessionmaker.cache_clear()
-
-        engine = make_engine(url)
-        Base.metadata.create_all(engine)
-        with Session(engine, expire_on_commit=False) as session:
-            seed_demo_plant(session)
-            auth.ensure_builtin_roles(session)
-            workorders.create(session, code="WO-BOOK", material_code="FG-COLA", quantity=400)
-            workorders.release(session, "WO-BOOK")
-            for seq in (10, 20):
-                workorders.start_operation(session, "WO-BOOK", seq)
-            execution.report(session, order_code="WO-BOOK", seq=10, good=102, scrap=2, source=ProductionSource.OPC)
-            execution.report(session, order_code="WO-BOOK", seq=20, good=95, scrap=1, source=ProductionSource.OPC)
-            session.commit()
-
-        sock = socket.socket()
-        sock.bind(("127.0.0.1", 0))
-        server = uvicorn.Server(uvicorn.Config(create_app(), log_level="warning", lifespan="on"))
-        thread = threading.Thread(target=lambda: server.run(sockets=[sock]), daemon=True)
-        thread.start()
-        try:
-            base = f"http://127.0.0.1:{sock.getsockname()[1]}"
-            _wait_until_answering(base)
-            yield base
-        finally:
-            server.should_exit = True
-            thread.join(timeout=10)
-            engine.dispose()
-
-    config.get_settings.cache_clear()
-    db.get_engine.cache_clear()
-    db.get_sessionmaker.cache_clear()
-
-
-def _wait_until_answering(base: str, seconds: float = 20.0) -> None:
-    import urllib.error
-    import urllib.request
-
-    deadline = time.monotonic() + seconds
-    while time.monotonic() < deadline:
-        try:
-            with urllib.request.urlopen(f"{base}/health", timeout=1) as reply:
-                if reply.status == 200:
-                    return
-        except (urllib.error.URLError, OSError):
-            time.sleep(0.1)
-    raise AssertionError(f"the plant at {base} never answered /health")
+    with serve_plant(_seed, name="book-output") as served:
+        yield served.base
 
 
 @pytest.fixture(scope="module")

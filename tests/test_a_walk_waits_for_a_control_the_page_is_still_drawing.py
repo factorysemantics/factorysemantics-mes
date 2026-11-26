@@ -29,12 +29,9 @@ is running. Marked slow; run it with
 """
 
 import json
-import socket
-import threading
 import time
 
 import pytest
-from sqlalchemy.orm import Session
 
 pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
@@ -55,69 +52,13 @@ BUDGET_SECONDS = 3
 
 
 @pytest.fixture(scope="module")
-def plant(tmp_path_factory):
+def plant(serve_plant):
     """A seeded demo plant, served over HTTP on a port nobody chose in advance.
     A file database rather than the suite's in-memory one, because the server
     answers on its own threads and must open the same rows."""
-    import uvicorn
 
-    from fsmes import config, db
-    from fsmes.api.app import create_app
-    from fsmes.db import Base, make_engine
-    from fsmes.seed import seed_demo_plant
-    from fsmes.services import auth
-
-    path = tmp_path_factory.mktemp("walk-wait") / "plant.db"
-    url = f"sqlite:///{path}"
-
-    with pytest.MonkeyPatch.context() as env:
-        env.setenv("MES_DATABASE_URL", url)
-        config.get_settings.cache_clear()
-        db.get_engine.cache_clear()
-        db.get_sessionmaker.cache_clear()
-
-        engine = make_engine(url)
-        Base.metadata.create_all(engine)
-        with Session(engine, expire_on_commit=False) as session:
-            seed_demo_plant(session)
-            auth.ensure_builtin_roles(session)
-            session.commit()
-
-        sock = socket.socket()
-        sock.bind(("127.0.0.1", 0))
-        server = uvicorn.Server(uvicorn.Config(
-            create_app(), log_level="warning", lifespan="on"))
-        thread = threading.Thread(
-            target=lambda: server.run(sockets=[sock]), daemon=True)
-        thread.start()
-        try:
-            port = sock.getsockname()[1]
-            base = f"http://127.0.0.1:{port}"
-            _wait_until_answering(base)
-            yield base
-        finally:
-            server.should_exit = True
-            thread.join(timeout=10)
-            engine.dispose()
-
-    config.get_settings.cache_clear()
-    db.get_engine.cache_clear()
-    db.get_sessionmaker.cache_clear()
-
-
-def _wait_until_answering(base: str, seconds: float = 20.0) -> None:
-    import urllib.error
-    import urllib.request
-
-    deadline = time.monotonic() + seconds
-    while time.monotonic() < deadline:
-        try:
-            with urllib.request.urlopen(f"{base}/health", timeout=1) as reply:
-                if reply.status == 200:
-                    return
-        except (urllib.error.URLError, OSError):
-            time.sleep(0.1)
-    raise AssertionError(f"the plant at {base} never answered /health")
+    with serve_plant(None, name="walk-wait") as served:
+        yield served.base
 
 
 @pytest.fixture(scope="module")
