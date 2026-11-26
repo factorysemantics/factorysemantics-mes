@@ -439,8 +439,14 @@
   FS.exportXlsx = function exportXlsx(bar, path, noun, { id, assist } = {}) {
     const host = typeof bar === "string" ? document.querySelector(bar) : bar;
     let link = host ? host.querySelector("a.export-xlsx") : null;
+    /* The words say which list: two lists on one screen (Quality's checks
+       and non-conformances, Analysis's stations and stops) had two buttons
+       both reading "Export xlsx", and a person - or a walk - pressed the
+       wrong one (card export-quality-xlsx, 2026-11-26). */
+    const words = `Export ${noun} (xlsx)`;
+    if (link) link.textContent = words;
     if (host && !link) {
-      link = FS.el("a", "ghost export-xlsx", "Export xlsx");
+      link = FS.el("a", "ghost export-xlsx", words);
       link.setAttribute("download", "");
       if (id) link.id = id;
       if (assist) link.dataset.assist = assist;
