@@ -136,6 +136,12 @@ LAB_USERS = [
     # plant, and the walk has to reach the same screens that person would.
     ("WALK-ENG", "Walker: MES engineer",
      os.environ.get("FSMES_WALK_PASSWORD", LAB_ONLY_WALK_PASSWORD), "admin"),
+    # The pretend quality engineer (labs/walks/quality-engineer.yaml): a
+    # supervisor, never an admin. The product has no quality-engineer role of
+    # its own, and the person who reviews, grades and closes a non-conformance
+    # holds what a supervisor holds.
+    ("WALK-QE", "Walker: quality engineer",
+     os.environ.get("FSMES_WALK_PASSWORD", LAB_ONLY_WALK_PASSWORD), "supervisor"),
 ]
 
 
