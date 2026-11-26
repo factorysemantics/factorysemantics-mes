@@ -7,6 +7,8 @@
   padding: 0 16px 16px;
 }
 .admin-layout .span-2 { grid-column: span 2; }
+.admin-jump { padding: 2px 0 0; }
+.admin-layout > section { scroll-margin-top: 12px; }
 @media (max-width: 1000px) {
   .admin-layout { grid-template-columns: 1fr; }
   .admin-layout .span-2 { grid-column: span 1; }

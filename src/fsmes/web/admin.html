@@ -30,7 +30,15 @@
   </div>
 
   <main id="admin-main" class="admin-layout hidden">
-    <section class="panel">
+    <!-- Routings sit at the bottom of a long page; a walker who could not
+         see them typed a routing into "Add someone" (card
+         routing-to-cost-centers, 2026-11-26). The top says what is here. -->
+    <nav class="span-2 admin-jump muted small" aria-label="On this page">
+      On this page: <a href="#people-panel">People</a> ·
+      <a href="#roles-panel">Roles</a> ·
+      <a href="#routings-panel">Routings</a>
+    </nav>
+    <section class="panel" id="people-panel" aria-label="People">
       <h2>People <span id="user-count" class="muted"></span></h2>
       <p class="muted small">Assigning a role takes effect on that person's very
         next action — capabilities are read live, not baked into their session.</p>
@@ -60,7 +68,7 @@
       </form>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="roles-panel" aria-label="Roles">
       <h2>Roles</h2>
       <p class="muted small">A role is a bundle of capabilities, not a rank. That
         is what lets “Quality Inspector” exist: it records inspections and
@@ -85,7 +93,7 @@
       </form>
     </section>
 
-    <section class="panel span-2">
+    <section class="panel span-2" id="routings-panel" aria-label="Routings">
       <h2>Routings <span id="routing-count" class="muted"></span></h2>
       <p class="muted small">A routing is the ordered path a material takes
         through the plant. Operations run in sequence, each on a named machine.</p>
@@ -101,8 +109,8 @@
       </div>
       <div id="r-pager" class="pager"></div>
 
-      <h3 class="mt">Define a routing</h3>
-      <form id="form-routing" class="stack" data-assist="routing-form">
+      <h3 class="mt" id="routing-form-title">Define a routing</h3>
+      <form id="form-routing" class="stack" aria-labelledby="routing-form-title" data-assist="routing-form">
         <div class="row">
           <input name="code" placeholder="Code, e.g. RT-2" aria-label="Routing code" required data-assist="routing-new-code">
           <input name="name" placeholder="Name" aria-label="Routing name" required data-assist="routing-new-name">
