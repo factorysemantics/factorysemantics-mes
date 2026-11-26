@@ -3,7 +3,7 @@
 # Each task is one sentence, said the way the plant's owner would say it to a
 # new hire; `expect` is what a working MES would have shown at the end. The
 # tasks here come from Scott's own complaints about the job, through pm's
-# complaint desk, and are walked only on his "walk it" (2026-11-26, the first).
+# complaint desk, and are walked only on his "walk it" (2026-11-26, all three).
 #
 # The account is a lab account (plant.LAB_USERS) with the supervisor role,
 # never an admin: the product has no quality-engineer role of its own, and
@@ -28,3 +28,18 @@ tasks:
     expect: >-
       Each report carries a severity you set, and the list sorts so the most
       severe come first.
+
+  - slug: guide-adjust-control-limits
+    task: Change the control limits on a measurement, using only the assistant's guide to find your way.
+    expect: >-
+      The assistant walks you step by step to the limits screen, you change
+      them, and the new limits show on the chart with who changed them and
+      when.
+
+  - slug: gauges-and-gage-rr
+    task: >-
+      Record which gauge took each inspection reading, then run a gauge study
+      to see if the gauge or the people are the problem.
+    expect: >-
+      Every reading shows its gauge, and a gauge study shows how much of the
+      spread comes from the gauge, the people and the parts.

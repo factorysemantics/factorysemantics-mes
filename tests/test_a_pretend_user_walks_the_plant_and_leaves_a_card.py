@@ -46,9 +46,15 @@ def test_there_are_three_personas_and_the_supervisors_first_task_is_the_xlsx_exp
         "replay-real-opc-into-test",
         "routing-to-cost-centers",
         "new-user-groups-shifts",
+        "connect-opc-ua-server",
+        "test-then-prod-update",
     ]
     # The quality engineer walks what Scott said "walk it" to on 2026-11-26.
-    assert [t.slug for t in loaded["quality-engineer"].tasks] == ["rank-ncr-severity"]
+    assert [t.slug for t in loaded["quality-engineer"].tasks] == [
+        "rank-ncr-severity",
+        "guide-adjust-control-limits",
+        "gauges-and-gage-rr",
+    ]
     supervisor = loaded["supervisor"]
     assert supervisor.tasks[0].slug == "export-quality-xlsx"
     assert supervisor.tasks[0].task == "Export the last two months of quality checks as an xlsx file."
