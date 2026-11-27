@@ -20,8 +20,12 @@ function fail(error) {
   banner.classList.remove("hidden");
 }
 
+// A stored word like "out_of_service" or "fail_as_found" said as words:
+// every underscore, not only the first (the class 4.4 film read "out of_service").
+function words(s) { return s.replaceAll("_", " "); }
+
 function statusPill(g) {
-  if (g.status === "out_of_service" || g.status === "lost") return el("span", "pill down", g.status.replace("_", " "));
+  if (g.status === "out_of_service" || g.status === "lost") return el("span", "pill down", words(g.status));
   if (g.overdue) return el("span", "pill down", g.never_calibrated ? "never calibrated" : "overdue");
   // The server decides "due soon", from this gauge's own warning window.
   // This file used to hold its own thirty, three times, which meant the
@@ -104,10 +108,10 @@ function wire() {
       const out = await api(`/quality/gauges/${encodeURIComponent($("#cal-gauge").value)}/calibrate`, { method: "POST", body: {
         result: $("#cal-result").value, performed_by: $("#cal-by").value.trim(),
         performed_on: $("#cal-on").value || null, certificate: $("#cal-cert").value.trim() || null } });
-      toast(`${out.gauge}: ${out.result} → ${out.status.replace("_", " ")}`);
+      toast(`${out.gauge}: ${words(out.result)} → ${words(out.status)}`);
       const box = $("#cal-result-box");
       box.classList.remove("hidden");
-      $("#cal-result-text").textContent = `${out.gauge} ${out.result}: now ${out.status.replace("_", " ")}, next due ${out.next_due || "—"}.`;
+      $("#cal-result-text").textContent = `${out.gauge} ${words(out.result)}: now ${words(out.status)}, next due ${out.next_due || "—"}.`;
       const list = $("#cal-suspect");
       list.replaceChildren();
       if (out.suspect_measurements) {
