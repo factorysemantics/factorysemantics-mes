@@ -676,6 +676,7 @@ async function loadWork() {
         done.addEventListener("click", () => {
           completing = o.code;
           $("#findings").value = "";
+          $("#part-code").value = ""; $("#part-qty").value = "";
           $("#complete-box").classList.remove("hidden");
           $("#findings").focus();
         });
@@ -696,7 +697,7 @@ function wireWork() {
     if (!completing) return;
     try {
       await api(`/maintenance/orders/${completing}/complete`, { method: "POST",
-        body: { findings: $("#findings").value.trim() || null } });
+        body: { findings: $("#findings").value.trim() || null, ...FS.partUsed("#part-code", "#part-qty") } });
       toast(`${completing} complete`);
       completing = null;
       $("#complete-box").classList.add("hidden");
@@ -808,7 +809,7 @@ async function loadHistory() {
   const done = page.items;
   const body = $("#history-table tbody");
   body.replaceChildren();
-  if (!done.length) { const tr = el("tr"); const td = el("td", "muted", "No completed work matches."); td.colSpan = 8; tr.append(td); body.append(tr); }
+  if (!done.length) { const tr = el("tr"); const td = el("td", "muted", "No completed work matches."); td.colSpan = 9; tr.append(td); body.append(tr); }
   for (const o of done) {
     const tr = el("tr");
     tr.append(el("td", "code", o.code));
@@ -816,6 +817,7 @@ async function loadHistory() {
     tr.append(el("td", "muted", o.kind));
     tr.append(el("td", null, o.summary));
     tr.append(el("td", "muted small", o.findings || ""));
+    tr.append(el("td", "small", o.part_code ? `${fmt.qty(o.part_qty)} × ${o.part_code}` : ""));
     tr.append(el("td", "num", o.downtime_minutes === null ? "—" : fmt.qty(o.downtime_minutes)));
     tr.append(el("td", "muted small", o.performed_by || ""));
     tr.append(el("td", "muted small", fmt.stamp(o.completed_at)));

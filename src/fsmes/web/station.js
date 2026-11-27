@@ -672,6 +672,7 @@ async function renderMaintenance() {
       done.addEventListener("click", () => {
         completing = order.code;
         $("#maint-findings").value = "";
+        $("#maint-part-code").value = ""; $("#maint-part-qty").value = "";
         $("#maint-complete").classList.remove("hidden");
         $("#maint-findings").focus();
       });
@@ -690,7 +691,8 @@ function wireMaintenance() {
     if (!completing) return;
     try {
       await api(`/maintenance/orders/${completing}/complete`, { method: "POST",
-        body: { findings: $("#maint-findings").value.trim() || null } });
+        body: { findings: $("#maint-findings").value.trim() || null,
+                ...FS.partUsed("#maint-part-code", "#maint-part-qty") } });
       toast(`${completing} complete`);
       completing = null;
       $("#maint-complete").classList.add("hidden");

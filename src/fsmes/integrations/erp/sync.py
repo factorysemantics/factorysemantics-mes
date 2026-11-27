@@ -21,7 +21,7 @@ from fsmes.db import session_scope
 from fsmes.domain import ErpMessage
 from fsmes.integrations.erp import base
 from fsmes.integrations.erp.base import ErpAdapter
-from fsmes.integrations.erp.contract import parse_confirmation
+from fsmes.integrations.erp.contract import PartUsed, parse_message
 from fsmes.services import erp
 
 log = structlog.get_logger("erp.sync")
@@ -50,7 +50,11 @@ def cycle(adapter: ErpAdapter, scope) -> None:
         pending = [(m.id, dict(m.payload)) for m in erp.pending_outbound(session)]
     for message_id, payload in pending:
         try:
-            adapter.send_confirmation(parse_confirmation(payload))
+            message = parse_message(payload)
+            if isinstance(message, PartUsed):
+                base.send_part_used(adapter, message)
+            else:
+                adapter.send_confirmation(message)
         except Exception as exc:
             # A connector may say a failure is permanent — the ERP refused
             # this message rather than failed to take it. `permanent` is read
@@ -64,12 +68,13 @@ def cycle(adapter: ErpAdapter, scope) -> None:
                            else erp.mark_error(session, stored, exc))
                 status, attempts = message.status.value, message.attempts
             log.warning("confirmation refused by the ERP" if refused else "confirmation delivery failed",
-                        order=payload.get("order"), kind=payload.get("kind"),
+                        order=payload.get("order") or payload.get("repair_order"), kind=payload.get("kind"),
                         attempts=attempts, status=status, error=str(exc))
         else:
             with scope() as session:
                 erp.mark_sent(session.get(ErpMessage, message_id))
-            log.info("confirmation sent to ERP", order=payload.get("order"), kind=payload.get("kind"))
+            log.info("confirmation sent to ERP", order=payload.get("order") or payload.get("repair_order"),
+                     kind=payload.get("kind"))
 
 
 async def run(adapter: ErpAdapter, poll_seconds: float) -> None:

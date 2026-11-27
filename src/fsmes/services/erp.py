@@ -22,6 +22,7 @@ from fsmes.db import utcnow
 from fsmes.domain import (
     ErpMessage,
     LotConsumption,
+    MaintenanceOrder,
     MessageDirection,
     MessageStatus,
     OrderStatus,
@@ -29,11 +30,12 @@ from fsmes.domain import (
     WorkOrderOperation,
 )
 from fsmes.integrations.erp.contract import (
-    CONFIRMATION_KINDS,
+    ERP_KINDS,
     ComponentUse,
     Confirmation,
     OperationConfirmation,
     OrderCompletion,
+    PartUsed,
     ProductionRequest,
     as_payload,
 )
@@ -220,7 +222,7 @@ def process_inbound(session: Session, request: ProductionRequest | dict,
 
 # ---------------------------------------------------------------- outbound
 
-def _enqueue(session: Session, confirmation: Confirmation) -> ErpMessage:
+def _enqueue(session: Session, confirmation: Confirmation | PartUsed) -> ErpMessage:
     """Idempotent by message key: the same event queued twice is one message."""
     return outbox.record(session, kind=confirmation.kind, payload=as_payload(confirmation),
                          message_key=confirmation.message_key)
@@ -270,6 +272,50 @@ def enqueue_confirmation(session: Session, wo: WorkOrder) -> ErpMessage:
         started_at=wo.started_at, completed_at=wo.completed_at))
 
 
+def _order_running_on(session: Session, equipment_id: int, at: datetime | None) -> WorkOrder | None:
+    """The production order a machine was working on at `at`: the newest of
+    its operations started by then and not finished before it. `None` when
+    the machine was on no order, or `at` is unknown."""
+    if at is None:
+        return None
+    op = session.scalars(
+        select(WorkOrderOperation)
+        .where(WorkOrderOperation.equipment_id == equipment_id,
+               WorkOrderOperation.started_at.is_not(None),
+               WorkOrderOperation.started_at <= at,
+               (WorkOrderOperation.completed_at.is_(None)) | (WorkOrderOperation.completed_at >= at))
+        .order_by(WorkOrderOperation.started_at.desc())
+        .limit(1)).first()
+    return op.order if op else None
+
+
+def part_used(session: Session, order: MaintenanceOrder) -> PartUsed:
+    """The part a closed repair order used, in the terms an ERP books stock against."""
+    if not order.part_code or not order.part_qty:
+        raise Invalid(f"{order.code} names no part")
+    machine = order.equipment
+    line = masterdata.work_center_of(session, machine)
+    running = _order_running_on(session, machine.id, order.started_at or order.raised_at)
+    return PartUsed(
+        message_key=f"{order.code}:part:{order.part_code}",
+        repair_order=order.code, part_code=order.part_code, quantity=order.part_qty,
+        equipment=machine.code,
+        work_center=line.code if line else None,
+        cost_center=masterdata.cost_center(session, machine),
+        performed_by=order.performed_by, completed_at=order.completed_at,
+        minutes_down=order.downtime_minutes,
+        work_order=running.code if running else None,
+        work_order_erp_reference=running.erp_reference if running else None,
+    )
+
+
+def enqueue_part_used(session: Session, order: MaintenanceOrder) -> ErpMessage | None:
+    """Queue the part a repair order used, once. Nothing for an order with no part."""
+    if not order.part_code:
+        return None
+    return _enqueue(session, part_used(session, order))
+
+
 def pending_outbound(session: Session, now: datetime | None = None) -> list[ErpMessage]:
     """What is due for delivery to the ERP: a kind this contract can parse,
     pending, and not backing off.
@@ -283,7 +329,7 @@ def pending_outbound(session: Session, now: datetime | None = None) -> list[ErpM
     return list(session.scalars(
         select(ErpMessage)
         .where(ErpMessage.direction == MessageDirection.OUT,
-               ErpMessage.kind.in_(CONFIRMATION_KINDS),
+               ErpMessage.kind.in_(ERP_KINDS),
                ErpMessage.status == MessageStatus.PENDING,
                (ErpMessage.next_attempt_at.is_(None)) | (ErpMessage.next_attempt_at <= now))
         .order_by(ErpMessage.id)))
@@ -381,7 +427,7 @@ def outbox_summary(session: Session, limit: int = 30) -> dict:
     `other_outbound` and in `kinds`, so nothing is hidden either.
     """
     erp_rows = (ErpMessage.direction == MessageDirection.OUT,
-                ErpMessage.kind.in_(CONFIRMATION_KINDS))
+                ErpMessage.kind.in_(ERP_KINDS))
     counts = {status.value: 0 for status in MessageStatus}
     for status, n in session.execute(
             select(ErpMessage.status, func.count()).where(*erp_rows)
@@ -392,7 +438,7 @@ def outbox_summary(session: Session, limit: int = 30) -> dict:
     other_outbound = session.scalar(
         select(func.count()).select_from(ErpMessage)
         .where(ErpMessage.direction == MessageDirection.OUT,
-               ErpMessage.kind.not_in(CONFIRMATION_KINDS))) or 0
+               ErpMessage.kind.not_in(ERP_KINDS))) or 0
     oldest = session.scalar(select(func.min(ErpMessage.created_at)).where(
         *erp_rows, ErpMessage.status == MessageStatus.PENDING))
     recent = session.scalars(select(ErpMessage).order_by(ErpMessage.id.desc()).limit(limit)).all()

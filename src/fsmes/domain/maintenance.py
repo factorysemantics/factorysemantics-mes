@@ -203,6 +203,11 @@ class MaintenanceOrder(Base):
     performed_by: Mapped[str | None] = mapped_column(String(40))
     findings: Mapped[str | None] = mapped_column(Text)
     downtime_minutes: Mapped[float | None] = mapped_column()
+    # The part the job used, as the stores and the ERP name it, and how many.
+    # Written at close; null on a job that used none, or whose closer did not
+    # say. A code and a count only: what the part is worth is the ERP's.
+    part_code: Mapped[str | None] = mapped_column(String(40))
+    part_qty: Mapped[float | None] = mapped_column()
 
     equipment: Mapped[Equipment] = relationship()
     plan: Mapped[MaintenancePlan | None] = relationship()

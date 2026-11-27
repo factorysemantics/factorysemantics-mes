@@ -160,6 +160,16 @@ class ErpAdapter(Protocol):
         No side effects: `check` must be safe to run against production."""
         ...
 
+    def send_part_used(self, part_used) -> None:
+        """Book a part a repair order used: stock out, against the cost center.
+
+        Optional. `part_used` is a `contract.PartUsed`. The same message may
+        arrive twice (a retry after a reply that was lost); it is booked
+        once. A connector without this method is told so by
+        `send_part_used()` below, and the outbox keeps the message.
+        """
+        ...
+
     def configure(self, policy) -> None:
         """Take this plant's current ERP policy, before the next cycle.
 
@@ -212,6 +222,34 @@ def configure(adapter: object, policy) -> None:
     method = getattr(adapter, "configure", None)
     if callable(method):
         method(policy)
+
+
+class PartUsedNotBooked(RuntimeError):
+    """This connector books no parts used on repair orders.
+
+    Permanent, so the outbox stops at once and keeps the message with this
+    sentence on it: retrying a connector that has no such call changes
+    nothing. The part stays recorded on the MES's repair order.
+    """
+
+    permanent = True
+
+
+def send_part_used(adapter: object, message) -> None:
+    """Deliver one part used on a repair order, if this connector books them.
+
+    Optional on the port, read off the object like `check`: a connector
+    written before this message existed has no `send_part_used`, and the
+    honest answer for it is a plain refusal the outbox keeps, never a
+    message posted somewhere that expects a production confirmation.
+    """
+    method = getattr(adapter, "send_part_used", None)
+    if not callable(method):
+        raise PartUsedNotBooked(
+            f"{_name(adapter)} does not book parts used on repair orders; "
+            f"{message.quantity:g} x {message.part_code} on {message.repair_order} "
+            "is recorded in the MES only")
+    method(message)
 
 
 def requirements(adapter: object) -> list[Requirement]:

@@ -281,7 +281,12 @@
    "skill": "ELEC",
    "priority": 2,
    "technician": "MT-01",
-   "findings": "Heater zone 2 open circuit, band replaced"
+   "findings": "Heater zone 2 open circuit, band replaced",
+   "part": {
+    "_why": "The band the technician fitted, as the stores and the ERP name it, and how many: the MES records it on the repair order's close and sends it to an ERP to book. A code and a count; the price is the ERP's (answer.part below is the answer key's, not the MES's).",
+    "code": "SP-HEATER-BAND",
+    "quantity": 1
+   }
   }
  ],
  "masterdata": {
@@ -310,7 +315,7 @@
   ]
  },
  "answer": {
-  "_what": "The true answers. The minutes are the scene's; the counts are read from the generated hour by scene.py; the prices are the design's and are made up to be plausible, not taken from a real machine. Parts and prices live here only: the MES cannot hold a part, a price or a cost on a breakdown yet.",
+  "_what": "The true answers. The minutes are the scene's; the counts are read from the generated hour by scene.py; the prices are the design's and are made up to be plausible, not taken from a real machine. Prices live here only: the MES holds the part a repair used as a code and a count (breakdowns[].part), never a price or a cost.",
   "line": "FORK1",
   "machine": "FORK1_Mold",
   "tag": "MeltTemp",

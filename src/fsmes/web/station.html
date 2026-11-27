@@ -156,6 +156,14 @@
           <label for="maint-findings">What was found / done?</label>
           <input id="maint-findings" placeholder="e.g. seals replaced, no scoring on the shaft">
         </div>
+        <div class="field">
+          <label for="maint-part-code">Part used (code, if any)</label>
+          <input id="maint-part-code" maxlength="40" placeholder="e.g. SP-HEATER-BAND">
+        </div>
+        <div class="field">
+          <label for="maint-part-qty">How many</label>
+          <input id="maint-part-qty" type="number" min="0" step="any" inputmode="decimal">
+        </div>
         <div class="row">
           <button id="maint-cancel" class="ghost" type="button">Back</button>
           <button id="maint-confirm" type="button">Complete job</button>

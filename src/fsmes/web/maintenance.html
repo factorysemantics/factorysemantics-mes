@@ -149,6 +149,14 @@
             <label for="findings">What was found / done?</label>
             <input id="findings" placeholder="e.g. seals replaced, no scoring on the shaft" data-assist="maintenance-complete-findings">
           </div>
+          <div class="field">
+            <label for="part-code">Part used (code, if any)</label>
+            <input id="part-code" maxlength="40" placeholder="e.g. SP-HEATER-BAND" data-assist="maintenance-complete-part">
+          </div>
+          <div class="field">
+            <label for="part-qty">How many</label>
+            <input id="part-qty" type="number" min="0" step="any" inputmode="decimal">
+          </div>
           <div class="row">
             <button id="complete-cancel" class="ghost" type="button">Back</button>
             <button id="complete-confirm" type="button" data-assist="maintenance-complete-confirm">Complete job</button>
@@ -216,7 +224,7 @@
             <input id="history-to" type="date" aria-label="Completed to"></label>
         </div>
         <div class="table-wrap"><table id="history-table" data-assist="maintenance-history">
-          <thead><tr><th>Order</th><th>Machine</th><th>Kind</th><th>Summary</th><th>Findings</th><th class="num">Down (min)</th><th>By</th><th>Completed</th></tr></thead>
+          <thead><tr><th>Order</th><th>Machine</th><th>Kind</th><th>Summary</th><th>Findings</th><th>Part used</th><th class="num">Down (min)</th><th>By</th><th>Completed</th></tr></thead>
           <tbody></tbody>
         </table></div>
         <div id="history-pager" class="pager"></div>

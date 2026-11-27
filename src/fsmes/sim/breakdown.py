@@ -58,6 +58,10 @@ class Breakdown:
     #: The person code the work is started and closed as.
     technician: str | None
     findings: str
+    #: The part the repair uses, as the stores name it, and how many; `None`
+    #: for a breakdown mended without one. A code and a count, never a price.
+    part_code: str | None = None
+    part_qty: float | None = None
 
 
 def breakdowns(script: dict) -> list[Breakdown]:
@@ -81,6 +85,8 @@ def breakdowns(script: dict) -> list[Breakdown]:
             priority=int(entry["priority"]) if entry.get("priority") is not None else None,
             technician=entry.get("technician"),
             findings=str(entry["findings"]),
+            part_code=(entry.get("part") or {}).get("code"),
+            part_qty=(float(entry["part"]["quantity"]) if (entry.get("part") or {}).get("code") else None),
         ))
     return out
 

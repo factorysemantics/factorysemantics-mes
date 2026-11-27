@@ -2030,6 +2030,8 @@ class Floor:
                         "downtime_minutes": decision.downtime_minutes}
                 if rule.technician:
                     body["performed_by"] = rule.technician
+                if rule.part_code:
+                    body["part_code"], body["part_qty"] = rule.part_code, rule.part_qty
                 r = await self.post(f"/maintenance/orders/{held[0]}/complete", json=body)
                 if r.status_code >= 400:
                     log.warning("the breakdown's order would not close", order=held[0],
