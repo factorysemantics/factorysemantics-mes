@@ -60,21 +60,31 @@ hold = 5.0
 
 [[step]]
 do = "say"
-line = "Out of stores, one band, at one hundred and forty dollars, charged to the mould's cost center."
+line = "Out of stores, one band, at one hundred and forty dollars. Which cost center it is charged to is on the ledger, in a moment."
 at = ".frappe-control[data-fieldname=\"items\"] .grid-row[data-idx=\"1\"]"
-label = "1 band out of Stores, to CC-MOULD01"
+label = "1 band out of Stores - CW, $140"
 hold = 6.0
 
 [[step]]
 do = "mark"
 name = "the-issue"
 
+# The remarks are on the form's Other Info tab; opening a tab is the
+# browser's own, nothing is sent.
+[[step]]
+do = "click"
+selector = ".form-tabs-list .nav-link:has-text(\"Other Info\")"
+settle = 1
+
+[[step]]
+do = "click"
+selector = ".section-head:has-text(\"More Information\")"
+settle = 1
+
 [[step]]
 do = "wait_for"
-js = "return !!document.querySelector('.frappe-control[data-fieldname=\"remarks\"]') && document.querySelector('.frappe-control[data-fieldname=\"remarks\"]').innerText.includes('CM-00001');"
+js = "const n = document.querySelector('.frappe-control[data-fieldname=\"remarks\"]'); return !!n && n.offsetParent !== null && n.innerText.includes('CM-00001');"
 timeout = 30
-scroll_to = ".frappe-control[data-fieldname=\"remarks\"]"
-scroll_offset = 300
 
 [[step]]
 do = "say"
@@ -96,7 +106,7 @@ settle = 3
 
 [[step]]
 do = "wait_for"
-js = "return [...document.querySelectorAll('.dt-row')].some((r) => r.innerText.includes('MAT-STE-2026-00017'));"
+js = "return [...document.querySelectorAll('.dt-row')].some((r) => r.innerText.includes('-1.000'));"
 timeout = 60
 
 [[step]]
@@ -119,13 +129,16 @@ settle = 3
 
 [[step]]
 do = "wait_for"
-js = "return [...document.querySelectorAll('.dt-row')].some((r) => r.innerText.includes('Stock Adjustment - CW') && r.innerText.includes('140'));"
+selector = ".dt-row-2"
+text = "Stock Adjustment - CW"
 timeout = 60
 
+# Both legs of the issue carry the cost center, so the ledger's balance
+# column nets to $0.00; the cost is the debit, boxed on its own row.
 [[step]]
 do = "say"
-line = "And the mould's cost center, which read nothing last time: one hundred and forty dollars, the band, against CC-MOULD01."
-at = ".report-wrapper .dt-scrollable"
+line = "And the mould's cost center, which read nothing last time: one hundred and forty dollars charged to CC-MOULD01, the band. The row above is the same band leaving the stock account."
+at = ".dt-row-2"
 label = "$140.00 on CC-MOULD01"
 hold = 7.0
 
