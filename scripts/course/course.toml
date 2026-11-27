@@ -237,6 +237,13 @@ label = "3.4"
 slug = "the-shift-rollup"
 title = "The shift rollup — from floor data to one page"
 one_line = "Every machine's events rolled into losses, a timeline and a pareto, with the share of the shift it saw."
+knows_before = ["2.2", "3.3"]
+outcomes = [
+  "Say what a shift is, and why the MES needs the plant's shifts before it will sum one.",
+  "Read one shift on the Analysis page: what ran, what stopped, what was made.",
+  "Find how much of a shift the MES watched, and read an unwatched shift as unknown.",
+]
+scene = "scripts/scenes/course/04-04-the-shift-rollup.toml"
 
 # ------------------------------------------------------------------ tier 4
 [[module]]
