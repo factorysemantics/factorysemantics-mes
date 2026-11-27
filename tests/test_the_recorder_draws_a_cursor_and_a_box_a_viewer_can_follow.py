@@ -242,10 +242,17 @@ def test_a_say_at_a_thing_under_the_sticky_header_scrolls_it_out_and_its_label_c
     stage, base = stage
     stage.goto(f"{base}/dashboard", 0.1)
     page = stage.page
-    page.evaluate("""() => {
-        const r = document.querySelector('#m-q').getBoundingClientRect();
+    # The dashboard is still drawing its cards when it first answers, and a
+    # page that is not yet tall enough cannot be scrolled far enough: scroll
+    # until the field is under the header, not once.
+    page.wait_for_function("""() => {
+        const el = document.querySelector('#m-q');
+        if (!el) return false;
+        const r = el.getBoundingClientRect();
         window.scrollBy({top: r.top - 20, behavior: 'instant'});
-    }""")
+        const x = r.left + r.width / 2, s = el.getBoundingClientRect();
+        return ![s.top + 2, s.top + s.height / 2].some((y) => el.contains(document.elementFromPoint(x, y)));
+    }""", timeout=15000)
     assert page.evaluate(SEEN, "#m-q") == [False, False], "the field is not under the header to begin with"
 
     stage.say("Type part of a machine's name.", 0.1, at="#m-q", label="Filter")
