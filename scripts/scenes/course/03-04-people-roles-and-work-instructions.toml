@@ -97,7 +97,7 @@ text = "No instructions yet"
 
 [[step]]
 do = "say"
-line = "In the MES, instructions live here. This simulated plant has none yet. By the end of the class it has one, signed by a person."
+line = "Instructions live here. This simulated plant has none yet; by the end of the class it has one, signed by a person."
 at = "#empty"
 
 [[step]]
@@ -219,7 +219,7 @@ name = "the-operators-role"
 
 [[step]]
 do = "say"
-line = "The planner holds two: read the plant and create orders. Planning an order and releasing it are two acts, and the planner may not release."
+line = "The planner holds two: read the plant, create orders. Planning and releasing are two acts, and the planner may not release."
 at = "#roles .role:has(strong:text-is(\"Planner\")) .grants"
 
 [[step]]
@@ -238,7 +238,7 @@ name = "the-supervisors-role"
 [[step]]
 do = "say"
 line = "A plant that wants its own role ticks capabilities here. Nothing is a rank; every role is a list."
-at = "#cap-checks"
+at = "#role-form-title"
 scroll_to = "#form-role"
 scroll_block = "start"
 scroll_offset = 230
@@ -531,7 +531,6 @@ text = "Not your screen"
 [[step]]
 do = "say"
 line = "Admin is not in the operator's menu. Typed in by address, the MES refuses: not your screen. Admin needs users.manage, and this role does not hold it."
-hold = 1.0
 at = "#denied"
 
 [[step]]
@@ -557,7 +556,7 @@ lines = [
 
 [[step]]
 do = "say"
-line = "Every power is a capability, and every instruction has one revision in force. You now know how to do three things."
+line = "Every power is a capability; every instruction has one revision in force."
 
 [[step]]
 do = "mark"
