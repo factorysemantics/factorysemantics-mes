@@ -104,7 +104,7 @@ def test_the_idea_card_names_the_four_words_and_each_is_explained_the_first_time
     words = [line.split(":")[0] for line in card["lines"]]
     lines = said(scene)
 
-    assert words == ["Certificate of analysis, a COA", "Lot", "Capability, Cpk", "Immutable"]
+    assert words == ["COA", "Lot", "Cpk", "Immutable"]
     for word, starts in (
         ("certificate of analysis", "Four words. A certificate of analysis, a COA, is "),
         ("lot", "A lot is "),
@@ -175,6 +175,7 @@ def test_the_pallets_it_opens_are_the_ones_issued_before_the_camera_rolled_and_t
 
     assert issued == ["PL1-000000001", "PL1-000000015"]
     assert searched == ["PL1-000000015", "PL1-000000002", "PL1-000000001"]
+    assert [s["text"] for s in scene["step"] if s["do"] == "fill" and s["selector"] == "#list-q"] == ["WO-FORK1-0001"]
     assert "PL1-000000002" not in issued
 
 

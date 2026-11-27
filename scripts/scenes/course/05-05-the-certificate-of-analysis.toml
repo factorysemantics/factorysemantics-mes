@@ -111,10 +111,10 @@ do = "slide"
 name = "four-words"
 title = "Four words"
 lines = [
-  "Certificate of analysis, a COA: the readings that judged what is shipped",
-  "Lot: what one order made, under one code; here, also a pallet",
-  "Capability, Cpk: how comfortably the line holds the spec",
-  "Immutable: once issued, never edited; a correction is a new revision",
+  "COA: the readings that judged a shipment",
+  "Lot: what one order made, under one code",
+  "Cpk: how comfortably the line holds a spec",
+  "Immutable: a correction is a new revision",
 ]
 hold = 1.5
 
@@ -168,7 +168,7 @@ selector = "nav.subnav a:text-is(\"Certificates\")"
 
 [[step]]
 do = "wait_for"
-js = "/ of [1-9]/.test(document.querySelector('#list-count').textContent) && [...document.querySelectorAll('#list-table tbody tr')].some(tr => tr.textContent.includes('WO-FORK1-0001'))"
+js = "/ of [1-9]/.test(document.querySelector('#list-count').textContent) && document.querySelectorAll('#list-table tbody tr td.code').length > 0"
 timeout = 30
 scroll_to = "#list-panel"
 scroll_block = "start"
@@ -182,11 +182,26 @@ at = "#list-count"
 [[step]]
 do = "say"
 line = "Nobody wrote these. The MES issued each one by itself, the moment its order was completed."
-at = "#list-table tbody tr:has-text(\"WO-FORK1-0001\")"
+at = "#list-table tbody tr:first-child"
 
 [[step]]
 do = "mark"
 name = "certificates-in-force"
+
+# The list is newest first; the first fork order is found by the list's own filter.
+[[step]]
+do = "fill"
+selector = "#list-q"
+text = "WO-FORK1-0001"
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#list-table tbody tr')].length === 1 && document.querySelector('#list-table tbody tr').textContent.includes('WO-FORK1-0001')"
+
+[[step]]
+do = "say"
+line = "The list is newest first. The filter finds the first fork order this plant completed."
+at = "#list-q"
 
 [[step]]
 do = "click"
