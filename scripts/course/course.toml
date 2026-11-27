@@ -189,6 +189,12 @@ label = "2.4"
 slug = "people-roles-and-work-instructions"
 title = "People, roles and work instructions"
 one_line = "Who may do what, and a draft is not an instruction until a person signs it."
+outcomes = [
+  "Say what a role is, a named bundle of capabilities and not a rank, and read one on the Admin screen.",
+  "Add an account in a role, and say what that person may and may not do from their next click.",
+  "Tell a draft from the revision in force, and say who drafts it, who signs it, and which one the floor reads.",
+]
+scene = "scripts/scenes/course/03-04-people-roles-and-work-instructions.toml"
 
 # ------------------------------------------------------------------ tier 3
 [[module]]
