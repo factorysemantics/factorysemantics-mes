@@ -109,9 +109,9 @@
           <option value="">Any severity</option>
         </select>
         <input id="n-q" type="search" placeholder="Code, order or text" aria-label="Code, order or text" data-assist="nc-search">
-        <label class="range-field" for="n-from">From
+        <label class="range-field" for="n-from">Raised from
           <input id="n-from" type="date" aria-label="Raised from"></label>
-        <label class="range-field" for="n-to">To
+        <label class="range-field" for="n-to">Raised to
           <input id="n-to" type="date" aria-label="Raised to"></label>
       </div>
       <ul id="ncs" class="feed" data-assist="nc-list"></ul>
@@ -153,13 +153,13 @@
         </select>
         <!-- In the bar, not behind a "When" toggle: the pretend supervisor read
              that toggle as a sort and reported there was no date range. -->
-        <label class="range-field" for="h-from">From
+        <label class="range-field" for="h-from">Taken from
           <input id="h-from" type="date" aria-label="Taken from"></label>
-        <label class="range-field" for="h-to">To
+        <label class="range-field" for="h-to">Taken to
           <input id="h-to" type="date" aria-label="Taken to"></label>
         <button id="h-clear" class="ghost" type="button">Clear</button>
         <a id="h-export" class="ghost export-xlsx" href="/quality/checks/export.xlsx" download
-           data-assist="history-export">Export xlsx</a>
+           data-assist="history-export">Export checks (xlsx)</a>
       </div>
       <div class="table-wrap">
         <table id="checks">

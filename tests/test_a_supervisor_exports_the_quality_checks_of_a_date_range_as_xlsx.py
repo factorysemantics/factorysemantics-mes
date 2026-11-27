@@ -247,7 +247,7 @@ def test_the_screen_has_a_visible_date_range_and_an_export_beside_the_filters():
                                                                        html.index("Inspection history"))]
     assert 'id="h-from"' in bar and 'id="h-to"' in bar
     assert "h-when-toggle" not in html
-    assert 'id="h-export"' in bar and "Export xlsx" in bar
+    assert 'id="h-export"' in bar and "Export checks (xlsx)" in bar
     js = (web / "quality.js").read_text(encoding="utf-8")
     assert "/quality/checks/export.xlsx" in js
 

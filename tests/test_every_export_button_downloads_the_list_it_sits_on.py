@@ -151,7 +151,7 @@ def test_the_export_button_downloads_its_list_named_for_the_list_and_the_range(b
                 f" || document.querySelector({button!r}).getAttribute('href').includes('shift=')",
                 timeout=20000)
         assert page.is_visible(button)
-        assert page.text_content(button).strip() == "Export xlsx"
+        assert re.fullmatch(r"Export [a-z -]+ \(xlsx\)", page.text_content(button).strip())
 
         with page.expect_download(timeout=20000) as caught:
             page.click(button)

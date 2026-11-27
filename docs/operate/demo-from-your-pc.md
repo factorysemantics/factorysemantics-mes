@@ -88,7 +88,7 @@ no OEE until the first pallet has gone by.
 | 1–3 | **Floor**, *lowest OEE first* | 83 machines on 61 lines — moulders, stackers, wrappers, palletizers — the worst on top, and why: availability, performance, quality, and the hours the Plant OEE tile covers. |
 | 3–4 | A machine's card → its stop | A machine that stopped says why in the plant's own words. (In the first twenty minutes of a fresh shift none may have stopped yet: open any stacker and show its eighteen live tags instead.) |
 | 4–5 | **Orders** | Two orders on every line: one running with its raw lot issued, one planned behind it. Open one: what it makes, its route, how far along. (The Work Instructions list is empty on a fresh plant; the lab's were written over weeks.) |
-| 5–7 | **Quality** | Record a check on a machine (it names the machine); raise a non-conformance by hand; **Export xlsx** — the file opens in Excel. |
+| 5–7 | **Quality** | Record a check on a machine (it names the machine); raise a non-conformance by hand; **Export checks (xlsx)** — the file opens in Excel. |
 | 7–8 | **Engineering** → shift analysis | OEE by station for the shift, and the stops behind the downtime. |
 | 8–9 | The window | `fsmes fleet stop cutlery --node b --root C:\fsmes-demo`. Then reload the page on 8040: the plant is still running; `fleet status` says one node answered and holds all three jobs. |
 | 9–10 | The window | `fsmes fleet start cutlery --root C:\fsmes-demo` — only the server that is down is started; `fleet status` says two again. |
