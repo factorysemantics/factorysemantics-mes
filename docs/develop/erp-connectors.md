@@ -53,6 +53,17 @@ class SapAdapter(ErpConnector):
     def send_confirmation(self, confirmation: Confirmation) -> None: ...
 ```
 
+One more is optional: `send_part_used(part_used) -> None`, the part a
+repair order used (`contract.PartUsed`: part code, count, repair order,
+machine, work center, cost center, who, when, minutes down). Book it as the
+ERP's own stock issue against the cost center, and make it safe to receive
+twice - the message key is stable, so look for it before booking. A
+connector without the method is not broken: the sync worker marks the
+message dead at once with "<connector> does not book parts used on repair
+orders; ... recorded in the MES only", and nothing else is held up. ERPNext's
+connector books a submitted Material Issue from the item's warehouse, with
+the key in the remarks.
+
 `fsmes erp requirements`, `fsmes erp setup` and `fsmes erp check` are these
 three methods and nothing else. They act on whatever `MES_ERP_MODE` names,
 so your connector gets all three commands the moment it is installed.
@@ -62,7 +73,8 @@ so your connector gets all three commands the moment it is installed.
 `fsmes.integrations.erp.contract`, and nothing else. `ProductionRequest`
 comes down; `OperationConfirmation` (one step: quantities, cost centre,
 times, consumed lots) and `OrderCompletion` (the order-level close and the
-finished lot) go up. The shape is SAP-shaped on purpose — a confirmation
+finished lot) go up, and `PartUsed` (a part a repair order used, as a code
+and a count) when a connector books it. The shape is SAP-shaped on purpose — a confirmation
 per operation is what CO11N wants and what ERPNext's Job Cards and Stock
 Entries are built from.
 

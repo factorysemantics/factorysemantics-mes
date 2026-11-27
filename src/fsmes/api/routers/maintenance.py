@@ -75,6 +75,9 @@ class CompleteIn(BaseModel):
     # not gets the elapsed time of the job, as every release before this.
     downtime_minutes: float | None = None
     performed_by: str | None = None
+    # The part the job used and how many: a code and a count, no price.
+    part_code: str | None = None
+    part_qty: float | None = None
 
 
 class AssignIn(BaseModel):
@@ -153,6 +156,7 @@ def _order_out(o, names: dict[str, str] | None = None) -> dict:
         # code - which is a finding and not a blank.
         "performed_by_name": names.get(o.performed_by) if o.performed_by else None,
         "findings": o.findings, "downtime_minutes": o.downtime_minutes,
+        "part_code": o.part_code, "part_qty": o.part_qty,
         "document": o.plan.document_code if o.plan else None,
         "skill": o.skill_code, "priority": o.priority,
         # What the job needs of the line. `needs_stop` is why an order can sit
@@ -276,6 +280,8 @@ MAINTENANCE_EXPORT = (
     export.Column("Completed", "completed_at", when=True),
     export.Column("Findings", "findings"),
     export.Column("Down (min)", "downtime_minutes"),
+    export.Column("Part used", "part_code"),
+    export.Column("Part qty", "part_qty"),
     export.Column("By", "performed_by"),
     export.Column("By (name)", "performed_by_name"),
     export.Column("Assigned to", "assigned_to"),
@@ -353,7 +359,8 @@ def complete(code: str, body: CompleteIn, db: DbDep, actor: ActorDep,
     held = auth.capabilities_for(db, user["role"])
     return _order_out(maintenance.complete(
         db, code, findings=body.findings, downtime_minutes=body.downtime_minutes,
-        performed_by=body.performed_by, capabilities=held, actor=actor), _names(db))
+        performed_by=body.performed_by, capabilities=held,
+        part_code=body.part_code, part_qty=body.part_qty, actor=actor), _names(db))
 
 
 # ------------------------------------------------- the crew, and who gets what

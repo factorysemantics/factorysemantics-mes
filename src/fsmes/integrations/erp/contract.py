@@ -125,6 +125,37 @@ class OrderCompletion(BaseModel):
 
 Confirmation = OperationConfirmation | OrderCompletion
 
+
+class PartUsed(BaseModel):
+    """A part a repair order used, sent once when the order closes with one.
+
+    The ERP books it as stock out against the machine's cost center; the MES
+    says which part, how many, where and why, and nothing about what it is
+    worth. `minutes_down` is the repair order's own figure, line minutes the
+    machine was stopped for the job. It is carried for the ERP's records and
+    is not a cost either.
+
+    Keyed on the repair order and the part, so the same close queued twice
+    is one message, and an ERP that sees the key twice books it once.
+    """
+
+    kind: Literal["part_used"] = "part_used"
+    message_key: str
+    repair_order: str
+    part_code: str
+    quantity: float
+    equipment: str                      # the machine (ISA-95 work unit)
+    work_center: str | None = None      # the line it belongs to
+    cost_center: str | None = None      # the machine's, inherited unless the cell overrides
+    performed_by: str | None = None     # the person code who closed the job
+    completed_at: datetime | None = None
+    minutes_down: float | None = None
+    # The production order the machine was on when the repair began, and its
+    # number in the ERP, where the MES knows one. Null when the machine was
+    # not on an order: a repair belongs to the machine, not to an order.
+    work_order: str | None = None
+    work_order_erp_reference: str | None = None
+
 # The outbox kinds this contract can parse, and therefore the only ones the
 # ERP sync may take. The outbox is a domain event log now - it also carries
 # equipment state changes, holds and resumes for the namespace - and a
@@ -136,6 +167,19 @@ CONFIRMATION_KINDS = frozenset({
     "order_completion",
     "production_confirmation",
 })
+
+
+#: Every outbox kind the ERP sync delivers: the confirmations, and the
+#: maintenance messages beside them. The scorecard and the validator compare
+#: production and read `CONFIRMATION_KINDS` alone.
+ERP_KINDS = CONFIRMATION_KINDS | frozenset({"part_used"})
+
+
+def parse_message(payload: dict) -> Confirmation | PartUsed:
+    """Any stored ERP outbox payload back into its model."""
+    if payload.get("kind") == "part_used":
+        return PartUsed.model_validate(payload)
+    return parse_confirmation(payload)
 
 
 def parse_confirmation(payload: dict) -> Confirmation:
@@ -151,6 +195,6 @@ def parse_confirmation(payload: dict) -> Confirmation:
     return OrderCompletion.model_validate(data)
 
 
-def as_payload(confirmation: Confirmation) -> dict:
+def as_payload(confirmation: Confirmation | PartUsed) -> dict:
     """What goes over the wire and into the outbox: plain JSON."""
     return confirmation.model_dump(mode="json")
