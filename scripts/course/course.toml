@@ -176,6 +176,12 @@ label = "2.3"
 slug = "lots-genealogy-and-trace"
 title = "Lots, genealogy and trace"
 one_line = "What went into this pallet, and where that bad resin went."
+outcomes = [
+  "Say what a lot, genealogy and where-used are, and how a lot of resin gets into a pallet.",
+  "Trace a pallet back to the lots that went into it, and say how the MES knows.",
+  "Trace a lot forward to the orders and packages that carry it, and say what Trace refuses.",
+]
+scene = "scripts/scenes/course/03-03-lots-genealogy-and-trace.toml"
 
 [[module.lesson]]
 order = 4
@@ -183,6 +189,12 @@ label = "2.4"
 slug = "people-roles-and-work-instructions"
 title = "People, roles and work instructions"
 one_line = "Who may do what, and a draft is not an instruction until a person signs it."
+outcomes = [
+  "Say what a role is, a named bundle of capabilities and not a rank, and read one on the Admin screen.",
+  "Add an account in a role, and say what that person may and may not do from their next click.",
+  "Tell a draft from the revision in force, and say who drafts it, who signs it, and which one the floor reads.",
+]
+scene = "scripts/scenes/course/03-04-people-roles-and-work-instructions.toml"
 
 # ------------------------------------------------------------------ tier 3
 [[module]]
@@ -225,6 +237,13 @@ label = "3.4"
 slug = "the-shift-rollup"
 title = "The shift rollup — from floor data to one page"
 one_line = "Every machine's events rolled into losses, a timeline and a pareto, with the share of the shift it saw."
+knows_before = ["2.2", "3.3"]
+outcomes = [
+  "Say what a shift is, and why the MES needs the plant's shifts before it will sum one.",
+  "Read one shift on the Analysis page: what ran, what stopped, what was made.",
+  "Find how much of a shift the MES watched, and read an unwatched shift as unknown.",
+]
+scene = "scripts/scenes/course/04-04-the-shift-rollup.toml"
 
 # ------------------------------------------------------------------ tier 4
 [[module]]
