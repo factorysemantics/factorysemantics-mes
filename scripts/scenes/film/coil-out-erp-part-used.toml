@@ -1,0 +1,173 @@
+# Coil out, the ERP side, once the MES says which part the repair used.
+#
+# The sister of coil-out-erp.toml, which filmed the band still sitting in
+# stores and $0.00 on the mould's cost center. Since then a repair order
+# closes with a part code and a count, and the MES's ERP sync sends it once;
+# ERPNext's connector books it as a Material Issue. This take reads what
+# that run left in ERPNext: the order was WO-FORK1-0003 (0001 and 0002 were
+# spent on the earlier takes), CM-00001 closed with 1 x SP-HEATER-BAND, and
+# the issue is MAT-STE-2026-00017 (its name is this run's; ERPNext numbers
+# them in order). Filmed after the run, with nothing written:
+#
+#   python scripts/record-erp-take.py scripts/scenes/film/coil-out-erp-part-used.toml
+#
+# The login is the one the MES's settings hold; this file names none.
+
+name = "coil-out-erp-part-used"
+title = "Coil out: the band leaves stores"
+out = "~/Work/gifs/film/coil-out/erp-part-used"
+base = "http://mes.localhost:8085"
+badge = "open-source ERP · simulated company · simulated costs"
+captions = true
+budget_seconds = 150
+gif_skip_seconds = 2.0
+gif_seconds = 40.0
+width = 1280
+height = 720
+
+notes = [
+  "ERPNext v15, the open-source ERP, on this box, with a simulated company (Cutlery Works) seeded by labs/erpnext/seed_cutlery.py from the ids in labs/cutlery/scenes/coil-out-erp.json. Every price is made up: the heater band at 140.",
+  "WO-FORK1-0003 was submitted here (seed_cutlery.py --work-order WO-FORK1-0003: this site had spent 0001 and 0002 on the earlier takes), taken by the MES's ordinary ERP sync worker and made on a scratch simulated cutlery plant at ten times, while a scripted heater-band failure stopped fork mould 1 for 42 line minutes. The simulated technician MT-01 closed CM-00001 with 1 x SP-HEATER-BAND; the same worker sent it once and ERPNext's connector booked it.",
+  "Filmed after the run, with the desk read and nothing written.",
+]
+
+honesty = [
+  "the company, its stock and every price are simulated; the ERP is a real ERPNext",
+  "the order was made on a simulated plant with a scripted fault",
+  "the take reads ERPNext after the run; nothing on screen is typed or saved",
+]
+
+# ------------------------------------------------------- the band goes out
+
+[[step]]
+part = "screen"
+do = "goto"
+url = "/app/stock-entry/MAT-STE-2026-00017"
+settle = 3
+
+[[step]]
+do = "wait_for"
+selector = ".frappe-control[data-fieldname=\"items\"] .grid-row[data-idx=\"1\"]"
+text = "SP-HEATER-BAND"
+timeout = 30
+
+[[step]]
+do = "say"
+line = "When the technician closed the repair order, the MES said which part he fitted: one heater band. ERPNext booked it as a material issue."
+at = ".page-head .title-text"
+label = "a Material Issue, from the MES"
+hold = 5.0
+
+[[step]]
+do = "say"
+line = "Out of stores, one band, at one hundred and forty dollars. Which cost center it is charged to is on the ledger, in a moment."
+at = ".frappe-control[data-fieldname=\"items\"] .grid-row[data-idx=\"1\"]"
+label = "1 band out of Stores - CW, $140"
+hold = 6.0
+
+[[step]]
+do = "mark"
+name = "the-issue"
+
+# The remarks are on the form's Other Info tab; opening a tab is the
+# browser's own, nothing is sent.
+[[step]]
+do = "click"
+selector = ".form-tabs-list .nav-link:has-text(\"Other Info\")"
+settle = 1
+
+[[step]]
+do = "click"
+selector = ".section-head:has-text(\"More Information\")"
+settle = 1
+
+[[step]]
+do = "wait_for"
+js = "const n = document.querySelector('.frappe-control[data-fieldname=\"remarks\"]'); return !!n && n.offsetParent !== null && n.innerText.includes('CM-00001');"
+timeout = 30
+
+[[step]]
+do = "say"
+line = "The remarks carry the repair order, CM-00001, and the forty-two minutes the mould was down. The minutes are a note, not a cost."
+at = ".frappe-control[data-fieldname=\"remarks\"]"
+label = "CM-00001, 42 min down"
+hold = 6.0
+
+[[step]]
+do = "mark"
+name = "the-remarks"
+
+# ------------------------------------------------------ the band's ledger
+
+[[step]]
+do = "goto"
+url = "/app/query-report/Stock Ledger?company=Cutlery+Works&item_code=SP-HEATER-BAND"
+settle = 3
+
+[[step]]
+do = "wait_for"
+js = "return [...document.querySelectorAll('.dt-row')].some((r) => r.innerText.includes('-1.000'));"
+timeout = 60
+
+[[step]]
+do = "say"
+line = "The band's own ledger: one in, at one forty, and now one out. None left in stores."
+at = ".report-wrapper .dt-scrollable"
+label = "one in, one out"
+hold = 6.0
+
+[[step]]
+do = "mark"
+name = "band-leaves-stores"
+
+# --------------------------------------------------- the mould's cost center
+
+[[step]]
+do = "goto"
+url = "/app/query-report/General Ledger?company=Cutlery+Works&cost_center=CC-MOULD01+-+CW"
+settle = 3
+
+[[step]]
+do = "wait_for"
+selector = ".dt-row-2"
+text = "Stock Adjustment - CW"
+timeout = 60
+
+# Both legs of the issue carry the cost center, so the ledger's balance
+# column nets to $0.00; the cost is the debit, boxed on its own row.
+[[step]]
+do = "say"
+line = "And the mould's cost center, which read nothing last time: one hundred and forty dollars charged to CC-MOULD01, the band. The row above is the same band leaving the stock account."
+at = ".dt-row-2"
+label = "$140.00 on CC-MOULD01"
+hold = 7.0
+
+[[step]]
+do = "mark"
+name = "cost-on-cc-mould01"
+
+# --------------------------------------------- the order that was running
+
+[[step]]
+do = "goto"
+url = "/app/work-order/WO-FORK1-0003"
+settle = 3
+
+[[step]]
+do = "wait_for"
+js = "return [...document.querySelectorAll('.timeline-item .content')].some((n) => n.innerText.includes('CM-00001'));"
+timeout = 30
+scroll_to = ".timeline-item"
+scroll_text = "CM-00001"
+scroll_offset = 320
+
+[[step]]
+do = "say"
+line = "And on the order the mould was making, a note: repair order CM-00001, forty-two minutes down, the band issued."
+at = ".timeline-item:has-text(\"CM-00001\") .content"
+label = "42 min down, on the order"
+hold = 6.0
+
+[[step]]
+do = "mark"
+name = "minutes-on-the-order"

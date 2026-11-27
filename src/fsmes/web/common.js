@@ -316,6 +316,19 @@
     if (words) words.textContent = text || (ok ? "live" : "reconnecting…");
   };
 
+  /* ---------- the part a repair used ---------- */
+
+  /* The two fields a "complete job" form carries for the part a repair
+     used, as the body's `part_code` and `part_qty`. Both blank sends
+     nothing. A code with no count is sent as it is, so the MES says it
+     needs the count rather than this page guessing one. */
+  FS.partUsed = function partUsed(codeSel, qtySel) {
+    const code = document.querySelector(codeSel).value.trim();
+    const qty = document.querySelector(qtySel).value.trim();
+    if (!code && !qty) return {};
+    return { part_code: code || null, part_qty: qty === "" ? null : Number(qty) };
+  };
+
   /* ---------- toast ---------- */
 
   FS.toast = function toast(message, kind = "good") {

@@ -31,6 +31,7 @@ from fsmes.services import (
     Invalid,
     NotFound,
     audit,
+    erp,
     masterdata,
     plant_settings,
 )
@@ -383,8 +384,15 @@ def complete(session: Session, code: str, *, findings: str | None = None,
              downtime_minutes: float | None = None,
              performed_by: str | None = None,
              capabilities: set[str] | None = None,
+             part_code: str | None = None, part_qty: float | None = None,
              actor: str = "system") -> MaintenanceOrder:
     """Close the job and re-baseline its plan.
+
+    `part_code` and `part_qty` are the part the job used, as the stores and
+    the ERP name it, and how many: a code and a count, never a price. A part
+    named on the close is queued once for the ERP, which books it out of
+    stock against the machine's cost center. A code without a count is
+    refused rather than read as one: unknown is not one.
 
     Re-baselining is the point: the next interval counts from the work that
     was actually done, not from when it was scheduled. A plan that keeps
@@ -403,6 +411,16 @@ def complete(session: Session, code: str, *, findings: str | None = None,
     order = get(session, code)
     if order.status is MaintenanceStatus.DONE:
         raise Conflict(f"{code} is already done")
+    part_code = (part_code or "").strip() or None
+    if part_code is None and part_qty is not None:
+        raise Invalid("a part count needs the part's code")
+    if part_code is not None:
+        if part_qty is None:
+            raise Invalid(f"how many {part_code} were used? A part needs its count")
+        if float(part_qty) <= 0:
+            raise Invalid("a part count must be more than zero")
+        if len(part_code) > 40:
+            raise Invalid("a part code is at most 40 characters")
     whose = whose_work(session, order, actor, performed_by, capabilities)
 
     now = utcnow()
@@ -410,6 +428,8 @@ def complete(session: Session, code: str, *, findings: str | None = None,
     order.completed_at = now
     order.performed_by = whose
     order.findings = findings
+    order.part_code = part_code
+    order.part_qty = float(part_qty) if part_code is not None else None
     if downtime_minutes is not None:
         if float(downtime_minutes) < 0:
             raise Invalid("downtime_minutes cannot be negative")
@@ -430,7 +450,11 @@ def complete(session: Session, code: str, *, findings: str | None = None,
                  on_behalf_of=None if whose == str(actor).upper() else whose,
                  after={"order": code, "findings": findings,
                         "performed_by": whose,
-                        "downtime_minutes": order.downtime_minutes})
+                        "downtime_minutes": order.downtime_minutes,
+                        "part_code": order.part_code, "part_qty": order.part_qty})
+    # In this transaction, beside the close it reports: a part used and its
+    # message exist together or not at all.
+    erp.enqueue_part_used(session, order)
     return order
 
 

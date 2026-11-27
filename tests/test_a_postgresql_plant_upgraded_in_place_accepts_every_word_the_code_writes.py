@@ -23,7 +23,7 @@ import pytest
 from alembic import command
 from fastapi.testclient import TestClient
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy import create_engine, make_url, text
+from sqlalchemy import create_engine, insert, make_url, text
 from sqlalchemy.orm import Session
 
 import fsmes.domain  # noqa: F401  (register all tables)
@@ -136,7 +136,10 @@ def test_a_postgresql_plant_made_at_the_labs_revision_and_upgraded_can_assign_ma
         auth.ensure_builtin_roles(s)
         masterdata.create_person(s, code="FIXER", name="Fay Ixer", role="operator")
         equipment = masterdata.get_equipment(s, "MIX01")
-        s.add(MaintenanceOrder(
+        # A core insert names only the columns it sets (and those with a
+        # default); the ORM would name every column the model has today,
+        # some of which this older schema does not have yet.
+        s.execute(insert(MaintenanceOrder.__table__).values(
             code="CM-LAB-1", equipment_id=equipment.id, kind=MaintenanceKind.CORRECTIVE,
             summary="a bearing is loud", raised_at=datetime(2026, 10, 25, 11, 0)
             - timedelta(hours=1)))

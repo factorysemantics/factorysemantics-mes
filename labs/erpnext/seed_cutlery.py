@@ -2,6 +2,7 @@ r"""Seed an ERPNext site with the cutlery plant's coil-out order, as a second co
 
     .venv/bin/python labs/erpnext/seed_cutlery.py              # seed, and submit the order
     .venv/bin/python labs/erpnext/seed_cutlery.py --no-order   # seed only
+    .venv/bin/python labs/erpnext/seed_cutlery.py --work-order WO-FORK1-0003   # a later run
 
 Every id comes from the `erp` section of `labs/cutlery/scenes/coil-out-erp.json`,
 the one file the MES side of the scene and the film takes read too: the
@@ -235,6 +236,9 @@ def ensure_work_order(client: ErpNextClient, erp: dict, bom: str) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--no-order", action="store_true", help="seed, but do not submit the order")
+    parser.add_argument("--work-order", default=None,
+                        help="the number this site's series will give the order, when it has spent the "
+                             "ids file's on an earlier run (default: the ids file's)")
     parser.add_argument("--url", default=None, help="ERPNext base URL (default from settings)")
     parser.add_argument("--site", default=None, help="site to seed, sent as Host (default from settings)")
     args = parser.parse_args()
@@ -243,6 +247,8 @@ def main() -> int:
     url = args.url or settings.erpnext_base_url
     site = args.site if args.site is not None else settings.erpnext_site
     erp = ids()
+    if args.work_order:
+        erp["work_order"] = args.work_order
 
     log(f"Seeding {url} (site {site or 'default'}) with {erp['company']}\n")
     try:

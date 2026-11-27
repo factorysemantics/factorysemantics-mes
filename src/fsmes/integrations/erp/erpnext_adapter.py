@@ -226,6 +226,29 @@ def _same(sent, returned, *, rel_tol: float = 1e-3, abs_tol: float = 0.01) -> bo
     return str(sent or "") == str(returned or "")
 
 
+def _part_used_remarks(payload: dict, marker: str) -> str:
+    """The stock entry's remarks: what was used, on which repair, and the
+    machine's minutes down as the repair order holds them (line minutes)."""
+    where = payload["equipment"] + (f" ({payload['work_center']})" if payload.get("work_center") else "")
+    text = (f"MES-TWIN repair order {payload['repair_order']} on {where}: "
+            f"{float(payload['quantity']):g} x {payload['part_code']} used")
+    if payload.get("minutes_down") is not None:
+        text += f"; {float(payload['minutes_down']):g} min down"
+    if payload.get("performed_by"):
+        text += f"; by {payload['performed_by']}"
+    if payload.get("completed_at"):
+        text += f"; closed {payload['completed_at']}"
+    return f"{text}. {marker}"
+
+
+def _part_used_comment(payload: dict, entry: str | None) -> str:
+    text = f"MES-TWIN: repair order {payload['repair_order']} on {payload['equipment']}"
+    if payload.get("minutes_down") is not None:
+        text += f", {float(payload['minutes_down']):g} min down"
+    return text + f"; {float(payload['quantity']):g} x {payload['part_code']} issued" + (
+        f" ({entry})" if entry else "")
+
+
 _FRAPPE_EXCEPTION = re.compile(r"^[A-Za-z_.]*(?:Error|Exception):\s*")
 
 
@@ -446,6 +469,120 @@ class ErpNextAdapter(ErpConnector):
             + (f", lot {payload['lot']}" if payload.get("lot") else "")
             + (f" (completed {payload['completed_at']})" if payload.get("completed_at") else ""),
         )
+
+    # ---------------------------------------------------- parts used on repairs
+    def send_part_used(self, part_used) -> None:
+        """Book a part a repair order used as a Material Issue stock entry.
+
+        The part leaves the warehouse ERPNext holds it in, at ERPNext's own
+        valuation, and its line is charged to the machine's cost center, so
+        the General Ledger for that cost center shows the part the same day.
+        The MES sends a code and a count; the price is ERPNext's.
+
+        Booked once. The entry's remarks carry the message key in brackets,
+        and a submitted Material Issue already carrying it means this is a
+        retry whose answer was lost: nothing is posted again. The repair
+        order's minutes down go in the remarks and, when the machine was on
+        an order ERPNext sent, in a comment on that Work Order - never as
+        money.
+        """
+        payload = part_used if isinstance(part_used, dict) else as_payload(part_used)
+        key = payload["message_key"]
+        marker = f"[{key}]"
+        already = self.client.list(
+            "Stock Entry",
+            filters=[["purpose", "=", "Material Issue"], ["docstatus", "=", 1],
+                     ["remarks", "like", f"%{marker}%"]],
+            fields=["name"], limit=1)
+        if already:
+            log.info("part already issued in ERPNext", repair_order=payload["repair_order"],
+                     stock_entry=already[0]["name"])
+            return
+
+        cost_center = self._cost_center(payload)
+        company = cost_center["company"]
+        quantity = float(payload["quantity"])
+        warehouse = self._warehouse_of(payload["part_code"], company, quantity)
+        doc = {
+            "doctype": "Stock Entry",
+            "stock_entry_type": "Material Issue",
+            "purpose": "Material Issue",
+            "company": company,
+            "from_warehouse": warehouse,
+            "remarks": _part_used_remarks(payload, marker),
+            "items": [{"item_code": payload["part_code"], "qty": quantity,
+                       "s_warehouse": warehouse, "cost_center": cost_center["name"]}],
+            "docstatus": 1,
+        }
+        try:
+            entry = self.client.insert("Stock Entry", doc)
+        except ErpNextError as exc:
+            if exc.status_code != VALIDATION_REFUSED:
+                raise
+            raise ErpNextRefused(
+                f"ERPNext refused to issue {quantity:g} x {payload['part_code']} for "
+                f"{payload['repair_order']} and posted nothing: {_message_of(exc)}",
+                status_code=exc.status_code) from exc
+        kept = [row.get("cost_center") for row in entry.get("items") or []]
+        if entry.get("docstatus") != 1 or kept != [cost_center["name"]]:
+            raise ErpNextError(
+                f"ERPNext saved {entry.get('name')} for {payload['repair_order']} but not as sent: "
+                f"docstatus {entry.get('docstatus')!r}, cost centers {kept!r}")
+        log.info("part issued in ERPNext", repair_order=payload["repair_order"],
+                 part=payload["part_code"], qty=quantity, stock_entry=entry.get("name"))
+
+        reference = payload.get("work_order_erp_reference")
+        if reference:
+            try:
+                self.client.comment("Work Order", reference, _part_used_comment(payload, entry.get("name")))
+            except ErpNextError:
+                # The stock is booked and is the news; a lost note about it
+                # must not make the outbox post the issue a second time.
+                log.warning("could not leave the repair comment", order=reference)
+
+    def _cost_center(self, payload: dict) -> dict:
+        """ERPNext's cost center for the MES's code: the one whose own name
+        (`cost_center_name`) is the code, in this connector's company when
+        one is set. ERPNext suffixes the company's abbreviation to the
+        document name, so `CC-MOULD01` is `CC-MOULD01 - CW` there."""
+        code = payload.get("cost_center")
+        if not code:
+            raise ErpNextRefused(
+                f"{payload['equipment']} has no cost center in the MES, so "
+                f"{payload['repair_order']}'s part has nothing to be charged to")
+        filters = [["cost_center_name", "=", code], ["is_group", "=", 0]]
+        if self.company:
+            filters.append(["company", "=", self.company])
+        rows = self.client.list("Cost Center", filters=filters, fields=["name", "company"], limit=2)
+        if len(rows) != 1:
+            raise ErpNextRefused(
+                f"ERPNext has {'no' if not rows else 'more than one'} cost center named {code}"
+                + (f" in {self.company}" if self.company else "")
+                + f"; {payload['repair_order']}'s part is not issued until it has exactly one")
+        return rows[0]
+
+    def _warehouse_of(self, item: str, company: str, quantity: float) -> str:
+        """Where ERPNext holds the part: the item's own default warehouse for
+        the company, else the one warehouse of the company holding enough of
+        it. Two candidates and no default is a question for a person."""
+        try:
+            doc = self.client.get("Item", item)
+        except ErpNextError as exc:
+            if exc.status_code == 404:
+                raise ErpNextRefused(f"ERPNext has no item {item}") from exc
+            raise
+        for row in doc.get("item_defaults") or []:
+            if row.get("company") == company and row.get("default_warehouse"):
+                return row["default_warehouse"]
+        bins = [b for b in self.client.list(
+            "Bin", filters=[["item_code", "=", item], ["actual_qty", ">=", quantity]],
+            fields=["warehouse"], limit=20)
+            if self.client.get("Warehouse", b["warehouse"]).get("company") == company]
+        if len(bins) == 1:
+            return bins[0]["warehouse"]
+        raise ErpNextRefused(
+            f"ERPNext holds {quantity:g} x {item} in {len(bins)} warehouses of {company} and the item "
+            "names no default warehouse; set one on the item so the MES knows which to issue from")
 
     def _manufacture(self, order: str, quantity: float, payload: dict) -> None:
         """Post the finished quantity as a real Manufacture stock entry.
