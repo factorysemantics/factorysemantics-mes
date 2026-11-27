@@ -166,12 +166,12 @@ name = "two-ways-across"
 [[step]]
 do = "slide"
 name = "one-confirmation"
-title = "One confirmation, from the product's worked example"
+title = "A worked example"
 lines = [
   "Step 10, Mix: 120 put in, 118 good, 2 scrap",
   "41 minutes of machine time, 3 of labour, on cost centre CC-PKG-1",
   "Lots used: LOT-SUGAR-001 and LOT-FLAVOR-001",
-  "Its key is the order and the step, so the ERP books it once",
+  "Its key: the order and the step, so it is booked once",
 ]
 hold = 1.5
 
@@ -325,7 +325,7 @@ js = "location.pathname === '/dashboard/config/supply_chain' && !!document.query
 [[step]]
 do = "say"
 line = "How long it keeps trying is this plant's to set, under Orders, Configuration."
-at = 'tr:has-text("ERP delivery retries")'
+at = 'tr:has-text("ERP delivery retries") td:nth-child(2)'
 
 [[step]]
 do = "say"
@@ -335,12 +335,12 @@ at = 'input[data-setting-key="max_attempts"]'
 [[step]]
 do = "say"
 line = "After the eighth it is dead. Dead is not deleted: it stays in the queue, and a person decides, and presses Retry."
-at = 'tr:has-text("ERP delivery retries")'
+at = 'tr:has-text("ERP delivery retries") td:nth-child(3)'
 
 [[step]]
 do = "say"
 line = "With no ERP here, we cannot show one sent, or one dead. Said, not filmed."
-at = 'tr:has-text("ERP delivery retries")'
+at = 'tr:has-text("ERP delivery retries") td:nth-child(3)'
 
 [[step]]
 do = "mark"
