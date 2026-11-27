@@ -356,6 +356,13 @@ label = "5.3"
 slug = "triggers-and-adjustments"
 title = "Triggers and adjustments — the only path to a PLC"
 one_line = "A rule raises a recommended setpoint; nothing reaches a machine until a person approves it."
+outcomes = [
+  "Draft a trigger, and say why a draft watches nothing until it is approved.",
+  "Follow a recommended setpoint from the rule that raised it to the person who approved it.",
+  "Say why nothing reaches a machine until a person with the right to approve says yes.",
+]
+knows_before = ["3.1"]
+scene = "scripts/scenes/course/06-03-triggers-and-adjustments.toml"
 
 [[module.lesson]]
 order = 4
