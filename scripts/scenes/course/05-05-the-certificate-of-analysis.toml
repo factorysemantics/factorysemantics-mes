@@ -395,7 +395,7 @@ selector = "#find-submit"
 [[step]]
 do = "wait_for"
 js = "document.querySelector('#cert-code').textContent.startsWith('COA-PALLET-PL1-000000001') && document.querySelector('#cert-body').textContent.includes('capability needs')"
-scroll_to = "#cert-body h3:has-text(\"Capability\")"
+scroll_to = "#cert-body h3:nth-of-type(2)"
 scroll_block = "start"
 scroll_offset = 300
 
