@@ -1,0 +1,403 @@
+# Class 5.4 of the course, *The ERP handoff*: what crosses from the MES to the
+# ERP, how it waits, and how long the plant keeps trying.
+#
+# It starts from a card of words (no drawing): the office's ERP books the
+# money, the MES knows what the line made, and something has to carry it
+# across. The idea cards name the words of the class (confirmation, order
+# completion, the queue), the two ways across (a file in a folder, a live
+# connector) and what one confirmation carries, read from the product's own
+# worked example. Then the product, signed in as the lab admin: the Floor's ERP
+# queue tile, a fork order the simulated shift supervisor has just finished,
+# its three steps with their good and scrap, the lots it used and the lot it
+# made, and the ERP delivery retries on Orders > Configuration. Then what it
+# refuses: a confirmation offered zero times. Filmed on a scratch cutlery plant
+# at ten times the clock, every screen as the product draws it.
+#
+# Beats changed from the outline (reports/learning-platform-2026-11-14 §5.4),
+# where the product differs: the outline watches a confirmation leave the
+# queue, then disconnects the ERP and watches the queue hold. The scratch plant
+# runs no ERP connection at all, so nothing ever leaves its queue, and the one
+# screen that lists the queue, Setup > Ops, opens on a panel of this machine's
+# file paths, which may not be filmed. So the class shows the queue as the
+# Floor's one word and the order's own screen, says that nothing is connected,
+# and says sent, dead and Retry in words rather than filming them.
+
+name = "the-erp-handoff"
+title = "The ERP handoff"
+lesson = "5.4"
+take_is = "lesson"
+part = "hook"
+base = "http://127.0.0.1:8040"
+badge = "pre-alpha · simulated plant · v{version}"
+# Orders > Configuration offers its inputs to a holder of `erp.define`. A lab
+# account, not a person; the sign-in page is never filmed.
+user = "ADMIN"
+password = "admin"
+# Four and a half to six minutes, as the handoff asks.
+budget_seconds = 360
+gif_skip_seconds = 2.0
+width = 1280
+height = 720
+# Saving a retry count of zero is the refusal, and it is the story.
+allow_writes = true
+what_is_written = "nothing that stays: the class types 0 into the ERP delivery retries on Orders > Configuration and presses its Save, a real `PATCH` to the take's own scratch plant under the lab admin signed in, and the plant refuses it, so nothing is written."
+
+notes = [
+  "The plant was started from the cutlery pack at ten times wall clock, and the camera waited, off screen, until the simulated shift supervisor finished WO-FORK1-0001, the pack's first fork order. Finishing each of its three steps and the order queued three operation confirmations and one order completion in the plant's outbox. Every 2D page carries the product's REPLAY 10× banner across its top; it is filmed as the product draws it.",
+  "The scratch plant runs no ERP connection: `fsmes fleet start` starts no sync worker, so nothing reads the outbox and every confirmation stays pending. The class says so in its own lines and does not show a confirmation sent, a dead one, or Retry.",
+  "Setup > Ops is the one screen that lists the outbox row by row, with pending, dead, sent and the age of the oldest. Its first panel shows the plant's database and file paths on this machine, which may not be in a frame, so the class does not open it. That is a gap, written up for the people who fix it; the class says so.",
+  "The Floor's ERP queue tile reads sending whenever any message in the outbox is pending, the machines' own events included, which the ERP is never sent. On this plant it reads sending even before any confirmation exists, and nothing is being sent. That is a gap in the product, written up; filmed as drawn and said.",
+  "No screen shows what one confirmation says. The third idea card reads the product's own worked example (docs/operate/confirmation-examples), a drinks line, and says so; the order's screen then shows the same fields for the fork order: good and scrap per step, the lots used, the lot made. The times a confirmation carries are on no screen.",
+  "The ERP delivery retries are the product's defaults: offered at most 8 times, waiting 5 seconds after the first failure and twice as long after each next, never more than an hour. An ERP that reads a confirmation and says no makes it dead at once. These are said, not filmed.",
+  "The refusal is the plant's own sentence, shown beside the Save it answers.",
+  "The class is clicked through as a person would go: the only page opened by address is the Floor, the first page after sign-in. Orders and its Configuration are reached by their menus; the order by the screen's own search box.",
+  "The opening beat is a plain card with words on it. There is no artwork of an office, an ERP or a fork.",
+]
+
+honesty = [
+  "the plant is a scratch simulated plant, replaying a recorded line at ten times wall clock, which is the banner across the top of the 2D pages",
+  "no ERP is connected to this plant, so nothing leaves its queue; a confirmation sent, a dead one and Retry are said, not filmed",
+  "the screen that lists the queue opens on this machine's file paths and is not filmed; said, and written up",
+  "the Floor's ERP queue word counts the machines' own events too; filmed as drawn, and said",
+  "what one confirmation carries is read from the product's worked example, a drinks line, and said to be",
+]
+
+[plant]
+pack = "labs/cutlery"
+speed = 10
+roll_when_timeout_seconds = 1800
+
+# The first fork order is finished, so its confirmations are in the outbox.
+[[plant.roll_when_order]]
+code = "WO-FORK1-0001"
+completed = true
+
+# ----------------------------------------------------------------- the hook
+
+[[step]]
+do = "slide"
+name = "who-tells-the-office"
+title = "Who tells the office?"
+lines = [
+  "The office's ERP books the money: stock, cost, the customer's invoice",
+  "The MES knows what the line made",
+  "Something has to carry it across, once, and not lose it on the way",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "The office runs an ERP. It books the money: what is in stock, what an order cost, what the customer is billed."
+
+[[step]]
+do = "say"
+line = "It never saw a fork being made. The MES did."
+
+[[step]]
+do = "say"
+line = "This class: what the MES tells the ERP, how it waits when the ERP is not there, and how long it keeps trying."
+
+[[step]]
+do = "mark"
+name = "who-tells-the-office"
+
+# ----------------------------------------------------------------- the idea
+
+[[step]]
+part = "idea"
+do = "slide"
+name = "the-words"
+title = "The words"
+lines = [
+  "ERP: the office's system for stock, cost and money",
+  "Confirmation: what one finished step made, sent to the ERP",
+  "Order completion: one more, when the last step is done",
+  "Queue: where they wait until the ERP takes them",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Four words. The ERP is the office's system for stock, cost and money."
+
+[[step]]
+do = "say"
+line = "A confirmation is what one finished step made, sent to the ERP: one for each step of an order."
+
+[[step]]
+do = "say"
+line = "An order completion is one more, when the last step is done. It names the finished lot."
+
+[[step]]
+do = "say"
+line = "And the queue, the outbox, is where they wait until the ERP takes them. Nothing leaves it unless the ERP took it."
+
+[[step]]
+do = "mark"
+name = "the-words"
+
+[[step]]
+do = "slide"
+name = "two-ways-across"
+title = "Two ways across"
+lines = [
+  "File exchange: a file in a shared folder, which the ERP picks up",
+  "Live connector: the MES sends it, and tries again until the ERP answers",
+  "Either way, no money crosses: the ERP puts the prices on",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "There are two ways across. A file exchange writes each confirmation as a file into a folder the ERP picks up from."
+
+[[step]]
+do = "say"
+line = "A live connector sends it straight to the ERP, and tries again, and again, until the ERP answers."
+
+[[step]]
+do = "say"
+line = "They are two different things, set up by whoever runs the plant. Either way, no money crosses. The ERP puts the prices on."
+
+[[step]]
+do = "mark"
+name = "two-ways-across"
+
+[[step]]
+do = "slide"
+name = "one-confirmation"
+title = "One confirmation, from the product's worked example"
+lines = [
+  "Step 10, Mix: 120 put in, 118 good, 2 scrap",
+  "41 minutes of machine time, 3 of labour, on cost centre CC-PKG-1",
+  "Lots used: LOT-SUGAR-001 and LOT-FLAVOR-001",
+  "Its key is the order and the step, so the ERP books it once",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Here is one, from the product's own worked example, a drinks line, not this plant. Step ten, the mixer: a hundred and twenty in, a hundred and eighteen good, two scrap."
+
+[[step]]
+do = "say"
+line = "The time it took, on which cost centre, and which lots it used. Good, scrap, time, lot."
+
+[[step]]
+do = "say"
+line = "Its key is the order and the step. Sent twice, it is still booked once."
+
+[[step]]
+do = "mark"
+name = "one-confirmation"
+
+# ------------------------------------------------------------ on the screen
+
+[[step]]
+part = "screen"
+do = "goto"
+url = "/dashboard"
+settle = 2
+
+[[step]]
+do = "wait_for"
+selector = "#kpi-erp"
+text = "sending"
+
+[[step]]
+do = "say"
+line = "The Floor. The ERP queue says sending."
+at = ".kpi:has(#kpi-erp)"
+
+[[step]]
+do = "say"
+line = "This is a simulated plant, and no ERP is connected to it. Nothing is being sent. What it confirms waits."
+at = "#kpi-erp"
+
+[[step]]
+do = "say"
+line = "And the word counts the machines' own events waiting too, which the ERP is never sent. It says sending even when the ERP is owed nothing. A gap, written up."
+at = "#kpi-erp"
+
+[[step]]
+do = "mark"
+name = "the-queue-word"
+
+[[step]]
+do = "click"
+selector = 'header nav a:text-is("Orders")'
+
+[[step]]
+do = "wait_for"
+selector = "#order-list tbody"
+text = "WO-"
+
+[[step]]
+do = "fill"
+selector = "#f-text"
+text = "WO-FORK1-0001"
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#order-list tbody tr')].some((r) => r.innerText.includes('WO-FORK1-0001'))"
+
+[[step]]
+do = "click"
+selector = "#order-list tbody tr:has-text(\"WO-FORK1-0001\")"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#detail-code').innerText === 'WO-FORK1-0001' && document.querySelector('#d-status').innerText === 'completed' && document.querySelectorAll('#ops tbody tr').length === 3"
+scroll_to = "#detail-panel"
+scroll_block = "start"
+scroll_offset = 220
+
+[[step]]
+do = "say"
+line = "The plant's first fork order. The simulated shift supervisor has just finished it, the way class one point four did by hand."
+at = "#d-status"
+
+[[step]]
+do = "mark"
+name = "a-finished-order"
+
+[[step]]
+do = "wait_for"
+selector = "#ops tbody"
+text = "Mark"
+scroll_to = "#ops"
+scroll_block = "start"
+scroll_offset = 230
+
+[[step]]
+do = "say"
+line = "Three steps, Mold, Degate and Mark, each done, each with its good and its scrap."
+at = "#ops tbody"
+
+[[step]]
+do = "say"
+line = "Each one became a confirmation the moment it was finished. Three confirmations, and the order completion: four."
+at = "#ops tbody"
+
+[[step]]
+do = "mark"
+name = "each-step-a-confirmation"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelectorAll('#consumed li').length > 0 && document.querySelectorAll('#produced li').length > 0"
+scroll_to = "#consumed"
+scroll_block = "start"
+scroll_offset = 320
+
+[[step]]
+do = "say"
+line = "The lots the steps used are what the confirmations name."
+at = "#consumed"
+
+[[step]]
+do = "say"
+line = "And the lot it made is what the order completion names. The minutes each step took are in them too, but on no screen."
+at = "#produced"
+
+[[step]]
+do = "say"
+line = "Where are the four now? In the queue. The screen that lists it opens on this computer's file paths, so it is not filmed. A gap, written up."
+at = "#produced"
+
+[[step]]
+do = "mark"
+name = "the-lots-it-names"
+
+[[step]]
+do = "wait_for"
+selector = ".subnav"
+text = "Configuration"
+
+[[step]]
+do = "click"
+selector = '.subnav a:text-is("Configuration")'
+
+[[step]]
+do = "wait_for"
+js = "location.pathname === '/dashboard/config/supply_chain' && !!document.querySelector('input[data-setting-key=\"max_attempts\"]')"
+
+[[step]]
+do = "say"
+line = "How long it keeps trying is this plant's to set, under Orders, Configuration."
+at = 'tr:has-text("ERP delivery retries")'
+
+[[step]]
+do = "say"
+line = "A confirmation is offered at most eight times. After the first miss it waits five seconds, then twice as long each time, never more than an hour."
+at = 'input[data-setting-key="max_attempts"]'
+
+[[step]]
+do = "say"
+line = "After the eighth it is dead. Dead is not deleted: it stays in the queue, and a person decides, and presses Retry."
+at = 'tr:has-text("ERP delivery retries")'
+
+[[step]]
+do = "say"
+line = "With no ERP here, we cannot show one sent, or one dead. Said, not filmed."
+at = 'tr:has-text("ERP delivery retries")'
+
+[[step]]
+do = "mark"
+name = "how-long-it-tries"
+
+# -------------------------------------------------------------- it refuses
+
+[[step]]
+part = "refuses"
+do = "say"
+line = "Now what it refuses. Offer a confirmation zero times."
+at = 'input[data-setting-key="max_attempts"]'
+
+[[step]]
+do = "fill"
+selector = 'input[data-setting-key="max_attempts"]'
+text = "0"
+
+[[step]]
+do = "click"
+selector = 'tr:has-text("ERP delivery retries") button:has-text("Save")'
+
+[[step]]
+do = "wait_for"
+selector = "span.refused"
+text = "it has to be above 0"
+
+[[step]]
+do = "say"
+line = "Refused, in its own words: offered at least once, or nothing is ever delivered and nothing is ever called dead."
+at = "span.refused"
+
+[[step]]
+do = "mark"
+name = "never-offered-refused"
+
+# ---------------------------------------------------------- you now know
+
+[[step]]
+part = "know"
+do = "slide"
+name = "you-now-know"
+title = "You now know how to"
+lines = [
+  "Say what a confirmation carries to the ERP: good, scrap, time and lots, one for each finished step.",
+  "Tell the file exchange from the live connector, and say why no money crosses either.",
+  "Say what the queue does while the ERP is away: it holds, it tries again, and a person decides on a dead one.",
+]
+
+[[step]]
+do = "say"
+line = "This was a simulated plant at ten times the clock, with no ERP connected. Nothing on screen was sent."
+
+[[step]]
+do = "say"
+line = "That is the ERP handoff: what crosses, how it waits, and how long it tries. You now know how to do three things."
+
+[[step]]
+do = "mark"
+name = "you-now-know"

@@ -370,6 +370,13 @@ label = "5.4"
 slug = "the-erp-handoff"
 title = "The ERP handoff — confirmations go back up"
 one_line = "Every finished step becomes a confirmation; the file exchange and the live connector are two different things."
+knows_before = ["1.4"]
+outcomes = [
+  "Say what a confirmation carries to the ERP: good, scrap, time and lots, one for each finished step.",
+  "Tell the file exchange from the live connector, and say why no money crosses either.",
+  "Say what the queue does while the ERP is away: it holds, it tries again, and a person decides on a dead one.",
+]
+scene = "scripts/scenes/course/06-04-the-erp-handoff.toml"
 
 # ------------------------------------------------------------------ tier 6
 [[module]]
