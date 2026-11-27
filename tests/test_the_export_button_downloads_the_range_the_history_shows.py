@@ -74,10 +74,18 @@ def test_export_downloads_every_check_of_the_chosen_range(browser, plant):
         page.dispatch_event("#h-from", "change")
         page.fill("#h-to", "2026-09-30")
         page.dispatch_event("#h-to", "change")
+        # Waits for the count on the link itself. Each box's change fetches
+        # the history, and the From box's reply alone can also read "of 5
+        # matching" while the link already follows the To box: that reply is
+        # not the link's, so its label still has no count, and reading it
+        # then failed once on CI (#310, 2026-11-26). The second reply is the
+        # one that puts the count on the link.
         page.wait_for_function(
             """() => document.querySelector('#h-count').textContent.includes('of 5 matching')
                      && document.querySelector('#h-export').getAttribute('href')
-                          .includes('since=2026-09-01&until=2026-09-30')""",
+                          .includes('since=2026-09-01&until=2026-09-30')
+                     && (document.querySelector('#h-export').getAttribute('aria-label') || '')
+                          .includes('5 checks')""",
             timeout=20000)
         assert page.is_visible("#h-from") and page.is_visible("#h-export")
         assert "5 checks" in page.get_attribute("#h-export", "aria-label")
