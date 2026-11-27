@@ -420,11 +420,15 @@ function drawChecks() {
       order.appendChild(el("span", "muted", "no order"));
     }
     row.appendChild(order);
+    // The instrument beside the person who held it: "is it the gauge or
+    // the people?" is the first question about a reading (Scott, 2026-11-22).
+    // "not recorded", the export's word, when nobody named one.
+    row.appendChild(c.gauge ? el("td", "mono", c.gauge) : el("td", "muted", "not recorded"));
     row.appendChild(el("td", "mono", c.checked_by || ""));
     body.appendChild(row);
   }
   if (!page.items.length) {
-    const row = el("tr"); const cell = el("td", "muted", "No checks match."); cell.colSpan = 7;
+    const row = el("tr"); const cell = el("td", "muted", "No checks match."); cell.colSpan = 8;
     row.appendChild(cell); body.appendChild(row);
   }
   FS.pager($("#h-pager"), page, (offset) => { filters.hOffset = offset; writeUrl(); refresh(); });
