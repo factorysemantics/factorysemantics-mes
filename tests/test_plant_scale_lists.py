@@ -132,11 +132,17 @@ def test_the_floor_summary_and_the_machine_page_cannot_disagree(client, session)
     assert tile["state"] == "running"
 
 
-def test_the_analysis_screen_sums_the_same_way(session):
+def test_the_analysis_screen_sums_the_same_way(session, monkeypatch):
     from fsmes.services import analysis
 
     mixer = masterdata.get_equipment(session, "MIX01")
     now = utcnow()
+    # The screen's window ends at its own `utcnow()`. Read a moment after
+    # this one, it slid past the hour of states laid down here and clipped
+    # the first, running one: 998.2 s, not 1000, on a slow CI runner (the
+    # board's flake since 2026-10-08, again on #314). The window is pinned
+    # to the hour the states fill, so what is summed is the summing.
+    monkeypatch.setattr(analysis, "utcnow", lambda: now)
     for i in range(300):
         session.add(EquipmentState(
             equipment_id=mixer.id, state=EquipmentStateName.DOWN if i % 3 else EquipmentStateName.RUNNING,
