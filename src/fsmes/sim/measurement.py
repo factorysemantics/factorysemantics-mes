@@ -196,11 +196,20 @@ class Follows:
     on ordinary noise makes ordinary forks. The centre does not move - a
     hot mould makes forks that wander both ways, which is why the average
     of a chart of them stays put while its range climbs.
+
+    A cold mould is the other way round, and is the second half of this
+    rule: while the tag reads under `below`, the centre moves by
+    `centre_per_unit` for every unit under (negative to make the piece
+    smaller). Cold plastic does not fill the cavity, so a fork made from it
+    comes out short and light - every one of them, so a chart's points step
+    down together rather than spreading. Either half may be left out.
     """
 
     tag: str
-    above: float
-    sigma_per_unit: float
+    above: float | None = None
+    sigma_per_unit: float = 0.0
+    below: float | None = None
+    centre_per_unit: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -242,12 +251,30 @@ class PieceRule:
         if reading is None:
             raise ValueError(f"{self.characteristic} follows {self.follows.tag}, "
                              "which has no reading")
+        if self.follows.above is None:
+            return self.sigma
         over = max(float(reading) - self.follows.above, 0.0)
         return self.sigma + self.follows.sigma_per_unit * over
 
+    def centre_at(self, reading: float | None) -> float:
+        """Where the pieces made while the followed tag reads `reading` centre.
+
+        The rule's own centre unless the tag reads under the rule's `below`;
+        the same refusal as `spread` for a followed tag with no reading.
+        """
+        if self.follows is None:
+            return self.centre
+        if reading is None:
+            raise ValueError(f"{self.characteristic} follows {self.follows.tag}, "
+                             "which has no reading")
+        if self.follows.below is None:
+            return self.centre
+        under = max(self.follows.below - float(reading), 0.0)
+        return self.centre + self.follows.centre_per_unit * under
+
     def draw(self, rng: random.Random, reading: float | None) -> float:
         """The true value of one piece. Deterministic for a seed and a reading."""
-        return rng.gauss(self.centre, self.spread(reading))
+        return rng.gauss(self.centre_at(reading), self.spread(reading))
 
 
 def piece_rules(script: dict) -> list[PieceRule]:
@@ -270,11 +297,26 @@ def piece_rules(script: dict) -> list[PieceRule]:
             centre=float(entry["centre"]),
             sigma=float(entry["sigma"]),
             every_line_s=float(entry.get("every_line_s") or every),
-            follows=Follows(tag=str(follows["tag"]), above=float(follows["above"]),
-                            sigma_per_unit=float(follows["sigma_per_unit"]))
-            if follows else None,
+            follows=_follows(follows) if follows else None,
         ))
     return out
+
+
+def _follows(entry: dict) -> Follows:
+    """A rule's `follows`, either half or both. A threshold named without
+    its rate is refused rather than read as a rate of nothing."""
+    above, below = entry.get("above"), entry.get("below")
+    if above is not None and "sigma_per_unit" not in entry:
+        raise ValueError(f"follows {entry.get('tag')!r} above {above} without sigma_per_unit")
+    if below is not None and "centre_per_unit" not in entry:
+        raise ValueError(f"follows {entry.get('tag')!r} below {below} without centre_per_unit")
+    return Follows(
+        tag=str(entry["tag"]),
+        above=float(above) if above is not None else None,
+        sigma_per_unit=float(entry.get("sigma_per_unit") or 0.0),
+        below=float(below) if below is not None else None,
+        centre_per_unit=float(entry.get("centre_per_unit") or 0.0),
+    )
 
 
 @dataclass(frozen=True)

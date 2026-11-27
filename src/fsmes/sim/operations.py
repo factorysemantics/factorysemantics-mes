@@ -65,7 +65,7 @@ import structlog
 from fsmes import identity
 from fsmes.config import Settings
 from fsmes.db import utcnow
-from fsmes.sim import measurement
+from fsmes.sim import breakdown, measurement
 from fsmes.sim.measurement import Bench
 
 log = structlog.get_logger("operations")
@@ -454,6 +454,12 @@ def _as_moment(value) -> datetime | None:
     return parsed.astimezone(UTC).replace(tzinfo=None) if parsed.tzinfo else parsed
 
 
+def _seconds_of(value) -> float | None:
+    """An instant out of a JSON response as seconds since the epoch, or `None`."""
+    moment = _as_moment(value)
+    return moment.replace(tzinfo=UTC).timestamp() if moment else None
+
+
 #: Never renew more often than this, however short the plant's token life is.
 #: A plant configured with a two-second login would otherwise have this floor
 #: spending its shift signing in.
@@ -647,6 +653,11 @@ class Floor:
         # issued. And which orders have been looked at for their material, so
         # a line's lot is issued to its order once and not every pass.
         self.each_line = plans_each_line(self.script)
+        # The breakdowns this script says somebody calls maintenance for
+        # (`sim.breakdown`), and the corrective order this floor has open for
+        # each machine: its code and when the stop it was raised for began.
+        self.breakdowns = breakdown.breakdowns(self.script)
+        self._open_breakdowns: dict[str, tuple[str, float]] = {}
         self._said_no_line: set[str] = set()
         self._said_the_line_is_empty: set[str] = set()
         self._lines_seen: set[str] = set()
@@ -1557,6 +1568,15 @@ class Floor:
                 log.warning("inspection refused", status=exc.response.status_code,
                             detail=exc.response.text[:160])
 
+    async def _machines_down(self) -> set[str]:
+        """The machines the MES says are down now; none when it cannot say."""
+        try:
+            states = await self.get("/equipment/states")
+        except httpx.HTTPError as exc:
+            log.warning("could not read the machine states", error=str(exc)[:160])
+            return set()
+        return {row["equipment"] for row in states if row.get("state") == breakdown.DOWN}
+
     async def _reading_of(self, equipment: str, tag: str) -> float | None:
         """The newest value of one named tag on one machine, or `None`.
 
@@ -1604,6 +1624,16 @@ class Floor:
                          characteristic=rule.characteristic, spec=spec is not None,
                          open_orders_on_its_machines=len(candidates))
             return False
+        if rule.follows is not None:
+            # A mould that is down makes nothing, so no piece comes off it -
+            # without this a stopped, cold mould would go on drawing short
+            # forks onto the chart all through its repair. Only for a rule
+            # that follows a tag, which is a scene's: the everyday floor
+            # makes no extra request.
+            down = await self._machines_down()
+            candidates = [c for c in candidates if c[1] not in down]
+            if not candidates:
+                return False
         order, station = self.rng.choice(sorted(candidates))
         reading = None
         if rule.follows is not None:
@@ -1955,6 +1985,79 @@ class Floor:
                         characteristic=name, lot=body["lot_ref"],
                         nonconformance=signal.get("nonconformance"))
         return True
+
+    # ----------------------------------------------------------- breakdowns
+
+    async def answer_the_breakdowns(self) -> list[str]:
+        """Call maintenance for a machine that has broken, and close the job.
+
+        A supervisor's act: the mould is stopped with its melt cold, so a
+        corrective order is raised against it, through the same
+        `POST /maintenance/corrective` a person uses, and started at once as
+        the technician's work (`performed_by`, which is how a plant whose
+        mechanics have no login names them). When the machine is back, the
+        order is closed with the findings and the minutes the *machine* was
+        down, from the MES's own record of when the stop began and ended.
+
+        Which stop is a breakdown is the script's (`breakdowns`); a script
+        without the section does nothing here, which is every pack's
+        everyday shift. Returns the codes raised or closed on this look.
+        """
+        if not self.breakdowns:
+            return []
+        try:
+            states = {row["equipment"]: row for row in await self.get("/equipment/states")}
+        except httpx.HTTPError as exc:
+            log.warning("could not read the machine states", error=str(exc)[:160])
+            return []
+        acted: list[str] = []
+        for rule in self.breakdowns:
+            row = states.get(rule.machine) or {}
+            since = _seconds_of(row.get("since"))
+            held = self._open_breakdowns.get(rule.machine)
+            reading = None
+            if held is None and row.get("state") == breakdown.DOWN:
+                reading = await self._reading_of(rule.machine, rule.tag)
+            decision = breakdown.decide(rule, row.get("state"), since, reading,
+                                        held[1] if held else None, self.speed)
+            if decision.act == "raise" and since is not None:
+                code = await self._raise_breakdown(rule)
+                if code:
+                    self._open_breakdowns[rule.machine] = (code, since)
+                    acted.append(code)
+            elif decision.act == "close" and held is not None:
+                body = {"findings": rule.findings,
+                        "downtime_minutes": decision.downtime_minutes}
+                if rule.technician:
+                    body["performed_by"] = rule.technician
+                r = await self.post(f"/maintenance/orders/{held[0]}/complete", json=body)
+                if r.status_code >= 400:
+                    log.warning("the breakdown's order would not close", order=held[0],
+                                status=r.status_code, detail=r.text[:160])
+                    continue
+                log.info("the breakdown is mended", machine=rule.machine, order=held[0],
+                         downtime_minutes=decision.downtime_minutes)
+                self._open_breakdowns.pop(rule.machine, None)
+                acted.append(held[0])
+        return acted
+
+    async def _raise_breakdown(self, rule) -> str | None:
+        """Raise the corrective order and start it; its code, or `None`."""
+        r = await self.post("/maintenance/corrective", json={
+            "equipment": rule.machine, "summary": rule.summary, "reason": rule.reason,
+            "skill": rule.skill, "priority": rule.priority, "needs_stop": True})
+        if r.status_code >= 400:
+            log.warning("the breakdown's order was refused", machine=rule.machine,
+                        status=r.status_code, detail=r.text[:160])
+            return None
+        code = r.json()["code"]
+        body = {"performed_by": rule.technician} if rule.technician else {}
+        started = await self.post(f"/maintenance/orders/{code}/start", json=body)
+        if started.status_code >= 400:
+            log.warning("the breakdown's order would not start", order=code,
+                        status=started.status_code, detail=started.text[:160])
+        log.info("maintenance called for a breakdown", machine=rule.machine, order=code)
+        return code
 
     # ---------------------------------------------------------------- stops
 
@@ -2953,6 +3056,19 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
                 except httpx.HTTPError as exc:
                     log.warning("the stop watch failed", error=str(exc)[:160])
 
+        async def answer_the_breakdowns() -> None:
+            # The supervisor's, like raising any other maintenance work, and
+            # only for a script that names a breakdown: the everyday shift
+            # has none and makes no request for one.
+            if shift is None or not shift.breakdowns:
+                return
+            while True:
+                await asyncio.sleep(watch_every)
+                try:
+                    await shift.answer_the_breakdowns()
+                except httpx.HTTPError as exc:
+                    log.warning("the breakdown watch failed", error=str(exc)[:160])
+
         async def plan_ahead() -> None:
             """Its own loop, like the stop watch: it needs only the book.
 
@@ -3014,6 +3130,7 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
             every(review_every, do_review),
             every(supervise_every, do_supervise),
             watch_the_stops(),
+            answer_the_breakdowns(),
             sample_the_bench(),
             measure_the_pieces(),
             count_what_went_back(),

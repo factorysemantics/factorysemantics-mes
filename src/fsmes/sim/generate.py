@@ -58,7 +58,8 @@ EVENT_TYPES = {
     "down": "the machine has broken: it makes nothing and reports DOWN",
     "changeover": "the whole line is changing over: planned, and never downtime",
     "micro_stops": "short random stops, pre-rolled from the seed so a run repeats",
-    "drift": "an analog ramps from its base to `to` across the window",
+    "drift": "an analog ramps from its base - or from `from`, when the event says "
+             "one - to `to` across the window",
     "offset": "an analog is held `offset` off its base for the window - a dip or a "
               "step, rather than a ramp, which is what a valve closing or a "
               "pressure falling away actually looks like",
@@ -217,6 +218,10 @@ def _validate_line(config: dict, label: str) -> dict:
             sys.exit(f"{label}: a 'rate' event says how fast the station runs for "
                      "the window - `rate_per_min`, a positive number in the "
                      "station's own units.")
+        if "from" in event and (kind != "drift" or isinstance(event["from"], bool)
+                                or not isinstance(event["from"], int | float)):
+            sys.exit(f"{label}: `from` belongs on a 'drift' event and is a number - "
+                     "where the analog starts its ramp, in the signal's own units.")
         if kind == "offset" and "offset" not in event:
             sys.exit(f"{label}: an {kind!r} event says how far off base it holds "
                      "the analog - `offset`, in the signal's own units.")
@@ -839,7 +844,11 @@ def simulate(config: dict) -> dict[str, list[list]]:
                     a, b = int(drift["start"]), int(drift["end"])
                     if in_win(t, a, b):
                         frac = (t - a) / max(b - a, 1)
-                        value = value + (float(drift["to"]) - value) * frac
+                        # From the base unless the event says where it
+                        # starts: a barrel warming back up after a repair
+                        # climbs from where the fault left it, not from 214.
+                        start = float(drift["from"]) if "from" in drift else value
+                        value = start + (float(drift["to"]) - start) * frac
                 for burst in bursts.get(name, []):
                     if signal not in _targets(burst, analogs):
                         continue

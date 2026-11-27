@@ -1,0 +1,338 @@
+{
+ "_what": "A real breakdown on the cutlery plant: heater zone 2 of the four on FORK1's mould barrel burns out at line minute 30. The melt sags cold from 214 to about 199 C while the setpoint holds, the forks come out short and light, the length chart fires, the mould is stopped at minute 44 and a corrective maintenance order is raised, worked and closed with what was found and 42 minutes down. Built into a copy of the cutlery pack by labs/cutlery/scene.py, which also writes the answer key (answer-key.json) beside it; the pack on disk is not touched, and the everyday shift does not change. The design Scott reviewed is the crew's reports/sim-designs/2026-11-27-coil-out.md.",
+ "name": "coil-out",
+ "speed": 10,
+ "_speed": "Ten times, as hot-mould: FORK1's ninety-minute hour is nine minutes of wall clock - three healthy, a minute and a half sagging, four and a bit down, a few seconds back to healthy - and the 42 minutes down are 252 wall seconds, which the floor measures from the MES's own state record and multiplies back.",
+ "lines": {
+  "FORK1": {
+   "duration_s": 5400,
+   "events": [
+    {
+     "type": "down",
+     "station": "Mold",
+     "start": 600,
+     "end": 690
+    },
+    {
+     "type": "micro_stops",
+     "station": "Mark",
+     "every_s": [
+      240,
+      420
+     ],
+     "duration_s": [
+      6,
+      14
+     ]
+    }
+   ],
+   "_events": "FORK1's everyday events, less its changeover at 3000-3060: that minute falls inside the breakdown, and a changeover recorded in the middle of a repair would split the 42 minutes down into two stops. The everyday 90-second stop at minute 10 stays - it is a warm stop, and the floor's breakdown watch leaves it alone because the melt reads normal."
+  }
+ },
+ "events": {
+  "FORK1": [
+   {
+    "type": "drift",
+    "station": "Mold",
+    "analog": "MeltTemp",
+    "start": 1800,
+    "end": 2520,
+    "to": 199.0,
+    "_why": "Minute 30: heater zone 2 opens. The three bands left cannot hold the barrel, and over twelve line minutes the melt sags from its 214 C base to 199 C. The setpoint (MeltTempSP) does not move; the actual walks away from it, cold."
+   },
+   {
+    "type": "offset",
+    "station": "Mold",
+    "analog": "MeltTemp",
+    "start": 2520,
+    "end": 4440,
+    "offset": -15.0,
+    "_why": "And stays there, 15 C under, through the stop, the finding and the wait for the band from the stores (minutes 42-74). The bands still working keep it from falling further."
+   },
+   {
+    "type": "drift",
+    "station": "Mold",
+    "analog": "MeltTemp",
+    "start": 4440,
+    "end": 5160,
+    "from": 199.0,
+    "to": 214.0,
+    "_why": "Minute 74: the band is replaced and the barrel heats back up to 214 C over twelve minutes, before the mould is restarted at 86."
+   },
+   {
+    "type": "scrap_burst",
+    "station": "Mold",
+    "start": 2160,
+    "end": 2400,
+    "scrap_pct": 6.0,
+    "_why": "From minute 36 the melt is under 206 C and cold plastic short-fills the cavity: scrap at the mould climbs from its everyday 0.4 %..."
+   },
+   {
+    "type": "scrap_burst",
+    "station": "Mold",
+    "start": 2400,
+    "end": 2640,
+    "scrap_pct": 12.0,
+    "_why": "...to about 12 % by minute 40, until the stop."
+   },
+   {
+    "type": "down",
+    "station": "Mold",
+    "start": 2640,
+    "end": 5160,
+    "_why": "Minute 44, four minutes after the length chart fires: the operator stops the mould. It stands down 42 minutes - six finding zone 2 open circuit, twenty-four waiting for a band from the stores, twelve replacing it and heating back up - and is restarted at minute 86 with its first forks good."
+   }
+  ]
+ },
+ "pieces": {
+  "_why": "Every dimension on every utensil is measured off a piece one of its three moulds made, and the check names that mould. Healthy spread is a twelfth of the tolerance, as in hot-mould. Fork length and weight follow their mould's MeltTemp the cold way: under 206 C - three of the melt's own noise sigmas under its 214 C base, so a healthy mould almost never reads there - the centre moves down 0.12 mm and 0.012 g a degree, so at 199 C FORK1's forks are about 0.84 mm short (164.16 mm against a 164.0 lower limit) and 0.08 g light, while FORK2 and FORK3 stay where they were. Length and weight are checked every 20 line seconds, about one a minute off each mould, so the chart has the points to fire on within minutes.",
+  "every_line_s": 90,
+  "rules": [
+   {
+    "material": "UT-FORK",
+    "characteristic": "length_mm",
+    "stations": [
+     "FORK1_Mold",
+     "FORK2_Mold",
+     "FORK3_Mold"
+    ],
+    "centre": 165.0,
+    "sigma": 0.1667,
+    "every_line_s": 20,
+    "follows": {
+     "tag": "MeltTemp",
+     "below": 206.0,
+     "centre_per_unit": -0.12
+    }
+   },
+   {
+    "material": "UT-FORK",
+    "characteristic": "width_mm",
+    "stations": [
+     "FORK1_Mold",
+     "FORK2_Mold",
+     "FORK3_Mold"
+    ],
+    "centre": 25.0,
+    "sigma": 0.1667
+   },
+   {
+    "material": "UT-FORK",
+    "characteristic": "thickness_mm",
+    "stations": [
+     "FORK1_Mold",
+     "FORK2_Mold",
+     "FORK3_Mold"
+    ],
+    "centre": 2.1,
+    "sigma": 0.0333
+   },
+   {
+    "material": "UT-FORK",
+    "characteristic": "weight_g",
+    "stations": [
+     "FORK1_Mold",
+     "FORK2_Mold",
+     "FORK3_Mold"
+    ],
+    "centre": 3.9,
+    "sigma": 0.05,
+    "every_line_s": 20,
+    "follows": {
+     "tag": "MeltTemp",
+     "below": 206.0,
+     "centre_per_unit": -0.012
+    }
+   },
+   {
+    "material": "UT-FORK",
+    "characteristic": "tine_gap_mm",
+    "stations": [
+     "FORK1_Mold",
+     "FORK2_Mold",
+     "FORK3_Mold"
+    ],
+    "centre": 3.2,
+    "sigma": 0.05
+   },
+   {
+    "material": "UT-SPOON",
+    "characteristic": "length_mm",
+    "stations": [
+     "SPOON1_Mold",
+     "SPOON2_Mold",
+     "SPOON3_Mold"
+    ],
+    "centre": 160.0,
+    "sigma": 0.1667
+   },
+   {
+    "material": "UT-SPOON",
+    "characteristic": "width_mm",
+    "stations": [
+     "SPOON1_Mold",
+     "SPOON2_Mold",
+     "SPOON3_Mold"
+    ],
+    "centre": 34.0,
+    "sigma": 0.1667
+   },
+   {
+    "material": "UT-SPOON",
+    "characteristic": "thickness_mm",
+    "stations": [
+     "SPOON1_Mold",
+     "SPOON2_Mold",
+     "SPOON3_Mold"
+    ],
+    "centre": 2.1,
+    "sigma": 0.0333
+   },
+   {
+    "material": "UT-SPOON",
+    "characteristic": "weight_g",
+    "stations": [
+     "SPOON1_Mold",
+     "SPOON2_Mold",
+     "SPOON3_Mold"
+    ],
+    "centre": 4.7,
+    "sigma": 0.05
+   },
+   {
+    "material": "UT-SPOON",
+    "characteristic": "bowl_depth_mm",
+    "stations": [
+     "SPOON1_Mold",
+     "SPOON2_Mold",
+     "SPOON3_Mold"
+    ],
+    "centre": 9.0,
+    "sigma": 0.0833
+   },
+   {
+    "material": "UT-KNIFE",
+    "characteristic": "length_mm",
+    "stations": [
+     "KNIFE1_Mold",
+     "KNIFE2_Mold",
+     "KNIFE3_Mold"
+    ],
+    "centre": 175.0,
+    "sigma": 0.1667
+   },
+   {
+    "material": "UT-KNIFE",
+    "characteristic": "width_mm",
+    "stations": [
+     "KNIFE1_Mold",
+     "KNIFE2_Mold",
+     "KNIFE3_Mold"
+    ],
+    "centre": 18.0,
+    "sigma": 0.1667
+   },
+   {
+    "material": "UT-KNIFE",
+    "characteristic": "thickness_mm",
+    "stations": [
+     "KNIFE1_Mold",
+     "KNIFE2_Mold",
+     "KNIFE3_Mold"
+    ],
+    "centre": 2.1,
+    "sigma": 0.0333
+   },
+   {
+    "material": "UT-KNIFE",
+    "characteristic": "weight_g",
+    "stations": [
+     "KNIFE1_Mold",
+     "KNIFE2_Mold",
+     "KNIFE3_Mold"
+    ],
+    "centre": 4.3,
+    "sigma": 0.05
+   },
+   {
+    "material": "UT-KNIFE",
+    "characteristic": "edge_straightness_mm",
+    "stations": [
+     "KNIFE1_Mold",
+     "KNIFE2_Mold",
+     "KNIFE3_Mold"
+    ],
+    "centre": 0.2,
+    "sigma": 0.0333
+   }
+  ]
+ },
+ "breakdowns": [
+  {
+   "_why": "What the floor does when a machine stops and its own tag says why: the supervisor raises a corrective order against the machine through the MES (POST /maintenance/corrective, the same service call the raise_corrective_maintenance tool makes), the technician starts it at once, and when the machine reports running again completes it with what was found and the minutes the MES's own state record holds it down for. A stop with the melt reading normal - the everyday minute-10 stop - is not this breakdown and raises nothing.",
+   "machine": "FORK1_Mold",
+   "when": {
+    "state": "down",
+    "tag": "MeltTemp",
+    "below": 206.0
+   },
+   "summary": "Melt temperature low, forks short",
+   "reason": "MeltTemp about 15 C under its setpoint and the length chart fired; mould stopped by the operator",
+   "skill": "ELEC",
+   "priority": 2,
+   "technician": "MT-01",
+   "findings": "Heater zone 2 open circuit, band replaced"
+  }
+ ],
+ "masterdata": {
+  "_why": "The cutlery pack has nobody on its maintenance books, and an order started and closed by nobody would be a record of nothing. The scene's copy gets one electrician, named by trade rather than given an invented person's name.",
+  "personnel.json": [
+   {
+    "code": "MT-01",
+    "name": "Maintenance technician (electrical)",
+    "role": "operator",
+    "home_equipment": "FORK1_Mold"
+   }
+  ],
+  "skills.json": [
+   {
+    "code": "ELEC",
+    "name": "Electrician",
+    "description": "Heaters, thermocouples, motors, drives and control panels: anything that needs isolating before it is opened."
+   }
+  ],
+  "personnel_skills.json": [
+   {
+    "person": "MT-01",
+    "skill": "ELEC",
+    "level": 2
+   }
+  ]
+ },
+ "answer": {
+  "_what": "The true answers. The minutes are the scene's; the counts are read from the generated hour by scene.py; the prices are the design's and are made up to be plausible, not taken from a real machine. Parts and prices live here only: the MES cannot hold a part, a price or a cost on a breakdown yet.",
+  "line": "FORK1",
+  "machine": "FORK1_Mold",
+  "tag": "MeltTemp",
+  "characteristic": "UT-FORK length_mm",
+  "failed": {
+   "zone": 2,
+   "part": "barrel heater band, zone 2",
+   "at_s": 1800
+  },
+  "band_sigmas": 2,
+  "part": {
+   "name": "barrel heater band",
+   "quantity": 1,
+   "price": 140.0
+  },
+  "labour": {
+   "people": 1,
+   "rate_per_hour": 60.0
+  },
+  "resin_price_per_kg": 1.5,
+  "_resin_price_per_kg": "Polypropylene at a made-up 1.50 a kilogram; a fork's material is its 3.9 g centre weight of it.",
+  "chart_seed": 7,
+  "currency": "USD"
+ }
+}
