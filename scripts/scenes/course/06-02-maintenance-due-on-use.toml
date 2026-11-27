@@ -1,0 +1,542 @@
+# Class 5.2 of the course, *Maintenance — due on use*: a plan that counts what
+# the machine did, the job it raises when the count passes the interval, and
+# the job done at the machine, which starts the count again.
+#
+# It starts from a card of words (no drawing): two moulds greased every
+# Monday, one that ran all week and one that stood still. The idea card names
+# the three words of the class (preventive, due on use, expected downtime).
+# Then the product, signed in as the lab
+# admin (the one built-in role that may write a plan): two plans written on
+# Maintenance > Plans for the fork mould, one every thousand forks made and one
+# every seven days; both on Due; Raise due work makes two jobs, and the tiles
+# say what they cost the line; then, as the pack's lab operator, the station
+# screen of the mould, where one job is started and completed with what was
+# found; History, which names who did it; and Plans, where the fork count has
+# started again. Then what it refuses: raising the same plan twice while its
+# job is still open. Filmed on a scratch cutlery plant at ten times the clock,
+# every screen as the product draws it.
+#
+# Beats changed from the outline (reports/learning-platform-2026-11-14 §5.2),
+# where the product differs: the cutlery pack has no maintenance plan, so the
+# class writes two; the interval is a thousand forks, not a hundred thousand
+# shots, so it comes due on a plant a few minutes old; the plan form has no
+# window, so the third word is the expected downtime the open work costs; and
+# the outline's refusal, closing a job with no record of who did it, cannot be
+# filmed because no screen offers it: a job records whoever is signed in, which
+# the class says, and films the refusal the screens do make.
+
+name = "maintenance-due-on-use"
+title = "Maintenance — due on use"
+lesson = "5.2"
+take_is = "lesson"
+part = "hook"
+base = "http://127.0.0.1:8040"
+badge = "pre-alpha · simulated plant · v{version}"
+# Writing a plan takes `maintenance.plan`, which only the admin role holds. A
+# lab account, not a person; the sign-in page is never filmed.
+user = "ADMIN"
+password = "admin"
+# Four and a half to six minutes, as the handoff asks.
+budget_seconds = 360
+gif_skip_seconds = 2.0
+width = 1280
+height = 720
+# Writing two plans, raising their jobs and doing one of them are writes, and
+# they are the story.
+allow_writes = true
+what_is_written = "which is how the class makes its maintenance: Create plan on Maintenance > Plans writes PM-FORK1-VENTS (every 1,000 units made) and PM-FORK1-GUARD (every 7 days) on FORK1_Mold, Raise due work raises PM-00001 and PM-00002, and Start and Complete job on the station screen do PM-00001, each a real `POST` to the take's own scratch plant, made with the screen's own buttons, the plans under the lab admin and the job under the lab operator. Raising again is answered with nothing new, so it writes nothing."
+
+notes = [
+  "The plant was started from the cutlery pack at ten times wall clock. The camera waited, off camera, until fork order WO-FORK1-0001 had booked 1,100 good, so the fork mould has made more than a thousand forks by the time the class writes a plan for every thousand.",
+  "The cutlery pack carries no maintenance plan, so the class writes two on camera, as the lab admin (ADMIN, \"Lab Admin\"): writing a plan takes `maintenance.plan`, which only the admin role holds. A real mould is serviced every hundred thousand shots or so; the class writes a thousand forks so the plan comes due on a plant a few minutes old, and says so.",
+  "The second plan is every seven days. Nobody has ever done it, so the MES reads it as due now rather than inventing a date it was last done. Its reason reads \"7.0 days against a 7.0 days plan — never serviced\": the seven is the interval, not seven days gone by. Filmed as drawn, and said.",
+  "The job is done as WALK-OP, \"Walker: line operator\", one of the pack's seeded lab accounts. The operator role holds `maintenance.perform`, so the job is started and completed from the station screen of FORK1_Mold. The recorder's `sign_in` step changes who is signed in off camera.",
+  "Complete job asks what was found, and nothing else. The downtime it books is the time between Start and Complete, a few seconds here, whether or not the mould stopped; the plant's API takes a downtime figure, but no screen asks for one. A gap, written up; filmed as drawn, and said.",
+  "The History tab names who did the job by account code (WALK-OP), where the Work tab names people by name. Filmed as drawn.",
+  "A plan may say when its job may be done (a window, such as a changeover) and whether the machine must stop. The New plan form sets neither; a plant pack's plans can. Said, not filmed.",
+  "The outline's refusal, closing a job with nobody named on it, is not on any screen: Start and Complete take the account of the person at the keyboard. The class films the refusal the screens do make: Raise due work, a second time, while the guard job is open, adds nothing, because a plan never has two open jobs.",
+  "Handing jobs to a crew by trade and shift (the dispatcher on the Due tab) needs shift patterns and skills this plant does not have. The class scrolls past it.",
+  "At any speed but 1x every 2D page carries the product's REPLAY 10× banner across its top. It is filmed as the product draws it.",
+  "The opening beat is a plain card with words on it. There is no artwork of a mould or a grease gun.",
+]
+
+honesty = [
+  "the plant is a scratch simulated plant, replaying a recorded line at ten times wall clock",
+  "the two plans, the two jobs and the job done were made on camera; the pack has no maintenance plan of its own",
+  "the interval is a thousand forks so it comes due on a plant a few minutes old; a real mould's is far longer, and said",
+  "the downtime a completed job books is the time between Start and Complete, because no screen asks for it; filmed as drawn, and said",
+  "a plan's window and whether its machine must stop are not on the New plan form; said, not filmed",
+]
+
+[plant]
+pack = "labs/cutlery"
+speed = 10
+roll_when_timeout_seconds = 1800
+
+# The fork mould has made more than a thousand forks before the first frame.
+[[plant.roll_when_order]]
+code = "WO-FORK1-0001"
+booked = 1100
+
+# ----------------------------------------------------------------- the hook
+
+[[step]]
+do = "slide"
+name = "every-monday"
+title = "Every Monday: grease the moulds"
+lines = [
+  "Mould 1: ran three shifts, every day",
+  "Mould 2: stood still since Tuesday",
+  "Both greased on Monday, by the calendar",
+  "One too late. One for nothing.",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "A maintenance plan on a calendar says: every Monday, whatever the week was like."
+
+[[step]]
+do = "say"
+line = "Mould one ran flat out all week. Mould two stood still. Both got the same grease on the same day."
+
+[[step]]
+do = "say"
+line = "One was serviced too late, the other for nothing. The calendar never saw the difference."
+
+[[step]]
+do = "mark"
+name = "every-monday"
+
+# ----------------------------------------------------------------- the idea
+
+[[step]]
+part = "idea"
+do = "slide"
+name = "three-words"
+title = "Three words"
+lines = [
+  "Preventive: work done before something breaks, from a plan",
+  "Due on use: the plan counts what the machine did, not the days",
+  "Expected downtime: what the open work will cost the line",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Three words. Preventive maintenance is work done before something breaks, from a plan, not after."
+
+[[step]]
+do = "say"
+line = "Due on use means the plan counts what the machine actually did: parts it made, or hours it ran. Not the days on a calendar."
+
+[[step]]
+do = "say"
+line = "Expected downtime is what the open work will cost the line: how long the machines stand while the jobs get done."
+
+[[step]]
+do = "mark"
+name = "three-words"
+
+# ------------------------------------------------------------ on the screen
+
+# Back from the cards to the floor, by address: a card is the recorder's page
+# and has no menu to click. Every page after this one is reached by a click.
+[[step]]
+part = "screen"
+do = "goto"
+url = "/dashboard"
+settle = 3
+
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"Maintenance\")"
+
+[[step]]
+do = "wait_for"
+selector = "#kpi-open-split"
+text = "preventive"
+
+[[step]]
+do = "say"
+line = "The Maintenance page. Nothing is due and nothing is open: this plant came with no maintenance plans."
+at = ".kpi:has(#kpi-due)"
+
+[[step]]
+do = "click"
+selector = "button.tab[data-tab=\"plans\"]"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#plan-machine').options.length > 1 && /No plans yet/.test(document.querySelector('#plans-table tbody').textContent)"
+
+[[step]]
+do = "say"
+line = "So the class writes one, for the fork mould: clean its vents every thousand forks."
+at = "#plan-form"
+
+[[step]]
+do = "fill"
+selector = "#plan-code"
+text = "PM-FORK1-VENTS"
+
+[[step]]
+do = "fill"
+selector = "#plan-name"
+text = "Clean the mould vents"
+
+[[step]]
+do = "choose"
+selector = "#plan-machine"
+value = "FORK1_Mold"
+
+[[step]]
+do = "choose"
+selector = "#plan-trigger"
+value = "produced_qty"
+
+[[step]]
+do = "say"
+line = "The trigger is every so many units made. It could be hours run, or days, the calendar's way."
+at = "#plan-trigger"
+
+[[step]]
+do = "fill"
+selector = "#plan-interval"
+text = "1000"
+
+[[step]]
+do = "say"
+line = "A real mould gets this every hundred thousand shots or so. This plant is a few minutes old, so a thousand, to watch it come due."
+at = "#plan-interval"
+
+[[step]]
+do = "click"
+selector = "#plan-submit"
+
+[[step]]
+do = "wait_for"
+js = "/PM-FORK1-VENTS created on FORK1_Mold/.test(document.querySelector('#toast').textContent) && [...document.querySelectorAll('#plans-table tbody tr')].some((r) => r.textContent.includes('PM-FORK1-VENTS'))"
+
+[[step]]
+do = "say"
+line = "The mould has made more than a thousand forks already, so the bar is full: due. Nobody typed that count."
+at = "#plans-table tbody tr:has-text(\"PM-FORK1-VENTS\") td:nth-child(4)"
+
+[[step]]
+do = "mark"
+name = "a-plan-on-use"
+
+[[step]]
+do = "say"
+line = "A second plan, the calendar's kind: check the safety guard every seven days."
+at = "#plan-form"
+
+[[step]]
+do = "fill"
+selector = "#plan-code"
+text = "PM-FORK1-GUARD"
+
+[[step]]
+do = "fill"
+selector = "#plan-name"
+text = "Check the safety guard"
+
+[[step]]
+do = "choose"
+selector = "#plan-machine"
+value = "FORK1_Mold"
+
+[[step]]
+do = "choose"
+selector = "#plan-trigger"
+value = "calendar_days"
+
+[[step]]
+do = "fill"
+selector = "#plan-interval"
+text = "7"
+
+[[step]]
+do = "click"
+selector = "#plan-submit"
+
+[[step]]
+do = "wait_for"
+js = "/PM-FORK1-GUARD created on FORK1_Mold/.test(document.querySelector('#toast').textContent) && [...document.querySelectorAll('#plans-table tbody tr')].some((r) => r.textContent.includes('PM-FORK1-GUARD'))"
+
+[[step]]
+do = "say"
+line = "Nobody has ever done this one, so it is due now. The MES does not make up a date it was last done."
+at = "#plans-table tbody tr:has-text(\"PM-FORK1-GUARD\") td:nth-child(7)"
+
+[[step]]
+do = "say"
+line = "A plan can also say when its job may be done, at a changeover say. This form cannot set that; a plant's setup files can."
+at = "#plan-form"
+
+# The Due tab: the dispatcher's panels need shifts this plant does not have,
+# so the take goes straight to the plans that have come due.
+[[step]]
+do = "click"
+selector = "button.tab[data-tab=\"due\"]"
+
+[[step]]
+do = "wait_for"
+js = "['PM-FORK1-VENTS', 'PM-FORK1-GUARD'].every((p) => document.querySelector('#due-list').textContent.includes(p)) && document.querySelector('#kpi-due').textContent === '2'"
+
+[[step]]
+do = "wait_for"
+selector = "#due-list"
+text = "PM-FORK1-VENTS"
+scroll_to = "#raise-due"
+scroll_block = "center"
+
+[[step]]
+do = "say"
+line = "Here they are, worst first. Each line says how far past its interval the plan is, in its own units."
+at = "#due-list"
+
+[[step]]
+do = "say"
+line = "The guard's seven days is its interval, not seven days gone by: never serviced, so due."
+at = "#due-list li:has-text(\"PM-FORK1-GUARD\")"
+
+[[step]]
+do = "mark"
+name = "due-on-use"
+
+[[step]]
+do = "click"
+selector = "#raise-due"
+
+[[step]]
+do = "wait_for"
+js = "/Raised 2 job/.test(document.querySelector('#toast').textContent) && document.querySelector('#kpi-open').textContent === '2'"
+
+[[step]]
+do = "say"
+line = "Raise due work turns each due plan into a job, once. Two jobs."
+at = "#toast"
+
+[[step]]
+do = "say"
+line = "Open work: two, both preventive. Something that broke would be corrective, raised by hand."
+at = ".kpi:has(#kpi-open)"
+
+[[step]]
+do = "say"
+line = "And expected downtime: one hour, half an hour a job, to clear the open work. That is what a supervisor weighs before saying tonight."
+at = ".kpi:has(#kpi-downtime)"
+
+[[step]]
+do = "mark"
+name = "what-it-costs"
+
+# The operator, signed in off camera; the header changes as the page loads.
+[[step]]
+do = "sign_in"
+user = "WALK-OP"
+password = "walk-lab-only"
+settle = 2
+
+[[step]]
+do = "wait_for"
+selector = "#user-name"
+text = "Walker: line operator"
+
+[[step]]
+do = "say"
+line = "Now the person at the machine: the line operator. The station screen shows what is owed on this machine."
+at = "#user-name"
+
+# The station the way an operator reaches it: Floor, its Station chip, and
+# the Machine chooser.
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"Floor\")"
+
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"Station\")"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#machine').options.length > 1"
+
+[[step]]
+do = "choose"
+selector = "#machine"
+value = "FORK1_Mold"
+
+[[step]]
+do = "wait_for"
+js = "['PM-00001', 'PM-00002'].every((c) => document.querySelector('#maint').textContent.includes(c))"
+scroll_to = "#maint"
+scroll_block = "center"
+
+[[step]]
+do = "say"
+line = "Class 2.1 showed this card empty, because the plant had no plans. Now the mould owes two jobs."
+at = "#maint"
+
+[[step]]
+do = "mark"
+name = "owed-on-this-machine"
+
+[[step]]
+do = "click"
+selector = "#maint li:has-text(\"PM-00001\") button:text-is(\"Start\")"
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#maint li')].some((li) => li.textContent.includes('PM-00001') && [...li.querySelectorAll('button')].some((b) => b.textContent.startsWith('Complete')))"
+
+[[step]]
+do = "say"
+line = "Start says the job has begun, and who began it. The vents get cleaned."
+at = "#maint li:has-text(\"PM-00001\")"
+
+[[step]]
+do = "click"
+selector = "#maint li:has-text(\"PM-00001\") button:text-is(\"Complete…\")"
+
+[[step]]
+do = "wait_for"
+js = "!document.querySelector('#maint-complete').classList.contains('hidden')"
+
+[[step]]
+do = "fill"
+selector = "#maint-findings"
+text = "vents cleared, two blocked with flash"
+
+[[step]]
+do = "say"
+line = "Complete asks one thing: what was found. Two vents were blocked. The next person to clean them will read that."
+at = "#maint-findings"
+
+[[step]]
+do = "click"
+selector = "#maint-confirm"
+
+[[step]]
+do = "wait_for"
+js = "/PM-00001 complete/.test(document.querySelector('#toast').textContent) && !document.querySelector('#maint').textContent.includes('PM-00001')"
+
+[[step]]
+do = "say"
+line = "Done. One job left on this machine: the guard check."
+at = "#maint"
+
+[[step]]
+do = "mark"
+name = "done-at-the-machine"
+
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"Maintenance\")"
+
+[[step]]
+do = "click"
+selector = "button.tab[data-tab=\"history\"]"
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#history-table tbody tr')].some((r) => r.textContent.includes('PM-00001'))"
+
+[[step]]
+do = "say"
+line = "History keeps the job: what was found, and who did it. Nobody typed the name; it is whoever was signed in."
+at = "#history-table tbody tr:has-text(\"PM-00001\") td:nth-child(8)"
+
+[[step]]
+do = "say"
+line = "Down, in minutes, is the time between Start and Complete. The screen never asked whether the mould actually stopped."
+at = "#history-table tbody tr:has-text(\"PM-00001\") td:nth-child(7)"
+
+[[step]]
+do = "mark"
+name = "who-did-it"
+
+[[step]]
+do = "click"
+selector = "button.tab[data-tab=\"plans\"]"
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#plans-table tbody tr')].some((r) => r.textContent.includes('PM-FORK1-VENTS') && !r.children[6].textContent.includes('never'))"
+
+[[step]]
+do = "say"
+line = "And the plan. Last done: just now. The fork count started again from the job, and the bar is nearly empty."
+at = "#plans-table tbody tr:has-text(\"PM-FORK1-VENTS\") td:nth-child(5)"
+
+[[step]]
+do = "say"
+line = "If the mould stands still, the count stands still too. That is due on use."
+at = "#plans-table tbody tr:has-text(\"PM-FORK1-VENTS\") td:nth-child(4)"
+
+[[step]]
+do = "mark"
+name = "the-count-starts-again"
+
+# --------------------------------------------------------- what it refuses
+
+[[step]]
+part = "refuses"
+do = "click"
+selector = "button.tab[data-tab=\"due\"]"
+
+[[step]]
+do = "wait_for"
+selector = "#due-list"
+text = "PM-FORK1-GUARD"
+scroll_to = "#raise-due"
+scroll_block = "center"
+
+[[step]]
+do = "click"
+selector = "#raise-due"
+
+[[step]]
+do = "wait_for"
+js = "/Nothing new to raise/.test(document.querySelector('#toast').textContent)"
+
+[[step]]
+do = "say"
+line = "Raise again: nothing new. The guard check is still open, and a plan never has two open jobs."
+at = "#toast"
+
+[[step]]
+do = "say"
+line = "So the list never fills with copies of the same job, which is how people learn to ignore it."
+at = "#due-list"
+
+# --------------------------------------------------------- you now know
+
+[[step]]
+part = "know"
+do = "slide"
+name = "you-now-know"
+title = "You now know how to"
+lines = [
+  "Say why a plan that counts what the machine did beats one that counts days.",
+  "Write a plan, raise the work that has come due, and read what it costs the line.",
+  "Do a job from the station screen, and read who did it and where the count starts again.",
+]
+
+[[step]]
+do = "say"
+line = "This was a simulated plant at ten times the clock. The plans and the jobs were made on camera."
+
+[[step]]
+do = "say"
+line = "Count what the machine did, raise the job once, start the count again when it is done. That is due on use."
+
+[[step]]
+do = "mark"
+name = "you-now-know"
+
+[[step]]
+do = "hold"
+seconds = 3

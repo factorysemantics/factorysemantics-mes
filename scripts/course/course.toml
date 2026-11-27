@@ -349,6 +349,13 @@ label = "5.2"
 slug = "maintenance-due-on-use"
 title = "Maintenance — due on use"
 one_line = "Due on cycles and hours, not only dates, and the operator sees what is owed."
+knows_before = ["2.1"]
+outcomes = [
+  "Say why a plan that counts what the machine did beats one that counts days.",
+  "Write a plan, raise the work that has come due, and read what it costs the line.",
+  "Do a job from the station screen, and read who did it and where the count starts again.",
+]
+scene = "scripts/scenes/course/06-02-maintenance-due-on-use.toml"
 
 [[module.lesson]]
 order = 3
