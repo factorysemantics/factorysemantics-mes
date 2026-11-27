@@ -16,6 +16,11 @@ command that names one is refused. A command that fails stops the take.
 A take that is not a lesson may set `gif_seconds`: its GIF is then that many
 seconds from the start, a preview, while the mp4 stays the whole take — for a
 take of minutes, whose GIF would never come in under 10,000,000 bytes.
+`[plant] pallet_certificates_before_roll` lists pallet serials whose first
+certificate of analysis the recorder issues, off camera, once the plant is
+ready and before the camera rolls, by the plant's own `POST /coa/pallet/{serial}`
+as the scene's user; no screen issues a pallet's first certificate, and the
+folder's README says it was done.
 
 Each `[[step]]` has a `do`:
 

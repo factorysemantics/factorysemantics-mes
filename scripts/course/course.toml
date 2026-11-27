@@ -314,6 +314,13 @@ label = "4.5"
 slug = "the-certificate-of-analysis"
 title = "COA — the certificate of analysis"
 one_line = "The readings that judged a lot, against the spec, signed; a correction is a new certificate."
+knows_before = ["4.1", "4.3"]
+outcomes = [
+  "Read a certificate of analysis: what it covers, each reading against its spec, and who issued it.",
+  "Say why a certificate is never edited, and reissue one so the new revision supersedes the old.",
+  "Tell when a certificate withholds a capability figure, and why.",
+]
+scene = "scripts/scenes/course/05-05-the-certificate-of-analysis.toml"
 
 # ------------------------------------------------------------------ tier 5
 [[module]]
