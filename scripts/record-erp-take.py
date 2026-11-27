@@ -45,6 +45,19 @@ _spec.loader.exec_module(rs)
 
 WRITE_WORDS = ("save", "submit", "cancel", "insert", "delete", "set_value", "set_", "rename",
                "amend", "update", "make_", "create")
+# The desk's own stylesheet keeps a scrollbar's width free down the right
+# (`html { scrollbar-gutter: stable }`), which narrows the box a fixed badge is
+# placed in: the badge would sit 15 px left of where the recorder looks for it.
+# Set at document start, where the overlay is drawn, so the first paints have
+# it too, as a sheet adopted by the document: the desk takes out a <style> added
+# to the page, and resets <html>'s own style attribute.
+HIDE_SCROLLBAR = """
+(() => {
+  const sheet = new CSSStyleSheet();
+  sheet.replaceSync("html { scrollbar-gutter: auto !important; }");
+  document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+})();
+"""
 # The two POSTs a person's sign-in and the desk's own bookkeeping make, which
 # change no business record: the session itself, and "who looked at what".
 HOUSEKEEPING = ("login", "frappe.desk.form.utils.add_comment_seen", "frappe.desk.form.load.getdoc",
@@ -106,6 +119,10 @@ def record(scene: dict, out: Path, run_fsmes=None) -> dict:
         version = erpnext_version(context, base)
         badge = scene["badge"].format(version=version, plant="ERPNext")
         context.add_init_script(rs.overlay_script(badge, bool(scene["captions"])))
+        # The desk keeps a vertical scrollbar, which narrows the window a fixed
+        # badge is placed in by its width: the badge would sit 15 px left of
+        # where the recorder looks for it. Hidden, so it sits where every take's does.
+        context.add_init_script(HIDE_SCROLLBAR)
         presses: list[tuple[int, int]] = []
         rs.listen_for_presses(context, presses)
         slides: dict[str, str] = {}
