@@ -54,15 +54,19 @@
       </div>
       <div id="u-pager" class="pager"></div>
 
-      <h3 class="mt">Add someone</h3>
-      <form id="form-user" class="stack" data-assist="user-form">
+      <!-- Each box says whose it is, and the form has a name, the way the
+           routing form's do (#309): the boxes were placeholders only, and a
+           walker filling the routing below typed its name in here (card
+           routing-to-cost-centers, 2026-11-27). -->
+      <h3 class="mt" id="user-form-title">Add someone</h3>
+      <form id="form-user" class="stack" aria-labelledby="user-form-title" data-assist="user-form">
         <div class="row">
-          <input name="code" placeholder="Code (e.g. JSMITH)" required data-assist="user-new-code">
-          <input name="name" placeholder="Full name" required data-assist="user-new-name">
+          <input name="code" placeholder="Code (e.g. JSMITH)" aria-label="New person's code" required data-assist="user-new-code">
+          <input name="name" placeholder="Full name" aria-label="New person's full name" required data-assist="user-new-name">
         </div>
         <div class="row">
-          <input name="password" type="text" placeholder="Initial password" required data-assist="user-new-password">
-          <select name="role" id="new-user-role" aria-label="Role" data-assist="user-new-role"></select>
+          <input name="password" type="text" placeholder="Initial password" aria-label="New person's initial password" required data-assist="user-new-password">
+          <select name="role" id="new-user-role" aria-label="New person's role" data-assist="user-new-role"></select>
           <button data-assist="user-new-create">Create</button>
         </div>
       </form>
@@ -76,12 +80,12 @@
       <div id="roles" class="role-list" data-assist="role-list"></div>
 
       <h3 class="mt" id="role-form-title">Define a role</h3>
-      <form id="form-role" class="stack" data-assist="role-form">
+      <form id="form-role" class="stack" aria-labelledby="role-form-title" data-assist="role-form">
         <div class="row">
-          <input name="code" placeholder="Code (e.g. line_lead)" required data-assist="role-new-code">
-          <input name="name" placeholder="Display name" required data-assist="role-new-name">
+          <input name="code" placeholder="Code (e.g. line_lead)" aria-label="Role code" required data-assist="role-new-code">
+          <input name="name" placeholder="Display name" aria-label="Role display name" required data-assist="role-new-name">
         </div>
-        <input name="description" placeholder="What this role is for" data-assist="role-new-description">
+        <input name="description" placeholder="What this role is for" aria-label="What this role is for" data-assist="role-new-description">
         <fieldset class="caps">
           <legend class="muted small">Capabilities</legend>
           <div id="cap-checks" class="cap-grid" data-assist="cap-checks"></div>
