@@ -457,16 +457,26 @@
        (the link follows the screen at once), then with the total when the
        list answers. A reply to filters the screen has moved on from - the
        From box's fetch landing after the To box's - is not this link's any
-       more, and is ignored: the file is always the range in the boxes. */
+       more, and is ignored: the file is always the range in the boxes.
+       Asked again for the filters it has already counted - a screen's
+       timer refreshing what it shows - it keeps that count rather than
+       going back to none until the reply: Quality refreshes every five
+       seconds, and its button's name lost its number each time (a test
+       caught it mid-refresh on #310, 2026-11-26). */
     let asked = null;
+    let counted = null;
     return function update(params, total) {
       if (!link) return;
       const p = new URLSearchParams(params || {});
       p.delete("limit");
       p.delete("offset");
       const query = p.toString();
-      if (total === undefined) asked = query;
-      else if (asked !== null && asked !== query) return;
+      if (total === undefined) {
+        asked = query;
+        if (query === counted) return;
+        counted = null;
+      } else if (asked !== null && asked !== query) return;
+      else counted = query;
       link.href = `${path}${query ? `?${query}` : ""}`;
       const n = total === undefined || total === null ? null : Number(total).toLocaleString();
       link.title = n === null ? `Download these ${noun} as a spreadsheet`
