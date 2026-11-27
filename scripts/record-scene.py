@@ -510,6 +510,24 @@ def hold_for_words(line: str) -> float:
     return max(HOLD_FLOOR_SECONDS, round(words / WORDS_PER_SECOND + HOLD_PADDING_SECONDS, 1))
 
 
+#: `{today}`, `{today+2}`, `{today-1}` in a `fill`'s text: a date counted from
+#: the day the take is filmed, written as a date field takes it (YYYY-MM-DD).
+#: A due date typed on camera has to be a day that is still ahead when the
+#: camera rolls, and a scene file written on one day is filmed on another.
+DAYS_FROM_TODAY = re.compile(r"\{today(?:([+-])(\d+))?\}")
+
+
+def days_from_today(text: str, today: datetime.date | None = None) -> str:
+    """The text with every `{today±N}` turned into that day's date, from the day it is filmed."""
+    today = today or datetime.date.today()
+
+    def day(found: re.Match) -> str:
+        sign, count = found.group(1), int(found.group(2) or 0)
+        return (today + datetime.timedelta(days=-count if sign == "-" else count)).isoformat()
+
+    return DAYS_FROM_TODAY.sub(day, text)
+
+
 def script_lines(scene: dict) -> list[str]:
     """The overlay lines, in order. This is the script file's whole content."""
     return [step["line"] for step in scene["step"] if step["do"] == "say"]
@@ -569,7 +587,7 @@ def play(scene: dict, stage) -> None:
         elif verb == "click":
             stage.click(step["selector"])
         elif verb == "fill":
-            stage.fill(step["selector"], step["text"])
+            stage.fill(step["selector"], days_from_today(step["text"]))
         elif verb == "choose":
             stage.choose(step["selector"], step["value"])
         elif verb == "wait_for":
@@ -1032,7 +1050,12 @@ class BrowserStage:
         pointed = self.point_at(field)
         typing = time.monotonic()
         field.fill("")
-        if text:
+        if text and (field.get_attribute("type") or "").lower() == "date":
+            # A date field is three boxes in the browser's own order, so keys
+            # typed into it land by locale; it is given the date whole, as a
+            # person picking it from the calendar gets it.
+            field.fill(text)
+        elif text:
             # Rounded up: a delay of 84 ms, not 85 truncated to 84 and then some.
             field.press_sequentially(text, delay=math.ceil(self.type_delay * 1000))
         typed = round(time.monotonic() - typing, 2)
