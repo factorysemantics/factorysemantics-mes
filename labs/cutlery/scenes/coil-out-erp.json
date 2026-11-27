@@ -3,7 +3,7 @@
  "extends": "coil-out.json",
  "name": "coil-out-erp",
  "masterdata_left_out": {
-  "_why": "ERPNext drops WO-FORK1-0001. With the pack's own row in the copy the import would find an order of that code already running and change nothing, and the film would show an ERP order the MES never took. WO-FORK1-0002 goes too: it is planned on FORK1LINE at priority 10, and the floor would put it on the line ahead of the ERP's order. The floor's planner continues FORK1's book from the ERP order instead, as it does for every line.",
+  "_why": "ERPNext drops a FORK1 order, erp.work_order below. Both of the pack's FORK1 orders go from the copy. One carries the code the ERP's order may have: with that row in the copy, the import would find an order of the same code already there and change nothing, and the film would show an ERP order the MES never took. The other is planned on FORK1LINE at priority 10, and the floor would put it on the line ahead of the ERP's order. The floor's planner continues FORK1's book from the ERP order instead, as it does for every line.",
   "work_orders.json": [
    "WO-FORK1-0001",
    "WO-FORK1-0002"
@@ -14,7 +14,8 @@
   "company": "Cutlery Works",
   "abbr": "CW",
   "currency": "USD",
-  "work_order": "WO-FORK1-0001",
+  "work_order": "WO-FORK1-0002",
+  "_work_order": "The number ERPNext gives the order under the series below: the next one free. On a fresh site that is WO-FORK1-0001. On the box this was filmed on it is 0002. A first run there was cancelled, so its film could be retaken, and ERPNext keeps a cancelled order's number spent. The seed refuses to go on if ERPNext gives any other number.",
   "naming_series": "WO-FORK1-.####",
   "item": "UT-FORK",
   "item_name": "Fork (PP)",

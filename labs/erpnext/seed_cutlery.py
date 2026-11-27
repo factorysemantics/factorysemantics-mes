@@ -19,7 +19,8 @@ nothing and a run after a partial failure finishes the job):
   scene's prices; that is what puts "$140" on the band in ERPNext;
 * a BOM for the fork that uses the scene's grams of resin a fork;
 * the work order, submitted, under the series that gives it the scene's
-  number (`WO-FORK1-.####` -> WO-FORK1-0001). The series is added to the
+  number (`WO-FORK1-.####` -> the next free number, which the scene's ids
+  name; the seed stops if ERPNext gives another). The series is added to the
   Work Order's naming options with a Property Setter, the way a person does
   it in Customize Form; the bottling demo's series stays the default.
 
