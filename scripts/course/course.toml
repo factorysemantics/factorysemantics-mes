@@ -300,6 +300,13 @@ label = "4.4"
 slug = "gauges-and-calibration"
 title = "Gauges and calibration"
 one_line = "A reading is only as good as the instrument; a failed calibration lists the readings it touched."
+knows_before = ["4.1"]
+outcomes = [
+  "Say what a gauge, a calibration and the rule of ten are, and read a gauge's due date in the register.",
+  "Find which gauge took a reading, and read a gauge study that says whether the gauge or the people are the problem.",
+  "Record a failed calibration, read the readings it puts in doubt, and say what the MES leaves to a person.",
+]
+scene = "scripts/scenes/course/05-04-gauges-and-calibration.toml"
 
 [[module.lesson]]
 order = 5

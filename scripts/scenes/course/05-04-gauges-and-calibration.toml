@@ -1,0 +1,496 @@
+# Class 4.4 of the course, *Gauges and calibration*: which gauge took a
+# reading, how a plant knows the gauge was right, and what the MES does when it
+# was not.
+#
+# It starts from a card of words (no drawing): a caliper reads a knife in spec,
+# but the caliper was dropped last week. The idea card names the four words of
+# the class: gauge, calibration, the rule of ten and gauge study. Then the
+# product, signed in as the cutlery pack's lab quality engineer (a supervisor):
+# Quality > Gauges, the register of three gauges, what caliper CAL-12 measured
+# and whether it reads fine enough for the knife's tolerance; Quality's
+# inspection history, where every reading names its gauge or says "not
+# recorded"; Quality > Gauge studies, the optional module, where one study
+# says the gauge is the problem and another says the people are; and back on
+# Gauges, CAL-12 found out of tolerance, taken out of service, and the hundred
+# readings it touched listed. Then what it refuses: a reading naming a gauge
+# the register does not have. Filmed on a scratch cutlery plant, every screen
+# as the product draws it.
+#
+# The cutlery pack's shift registers no gauge and runs no study, so the
+# recorder runs `fsmes sim-gage-study labs/cutlery/gage_studies.json all`
+# against the take's own plant before the camera rolls (`[plant] before_roll`).
+#
+# Beats changed from the outline (reports/learning-platform-2026-11-14 §4.4),
+# where the product differs: the ratio card says ten to one, with four as the
+# floor, because that is what this plant's settings say; and a failed
+# calibration lists the readings it touched but reopens no non-conformance and
+# flags no reading by itself, so the film says that instead of showing it.
+
+name = "gauges-and-calibration"
+title = "Gauges and calibration"
+lesson = "4.4"
+take_is = "lesson"
+part = "hook"
+base = "http://127.0.0.1:8040"
+badge = "pre-alpha · simulated plant · v{version}"
+# The pack's lab quality engineer, in the Supervisor role: it may record a
+# calibration. A lab account, not a person; the sign-in page is never filmed.
+user = "WALK-QE"
+password = "walk-lab-only"
+# Four and a half to six minutes, as the handoff asks.
+budget_seconds = 360
+gif_skip_seconds = 2.0
+width = 1280
+height = 720
+# Recording the failed calibration is a write, and it is the story.
+allow_writes = true
+what_is_written = "which is how the class fails one calibration: Record on Quality > Gauges is a real `POST` to the take's own scratch plant, made with the screen's own form, and it takes caliper CAL-12 out of service under the lab account signed in. The reading naming gauge CAL-99 is sent with the Floor's own form and refused, so it writes nothing. Before the camera rolled, `fsmes sim-gage-study` wrote the three gauges, their calibrations, three gauge studies and a hundred knife readings taken with CAL-12 to the same scratch plant."
+
+notes = [
+  "The plant was started from the cutlery pack at ten times wall clock. Before the camera rolled the recorder ran `fsmes sim-gage-study labs/cutlery/gage_studies.json all` against it, off camera. That registered three gauges (CAL-12, a digital caliper; DEP-03, a depth gauge; MIC-07, a micrometer), recorded a passing calibration for each thirty days back by \"metrology lab\", ran one gauge study on each (ten parts, three appraisers called Ana, Ben and Cleo, three trials), and recorded a hundred knife bolster readings taken with CAL-12. The appraisers are invented names in the pack's study file, not people.",
+  "The pack's own floor simulation records its readings under its own name, FLOOR-SIM, and names no gauge, so its rows in the inspection history say \"not recorded\". The hundred CAL-12 readings were recorded by the simulator as ADMIN, with no order.",
+  "The class signs in as WALK-QE, \"Walker: quality engineer\", the cutlery pack's seeded lab account in the Supervisor role. It holds `quality.close_nc`, which recording a calibration needs; an operator's Gauges page draws the calibration panel with no form in it. The class says so; it does not film it, to keep what it refuses under twenty-five seconds.",
+  "The rule of ten: this plant calls a gauge adequate at ten to one against the tolerance and refuses to call it usable under four to one (`gauge_ratio_adequate` and its floor, both plant settings). The outline's \"4:1\" is that floor.",
+  "Gauge studies are an optional module of the MES; the class says so.",
+  "The failed calibration is entered as \"fail as found\", performed by \"metrology lab\", on today's date. The MES takes CAL-12 out of service and lists every reading taken with it since its last good calibration, a hundred, with a note that each should be judged again. It does not reopen a non-conformance, change a reading or flag one by itself. The class says so.",
+  "After the failure the Out of service tile reads 1, but the Out of calibration tile still reads 0 and \"every gauge is in calibration\": the register's verdict counts only overdue gauges, and a gauge found out of tolerance today has today's date. That is a gap in the product, written up for the people who fix it; the class films it as drawn and says so.",
+  "The status pill reads OUT OF_SERVICE, with an underscore, as the product draws it.",
+  "A reading naming a gauge the register does not have is refused (`no gauge CAL-99`). A reading naming a gauge that is overdue or out of service is not refused, by design: it is kept and named, and the gauge's list of what it measured is what bounds it. The class says so.",
+  "At any speed but 1x every 2D page carries the product's REPLAY 10× banner across its top. It is filmed as the product draws it.",
+  "The opening beat is a plain card with words on it. There is no artwork of a caliper or a knife.",
+]
+
+honesty = [
+  "the plant is a scratch simulated plant, replaying a recorded line at ten times wall clock, which is the banner across the top of the 2D pages",
+  "the gauges, their calibrations, the three studies and the readings taken with CAL-12 were written by the simulator before the camera rolled; the class says so",
+  "a failed calibration lists the readings it touched but reopens no non-conformance and changes no reading by itself; the class says so",
+  "the Out of calibration tile still says every gauge is in calibration after one is taken out of service; filmed as drawn, and said",
+  "an operator's missing calibration form is said, not filmed",
+]
+
+[plant]
+pack = "labs/cutlery"
+speed = 10
+roll_when_timeout_seconds = 600
+# The pack's shift registers no gauge and runs no study: these do, off camera.
+before_roll = [["sim-gage-study", "labs/cutlery/gage_studies.json", "all"]]
+
+# ----------------------------------------------------------------- the hook
+
+[[step]]
+do = "slide"
+name = "is-the-caliper-right"
+title = "Is the caliper right?"
+lines = [
+  "A caliper reads a knife: 12.06 mm, in spec",
+  "The caliper was dropped last week",
+  "Is 12.06 the knife, or the caliper?",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "A caliper reads a knife at twelve point oh six millimetres. In spec, so the knife ships."
+
+[[step]]
+do = "say"
+line = "But that caliper was dropped last week. Is the reading the knife, or the caliper?"
+
+[[step]]
+do = "say"
+line = "This class: which gauge took a reading, how a plant knows it was right, and what the MES does when it was not."
+
+[[step]]
+do = "mark"
+name = "is-the-caliper-right"
+
+# ----------------------------------------------------------------- the idea
+
+[[step]]
+part = "idea"
+do = "slide"
+name = "the-words"
+title = "The words"
+lines = [
+  "Gauge: the instrument that took a reading",
+  "Calibration: checked against a standard, by a due date",
+  "Rule of ten: it reads ten times finer than the tolerance",
+  "Gauge study: is the spread the gauge, or the people?",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Four words. A gauge is the instrument that took a reading: a caliper, a micrometer, a depth gauge."
+
+[[step]]
+do = "say"
+line = "Calibration is checking a gauge against a standard you trust, by the date it falls due. Found out of tolerance means it failed that check."
+
+[[step]]
+do = "say"
+line = "The rule of ten: a gauge should read ten times finer than the tolerance it judges. This plant calls ten to one adequate, and under four to one not usable at all."
+
+[[step]]
+do = "say"
+line = "A gauge study measures the same parts several times, by several people, and splits the spread into the gauge and the people. Gauge studies are an optional module of this MES."
+
+[[step]]
+do = "mark"
+name = "the-words"
+
+# ------------------------------------------------------------ on the screen
+
+[[step]]
+part = "screen"
+do = "goto"
+url = "/dashboard/gauges"
+settle = 2
+
+[[step]]
+do = "wait_for"
+js = "const r = window.__fsmesPageData || {}; return (r.gauges || []).length === 3 && r.gauges.every(g => g.status === 'in_service') && document.querySelectorAll('#gauges-table tbody tr').length === 3;"
+scroll_to = "#gauges-table"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "Quality, Gauges: the gauge register. Every instrument this plant measures with. Three here."
+at = "#gauges-table"
+
+[[step]]
+do = "say"
+line = "Each one has the day it was last calibrated, and the day it falls due."
+at = "#gauges-table tbody tr:has-text(\"CAL-12\") td:nth-child(6)"
+
+[[step]]
+do = "wait_for"
+selector = "#kpi-overdue"
+text = "0"
+scroll_to = "#kpi-overdue"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "A gauge past its due date, or never calibrated at all, counts here, out of calibration. None today."
+at = "#kpi-overdue"
+
+[[step]]
+do = "mark"
+name = "the-register"
+
+[[step]]
+do = "click"
+selector = "#gauges-table tbody tr:has-text(\"CAL-12\")"
+
+[[step]]
+do = "wait_for"
+selector = "#impact"
+text = "100 measurement"
+scroll_to = "#impact"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "Click a gauge, and the MES lists what it measured since its last calibration: a hundred knife readings, taken with caliper CAL-12."
+at = "#impact"
+
+[[step]]
+do = "fill"
+selector = "#res-tolerance"
+text = "1"
+
+[[step]]
+do = "click"
+selector = "#res-check"
+
+[[step]]
+do = "wait_for"
+selector = "#res-verdict"
+text = "adequate"
+
+[[step]]
+do = "say"
+line = "Is it fine enough? The knife's tolerance is one millimetre, and the caliper reads to a thousandth: a thousand to one, adequate by the rule of ten."
+at = "#res-verdict"
+
+[[step]]
+do = "mark"
+name = "what-a-gauge-measured"
+
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"Quality\")"
+
+[[step]]
+do = "wait_for"
+selector = "#checks"
+text = "CAL-12"
+
+[[step]]
+do = "choose"
+selector = "#h-material"
+value = "UT-KNIFE"
+
+[[step]]
+do = "wait_for"
+js = "const rows = [...document.querySelectorAll('#checks tbody tr')]; return rows.length > 0 && rows.every(r => r.textContent.includes('UT-KNIFE')) && rows.some(r => r.textContent.includes('CAL-12')) && rows.some(r => r.textContent.includes('not recorded'));"
+timeout = 120
+scroll_to = "#checks"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "Quality, the inspection history, knives only. Each reading says which gauge took it. This one: CAL-12."
+at = "#checks tbody tr:has-text(\"CAL-12\") td:nth-child(7)"
+
+[[step]]
+do = "say"
+line = "The simulated floor names no gauge, so its readings say not recorded. The MES does not guess one."
+at = "#checks tbody tr:has-text(\"not recorded\") td:nth-child(7)"
+
+[[step]]
+do = "say"
+line = "Class four point one recorded readings at the station. The station and the Floor form both ask for the gauge now."
+at = "#checks tbody tr:has-text(\"CAL-12\")"
+
+[[step]]
+do = "mark"
+name = "which-gauge-took-it"
+
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"Gauge studies\")"
+
+[[step]]
+do = "click"
+selector = "#studies-table tbody tr:has(td:text-is(\"GS-WORN-MIC\"))"
+
+[[step]]
+do = "wait_for"
+js = "return document.querySelector('#study-title').textContent.includes('GS-WORN-MIC') && /not acceptable/i.test(document.querySelector('#study-verdict').textContent) && document.querySelectorAll('#studies-table tbody tr').length === 3;"
+scroll_to = "#studies-table"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "Gauge studies, the optional module. Three studies: ten parts, three people, three times each."
+at = "#studies-table"
+
+[[step]]
+do = "wait_for"
+selector = "#study-verdict"
+text = "repeatability"
+scroll_to = "#study-verdict"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "Micrometer MIC-07: over thirty percent of the tolerance, not acceptable. The same person on the same part gets a different reading. The gauge is the problem."
+at = "#study-verdict"
+
+[[step]]
+do = "say"
+line = "Repeatability is the gauge. Reproducibility, the people, is nothing here."
+at = "#components-table tbody tr:has(td:text-is(\"Repeatability — the gauge\"))"
+
+[[step]]
+do = "mark"
+name = "the-gauge-is-the-problem"
+
+[[step]]
+do = "click"
+selector = "#studies-table tbody tr:has(td:text-is(\"GS-ONE-READER\"))"
+scroll_to = "#studies-table"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "wait_for"
+js = "return document.querySelector('#study-title').textContent.includes('GS-ONE-READER') && /reproducibility/i.test(document.querySelector('#study-verdict').textContent);"
+scroll_to = "#study-verdict"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "Depth gauge DEP-03: not acceptable either, but this time it is reproducibility. One of the three reads high. The people, not the gauge."
+at = "#study-verdict"
+
+[[step]]
+do = "say"
+line = "So the fix is how people use it, not a new gauge."
+at = "#components-table tbody tr:has(td:text-is(\"Reproducibility — the people\"))"
+
+[[step]]
+do = "mark"
+name = "the-people-are-the-problem"
+
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"Gauges\")"
+
+[[step]]
+do = "wait_for"
+js = "const r = window.__fsmesPageData || {}; return (r.gauges || []).length === 3 && document.querySelector('#cal-gauge').options.length === 3;"
+scroll_to = "#cal-form"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "Back on Gauges. The caliper from the start, CAL-12, has been to the metrology lab, and failed: found out of tolerance."
+at = "#cal-form"
+
+[[step]]
+do = "choose"
+selector = "#cal-gauge"
+value = "CAL-12"
+
+[[step]]
+do = "choose"
+selector = "#cal-result"
+value = "fail_as_found"
+
+[[step]]
+do = "fill"
+selector = "#cal-by"
+text = "metrology lab"
+
+[[step]]
+do = "click"
+selector = "#cal-submit"
+
+[[step]]
+do = "wait_for"
+js = "const box = document.querySelector('#cal-result-box'); return !box.classList.contains('hidden') && /now out of.service/.test(document.querySelector('#cal-result-text').textContent) && /^100 suspect/.test(document.querySelector('#cal-suspect li.alarm').textContent);"
+scroll_to = "#cal-result-box"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "Recorded. CAL-12 is now out of service: off the floor."
+at = "#cal-result-text"
+
+[[step]]
+do = "say"
+line = "And the MES lists what it touched: a hundred readings since its last good calibration, every one to be judged again."
+at = "#cal-suspect li.alarm"
+
+[[step]]
+do = "say"
+line = "It lists them. It does not reopen a non-conformance or change a reading by itself: that is a person's job, with this list in hand."
+at = "#cal-suspect li.alarm"
+
+[[step]]
+do = "mark"
+name = "found-out-of-tolerance"
+
+[[step]]
+do = "wait_for"
+selector = "#kpi-oos"
+text = "1"
+scroll_to = "#kpi-oos"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "The register counts one gauge out of service now."
+at = "#kpi-oos"
+
+[[step]]
+do = "say"
+line = "But the tile beside it still says every gauge is in calibration: on this build it counts only gauges past their due date. A gap, written up."
+at = "#kpi-verdict"
+
+[[step]]
+do = "mark"
+name = "the-tile-that-does-not-count-it"
+
+# -------------------------------------------------------------- it refuses
+
+[[step]]
+part = "refuses"
+do = "click"
+selector = "header nav a:text-is(\"Floor\")"
+
+[[step]]
+do = "wait_for"
+js = "return [...document.querySelectorAll('#form-quality select[name=spec] option')].some(o => o.value === 'UT-KNIFE::bolster_width_mm') && !!document.querySelector('#gauge-options option');"
+
+[[step]]
+do = "choose"
+selector = "#form-quality select[name=spec]"
+value = "UT-KNIFE::bolster_width_mm"
+scroll_to = "#form-quality"
+scroll_block = "center"
+
+[[step]]
+do = "fill"
+selector = "#form-quality input[name=value]"
+text = "12.06"
+
+[[step]]
+do = "fill"
+selector = "#form-quality input[name=gauge]"
+text = "CAL-99"
+
+[[step]]
+do = "click"
+selector = "#form-quality button"
+
+[[step]]
+do = "wait_for"
+selector = "#toast"
+text = "no gauge CAL-99"
+
+[[step]]
+do = "say"
+line = "A reading naming a gauge the register does not have is refused."
+at = "#toast"
+
+[[step]]
+do = "say"
+line = "One overdue or out of service is not: it is kept, and named. And an operator gets no calibration form."
+at = "#form-quality input[name=gauge]"
+
+[[step]]
+do = "mark"
+name = "no-such-gauge"
+
+# ------------------------------------------------------------ you now know
+
+[[step]]
+part = "know"
+do = "slide"
+name = "you-now-know"
+title = "You now know how to"
+lines = [
+  "Say what a gauge, a calibration and the rule of ten are, and read a gauge's due date in the register.",
+  "Find which gauge took a reading, and read a gauge study that says whether the gauge or the people are the problem.",
+  "Record a failed calibration, read the readings it puts in doubt, and say what the MES leaves to a person.",
+]
+
+[[step]]
+do = "say"
+line = "This was a simulated plant at ten times the clock. Its gauges and studies were written in before the camera rolled."
+
+[[step]]
+do = "say"
+line = "That is gauges and calibration: a reading names its gauge, and a failed gauge lists what it touched. You now know how to do three things."
+
+[[step]]
+do = "mark"
+name = "you-now-know"
+
+[[step]]
+do = "hold"
+seconds = 3
