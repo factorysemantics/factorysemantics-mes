@@ -1,0 +1,428 @@
+# Class 2.3 of the course, *Lots, genealogy and trace*: what went into this
+# pallet, and where that bad resin went.
+#
+# Class 2.1 issued resin to the fork order at the station; this class reads
+# what that kind of issue leaves behind. A supplier's recall letter names a
+# resin lot. The class opens one pallet on the Trace screen, reads what is
+# packed inside it and which lots went into it, then clicks the resin lot and
+# reads the same record the other way: the order that drew on it and every
+# package that carries it. It ends on what Trace refuses: a lot it has no
+# record of is answered "no lot", not guessed. Filmed on a scratch cutlery
+# plant, every screen as the product draws it.
+
+name = "lots-genealogy-and-trace"
+title = "Lots, genealogy and trace"
+lesson = "2.3"
+take_is = "lesson"
+part = "hook"
+base = "http://127.0.0.1:8040"
+badge = "pre-alpha · simulated plant · v{version}"
+# Four and a half to six minutes, as the outline says this class runs.
+budget_seconds = 360
+gif_skip_seconds = 2.0
+width = 1280
+height = 720
+
+notes = [
+  "The plant was started from the cutlery pack at ten times wall clock, and the camera rolled once the first palletizer's order had booked two pallets: the first count it makes is starved of wraps, so the first pallet with a serial, PL1-000000001, is made on the second. That is about three minutes of wall clock.",
+  "The class writes nothing. Every lot, order and serial on the screen is the simulated plant's own: the pack books its nine resin lots and sixteen paper-plate lots in at seed and issues each to its line's first order.",
+  "The outline's refusal was \"a lot never issued is not inferred into a product\". Every lot on a fresh cutlery plant is issued at seed, so there is no booked-but-unissued lot to show without writing one. The class shows the nearest thing the product does: a lot code it has no record of is answered \"no lot\", and nothing is guessed.",
+  "What went into the pallet is drawn with the basis \"via the order's consumption\": a fork carries the resin lot because the fork order drew on it, not because each fork's resin was recorded. The class reads that column aloud.",
+  "The first two stacks on the pallet hold no pieces: the simulated stacker made them before any fork, spoon or knife reached it. So the pallet holds 240 stacks and fewer forks. The class says so over the tree.",
+  "The fork order's \"Lots it made\" reads \"none yet\": forks are made as serials, not lots, so the trail goes on by package. The palletizer's order draws on no lot at all.",
+  "The class is clicked through, as a person would go. Trace is opened by address in the hook and once more straight after the card that reads it both ways, and the Floor once, straight after a card, because a card is the recorder's own page and has no menu. Everything else is reached by Quality, the Trace tab, the search box and the links on the screen.",
+  "Every line said over the screen has a box round the thing it is about, with a few words on a tab where words help. Rows and cells of a table are boxed without a tab.",
+  "Figures that grow while the plant runs (units carrying the lot, packages to hold) are pointed at, never said: they are different in every take.",
+  "At any speed but 1x every 2D page carries the product's REPLAY 10× banner across its top. It is filmed as the product draws it.",
+  "The opening beat is a plain card with words on it. There is no artwork of a letter, a pallet or a person.",
+]
+
+honesty = [
+  "the plant is a scratch plant a few minutes old, replaying at ten times wall clock; every lot and serial is the simulation's own",
+  "a piece carries a lot because its order drew on that lot, which the screen says as \"via the order's consumption\"; the MES did not see resin go into each fork",
+  "the first two stacks on the pallet are empty, made before any pieces reached the stacker, so the pallet holds fewer forks than stacks",
+  "every lot on a fresh cutlery plant is issued at seed, so the class cannot show a booked lot that was never issued; it shows a lot code the MES has no record of, refused",
+  "the class reads Trace and presses nothing that writes; holding the pallet is pointed at, not done",
+]
+
+[plant]
+pack = "labs/cutlery"
+speed = 10
+roll_when_timeout_seconds = 900
+
+# The first pallet with a serial is made on the palletizer's second count.
+[[plant.roll_when_order]]
+code = "WO-PAL1-0001"
+booked = 2
+
+# ----------------------------------------------------------------- the hook
+
+[[step]]
+do = "slide"
+name = "recall-letter"
+title = "A letter from the resin supplier"
+lines = [
+  "Resin lot LOT-PP-FORK1-001 may be contaminated",
+  "Hold everything made from it",
+  "Which pallets is it in?",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "A letter from the resin supplier: lot LOT-PP-FORK1-001 may be bad. Hold everything made from it. Which pallets is that?"
+
+[[step]]
+do = "mark"
+name = "recall-letter"
+
+[[step]]
+do = "goto"
+url = "/dashboard/trace"
+settle = 2
+
+[[step]]
+do = "say"
+line = "One screen answers it, both ways round: Trace."
+at = "#find"
+label = "Look up"
+
+[[step]]
+do = "mark"
+name = "one-screen"
+
+# ----------------------------------------------------------------- the idea
+
+[[step]]
+part = "idea"
+do = "slide"
+name = "three-words"
+title = "Three words"
+lines = [
+  "Lot: one delivery or batch of a material, with a code of its own",
+  "Genealogy: what is inside a thing, down to the lots it was made from",
+  "Where-used: the same record read the other way, from a lot up",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "A lot is one delivery or batch of a material, booked in with a code of its own: one load of resin, one load of paper plates."
+
+[[step]]
+do = "say"
+line = "Genealogy is a thing's family tree: what is packed inside it, and which lots those were made from."
+
+[[step]]
+do = "say"
+line = "Where-used reads the same record the other way: start from a lot, and find everything that carries it."
+
+[[step]]
+do = "mark"
+name = "three-words"
+
+[[step]]
+do = "slide"
+name = "how-a-lot-gets-in"
+title = "How a lot gets into a pallet"
+lines = [
+  "The resin lot is issued to the fork order",
+  "Each piece gets a serial: a number of its own",
+  "Fork into stack, stack into wrap, wrap onto pallet",
+  "Each step is written down",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "In class 2.1 we issued resin to the fork order at the mould. That is how a lot gets in."
+
+[[step]]
+do = "say"
+line = "From there every piece has a serial, a number of its own. Forks go into stacks, stacks into wraps, wraps onto a pallet, and each step is written down."
+
+[[step]]
+do = "mark"
+name = "how-a-lot-gets-in"
+
+# ------------------------------------------------------------ on the screen
+
+# A card is the recorder's own page and has no menu, so the camera comes back
+# from the cards to the Floor by address; everything after is reached by menus,
+# the search box and the links on the screen.
+[[step]]
+part = "screen"
+do = "goto"
+url = "/dashboard"
+settle = 2
+
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"Quality\")"
+
+[[step]]
+do = "click"
+selector = ".subnav a:text-is(\"Trace\")"
+
+[[step]]
+do = "fill"
+selector = "#q"
+text = "PL1-000000001"
+
+[[step]]
+do = "click"
+selector = "#find-submit"
+
+[[step]]
+do = "wait_for"
+selector = "#s-serial"
+text = "PL1-000000001"
+
+[[step]]
+do = "say"
+line = "Quality, Trace. Start from one pallet: its serial is the number on its label."
+at = "#s-serial"
+label = "The pallet"
+
+[[step]]
+do = "say"
+line = "A pallet, made by the first palletizer's order, status good. This is a simulated plant, so the pallet is the simulation's own."
+at = "#serial-panels .object-facts"
+
+[[step]]
+do = "mark"
+name = "the-pallet"
+
+[[step]]
+do = "wait_for"
+selector = "#s-count"
+text = "inside"
+scroll_to = "#s-count"
+scroll_block = "start"
+scroll_offset = 215
+
+[[step]]
+do = "say"
+line = "Contains: every unit inside it, counted by material. Wraps, stacks, plates, forks, spoons and knives."
+at = "#s-count"
+
+[[step]]
+do = "say"
+line = "That is genealogy, drawn as a tree. This wrap holds a paper plate and a stack, and the stack holds a fork, a knife and a spoon."
+at = "#s-tree li:has(> div.node > a:text-is(\"W01-000000003\"))"
+
+[[step]]
+do = "say"
+line = "The first stacks hold nothing: the simulated stacker made them before any pieces reached it. So this pallet has fewer forks than stacks."
+at = "#s-tree li:has(> div.node > a:text-is(\"ST01-000000001\"))"
+label = "Empty stack"
+
+[[step]]
+do = "mark"
+name = "the-tree"
+
+[[step]]
+do = "wait_for"
+selector = "#s-components-count"
+text = "lot(s)"
+scroll_to = "#s-components-count"
+scroll_block = "start"
+scroll_offset = 215
+
+[[step]]
+do = "say"
+line = "What went into it: the lots. Paper plates at the top, then the resin, one lot for each mould."
+at = "#s-components-count"
+label = "The lots"
+
+[[step]]
+do = "say"
+line = "The paper plates came from four lots, one for each wrapper that made this pallet's wraps."
+at = "#s-components a:text-is(\"LOT-PLATE-WRAP01-001\")"
+
+[[step]]
+do = "say"
+line = "And there is the lot from the letter. So yes: this pallet carries it."
+at = "#s-components a:text-is(\"LOT-PP-FORK1-001\")"
+
+[[step]]
+do = "say"
+line = "Read how it knows: via the order's consumption. The fork order drew on that lot, so each of its forks is counted. Nobody recorded resin going into each fork."
+at = "#s-components tbody tr:has(a:text-is(\"LOT-PP-FORK1-001\")) td:nth-child(4)"
+
+[[step]]
+do = "mark"
+name = "what-went-in"
+
+[[step]]
+do = "click"
+selector = "#s-components a:text-is(\"LOT-PP-FORK1-001\")"
+
+[[step]]
+do = "wait_for"
+selector = "#l-verdict"
+text = "carry LOT-PP-FORK1-001"
+
+[[step]]
+do = "say"
+line = "Now the other way round. One click on the lot, and the same screen answers where-used."
+at = "#l-lot"
+label = "The lot"
+
+[[step]]
+do = "say"
+line = "Its answer in one line: how many units carry the lot, in how many packages, and the orders that drew on it. The plant is still running, so these grow."
+at = "#l-verdict"
+
+[[step]]
+do = "mark"
+name = "where-used"
+
+[[step]]
+do = "say"
+line = "One order drew on it: the fork order, at the fork mould, operation 10, and how much it drew."
+at = "#l-orders tbody tr:nth-child(1)"
+
+[[step]]
+do = "say"
+line = "Lots it made: none yet. Forks are made as serials, not as lots, so the trail goes on by package."
+at = "#l-orders tbody tr:nth-child(1) td:nth-child(6)"
+
+[[step]]
+do = "mark"
+name = "the-order"
+
+[[step]]
+do = "wait_for"
+selector = "#l-packages-count"
+text = "package(s)"
+scroll_to = "#l-packages-count"
+scroll_block = "start"
+scroll_offset = 215
+
+[[step]]
+do = "say"
+line = "And the answer to the letter: every package carrying the lot, the ones a warehouse can be asked to pull."
+at = "#l-packages-count"
+label = "To hold"
+
+[[step]]
+do = "say"
+line = "The pallets come first, ours among them. Stacks and wraps not yet on a pallet follow."
+at = "#l-table tbody tr:nth-child(1) td:nth-child(1)"
+
+[[step]]
+do = "say"
+line = "A stack the line scrapped still carries the lot, and is still listed, marked scrapped. Nothing is left out of the count."
+at = "#l-table td:text-is(\"scrapped\")"
+
+[[step]]
+do = "mark"
+name = "packages-to-hold"
+
+[[step]]
+do = "click"
+selector = "#l-table a:text-is(\"PL1-000000001\")"
+
+[[step]]
+do = "wait_for"
+selector = "#s-serial"
+text = "PL1-000000001"
+
+[[step]]
+do = "say"
+line = "Back on the pallet, a person allowed to can quarantine it, and everything inside, with a reason. We only point at it here."
+at = "#serial-panels [data-assist=\"trace-status\"]"
+label = "Hold it"
+
+[[step]]
+do = "mark"
+name = "hold-it"
+
+[[step]]
+do = "slide"
+name = "both-ways"
+title = "One record, read both ways"
+lines = [
+  "Back: pallet, wrap, stack, fork, and the resin lot the fork order drew on",
+  "Forward: resin lot, the order that drew on it, and every package carrying it",
+  "The letter's answer is the forward list: the pallets, and the stacks and wraps not yet on one",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Back from the pallet, you reach the lots. Forward from a lot, you reach the pallets. It is one record, read both ways."
+
+[[step]]
+do = "say"
+line = "And the letter is answered: hold those pallets, and the stacks and wraps not yet on one."
+
+[[step]]
+do = "mark"
+name = "both-ways"
+
+# -------------------------------------------------------------- it refuses
+
+[[step]]
+part = "refuses"
+do = "goto"
+url = "/dashboard/trace"
+settle = 2
+
+[[step]]
+do = "fill"
+selector = "#q"
+text = "LOT-PP-FORK1-002"
+
+[[step]]
+do = "click"
+selector = "#find-submit"
+
+[[step]]
+do = "wait_for"
+selector = "#banner"
+text = "no lot"
+
+[[step]]
+do = "say"
+line = "No lot: never booked in here. The MES does not guess where it went."
+at = "#banner"
+
+[[step]]
+do = "say"
+line = "Like the Floor in class 1.2: no record, no answer."
+at = "#banner"
+
+[[step]]
+do = "mark"
+name = "refused-no-lot"
+
+[[step]]
+do = "hold"
+seconds = 1
+
+# ------------------------------------------------------------ you now know
+
+[[step]]
+part = "know"
+do = "slide"
+name = "you-now-know"
+title = "You now know how to"
+lines = [
+  "Say what a lot, genealogy and where-used are, and how a lot of resin gets into a pallet.",
+  "Trace a pallet back to the lots that went into it, and say how the MES knows.",
+  "Trace a lot forward to the orders and packages that carry it, and say what Trace refuses.",
+]
+
+[[step]]
+do = "say"
+line = "One record, read both ways. You now know how to do three things."
+
+[[step]]
+do = "mark"
+name = "you-now-know"
+
+[[step]]
+do = "hold"
+seconds = 3

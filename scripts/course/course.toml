@@ -176,6 +176,12 @@ label = "2.3"
 slug = "lots-genealogy-and-trace"
 title = "Lots, genealogy and trace"
 one_line = "What went into this pallet, and where that bad resin went."
+outcomes = [
+  "Say what a lot, genealogy and where-used are, and how a lot of resin gets into a pallet.",
+  "Trace a pallet back to the lots that went into it, and say how the MES knows.",
+  "Trace a lot forward to the orders and packages that carry it, and say what Trace refuses.",
+]
+scene = "scripts/scenes/course/03-03-lots-genealogy-and-trace.toml"
 
 [[module.lesson]]
 order = 4
