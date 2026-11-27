@@ -1568,6 +1568,15 @@ class Floor:
                 log.warning("inspection refused", status=exc.response.status_code,
                             detail=exc.response.text[:160])
 
+    async def _machines_down(self) -> set[str]:
+        """The machines the MES says are down now; none when it cannot say."""
+        try:
+            states = await self.get("/equipment/states")
+        except httpx.HTTPError as exc:
+            log.warning("could not read the machine states", error=str(exc)[:160])
+            return set()
+        return {row["equipment"] for row in states if row.get("state") == breakdown.DOWN}
+
     async def _reading_of(self, equipment: str, tag: str) -> float | None:
         """The newest value of one named tag on one machine, or `None`.
 
@@ -1615,6 +1624,16 @@ class Floor:
                          characteristic=rule.characteristic, spec=spec is not None,
                          open_orders_on_its_machines=len(candidates))
             return False
+        if rule.follows is not None:
+            # A mould that is down makes nothing, so no piece comes off it -
+            # without this a stopped, cold mould would go on drawing short
+            # forks onto the chart all through its repair. Only for a rule
+            # that follows a tag, which is a scene's: the everyday floor
+            # makes no extra request.
+            down = await self._machines_down()
+            candidates = [c for c in candidates if c[1] not in down]
+            if not candidates:
+                return False
         order, station = self.rng.choice(sorted(candidates))
         reading = None
         if rule.follows is not None:

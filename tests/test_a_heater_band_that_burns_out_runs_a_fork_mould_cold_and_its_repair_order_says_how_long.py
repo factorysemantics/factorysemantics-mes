@@ -393,6 +393,35 @@ def test_a_floor_with_no_breakdowns_makes_no_request_for_one():
     assert calls == []
 
 
+def test_no_fork_is_measured_off_a_mould_that_is_down(plant):
+    """It makes nothing while it is down, so nothing comes off it to measure."""
+    machine = plant.scalar(select(Equipment).where(Equipment.code == MOULD))
+    reading = TagValue(equipment_id=machine.id, tag=f"{MOULD}.MeltTemp", value_num=199.0)
+    reading.ts = _now()
+    plant.add(reading)
+    equipment.set_state(plant, equipment_code=MOULD, state=EquipmentStateName.DOWN)
+    plant.commit()
+    script = scene_floor()
+    script["pieces"]["rules"] = [dict(r, stations=[MOULD]) for r in script["pieces"]["rules"]
+                                 if r["characteristic"] == "length_mm"]
+    app = create_app()
+
+    async def _run():
+        client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://plant")
+        async with client:
+            floor = Floor(get_settings(), client, random.Random(7), script)
+            await floor.sign_in(SUPERVISOR, SUPERVISOR_PASSWORD)
+            specs = await floor.every("/quality/specs")
+            orders = (await floor.get("/workorders", status=["released", "running"],
+                                      limit=500))["items"]
+            assert not await floor.inspect_a_piece(floor.pieces[0], specs, orders)
+            equipment.set_state(plant, equipment_code=MOULD, state=EquipmentStateName.RUNNING)
+            plant.commit()
+            assert await floor.inspect_a_piece(floor.pieces[0], specs, orders)
+
+    asyncio.run(_run())
+
+
 def test_a_down_mould_with_no_melt_reading_raises_nothing():
     """Unknown is not cold: a stop nobody can read the melt of is nobody's breakdown."""
     rule = breakdown.breakdowns(the_scene())[0]
