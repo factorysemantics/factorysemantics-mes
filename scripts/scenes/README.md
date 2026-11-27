@@ -8,6 +8,11 @@ Top of the file: `name` (names every file), `title`, `base`, `budget_seconds`,
 `allow_writes` (loopback only), `[plant]` (a scratch plant of the take's own),
 and `type_delay_seconds` — seconds between typed keys, 0.085 by default
 (about twelve a second), never under 0.05.
+`[plant] before_roll` is a list of `fsmes` commands, each the words after
+`fsmes`, run against the scratch plant after it is up and before the camera
+rolls — work people do off the line that the pack's shift never does. Only
+`sim-gage-study` may run; the recorder adds the plant's own `--base`, and a
+command that names one is refused. A command that fails stops the take.
 A take that is not a lesson may set `gif_seconds`: its GIF is then that many
 seconds from the start, a preview, while the mp4 stays the whole take — for a
 take of minutes, whose GIF would never come in under 10,000,000 bytes.

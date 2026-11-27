@@ -70,6 +70,9 @@ Two things a scene may say to get out of that, and only together:
     or `[plant.roll_when_watched]`, a machine the MES has watched for enough of a
     window that its OEE is no longer withheld — because a wait inside a scene is
     filmed, and a clip has forty-five seconds.
+    `[plant] before_roll` gives the plant, off camera, work people do off the
+    line that its simulated shift never does — a gauge study — as `fsmes`
+    commands from a short list, run against the take's own plant and no other.
   * `allow_writes` — let the page write. Some stories *are* writes: a hold is
     taken under review by somebody deciding to, and a clip of quality work
     with nothing written in it is a tour. This is honoured only when `base` is
@@ -209,6 +212,16 @@ TERMINAL_BACKGROUND = "#101418"
 READ_ONLY_COMMANDS = (("oee", "explain"),)
 #: How long a terminal card's command may take before the take is called off.
 COMMAND_TIMEOUT_SECONDS = 60.0
+
+# What a scratch plant may be given before the camera rolls: `[plant]
+# before_roll`, each the words after `fsmes`. Work people do off the line on a
+# day of their own choosing - a gauge study, say - that the simulated shift
+# never does and a take cannot wait for. Only commands that write to the plant
+# named by `--base` (which the recorder adds, and which is always the take's own
+# scratch plant), and only these; the list grows by review, as the cards' does.
+BEFORE_ROLL_COMMANDS = (("sim-gage-study",),)
+#: How long one of them may take before the take is called off.
+BEFORE_ROLL_TIMEOUT_SECONDS = 300.0
 
 # What the GIF may weigh and how it is made smaller until it does. GitHub
 # renders an image up to 10 MB and refuses to animate one over it, and that is
@@ -1700,6 +1713,11 @@ def readme(scene: dict, facts: dict) -> str:
             f" **{plant['speed']}x** the line's clock, and stopped and deleted when the take ended."
             " Nothing in the checkout and no plant anybody else started was touched.",
         ]
+        for words in plant.get("before_roll") or []:
+            lines += [
+                f"- **before the camera started**: `fsmes {' '.join(words)}` was run against the"
+                " plant, off camera; what it wrote is described under *Worth knowing* below",
+            ]
         if plant.get("roll_when_chart"):
             lines += [
                 f"- **when the camera started**: it waited, off camera, for"
@@ -2397,6 +2415,21 @@ def plant_defaults(spec: dict) -> dict:
     if sum(1 for wanted in (spec["roll_when_chart"], spec["roll_when_order"], watched) if wanted) > 1:
         raise SystemExit("[plant]: a take rolls on one thing — a chart, an order, or a machine watched — "
                          "not on more than one")
+    before = spec.setdefault("before_roll", [])
+    if not isinstance(before, list):
+        raise SystemExit("[plant]: `before_roll` is a list of commands, each the words after `fsmes`")
+    for words in before:
+        if not isinstance(words, list) or not words or not all(isinstance(w, str) for w in words):
+            raise SystemExit("[plant]: each `before_roll` command is the words after `fsmes`, as a list of strings")
+        if not any(tuple(words[:len(allowed)]) == allowed for allowed in BEFORE_ROLL_COMMANDS):
+            raise SystemExit(
+                f"[plant]: `fsmes {' '.join(words)}` is not a command a take may run before it rolls — only "
+                + ", ".join(f"`fsmes {' '.join(allowed)}`" for allowed in BEFORE_ROLL_COMMANDS)
+            )
+        if any(w == "--base" or w.startswith("--base=") for w in words):
+            # The plant is the take's own, always: a scene that named one could
+            # name somebody else's.
+            raise SystemExit("[plant]: a `before_roll` command names no `--base`; the recorder adds its own plant's")
     if not isinstance(spec["env"], dict):
         raise SystemExit("[plant]: `env` is a table of NAME = \"value\"")
     for key, value in spec["env"].items():
@@ -2487,6 +2520,26 @@ class ScratchPlant:
             [sys.executable, "-m", "fsmes", *words],
             cwd=str(REPO), env=self.env, capture_output=True, text=True, encoding="utf-8", check=False,
         )
+
+    def before_roll(self, words: list[str], base: str) -> str:
+        """Run one of BEFORE_ROLL_COMMANDS against this plant, before the camera rolls.
+
+        `--base` is this plant's own address, added here; a command that fails
+        stops the take, because a take of a plant half given what its scene
+        asked for is not a take of that scene.
+        """
+        try:
+            made = subprocess.run(
+                [sys.executable, "-m", "fsmes", *words, "--base", base],
+                cwd=str(REPO), env=self.env, capture_output=True, text=True, encoding="utf-8",
+                check=False, timeout=BEFORE_ROLL_TIMEOUT_SECONDS,
+            )
+        except subprocess.TimeoutExpired:
+            raise SystemExit(f"`fsmes {' '.join(words)}` took longer than {BEFORE_ROLL_TIMEOUT_SECONDS:.0f}s") from None
+        if made.returncode != 0:
+            raise SystemExit(f"`fsmes {' '.join(words)}` failed before the take rolled:\n{made.stdout}\n{made.stderr}")
+        print(made.stdout.rstrip(), flush=True)
+        return made.stdout
 
     def run_fsmes(self, words: list[str]) -> str:
         """Run one read-only `fsmes` command against this plant's own database, and return its output.
@@ -3107,6 +3160,9 @@ def take(scene: dict, args, out: Path, final: Path, name: str, course, module, l
                 )
             scratch = start_a_scratch_plant(plant_spec)
             wait_for_the_plant(scene["base"].rstrip("/"))
+            for words in plant_spec["before_roll"]:
+                print(f"== before the camera rolls: fsmes {' '.join(words)}", flush=True)
+                scratch.before_roll(words, scene["base"].rstrip("/"))
             if plant_spec["roll_when_order"]:
                 print("== waiting for the orders to reach the state this scene opens on", flush=True)
                 wait_for_the_orders(scene["base"].rstrip("/"), plant_spec,
