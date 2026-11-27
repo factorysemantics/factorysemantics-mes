@@ -335,6 +335,13 @@ label = "5.1"
 slug = "scheduling"
 title = "Scheduling — the board and what the plan promises"
 one_line = "Which order runs where and when, against when the plant works and what the floor has done."
+knows_before = ["1.4"]
+outcomes = [
+  "Read the schedule board: each machine, time across, an order's steps one after another.",
+  "Say what a promise is, and why it rests on the shifts in the calendar.",
+  "Plan an order, add a shift, and say what the plan does not do by itself.",
+]
+scene = "scripts/scenes/course/06-01-scheduling.toml"
 
 [[module.lesson]]
 order = 2
