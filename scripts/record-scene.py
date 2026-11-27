@@ -79,6 +79,14 @@ Two things a scene may say to get out of that, and only together:
     a loopback address and refused everywhere else, before the browser opens,
     because the lab fleet and the public demo answer on this box too.
 
+  `[plant] pallet_certificates_before_roll` is a list of pallet serials whose
+  certificate of analysis is issued, off camera, once the plant has reached
+  the state the scene opens on and before the camera rolls: a POST to the
+  plant's own `/coa/pallet/{serial}`, signed in as the scene's own user, which
+  is what a supervisor's tool does. A pallet's first certificate is issued only
+  when somebody asks, and no screen asks; a class about the certificate needs
+  one to open. Only with `[plant]`, so only on the take's own scratch plant.
+
 Three things on screen are this file's and not the product's — four, when a
 scene starts its own plant — and the README of every folder it writes says so:
 
@@ -1759,6 +1767,12 @@ def readme(scene: dict, facts: dict) -> str:
             ]
         for key, value in sorted((plant.get("env") or {}).items()):
             lines += [f"- **the simulated floor was told** `{key}={value}` — see *Worth knowing* below"]
+        for serial in plant.get("pallet_certificates_before_roll") or []:
+            lines += [
+                f"- **before the camera started**: the certificate of pallet `{serial}` was issued, off"
+                f" camera, through the plant's own API as `{scene.get('user') or 'the scene user'}` —"
+                " no screen issues a pallet's first certificate",
+            ]
     lines += [
         "",
         "Everything else is the plant's own screens, read live, and every figure on them is the"
@@ -2446,7 +2460,43 @@ def plant_defaults(spec: dict) -> dict:
             )
         if not isinstance(value, str):
             raise SystemExit(f"[plant]: `env` values are strings, as an environment's are — {key} is not")
+    pallets = spec.setdefault("pallet_certificates_before_roll", [])
+    if not isinstance(pallets, list) or not all(isinstance(p, str) and p.strip() for p in pallets):
+        raise SystemExit("[plant]: `pallet_certificates_before_roll` is a list of pallet serials, "
+                         "e.g. [\"PL1-000000001\"]")
+    if any("/" in p or "?" in p or "#" in p for p in pallets):
+        raise SystemExit("[plant]: a pallet serial in `pallet_certificates_before_roll` is a serial, not a path")
     return spec
+
+
+def issue_pallet_certificates(base: str, serials: list[str], user: str, password: str) -> list[dict]:
+    """Issue each pallet's certificate on the take's own plant, before the camera rolls.
+
+    The same request a supervisor's tool sends, `POST /coa/pallet/{serial}`,
+    signed in as the scene's own user, so the plant's own permission check
+    decides: a user without the right to issue is refused and the take stops,
+    rather than being filmed opening a certificate nobody could have issued.
+    A pallet the plant has not made is refused the same way.
+    """
+    reader = a_signed_in_reader(base, user, password)
+    issued = []
+    for serial in serials:
+        asked = urllib.request.Request(
+            f"{base}/coa/pallet/{urllib.parse.quote(serial)}", data=b"", method="POST")
+        try:
+            with reader.open(asked, timeout=60) as answer:
+                done = json.load(answer)
+        except urllib.error.HTTPError as refused:
+            raise SystemExit(
+                f"the plant refused to issue pallet {serial}'s certificate before the take rolled: "
+                f"{refused.code} {refused.read().decode('utf-8', 'replace')[:200]}"
+            ) from None
+        except (OSError, urllib.error.URLError, ValueError) as failed:
+            raise SystemExit(
+                f"could not issue pallet {serial}'s certificate before the take rolled: {failed}") from None
+        print(f"  issued {done.get('document')} revision {done.get('issued_revision')}", flush=True)
+        issued.append(done)
+    return issued
 
 
 def ports_of_pack(pack: Path) -> dict[int, str]:
@@ -3175,6 +3225,10 @@ def take(scene: dict, args, out: Path, final: Path, name: str, course, module, l
                 print("== waiting for the MES to have watched the machine this scene opens on", flush=True)
                 wait_for_the_watching(scene["base"].rstrip("/"), plant_spec,
                                       scene["user"], scene["password"])
+            if plant_spec["pallet_certificates_before_roll"]:
+                print("== before the camera rolls: issuing the pallet certificates this scene opens", flush=True)
+                issue_pallet_certificates(scene["base"].rstrip("/"), plant_spec["pallet_certificates_before_roll"],
+                                          scene["user"], scene["password"])
 
         made = record(scene, out, scratch.run_fsmes if scratch is not None else None)
     finally:
