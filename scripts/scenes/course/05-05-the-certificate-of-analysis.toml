@@ -9,7 +9,7 @@
 # Certificates, the certificates in force, one issued by itself as each order
 # completed; the fork order's certificate read top to bottom (the product,
 # what went in, every characteristic against its specification, the
-# non-conformances, what the moulding machine held); a pallet's certificate,
+# non-conformances, what each station held); a pallet's certificate,
 # with the capability of every dimension and the window its checks come
 # from; Print; and Reissue, which issues a second revision that supersedes the
 # first and keeps it. Then what it refuses: a certificate with no edit button,
@@ -40,8 +40,8 @@ allow_writes = true
 what_is_written = "which is how the class reissues one pallet's certificate: Reissue is a real `POST` to the take's own scratch plant, made with the Certificates screen's own button, and it issues revision 2, which supersedes revision 1 and keeps it."
 
 notes = [
-  "The plant was started from the cutlery pack at ten times wall clock. The camera waited, off camera, until the first fork order, WO-FORK1-0001, had completed and made its lot, and the first palletizer's second order, WO-PAL1-0002, had booked six pallets. The simulated shift supervisor, FLOOR-SUP, completes an order when its line has made the number, and the MES issues that order's certificate the moment it completes.",
-  "A pallet's certificate is issued only when somebody asks for it, and no screen asks: Certificates opens one that exists and reissues it, and has no button for a pallet's first. So before the camera rolled, the recorder issued two pallets' certificates through the plant's own API, `POST /coa/pallet/{serial}`, signed in as WALK-SUP, as a supervisor's tool would: PL1-000000001, the first pallet, made before there were enough checks for a capability figure, and PL1-000000013, made after. The class says so on camera.",
+  "The plant was started from the cutlery pack at ten times wall clock. The camera waited, off camera, until the first fork order, WO-FORK1-0001, had completed and made its lot, and the first palletizer's third order, WO-PAL1-0003, had booked its first pallet, so PL1-000000015 had closed. The simulated shift supervisor, FLOOR-SUP, completes an order when its line has made the number, and the MES issues that order's certificate the moment it completes.",
+  "A pallet's certificate is issued only when somebody asks for it, and no screen asks: Certificates opens one that exists and reissues it, and has no button for a pallet's first. So before the camera rolled, the recorder issued two pallets' certificates through the plant's own API, `POST /coa/pallet/{serial}`, signed in as WALK-SUP, as a supervisor's tool would: PL1-000000001, the first pallet, made before there were enough checks for a capability figure, and PL1-000000015, made after. The class says so on camera.",
   "The class signs in as WALK-SUP, \"Walker: shift supervisor\", the cutlery pack's seeded lab account in the Supervisor role, which holds `quality.close_nc`, the right the Reissue button asks for. It is a lab account, not a person.",
   "The fork order's certificate lists every characteristic the simulated floor checked against its specification, with how many checks, the lowest, the mean, the highest and how many failed. The figures are the simulation's own and differ in every take; the class points at them and does not read them out.",
   "A pallet's capability is worked out from the dimensional checks on record up to the pallet's close: a pallet is made in minutes and a check is taken every few, so the record reaches back to the twelve most recent, this plant's `[quality] spc_min_points`, and the certificate prints the time it reaches back to. Fewer than twelve, and the Cpk cell says how many there were and how many it needs, instead of a number.",
@@ -65,17 +65,18 @@ honesty = [
 pack = "labs/cutlery"
 speed = 10
 roll_when_timeout_seconds = 1800
-pallet_certificates_before_roll = ["PL1-000000001", "PL1-000000013"]
+pallet_certificates_before_roll = ["PL1-000000001", "PL1-000000015"]
 
 # The fork order has completed, so its certificate was issued by itself.
 [[plant.roll_when_order]]
 code = "WO-FORK1-0001"
 completed = true
 
-# Enough pallets made that PL1-000000013 exists, after twelve checks.
+# The first palletizer's third order has booked its first pallet, so
+# PL1-000000015, the second order's last, has closed, after twelve checks.
 [[plant.roll_when_order]]
-code = "WO-PAL1-0002"
-booked = 6
+code = "WO-PAL1-0003"
+booked = 1
 
 # ----------------------------------------------------------------- the hook
 
@@ -238,8 +239,13 @@ at = "#cert-body h3:text-is(\"Non-conformances\") + *"
 
 [[step]]
 do = "say"
-line = "And what the moulding machine held while the order ran: the lowest, mean and highest of its own signal."
+line = "And what each station held while the order ran: the lowest, mean and highest of its own signal."
 at = "#cert-body h3:has-text(\"Process\") + table"
+
+[[step]]
+do = "say"
+line = "Each fork carries its own serial, so the sheet lists them, and the stack each one was packed into."
+at = "#cert-body h3:text-is(\"Serialised units\")"
 
 [[step]]
 do = "say"
@@ -254,7 +260,7 @@ name = "where-every-figure-comes-from"
 [[step]]
 do = "fill"
 selector = "#q"
-text = "PL1-000000013"
+text = "PL1-000000015"
 
 [[step]]
 do = "click"
@@ -262,7 +268,7 @@ selector = "#find-submit"
 
 [[step]]
 do = "wait_for"
-js = "document.querySelector('#cert-code').textContent.startsWith('COA-PALLET-PL1-000000013') && !!document.querySelector('#cert-body h3')"
+js = "document.querySelector('#cert-code').textContent.startsWith('COA-PALLET-PL1-000000015') && !!document.querySelector('#cert-body h3')"
 scroll_to = "#cert-panel"
 scroll_block = "start"
 scroll_offset = 300

@@ -173,8 +173,8 @@ def test_the_pallets_it_opens_are_the_ones_issued_before_the_camera_rolled_and_t
     issued = scene["plant"]["pallet_certificates_before_roll"]
     searched = [s["text"] for s in scene["step"] if s["do"] == "fill" and s["selector"] == "#q"]
 
-    assert issued == ["PL1-000000001", "PL1-000000013"]
-    assert searched == ["PL1-000000013", "PL1-000000002", "PL1-000000001"]
+    assert issued == ["PL1-000000001", "PL1-000000015"]
+    assert searched == ["PL1-000000015", "PL1-000000002", "PL1-000000001"]
     assert "PL1-000000002" not in issued
 
 
