@@ -1,0 +1,482 @@
+# Class 3.4 of the course, *The shift rollup — from floor data to one page*:
+# one shift of the fork line summed onto the Analysis page — what ran, what
+# stopped, what was made — and how much of the shift the MES saw.
+#
+# It starts from a card of words (the shift-change huddle: how did it go?).
+# The idea card names a shift, the rollup, the state timeline and coverage.
+# Then the product as it is: the Analysis page's Shift picker is greyed, and
+# says in its own words that this plant has no shift patterns, so nothing can
+# be windowed by shift. The plant's administrator opens Orders > Schedule >
+# Calendar and adds two shifts with the page's own form — Day, six to six, and
+# Night, six to six, on the plant's own working week. Then the shift
+# supervisor reads this shift: the picker now offers it, the foot of the page
+# names it and how much of it has run, the banner says how much the MES has
+# watched, the tiles say what was made and how long it stopped, each machine's
+# row says what share it watched, the state timeline draws every machine's
+# states along the clock, the pareto and the production chart. Then what it
+# will not do: last night's shift, which the MES never watched, is not called
+# a quiet night of downtime — and the tiles that still print zero are read
+# aloud as unknown. Filmed on a scratch cutlery plant, every screen as the
+# product draws it.
+
+name = "the-shift-rollup"
+title = "The shift rollup — from floor data to one page"
+lesson = "3.4"
+take_is = "lesson"
+part = "hook"
+base = "http://127.0.0.1:8040"
+badge = "pre-alpha · simulated plant · v{version}"
+# Four and a half to six minutes, as the handoff asks, clicked through the
+# menus all the way.
+budget_seconds = 390
+gif_skip_seconds = 2.0
+width = 1280
+height = 720
+# Adding the two shifts is a write, and it is the turn of the story.
+allow_writes = true
+what_is_written = "which is how the class gives the plant its shifts: each Add shift is a real `POST` to the take's own scratch plant, made with the Schedule page's own form while signed in as the pack's lab administrator. Nothing else is written; the Line and Shift lists on Analysis are filters in the browser."
+
+notes = [
+  "The plant was started from the cutlery pack at ten times wall clock, and the recorder started it with `fsmes fleet start --speed 10`, which puts MES_SIM_SPEED=10 into the API's environment, so the replay bar at the top of every page says so.",
+  "The camera waited, off camera, until the MES had watched the fork mould, FORK1_Mold, for at least 99 % of the last fifteen minutes, so that the shift the class reads has a quarter of an hour of the line in it.",
+  "The cutlery pack has no shift patterns (no shifts.json), so on this plant the Analysis page's Shift picker is greyed and says why. The class adds two on the scratch plant with the Schedule page's own form: DAY, Day shift, 06:00 to 18:00, and NIGHT, Night shift, 18:00 to 06:00 the next day. The days box is left as the page fills it, from the plant's own working week (Monday to Friday, 1111100). The pack on disk is not touched, and the scratch plant is thrown away after the take.",
+  "Defining the calendar is the administrator's (`scheduling.plan`), so the shifts are added as the pack's lab administrator. The rollup is then read as WALK-SUP, \"Walker: shift supervisor\", one of the pack's seeded lab accounts, not a person. The recorder's `sign_in` step changes who is signed in off camera.",
+  "The time boxes on the Schedule form are the browser's own and read in twelve-hour time, cut short by the box: six in the evening shows as 06:00 with its PM out of sight. The table above the form says 18:00:00 once the shift is added, and the caption says the hours in words.",
+  "The take has to run on a weekday, inside one of the two shifts, which on a Monday-to-Friday plant is any hour of a weekday: the picker offers \"this shift\" only when the plant is in one.",
+  "\"Last shift\" is the shift before this one. The plant started a few minutes before the camera rolled, so the MES watched none of it. The page's banner says so, the bars are hatched and OEE reads a dash; the Good, Scrap and Downtime tiles and the pareto still print zero and \"no downtime\". That is a gap in the product, written up for the people who fix it; the class shows it as drawn and says aloud that those zeros are unknown.",
+  "Every stop on a scratch plant is unlabelled: nobody stands at its stations to give a reason. Naming a stop is class 2.2; the three losses on each row are class 3.3.",
+  "The product has no place to write the shift hand-over. The two sentences of the hand-over are said, not typed.",
+  "The class is clicked through as a person would: the only page opened by address is the Floor, the first page after sign-in. Analysis is reached by the Engineering menu, Schedule by the Orders menu.",
+  "The opening beat is a plain card with words on it. There is no artwork of a huddle.",
+]
+
+honesty = [
+  "the plant is a scratch simulated plant, replaying a recorded line at ten times wall clock, started minutes before the take, so the MES has watched only a small share of the shift it reads",
+  "the cutlery pack has no shift patterns; the class adds two on the scratch plant with the product's own form, and they go when the scratch plant goes",
+  "every stop in the take is unlabelled, because nobody stands at a simulated plant's stations to give a reason",
+  "on last night's shift, which the MES never watched, the page still prints zero good, zero scrap and no downtime beside a banner that says it watched none of it: the class says aloud that those zeros are unknown",
+  "the product has no place to write the shift hand-over: its two sentences are said, not filmed being typed",
+]
+
+[plant]
+pack = "labs/cutlery"
+speed = 10
+roll_when_timeout_seconds = 1500
+
+# A quarter of an hour of the line in the shift before it rolls.
+[plant.roll_when_watched]
+equipment = "FORK1_Mold"
+hours = 0.25
+at_least = 0.99
+
+# ----------------------------------------------------------------- the hook
+
+[[step]]
+do = "slide"
+name = "the-huddle"
+title = "Shift change"
+lines = [
+  "One crew goes home, the next one comes in",
+  "\"How did it go?\"",
+  "What ran, what stopped, what was made",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Shift change. One crew goes home, the next one comes in, and somebody asks: how did it go?"
+
+[[step]]
+do = "say"
+line = "What ran, what stopped, what was made. This class puts one shift on one page."
+
+[[step]]
+do = "mark"
+name = "the-huddle"
+
+# ----------------------------------------------------------------- the idea
+
+[[step]]
+part = "idea"
+do = "slide"
+name = "the-words"
+title = "The words"
+lines = [
+  "Shift: a stretch of the clock, one crew",
+  "Rollup: every machine, summed over a window",
+  "State timeline: each machine's states in time",
+  "Coverage: how much of it the MES watched",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "A shift is a stretch of the plant's clock, worked by one crew. It is the unit a plant judges itself by."
+
+[[step]]
+do = "say"
+line = "A rollup is every machine's records, summed over one window. Here the window is a shift."
+
+[[step]]
+do = "say"
+line = "A state timeline draws each machine's states along the clock: running, idle, down, setup."
+
+[[step]]
+do = "say"
+line = "Coverage is how much of the window the MES actually watched. Every figure on the page rests on it."
+
+[[step]]
+do = "mark"
+name = "the-words"
+
+# ------------------------------------------------------------ on the screen
+
+# The Floor is the one page opened by address, the first after signing in.
+[[step]]
+part = "screen"
+do = "goto"
+url = "/dashboard"
+settle = 2
+
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"Engineering\")"
+
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"Analysis\")"
+
+[[step]]
+do = "wait_for"
+js = "!!document.querySelector('#shift') && document.querySelector('#shift').disabled && document.querySelector('#shift-zone').textContent.includes('no shift patterns') && !!document.querySelector('#oee .oee-row')"
+
+[[step]]
+do = "say"
+line = "Engineering, Analysis: the page a supervisor reads at the end of a shift. Line, window, and shift, at the top."
+at = "div.picks"
+
+[[step]]
+do = "say"
+line = "But the Shift list is greyed out. The page says why: this plant has no shift patterns."
+at = "#shift-zone"
+style = "spotlight"
+
+[[step]]
+do = "say"
+line = "Nobody has told the MES when this plant's shifts start and end, so it will not guess them."
+at = "#shift"
+
+[[step]]
+do = "mark"
+name = "no-shifts-yet"
+
+# Schedule by the Orders menu, then its Calendar tab.
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"Orders\")"
+
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"Schedule\")"
+
+[[step]]
+do = "click"
+selector = "button.tab[data-tab=\"calendar\"]"
+
+[[step]]
+do = "wait_for"
+selector = "#calendar-note"
+text = "no shift patterns defined"
+scroll_to = "#shifts-table"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "Orders, Schedule, the Calendar tab. No shifts yet: the plant is treated as running all the time."
+at = "#calendar-note"
+
+[[step]]
+do = "say"
+line = "Shifts are the plant's own calendar, so they are set by the administrator. We are signed in as one."
+at = "#shift-form"
+
+[[step]]
+do = "fill"
+selector = "#shift-code"
+text = "DAY"
+
+[[step]]
+do = "fill"
+selector = "#shift-name"
+text = "Day shift"
+
+[[step]]
+do = "fill"
+selector = "#shift-ends"
+text = "1800"
+
+[[step]]
+do = "say"
+line = "The day shift, from six in the morning to six in the evening. The time boxes read the hours in twelve-hour time."
+at = "#shift-ends"
+
+[[step]]
+do = "say"
+line = "The days box comes filled from the plant's own working week: Monday to Friday."
+at = "#shift-days"
+
+[[step]]
+do = "click"
+selector = "#shift-submit"
+
+[[step]]
+do = "wait_for"
+selector = "#shifts-table tbody"
+text = "DAY Day shift"
+
+[[step]]
+do = "fill"
+selector = "#shift-code"
+text = "NIGHT"
+
+[[step]]
+do = "fill"
+selector = "#shift-name"
+text = "Night shift"
+
+[[step]]
+do = "fill"
+selector = "#shift-starts"
+text = "1800"
+
+[[step]]
+do = "fill"
+selector = "#shift-ends"
+text = "0600AM"
+
+[[step]]
+do = "click"
+selector = "#shift-submit"
+
+[[step]]
+do = "wait_for"
+selector = "#shifts-table tbody"
+text = "NIGHT Night shift"
+scroll_to = "#shifts-table"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "And the night shift, six in the evening to six the next morning. Two shifts, and every hour of a working day is in one."
+at = "#shifts-table"
+
+[[step]]
+do = "mark"
+name = "two-shifts"
+
+# The supervisor reads the rollup.
+[[step]]
+do = "sign_in"
+user = "WALK-SUP"
+password = "walk-lab-only"
+settle = 2
+
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"Engineering\")"
+
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"Analysis\")"
+
+[[step]]
+do = "wait_for"
+js = "!!document.querySelector('#shift') && !document.querySelector('#shift').disabled && !!document.querySelector('#shift option[value=\"current\"]') && document.querySelector('#line').value === 'FORK1LINE' && !!document.querySelector('#oee .oee-row')"
+
+[[step]]
+do = "say"
+line = "Now the shift supervisor, back on Analysis. The Shift list is open, and says which clock it reads: the plant's own."
+at = "#shift-zone"
+
+[[step]]
+do = "choose"
+selector = "#shift"
+value = "current"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#shift').value === 'current' && document.querySelector('#window-note').textContent.includes('so far') && document.querySelector('#hours').disabled && /^\\d/.test(document.querySelector('#kpi-good').textContent)"
+scroll_to = "#window-note"
+scroll_block = "end"
+scroll_offset = 0
+
+[[step]]
+do = "say"
+line = "This shift. The foot of the page names it, when it started, and how much of its twelve hours has run so far."
+at = "#window-note"
+
+[[step]]
+do = "wait_for"
+js = "!document.querySelector('#banner').classList.contains('hidden') && document.querySelector('#banner').textContent.includes('not downtime')"
+scroll_to = "#banner"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "The banner is coverage. This plant started a few minutes ago, so the MES has watched only that much of the shift, and says so first."
+at = "#banner"
+style = "spotlight"
+
+[[step]]
+do = "mark"
+name = "this-shift"
+
+[[step]]
+do = "say"
+line = "The tiles are the rollup. What was made: good forks, and scrap with its share of the output."
+at = "section.kpis .kpi:has(#kpi-good)"
+
+[[step]]
+do = "say"
+line = "What stopped: downtime, and how much of it nobody gave a reason for. Naming a stop was class 2.2."
+at = "section.kpis .kpi:has(#kpi-downtime)"
+
+[[step]]
+do = "wait_for"
+js = "[...document.querySelectorAll('#oee .oee-row')].length === 3 && [...document.querySelectorAll('#oee .watched')].every(w => /Watched \\d+%/.test(w.textContent))"
+scroll_to = "#oee"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "What ran: every machine on the moulding line, with its three losses. Class 3.3 took these bars apart."
+at = "#oee"
+
+[[step]]
+do = "say"
+line = "Under each machine's name, the share of the shift the MES watched. A figure is only as good as the watching under it."
+at = "#oee .oee-row:has(.who:has-text(\"FORK1_Mold\")) .watched"
+
+[[step]]
+do = "mark"
+name = "the-rollup"
+
+[[step]]
+do = "wait_for"
+js = "!!document.querySelector('#timeline svg') && document.querySelector('#timeline').textContent.includes('machines drawn')"
+scroll_to = "#timeline"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "The state timeline. One strip a machine, along the clock. Green is running, red is down."
+at = "#timeline"
+
+[[step]]
+do = "say"
+line = "A stop on the mould starves the machines after it, so on a line a stop walks down the strips."
+at = "section.panel:has(#timeline) h2"
+
+[[step]]
+do = "say"
+line = "Grey hatching is time the MES had lost sight of a machine. That is not the machine standing still."
+at = "section.panel:has(#timeline) p.legend"
+
+[[step]]
+do = "mark"
+name = "the-state-timeline"
+
+[[step]]
+do = "wait_for"
+js = "!!document.querySelector('#pareto') && document.querySelector('#pareto').textContent.includes('unlabelled') && !!document.querySelector('#production svg')"
+scroll_to = "#pareto"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "The downtime pareto ranks the shift's stopped time by reason, the biggest first. Here, every stop is unlabelled."
+at = "#pareto"
+
+[[step]]
+do = "say"
+line = "And production: the good pieces booked in each slice of the shift, with any scrap on top in red."
+at = "#production"
+
+[[step]]
+do = "say"
+line = "That is the page a hand-over is said from: what ran, what stopped, what was made, and how much of it was seen."
+at = "section.kpis"
+
+[[step]]
+do = "say"
+line = "The MES has no box for the hand-over itself. The supervisor says the two sentences, from these figures."
+
+[[step]]
+do = "mark"
+name = "the-hand-over"
+
+# -------------------------------------------------------------- it refuses
+
+[[step]]
+part = "refuses"
+do = "choose"
+selector = "#shift"
+value = "previous"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#shift').value === 'previous' && document.querySelector('#banner').textContent.includes('Showing 0.00 h') && document.querySelector('#window-note').textContent.includes('12 h')"
+scroll_to = "#banner"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "The last shift. The MES was not running then: it watched none of it."
+at = "#banner"
+style = "spotlight"
+
+[[step]]
+do = "say"
+line = "It will not call twelve hours it never saw downtime. Line OEE is a dash."
+at = "section.kpis .kpi:has(#kpi-oee)"
+
+[[step]]
+do = "say"
+line = "The tiles still print zero. Read those zeros as unknown, not a quiet night."
+at = "section.kpis .kpi:has(#kpi-good)"
+
+[[step]]
+do = "mark"
+name = "a-shift-it-never-saw"
+
+# ------------------------------------------------------------ you now know
+
+[[step]]
+part = "know"
+do = "slide"
+name = "you-now-know"
+title = "You now know how to"
+lines = [
+  "Say what a shift is, and why the MES needs the plant's shifts before it will sum one.",
+  "Read one shift on the Analysis page: what ran, what stopped, what was made.",
+  "Find how much of a shift the MES watched, and read an unwatched shift as unknown.",
+]
+
+[[step]]
+do = "say"
+line = "That is the shift rollup: one shift, one page, and the share of it the MES saw. You now know how to do three things."
+
+[[step]]
+do = "mark"
+name = "you-now-know"
+
+[[step]]
+do = "hold"
+seconds = 3
