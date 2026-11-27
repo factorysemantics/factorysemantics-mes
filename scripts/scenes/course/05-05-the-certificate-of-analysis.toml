@@ -1,0 +1,413 @@
+# Class 4.5 of the course, *COA — the certificate of analysis*: the sheet
+# that goes with a pallet to the customer, what is on it, where each number
+# comes from, and why it is never edited.
+#
+# It starts from a card of words (no drawing): a pallet at a customer's dock
+# with one sheet of paper on it. The idea card names the four words of the
+# class: certificate of analysis, lot, capability and immutable. Then the
+# product, signed in as the cutlery plant's lab shift supervisor: Quality >
+# Certificates, the certificates in force, one issued by itself as each order
+# completed; the fork order's certificate read top to bottom (the product,
+# what went in, every characteristic against its specification, the
+# non-conformances, what the moulding machine held); a pallet's certificate,
+# with the capability of every dimension and the window its checks come
+# from; Print; and Reissue, which issues a second revision that supersedes the
+# first and keeps it. Then what it refuses: a certificate with no edit button,
+# a pallet nobody has issued a certificate for, answered "no certificate",
+# and the first pallet's certificate, issued with its capability withheld
+# because there were not yet enough checks. Filmed on a scratch cutlery plant,
+# every screen as the product draws it.
+
+name = "the-certificate-of-analysis"
+title = "COA — the certificate of analysis"
+lesson = "4.5"
+take_is = "lesson"
+part = "hook"
+base = "http://127.0.0.1:8040"
+badge = "pre-alpha · simulated plant · v{version}"
+# The take is signed in as the cutlery pack's lab shift supervisor, who holds
+# the right to reissue a certificate. A lab account, not a person; the
+# product's sign-in page is never filmed.
+user = "WALK-SUP"
+password = "walk-lab-only"
+# Four and a half to six minutes, as the handoff asks.
+budget_seconds = 390
+gif_skip_seconds = 2.0
+width = 1280
+height = 720
+# Reissuing is a write, and the story: a correction is a new revision.
+allow_writes = true
+what_is_written = "which is how the class reissues one pallet's certificate: Reissue is a real `POST` to the take's own scratch plant, made with the Certificates screen's own button, and it issues revision 2, which supersedes revision 1 and keeps it."
+
+notes = [
+  "The plant was started from the cutlery pack at ten times wall clock. The camera waited, off camera, until the first fork order, WO-FORK1-0001, had completed and made its lot, and the first palletizer's second order, WO-PAL1-0002, had booked six pallets. The simulated shift supervisor, FLOOR-SUP, completes an order when its line has made the number, and the MES issues that order's certificate the moment it completes.",
+  "A pallet's certificate is issued only when somebody asks for it, and no screen asks: Certificates opens one that exists and reissues it, and has no button for a pallet's first. So before the camera rolled, the recorder issued two pallets' certificates through the plant's own API, `POST /coa/pallet/{serial}`, signed in as WALK-SUP, as a supervisor's tool would: PL1-000000001, the first pallet, made before there were enough checks for a capability figure, and PL1-000000013, made after. The class says so on camera.",
+  "The class signs in as WALK-SUP, \"Walker: shift supervisor\", the cutlery pack's seeded lab account in the Supervisor role, which holds `quality.close_nc`, the right the Reissue button asks for. It is a lab account, not a person.",
+  "The fork order's certificate lists every characteristic the simulated floor checked against its specification, with how many checks, the lowest, the mean, the highest and how many failed. The figures are the simulation's own and differ in every take; the class points at them and does not read them out.",
+  "A pallet's capability is worked out from the dimensional checks on record up to the pallet's close: a pallet is made in minutes and a check is taken every few, so the record reaches back to the twelve most recent, this plant's `[quality] spc_min_points`, and the certificate prints the time it reaches back to. Fewer than twelve, and the Cpk cell says how many there were and how many it needs, instead of a number.",
+  "Print opens the browser's print dialog, which a recording cannot show; the class points at the button and does not press it. The print stylesheet hides everything on the page but the certificate.",
+  "Reissue reads the records again and issues the next revision. Nothing on a certificate can be typed over, so a correction is a correction of the records and a reissue. The Certificates screen shows only the revision in force; the superseded one is kept, and only the API's `/documents/{code}/revisions` reads it. The class says so.",
+  "The list of certificates in force shows a pallet's certificate with PALLET- in front of its serial, in the Order column. It is filmed as drawn.",
+  "At any speed but 1x every 2D page carries the product's REPLAY 10× banner across its top. It is filmed as the product draws it.",
+  "The class is clicked through as a person would go: the only page opened by address is the Floor, the first page after sign-in. Certificates is reached by Quality's menu; the pallets by the screen's own search box.",
+  "The opening beat is a plain card with words on it. There is no artwork of a dock, a pallet or a person.",
+]
+
+honesty = [
+  "the plant is a scratch simulated plant, replaying a recorded line at ten times wall clock, which is the banner across the top of the 2D pages",
+  "the shift supervisor is the cutlery pack's seeded lab account; no real person's name is on screen",
+  "the two pallet certificates were issued before the camera rolled, through the plant's own API, because no screen issues a pallet's first certificate; the class says so",
+  "Print is pointed at, not pressed: the browser's print dialog cannot be filmed",
+  "the superseded revision is kept, but this screen shows only the one in force; the class says so",
+]
+
+[plant]
+pack = "labs/cutlery"
+speed = 10
+roll_when_timeout_seconds = 1800
+pallet_certificates_before_roll = ["PL1-000000001", "PL1-000000013"]
+
+# The fork order has completed, so its certificate was issued by itself.
+[[plant.roll_when_order]]
+code = "WO-FORK1-0001"
+completed = true
+
+# Enough pallets made that PL1-000000013 exists, after twelve checks.
+[[plant.roll_when_order]]
+code = "WO-PAL1-0002"
+booked = 6
+
+# ----------------------------------------------------------------- the hook
+
+[[step]]
+do = "slide"
+name = "a-sheet-on-the-pallet"
+title = "A sheet on the pallet"
+lines = [
+  "A pallet of forks, spoons and knives reaches a customer's dock",
+  "Taped to it is one sheet of paper",
+  "What does it say, and who stands behind it?",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "A pallet of cutlery arrives at a customer's receiving dock. Taped to the wrap is one sheet of paper."
+
+[[step]]
+do = "say"
+line = "The customer reads it before they take the pallet in. What is on that sheet, and where does each number come from?"
+
+[[step]]
+do = "mark"
+name = "a-sheet-on-the-pallet"
+
+# ----------------------------------------------------------------- the idea
+
+[[step]]
+part = "idea"
+do = "slide"
+name = "four-words"
+title = "Four words"
+lines = [
+  "Certificate of analysis, a COA: the readings that judged what is shipped",
+  "Lot: what one order made, under one code; here, also a pallet",
+  "Capability, Cpk: how comfortably the line holds the spec",
+  "Immutable: once issued, never edited; a correction is a new revision",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Four words. A certificate of analysis, a COA, is the document that travels with the product: what it is, and the readings that judged it, against the spec."
+
+[[step]]
+do = "say"
+line = "A lot is what one order made, kept together under one code. This plant ships by the pallet, so a pallet gets a certificate too."
+
+[[step]]
+do = "say"
+line = "Capability, or Cpk, says how comfortably the line holds each spec. Class 4.3 showed where it comes from."
+
+[[step]]
+do = "say"
+line = "Immutable means that once a certificate is issued, nobody edits it. A correction is a new revision, and the old one is kept."
+
+[[step]]
+do = "mark"
+name = "four-words"
+
+# ------------------------------------------------------------ on the screen
+
+# The Floor is the one page opened by address, the first after signing in;
+# Certificates is reached by Quality's menu.
+[[step]]
+part = "screen"
+do = "goto"
+url = "/dashboard"
+settle = 2
+
+[[step]]
+do = "wait_for"
+selector = "#user-name"
+text = "Walker: shift supervisor"
+
+[[step]]
+do = "say"
+line = "We are signed in as Walker, a shift supervisor: one of the lab plant's own accounts."
+at = "#user-name"
+
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"Quality\")"
+
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"Certificates\")"
+
+[[step]]
+do = "wait_for"
+js = "/ of [1-9]/.test(document.querySelector('#list-count').textContent) && [...document.querySelectorAll('#list-table tbody tr')].some(tr => tr.textContent.includes('WO-FORK1-0001'))"
+timeout = 30
+scroll_to = "#list-panel"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "Quality, then Certificates. These are the certificates in force, and the count says how many."
+at = "#list-count"
+
+[[step]]
+do = "say"
+line = "Nobody wrote these. The MES issued each one by itself, the moment its order was completed."
+at = "#list-table tbody tr:has-text(\"WO-FORK1-0001\")"
+
+[[step]]
+do = "mark"
+name = "certificates-in-force"
+
+[[step]]
+do = "click"
+selector = "#list-table tbody tr:has-text(\"WO-FORK1-0001\")"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#cert-code').textContent.startsWith('COA-WO-FORK1-0001') && !!document.querySelector('#cert-body h3')"
+scroll_to = "#cert-panel"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "The fork order's certificate. At the top: when it was issued, by whom, and which revision this is."
+at = "#cert-body > p:first-of-type"
+
+[[step]]
+do = "say"
+line = "The product: the order, the lot it made, and how many were ordered, good and scrapped."
+at = "#cert-body h3:text-is(\"Product\") + table"
+
+[[step]]
+do = "say"
+line = "What went in: the resin lot, and the machine where it entered. Class 2.3 followed that same lot forward."
+at = "#cert-body h3:has-text(\"Genealogy\") + table"
+
+[[step]]
+do = "mark"
+name = "the-order-and-its-lot"
+
+[[step]]
+do = "say"
+line = "Then every characteristic the line checked, against its spec: how many checks, the lowest, the mean, the highest, and how many failed."
+at = "#cert-body h3:has-text(\"every characteristic\") + table"
+
+[[step]]
+do = "say"
+line = "These are the checks recorded during this order, the same rows the Quality screen shows. Nothing is worked out for the sheet."
+at = "#cert-body h3:has-text(\"every characteristic\") + table"
+
+[[step]]
+do = "mark"
+name = "every-characteristic-against-its-spec"
+
+[[step]]
+do = "say"
+line = "Any non-conformance raised on the order is listed, with its status. A customer sees the problems as well as the passes."
+at = "#cert-body h3:text-is(\"Non-conformances\") + *"
+
+[[step]]
+do = "say"
+line = "And what the moulding machine held while the order ran: the lowest, mean and highest of its own signal."
+at = "#cert-body h3:has-text(\"Process\") + table"
+
+[[step]]
+do = "say"
+line = "The last line says where every figure comes from, and that this revision will never change."
+at = "#cert-body > p:last-of-type"
+
+[[step]]
+do = "mark"
+name = "where-every-figure-comes-from"
+
+# A pallet, by the screen's own search box.
+[[step]]
+do = "fill"
+selector = "#q"
+text = "PL1-000000013"
+
+[[step]]
+do = "click"
+selector = "#find-submit"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#cert-code').textContent.startsWith('COA-PALLET-PL1-000000013') && !!document.querySelector('#cert-body h3')"
+scroll_to = "#cert-panel"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "A pallet's certificate. This plant ships by the pallet, so this is the sheet that goes to the dock."
+at = "#cert-code"
+
+[[step]]
+do = "say"
+line = "One honest note: a pallet's first certificate is issued only when somebody asks, and no screen asks. This one was issued before the class, through the plant's own API."
+at = "#cert-body > p:first-of-type"
+
+[[step]]
+do = "say"
+line = "The pallet: which machine closed it, on which order, when its contents were made, and how many pieces of each kind are on it."
+at = "#cert-body h3:text-is(\"Pallet\") + table"
+
+[[step]]
+do = "mark"
+name = "a-pallets-certificate"
+
+[[step]]
+do = "say"
+line = "Then capability: every dimension of every piece on the pallet, its spec, and its Cpk."
+at = "#cert-body h3:has-text(\"Capability\") + table"
+
+[[step]]
+do = "say"
+line = "A pallet is made in minutes, and a check is taken every few. So the record reaches back to the last twelve checks, and Record from says how far."
+at = "#cert-body h3:has-text(\"Capability\") + table tbody tr:first-child"
+
+[[step]]
+do = "mark"
+name = "capability-on-the-pallet"
+
+[[step]]
+do = "say"
+line = "Below that, every wrap on the pallet, with its stack, its plate and the pieces in it."
+at = "#cert-body h3:has-text(\"Contents\")"
+
+[[step]]
+do = "say"
+line = "Print prints the certificate alone. The menus and the buttons stay off the paper."
+at = "#print"
+
+[[step]]
+do = "mark"
+name = "print"
+
+[[step]]
+do = "say"
+line = "Now a correction. There is no edit button, and no box to type a number into. Reissue reads the records again and issues a new revision."
+at = "#reissue"
+
+[[step]]
+do = "click"
+selector = "#reissue"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#cert-code').textContent.includes('revision 2') && document.querySelector('#cert-revisions').textContent.includes('1, 2')"
+
+[[step]]
+do = "say"
+line = "Revision 2, issued now, under the supervisor's name. It says which revision it supersedes."
+at = "#cert-body > p:first-of-type"
+
+[[step]]
+do = "say"
+line = "Revision 1 is superseded, not deleted. This screen only shows the one in force, though: reading the old one takes the API."
+at = "#cert-revisions"
+
+[[step]]
+do = "mark"
+name = "revision-two-supersedes-one"
+
+# -------------------------------------------------------------- it refuses
+
+[[step]]
+part = "refuses"
+do = "fill"
+selector = "#q"
+text = "PL1-000000002"
+
+[[step]]
+do = "click"
+selector = "#find-submit"
+
+[[step]]
+do = "wait_for"
+js = "!document.querySelector('#banner').classList.contains('hidden') && document.querySelector('#banner').textContent.includes('no certificate has been issued for pallet PL1-000000002')"
+
+[[step]]
+do = "say"
+line = "A pallet nobody has issued a certificate for: the MES says so, and makes nothing up."
+at = "#banner"
+
+[[step]]
+do = "fill"
+selector = "#q"
+text = "PL1-000000001"
+
+[[step]]
+do = "click"
+selector = "#find-submit"
+
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#cert-code').textContent.startsWith('COA-PALLET-PL1-000000001') && document.querySelector('#cert-body').textContent.includes('capability needs')"
+scroll_to = "#cert-body h3:has-text(\"Capability\")"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "The very first pallet, made before there were twelve checks. Its certificate leaves Cpk empty and says why. Unknown is not zero."
+at = "#cert-body h3:has-text(\"Capability\") + table tbody tr:first-child"
+
+[[step]]
+do = "mark"
+name = "capability-withheld"
+
+# ------------------------------------------------------------ you now know
+
+[[step]]
+part = "know"
+do = "slide"
+name = "you-now-know"
+title = "You now know how to"
+lines = [
+  "Read a certificate of analysis: what it covers, each reading against its spec, and who issued it.",
+  "Say why a certificate is never edited, and reissue one so the new revision supersedes the old.",
+  "Tell when a certificate withholds a capability figure, and why.",
+]
+
+[[step]]
+do = "say"
+line = "Everything you saw is a simulated plant, replaying a recorded line at ten times the clock. You now know how to do three things."
+
+[[step]]
+do = "mark"
+name = "you-now-know"
+
+[[step]]
+do = "hold"
+seconds = 3
