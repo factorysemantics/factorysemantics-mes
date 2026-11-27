@@ -8,7 +8,9 @@ A scene is data (`scenes/<name>.json`): events added to named lines of
 `line.json` and settings over theirs (a line's `events` there replaces its own,
 for a scene that needs one of the everyday events out of its way), sections
 added to the floor script (`pieces`, `breakdowns`), rows added to the copy's
-master data (`masterdata`), and the answer key. This
+master data (`masterdata`), rows left out of it by code (`masterdata_left_out`,
+for an order another system brings), and the answer key. A scene may
+`extends` another in the same folder and say only what it changes. This
 writes a copy of the pack with both applied, generates its replay into the
 copy's `out/`, and writes a fleet file beside it. **The pack in this
 directory is never touched**, so the everyday shift - `fsmes demo cutlery`,
@@ -95,8 +97,46 @@ def add_masterdata(folder: Path, scene: dict) -> None:
         path.write_text(json.dumps(have + list(rows), indent=2) + "\n", encoding="utf-8")
 
 
+def leave_out_masterdata(folder: Path, scene: dict) -> None:
+    """The rows a scene names by code, taken out of the copy's files.
+
+    For a row another system brings: the coil-out-erp scene's fork order is
+    dropped by ERPNext, and the pack's own row of that code would have the MES
+    find the order already there. A code the pack does not have is refused,
+    so a typo cannot leave out nothing and pass.
+    """
+    for name, codes in (scene.get("masterdata_left_out") or {}).items():
+        if name.startswith("_"):
+            continue
+        path = folder / name
+        have = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
+        missing = sorted(set(codes) - {row.get("code") for row in have})
+        if missing:
+            raise SystemExit(f"the scene leaves out rows of {name} the pack does not have: {', '.join(missing)}")
+        kept = [row for row in have if row.get("code") not in set(codes)]
+        path.write_text(json.dumps(kept, indent=2) + "\n", encoding="utf-8")
+
+
+def load_scene(scene_path: Path) -> dict:
+    """A scene file, with the scene it `extends` (in the same folder) under it.
+
+    One level, top-level keys: what the scene says replaces what the one it
+    extends says, whole. The breakdown stays in one file, and a variant of
+    it says only what it changes.
+    """
+    scene_path = Path(scene_path)
+    scene = json.loads(scene_path.read_text(encoding="utf-8"))
+    parent = scene.pop("extends", None)
+    if not parent:
+        return scene
+    base = json.loads((scene_path.parent / parent).read_text(encoding="utf-8"))
+    if base.get("extends"):
+        raise SystemExit(f"{parent} extends another scene itself; a scene extends one level only")
+    return {**base, **scene}
+
+
 def build(scene_path: Path, into: Path) -> Path:
-    scene = json.loads(Path(scene_path).read_text(encoding="utf-8"))
+    scene = load_scene(scene_path)
     into = Path(into).expanduser().resolve()
     if into.exists() and any(into.iterdir()):
         raise SystemExit(f"{into} is not empty; a scene is built into a folder of its own")
@@ -109,6 +149,7 @@ def build(scene_path: Path, into: Path) -> Path:
     (into / "floor.json").write_text(json.dumps(scened_floor(floor, scene), indent=1) + "\n",
                                      encoding="utf-8")
     add_masterdata(into / "masterdata", scene)
+    leave_out_masterdata(into / "masterdata", scene)
     (into / "scene.json").write_text(json.dumps(scene, indent=1) + "\n", encoding="utf-8")
     (into / "fleet.toml").write_text(
         f"# The {scene['name']} scene of the cutlery plant, built by labs/cutlery/scene.py.\n"

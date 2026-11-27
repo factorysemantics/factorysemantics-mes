@@ -1,0 +1,295 @@
+# Coil out, the MES side: a heater band burns out on fork mould 1 and the MES
+# sees it as a sagging melt, a chart that fires, a hold, a stopped mould, and
+# a repair order opened and closed with its minutes down.
+#
+# The screen part of a film, not a class: one silent take with boxes and
+# labels and marks, which the editor cuts and a narrator voices afterwards.
+# Its sister take is the ERP side of the same run
+# (scripts/scenes/film/coil-out-erp.toml): the order filmed here came from
+# ERPNext, and what the run booked back is filmed there.
+#
+# The plant is the cutlery pack's coil-out-erp scene
+# (labs/cutlery/scenes/coil-out-erp.json): coil-out, with FORK1's order
+# taken from ERPNext instead of the pack. Brought up by hand on
+# 127.0.0.1:8040 (OPC 4844) at ten times wall clock, the ERP sync worker
+# beside it, and this take started straight after, because the fault starts
+# at line minute 30, three wall minutes in:
+#
+#   python labs/cutlery/scene.py labs/cutlery/scenes/coil-out-erp.json --out <empty dir>
+#   FSMES_PLANT_REGISTRY=<dir>/fleet.toml fsmes plant cutlery init
+#   python labs/erpnext/seed_cutlery.py                 # ERPNext submits WO-FORK1-0002
+#   MES_ERP_MODE=erpnext MES_ERPNEXT_COMPANY="Cutlery Works" \
+#     MES_DATABASE_URL=sqlite:///<dir>/.data/cutlery.db fsmes run-erp-sync   # left running
+#   FSMES_PLANT_REGISTRY=<dir>/fleet.toml fsmes plant cutlery start --speed 10
+#   python scripts/record-scene.py scripts/scenes/film/coil-out-mes.toml
+#
+# The take writes nothing. It waits on the plant: the waits between beats are
+# filmed (about four wall minutes while the band is mended), and the editor
+# cuts them between the marks either side.
+
+name = "coil-out-mes"
+title = "Coil out: the MES side"
+out = "~/Work/gifs/film/coil-out/mes"
+base = "http://127.0.0.1:8040"
+badge = "simulated plant · scripted fault"
+user = "WALK-ENG"
+password = "walk-lab-only"
+# Silent: the lines below pace the take and go into marks.json and the
+# script file for the narrator; no caption bar is drawn.
+captions = false
+# About ten wall minutes: ninety line minutes at ten times, most of it waits.
+budget_seconds = 840
+gif_skip_seconds = 2.0
+gif_seconds = 40.0
+width = 1280
+height = 720
+
+notes = [
+  "A simulated cutlery plant with a fault written into it (labs/cutlery/scenes/coil-out-erp.json, which extends coil-out.json): at line minute 30 heater zone 2 on fork mould 1 (FORK1_Mold) fails, the melt sags from about 214 to about 199 C while the setpoint stays at 214, and the forks come out short and light. The mould stops at minute 44; the simulated supervisor raises a corrective order, and the simulated technician MT-01 starts it, replaces the band and completes it. The mould restarts at minute 86. Replayed at ten times wall clock.",
+  "The order on FORK1 (WO-FORK1-0002, 1950 forks) was submitted in ERPNext and taken by the MES's ordinary ERP sync worker; it is not the pack's own order.",
+  "The fork-length checks come from a seeded stream, so the minute the chart fires (about 38 of the line hour) moves a little from take to take; the take waits for it rather than for a time.",
+  "The take is the lab account WALK-ENG and writes nothing: every step reads.",
+  "No caption bar: the say lines pace the take, are written to marks.json and the script file, and draw only the boxes and their labels.",
+]
+
+honesty = [
+  "the plant is a scratch simulated plant with a fault written into it, replayed at ten times wall clock",
+  "the waits between beats are filmed in real time and are for the editor to cut, among them a ninety-second pause on the Now tab before the first trend, written into the scene so the plant has a quarter hour to show; nothing in the product was slowed",
+  "the repair order is raised, started and completed by the simulator, as a supervisor and a technician; nobody is assigned it in between",
+]
+
+# --------------------------------------------------------------- the mould
+
+[[step]]
+part = "screen"
+do = "goto"
+url = "/dashboard/machine/FORK1_Mold#now"
+settle = 2
+
+[[step]]
+do = "wait_for"
+js = "const r = document.querySelector('#tags-table tbody tr[data-tag=\"MeltTemp\"]'); return !!r && parseFloat(r.children[1].textContent) > 208;"
+timeout = 60
+
+# A plant just started has no trend to show yet: the take sits on the Now
+# tab for ninety seconds, fifteen line minutes, so the first trend has a
+# quarter of an hour on its setpoint. Filmed, for the editor to cut.
+[[step]]
+do = "hold"
+seconds = 90
+
+[[step]]
+do = "goto"
+url = "/dashboard/machine/FORK1_Mold?tag=MeltTemp#trend"
+settle = 2
+
+[[step]]
+do = "wait_for"
+js = "return !!document.querySelector('#trend svg');"
+timeout = 30
+
+[[step]]
+do = "say"
+line = "Fork mould one, running. Its melt temperature is about two hundred and fourteen degrees, on its setpoint."
+at = "#trend"
+label = "melt on its setpoint"
+hold = 5.0
+
+[[step]]
+do = "mark"
+name = "melt-on-setpoint"
+
+# The band goes at line minute 30; the melt is well down by about 36.
+[[step]]
+do = "goto"
+url = "/dashboard/machine/FORK1_Mold#now"
+settle = 2
+
+[[step]]
+do = "wait_for"
+js = "const r = document.querySelector('#tags-table tbody tr[data-tag=\"MeltTemp\"]'); return !!r && parseFloat(r.children[1].textContent) < 204;"
+timeout = 330
+
+[[step]]
+do = "goto"
+url = "/dashboard/machine/FORK1_Mold?tag=MeltTemp#trend"
+settle = 2
+
+[[step]]
+do = "wait_for"
+js = "return !!document.querySelector('#trend svg');"
+timeout = 30
+
+[[step]]
+do = "say"
+line = "The trend: the melt sags while the setpoint stays at two hundred and fourteen. A heater zone has failed."
+at = "#trend"
+label = "melt sagging"
+hold = 6.0
+
+[[step]]
+do = "mark"
+name = "melt-sags"
+
+# ------------------------------------------------------------- the chart
+
+[[step]]
+do = "goto"
+url = "/dashboard/spc?spec=UT-FORK%7Clength_mm"
+settle = 2
+
+[[step]]
+do = "wait_for"
+# Waits for a flagged fork shorter than the lower control limit (164.46 mm
+# on this pack): the cold mould's short forks. A flag from ordinary noise
+# early in the hour (rule 3, high side) does not count.
+js = "return (window.__fsmesPageData || {}).characteristic === 'length_mm' && document.querySelector('#verdict').textContent.startsWith('out of control') && [...document.querySelectorAll('#chart circle.spc-flag[data-series=\"individuals\"]')].some((c) => parseFloat(c.dataset.value) < 164.46);"
+timeout = 240
+scroll_to = "#chart"
+scroll_block = "start"
+scroll_offset = 215
+
+[[step]]
+do = "say"
+line = "The fork length chart fires: a cold mould makes short forks."
+at = "#chart circle.spc-flag[data-series=\"individuals\"] >> nth=-1"
+label = "rule fired"
+style = "spotlight"
+hold = 5.0
+
+[[step]]
+do = "mark"
+name = "chart-fires"
+
+[[step]]
+do = "wait_for"
+selector = "#signals tbody"
+text = "held"
+timeout = 60
+scroll_to = "#signals"
+scroll_block = "start"
+scroll_offset = 240
+
+[[step]]
+do = "say"
+line = "And the MES raises a quality hold on the forks by itself."
+at = "#signals tbody tr:has-text(\"held\") td:last-child"
+label = "hold raised"
+hold = 5.0
+
+[[step]]
+do = "mark"
+name = "the-hold"
+
+# --------------------------------------------------------- the mould stops
+
+[[step]]
+do = "goto"
+url = "/dashboard/machine/FORK1_Mold#now"
+settle = 2
+
+[[step]]
+do = "wait_for"
+selector = "#m-state"
+text = "down"
+timeout = 240
+
+[[step]]
+do = "say"
+line = "Line minute forty-four: the mould is stopped."
+at = "#m-state"
+label = "mould stopped"
+hold = 5.0
+
+[[step]]
+do = "mark"
+name = "mould-stopped"
+
+# ------------------------------------------------------- the repair order
+
+[[step]]
+do = "goto"
+url = "/dashboard/maintenance?equipment=FORK1_Mold#work"
+settle = 2
+
+[[step]]
+do = "wait_for"
+selector = "#work-list"
+text = "CM-00001"
+timeout = 120
+
+[[step]]
+do = "say"
+line = "Maintenance, Work: repair order CM-00001 is open on fork mould one."
+at = "#work-list > li:has-text(\"CM-00001\") .mono"
+label = "CM-00001 open"
+hold = 6.0
+
+[[step]]
+do = "mark"
+name = "repair-order-open"
+
+# The band is mended off camera by the simulated technician; the mould
+# restarts at line minute 86. The History tab refreshes itself every eight
+# seconds, so the take waits on it.
+[[step]]
+do = "goto"
+url = "/dashboard/maintenance?equipment=FORK1_Mold#history"
+settle = 2
+
+[[step]]
+do = "wait_for"
+selector = "#history-table tbody"
+text = "CM-00001"
+timeout = 420
+
+[[step]]
+do = "say"
+line = "History: CM-00001 closed, with the technician's findings."
+at = "#history-table tbody tr:has-text(\"CM-00001\") td:nth-child(5)"
+label = "findings"
+hold = 6.0
+
+[[step]]
+do = "say"
+line = "And forty-two minutes down."
+at = "#history-table tbody tr:has-text(\"CM-00001\") td:nth-child(6)"
+label = "42 min down"
+hold = 5.0
+
+[[step]]
+do = "mark"
+name = "repair-order-closed"
+
+# ------------------------------------------------------------ back to work
+
+[[step]]
+do = "goto"
+url = "/dashboard/machine/FORK1_Mold#now"
+settle = 2
+
+[[step]]
+do = "wait_for"
+js = "const r = document.querySelector('#tags-table tbody tr[data-tag=\"MeltTemp\"]'); return !!r && parseFloat(r.children[1].textContent) > 211 && !/down/i.test(document.querySelector('#m-state').textContent);"
+timeout = 120
+
+[[step]]
+do = "goto"
+url = "/dashboard/machine/FORK1_Mold?tag=MeltTemp#trend"
+settle = 2
+
+[[step]]
+do = "wait_for"
+js = "return !!document.querySelector('#trend svg');"
+timeout = 30
+
+[[step]]
+do = "say"
+line = "Back on its setpoint, about two hundred and fourteen, and making good forks again."
+at = "#trend"
+label = "melt back at 214"
+hold = 6.0
+
+[[step]]
+do = "mark"
+name = "melt-back"

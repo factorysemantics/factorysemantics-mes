@@ -1,0 +1,196 @@
+# Coil out, the ERP side: what the MES's run booked back into ERPNext, and
+# what it did not.
+#
+# The screen part of a film, like its sister take, the MES side
+# (scripts/scenes/film/coil-out-mes.toml), filmed from the same run: the
+# order WO-FORK1-0002 was submitted here, made on the scratch cutlery plant
+# while a heater band burned out on fork mould 1, and finished. Filmed after
+# the order is complete, with nothing running:
+#
+#   python scripts/record-erp-take.py scripts/scenes/film/coil-out-erp.toml
+#
+# record-erp-take.py signs in to ERPNext with the login the MES's settings
+# hold for its connection; this file names no user or password. It writes
+# nothing: a request that would save, submit or cancel fails the take.
+
+name = "coil-out-erp"
+title = "Coil out: the ERP side"
+out = "~/Work/gifs/film/coil-out/erp"
+base = "http://mes.localhost:8085"
+badge = "open-source ERP · simulated company · simulated costs"
+captions = true
+budget_seconds = 150
+gif_skip_seconds = 2.0
+gif_seconds = 40.0
+width = 1280
+height = 720
+
+notes = [
+  "ERPNext v15, the open-source ERP, on this box, with a simulated company (Cutlery Works) seeded by labs/erpnext/seed_cutlery.py from the ids in labs/cutlery/scenes/coil-out-erp.json. Every price is made up: resin at 1.50 a kilogram, the heater band at 140.",
+  "WO-FORK1-0002 was submitted here, taken by the MES's ordinary ERP sync worker, made on a scratch simulated cutlery plant while a scripted heater-band failure stopped fork mould 1 for 42 minutes, and booked back by the same worker. Nothing in the ERPNext connection was changed for this take.",
+  "Filmed after the run, with the desk read and nothing written.",
+]
+
+honesty = [
+  "the company, its stock and every price are simulated; the ERP is a real ERPNext",
+  "the order was made on a simulated plant with a scripted fault",
+  "the take reads ERPNext after the run; nothing on screen is typed or saved",
+]
+
+# ------------------------------------------------------------- the order
+
+[[step]]
+part = "screen"
+do = "goto"
+url = "/app/work-order/WO-FORK1-0002"
+settle = 3
+
+[[step]]
+do = "wait_for"
+selector = ".page-head .indicator-pill"
+text = "Completed"
+timeout = 30
+
+[[step]]
+do = "say"
+line = "The work order, as ERPNext holds it: WO-FORK1-0002, nineteen hundred and fifty forks, submitted here and made in the MES. Completed."
+at = ".page-head .indicator-pill"
+label = "WO-FORK1-0002 completed"
+hold = 5.0
+
+[[step]]
+do = "mark"
+name = "the-order"
+
+[[step]]
+do = "say"
+line = "The MES wrote back what it counted: good forks, and the scrap, which ERPNext has no field of its own for."
+at = ".frappe-control[data-fieldname=\"custom_mes_scrap_qty\"]"
+label = "made and scrapped, from the MES"
+hold = 6.0
+
+[[step]]
+do = "mark"
+name = "made-and-scrapped"
+
+# ------------------------------------------- what each operation said back
+# The MES's confirmations are comments on the order: count, scrap, cost
+# center and machine minutes. The minutes are the wall clock of a plant
+# replayed at ten times, not the line's own.
+
+[[step]]
+do = "wait_for"
+js = "return [...document.querySelectorAll('.timeline-item .content')].some((n) => n.innerText.includes('op 10 Mold') && n.innerText.includes('cc CC-MOULD01'));"
+timeout = 30
+scroll_to = ".timeline-item"
+scroll_text = "op 10 Mold"
+scroll_offset = 320
+
+[[step]]
+do = "say"
+line = "Each step of the line reported back as a comment, with its cost center, CC-MOULD01. A comment, not a booking."
+at = ".timeline-item:has-text(\"op 10 Mold\") .content"
+label = "a comment naming the cost center"
+hold = 6.0
+
+[[step]]
+do = "mark"
+name = "the-comments"
+
+# ------------------------------------------------- the forks and the resin
+# The Manufacture entry the connection posted when the order finished
+# (its name is this run's; ERPNext numbers them in order).
+
+[[step]]
+do = "goto"
+url = "/app/stock-entry/MAT-STE-2026-00008"
+settle = 3
+
+[[step]]
+do = "wait_for"
+selector = ".frappe-control[data-fieldname=\"items\"] .grid-row[data-idx=\"1\"]"
+text = "RAW-PP"
+timeout = 30
+
+[[step]]
+do = "say"
+line = "What did land: the made forks into finished goods, and the resin they used, taken out of stores at a dollar fifty a kilogram."
+at = ".frappe-control[data-fieldname=\"items\"] .grid-row[data-idx=\"1\"]"
+label = "resin used, at cost"
+hold = 6.0
+
+[[step]]
+do = "mark"
+name = "forks-and-resin"
+
+# ----------------------------------------------------------------- the band
+
+[[step]]
+do = "goto"
+url = "/app/stock-entry/MAT-STE-2026-00006"
+settle = 3
+
+[[step]]
+do = "wait_for"
+selector = ".frappe-control[data-fieldname=\"items\"] .grid-row[data-idx=\"2\"]"
+text = "140.00"
+timeout = 30
+
+[[step]]
+do = "say"
+line = "The spare heater band came into stores at one hundred and forty dollars."
+at = ".frappe-control[data-fieldname=\"items\"] .grid-row[data-idx=\"2\"]"
+label = "heater band, $140"
+hold = 5.0
+
+[[step]]
+do = "mark"
+name = "band-in-stores"
+
+[[step]]
+do = "goto"
+url = "/app/query-report/Stock Ledger?company=Cutlery+Works&item_code=SP-HEATER-BAND"
+settle = 3
+
+[[step]]
+do = "wait_for"
+selector = ".dt-row-0 .dt-cell--col-8"
+text = "Stores - CW"
+timeout = 60
+
+[[step]]
+do = "say"
+line = "And it is still there. The MES replaced it on the mould, but ERPNext never heard: nothing went out."
+at = ".dt-row-0 .dt-cell--col-6"
+label = "none out"
+hold = 6.0
+
+[[step]]
+do = "mark"
+name = "band-still-in-stores"
+
+# --------------------------------------------------- the mould's cost center
+
+[[step]]
+do = "goto"
+url = "/app/query-report/General Ledger?company=Cutlery+Works&cost_center=CC-MOULD01+-+CW"
+settle = 3
+
+[[step]]
+do = "wait_for"
+selector = ".dt-row-1 .dt-cell--col-2"
+text = "Total"
+timeout = 60
+
+[[step]]
+do = "say"
+line = "The mould's cost center, CC-MOULD01: nothing. Not the band, not the forty-two minutes, not the repair order."
+# The whole ledger: opening, total and closing, each $0.00. Boxed whole
+# because its three rows sit too close for a label beside one cell.
+at = ".report-wrapper .dt-scrollable"
+label = "$0.00 on CC-MOULD01"
+hold = 7.0
+
+[[step]]
+do = "mark"
+name = "nothing-on-the-cost-center"
