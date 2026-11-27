@@ -1,0 +1,567 @@
+# Class 2.4 of the course, *People, roles and work instructions*: who may do
+# what is a list of capabilities bundled into roles, and a work instruction is
+# a controlled document with one revision in force; a draft is not an
+# instruction until a person signs it.
+#
+# It starts from a card of words (no drawing): a start-up sheet taped to the
+# fork mould, two revisions old. The idea cards name role, capability and
+# revision in force, and who drafts and who signs. Then the product, signed in
+# as the cutlery plant's lab administrator: Admin's roles, each a bundle of
+# capabilities, and a new operator's account. Then the shift supervisor drafts
+# the fork mould's start-up instruction and cannot sign it; the administrator
+# signs it and opens the next revision, which waits as a draft beside the one
+# in force; and the new operator reads the one in force. What it refuses: the
+# new operator typing Admin's address, and the screen saying it is not theirs.
+# Filmed on a scratch cutlery plant, every screen as the product draws it.
+
+name = "people-roles-and-work-instructions"
+title = "People, roles and work instructions"
+lesson = "2.4"
+take_is = "lesson"
+part = "hook"
+base = "http://127.0.0.1:8040"
+badge = "pre-alpha · simulated plant · v{version}"
+# Four and a half to six minutes, as the outline says this class runs.
+budget_seconds = 360
+gif_skip_seconds = 2.0
+width = 1280
+height = 720
+# The take starts as the cutlery pack's lab administrator; `sign_in` steps
+# change to the lab's shift supervisor, back, and to the account the class
+# makes. All are lab accounts on the take's own scratch plant, not people; the
+# product's sign-in page is never filmed.
+user = "ADMIN"
+password = "admin"
+allow_writes = true
+what_is_written = "which is how the class makes its account and its instruction: Create on Admin, Create draft, Approve revision 1 and Open next revision are each a real `POST` to the take's own scratch plant, and the account NEW-OP and the document WI-FORK-START with its two revisions really are in it afterwards. The plant is deleted when the take ends."
+
+notes = [
+  "The plant was started from the cutlery pack, at ten times wall clock, a minute or two before the camera rolled. People, roles and documents do not wait on production, so nothing had to run first; the speed only shows in the banner across the top of the pages.",
+  "The class signs in as four accounts, all lab accounts on the scratch plant: ADMIN, \"Lab Admin\", in the Administrator role; WALK-SUP, \"Walker: shift supervisor\", in the Supervisor role; and NEW-OP, \"New starter: line operator\", in the Operator role, which the class itself creates on Admin with a lab-only password typed on camera. The recorder's `sign_in` step changes who is signed in off camera and loads the page again, so the product's sign-in page is never on camera.",
+  "The People list is filtered to the word \"operator\" before the camera goes down the page. The product seeds a demo operator account under a person's name on every plant, and the class does not film it; on the first frame of Admin only the first two rows, ADMIN and AGENT, are on screen.",
+  "The outline had the new operator refused when releasing an order. The product says otherwise: the Operator role this product ships holds `orders.release`, and the role that may not release is the Planner. The class says so over the roles, and the refusal it films is the one an operator does meet: the Admin screen, which needs `users.manage`.",
+  "The outline had a supervisor put the new revision in force. In the roles this product ships the supervisor holds `documents.write` and not `documents.approve`; only the administrator approves. The class films the supervisor drafting and the administrator signing, and says a plant may define its own role that signs.",
+  "The scratch plant has no controlled document at all: the lab plant's seventy-six are drafted by a local model through `fsmes draft-instructions`, which a take does not run. The class writes the one instruction it needs on the Instructions screen. Its steps are plain and carry no figure the pack does not have.",
+  "A document written on the Instructions screen is tied to no material (the screen says \"general — not tied to a material\"), because the form has no field for it. An order's link to its work instructions looks for documents tied to the order's material, so it would not find this one. The class says so and reads the instruction on the Instructions screen; the station screen at a machine shows no instruction at all yet.",
+  "The Floor's Waiting for you panel lists drafts of the plant's reason codes and severities. It does not list a draft instruction: the administrator's Floor says \"Nothing is waiting on you\" while WI-FORK-START waits. The class films it as drawn and says where the draft waits instead.",
+  "Open next revision copies the revision in force into a new draft; the screen has no way to change the draft's words. The class says so rather than editing it another way.",
+  "Every line said over the screen has a box round the thing it is about, with a few words on a tab where words help. Rows of a table and the product's message after a save are boxed without a tab.",
+  "At any speed but 1x every 2D page carries the product's REPLAY 10× banner across its top. It is filmed as the product draws it.",
+  "The opening beat is a plain card with words on it. There is no artwork of a mould, a sheet or a person.",
+]
+
+honesty = [
+  "the scratch plant ships no work instruction; the class writes the one it needs, WI-FORK-START, on the Instructions screen, and every account it signs in as is a lab account on that plant",
+  "the operator role this product ships may release an order; the class says so, and films the refusal an operator does meet, the Admin screen",
+  "in the shipped roles only the administrator approves an instruction, not the supervisor; the class shows the supervisor drafting and the administrator signing",
+  "an instruction written on this screen is tied to no material, so an order's link to its instructions does not find it, and the station screen shows none; the class reads it on the Instructions screen",
+  "the Floor's Waiting for you panel does not list a draft instruction, and the next revision cannot be reworded on the screen; both are said aloud",
+  "the plant is a scratch plant a few minutes old, replaying at ten times wall clock, which is the banner across the top of the pages",
+]
+
+[plant]
+pack = "labs/cutlery"
+speed = 10
+roll_when_timeout_seconds = 600
+
+# ----------------------------------------------------------------- the hook
+
+[[step]]
+do = "slide"
+name = "the-sheet-on-the-mould"
+title = "The sheet on the mould"
+lines = [
+  "A laminated start-up sheet is taped to the fork mould",
+  "It is two revisions old, and nobody knows who changed it last",
+  "Who may change it, and which one is right?",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "A start-up sheet is taped to the fork mould. It is two revisions old. Who may change it, and which one is right?"
+
+[[step]]
+do = "mark"
+name = "the-sheet-on-the-mould"
+
+[[step]]
+do = "goto"
+url = "/dashboard/instructions"
+settle = 2
+
+[[step]]
+do = "wait_for"
+selector = "#empty"
+text = "No instructions yet"
+
+[[step]]
+do = "say"
+line = "Instructions live here. This simulated plant has none yet; by the end of the class it has one, signed by a person."
+at = "#empty"
+
+[[step]]
+do = "mark"
+name = "no-instructions-yet"
+
+# ----------------------------------------------------------------- the idea
+
+[[step]]
+part = "idea"
+do = "slide"
+name = "three-words"
+title = "Three words"
+lines = [
+  "Capability: one thing a person may do, like release an order",
+  "Role: a named bundle of capabilities, not a rank",
+  "Revision in force: the one version of an instruction the floor follows",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "A capability is one thing a person may do: book output, release an order, approve an instruction."
+
+[[step]]
+do = "say"
+line = "A role is a named bundle of capabilities. Not a rank: a quality inspector records checks and nothing else, and that is a role too."
+
+[[step]]
+do = "say"
+line = "And an instruction has revisions. Exactly one is in force: the one the floor follows."
+
+[[step]]
+do = "mark"
+name = "three-words"
+
+[[step]]
+do = "slide"
+name = "draft-and-sign"
+title = "A draft is not an instruction"
+lines = [
+  "Drafting and approving are two capabilities",
+  "A draft changes nothing on the floor until a person approves it",
+  "A draft an AI wrote is still a draft",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Writing an instruction and putting it in force are two different capabilities, often held by two different people."
+
+[[step]]
+do = "say"
+line = "A draft changes nothing on the floor, whoever wrote it, a person or an AI. It is in force only when a person signs it."
+
+[[step]]
+do = "mark"
+name = "draft-and-sign"
+
+# ------------------------------------------------------------ on the screen
+
+# A card is the recorder's own page and has no menu, so the camera comes back
+# from the cards to the Floor by address; everything after is reached by menus
+# and buttons.
+[[step]]
+part = "screen"
+do = "goto"
+url = "/dashboard"
+settle = 2
+
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"Setup\")"
+
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"Admin\")"
+
+[[step]]
+do = "wait_for"
+selector = "#roles"
+text = "Operator"
+
+# The People list is filtered before anything below its first two rows is on
+# the frame (see the notes).
+[[step]]
+do = "fill"
+selector = "#u-q"
+text = "operator"
+
+[[step]]
+do = "wait_for"
+selector = "#user-count"
+text = "1 of 1 matching"
+
+[[step]]
+do = "say"
+line = "Setup, Admin. People on the left, here just the operators. Roles on the right."
+at = "#user-count"
+label = "Filtered"
+
+[[step]]
+do = "say"
+line = "Each role lists its capabilities. The administrator holds every one, approving instructions among them."
+at = "#roles .role:has(strong:text-is(\"Administrator\")) .grants"
+
+[[step]]
+do = "say"
+line = "The operator's: book output, issue material, record checks, set a machine's state. And release an order, in the roles this product ships."
+at = "#roles .role:has(strong:text-is(\"Operator\")) .grants"
+scroll_to = "#roles .role-head"
+scroll_text = "Operator"
+scroll_block = "start"
+scroll_offset = 230
+
+[[step]]
+do = "mark"
+name = "the-operators-role"
+
+[[step]]
+do = "say"
+line = "The planner holds two: read the plant, create orders. Planning and releasing are two acts, and the planner may not release."
+at = "#roles .role:has(strong:text-is(\"Planner\")) .grants"
+
+[[step]]
+do = "say"
+line = "The supervisor adds closing orders and non-conformances, and drafting instructions. Not approving them. Class 4.2 showed this split on non-conformances."
+at = "#roles .role:has(strong:text-is(\"Supervisor\")) .grants"
+scroll_to = "#roles .role-head"
+scroll_text = "Supervisor"
+scroll_block = "start"
+scroll_offset = 230
+
+[[step]]
+do = "mark"
+name = "the-supervisors-role"
+
+[[step]]
+do = "say"
+line = "A plant that wants its own role ticks capabilities here. Nothing is a rank; every role is a list."
+at = "#role-form-title"
+scroll_to = "#form-role"
+scroll_block = "start"
+scroll_offset = 230
+
+# A new starter's account, in the left column at the top of the page.
+[[step]]
+do = "fill"
+selector = "#form-user input[name=\"code\"]"
+text = "NEW-OP"
+scroll_to = "#people-panel"
+scroll_block = "start"
+scroll_offset = 230
+
+[[step]]
+do = "fill"
+selector = "#form-user input[name=\"name\"]"
+text = "New starter: line operator"
+
+[[step]]
+do = "fill"
+selector = "#form-user input[name=\"password\"]"
+text = "new-lab-only"
+
+[[step]]
+do = "say"
+line = "A new starter on the line: an account in the Operator role, with a password for the lab."
+at = "#new-user-role"
+label = "Operator"
+
+[[step]]
+do = "click"
+selector = "#form-user button"
+
+[[step]]
+do = "wait_for"
+selector = "#user-count"
+text = "2 of 2 matching"
+
+[[step]]
+do = "say"
+line = "Made. From their very next click, the new starter may do what the Operator role holds, and nothing else."
+at = "#users tbody tr:has(td:text-is(\"NEW-OP\"))"
+
+[[step]]
+do = "mark"
+name = "a-new-starter"
+
+# The instruction: drafted by the supervisor. The camera goes to Instructions
+# first, so the sign-in reloads that page and not Admin, which is not the
+# supervisor's.
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"Instructions\")"
+
+[[step]]
+do = "wait_for"
+selector = "#empty"
+text = "No instructions yet"
+
+[[step]]
+do = "sign_in"
+user = "WALK-SUP"
+password = "walk-lab-only"
+settle = 2
+
+[[step]]
+do = "wait_for"
+selector = "#user-name"
+text = "Walker: shift supervisor"
+
+[[step]]
+do = "say"
+line = "Now the shift supervisor, signed in under their own name, writes the fork mould's start-up instruction."
+at = "#form-doc"
+label = "New document"
+scroll_to = "#form-doc"
+scroll_block = "end"
+scroll_offset = 120
+
+[[step]]
+do = "fill"
+selector = "#form-doc input[name=\"code\"]"
+text = "WI-FORK-START"
+
+[[step]]
+do = "fill"
+selector = "#form-doc input[name=\"title\"]"
+text = "Fork mould start-up"
+
+[[step]]
+do = "fill"
+selector = "#form-doc textarea[name=\"body\"]"
+text = "Purpose: start the fork mould the same way every time.\n1. Check the mould faces are clean.\n2. Wait until the melt temperature is steady.\n3. Weigh the first five forks."
+
+[[step]]
+do = "click"
+selector = "#form-doc button"
+
+[[step]]
+do = "wait_for"
+selector = "#catalogue tbody"
+text = "WI-FORK-START"
+
+[[step]]
+do = "click"
+selector = "#catalogue td:text-is(\"WI-FORK-START\")"
+
+[[step]]
+do = "wait_for"
+selector = "#doc-status"
+text = "draft"
+
+[[step]]
+do = "say"
+line = "It arrives as a draft: revision 1, not yet approved. In force: none."
+at = "#doc-approval"
+scroll_to = "#doc-title"
+scroll_block = "start"
+scroll_offset = 230
+
+[[step]]
+do = "say"
+line = "Drafted by the supervisor, approved by nobody. There is no button here to sign it: the supervisor's role does not hold that."
+at = "#history tbody tr:nth-child(1)"
+
+[[step]]
+do = "mark"
+name = "a-draft-nobody-signed"
+
+[[step]]
+do = "say"
+line = "One gap: written on this screen, it is tied to no material, so an order's link to its instructions will not find it."
+at = "#doc-anchors"
+label = "No material"
+
+# The administrator: first the Floor's queue, then the sign.
+[[step]]
+do = "sign_in"
+user = "ADMIN"
+password = "admin"
+settle = 2
+
+[[step]]
+do = "wait_for"
+selector = "#user-name"
+text = "Lab Admin"
+
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"Floor\")"
+
+[[step]]
+do = "wait_for"
+selector = "#pending"
+text = "Nothing is waiting on you"
+scroll_to = "#pending-panel"
+scroll_block = "start"
+scroll_offset = 230
+
+[[step]]
+do = "say"
+line = "The administrator's Floor has a Waiting for you panel. It says nothing is waiting: it lists reason codes and severities, not instructions. Another gap."
+at = "#pending-panel"
+
+[[step]]
+do = "mark"
+name = "nothing-waiting"
+
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"Setup\")"
+
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"Instructions\")"
+
+[[step]]
+do = "wait_for"
+selector = "#doc-actions"
+text = "Approve revision 1"
+scroll_to = "#doc-title"
+scroll_block = "start"
+scroll_offset = 230
+
+[[step]]
+do = "say"
+line = "The draft waits here. The administrator reads it, and signs revision 1."
+at = "#doc-actions button:text-is(\"Approve revision 1\")"
+label = "Sign"
+
+[[step]]
+do = "click"
+selector = "#doc-actions button:text-is(\"Approve revision 1\")"
+
+[[step]]
+do = "wait_for"
+selector = "#doc-status"
+text = "approved"
+
+[[step]]
+do = "say"
+line = "In force. Approved by the administrator, by name, with the time. Whoever reads it can see who signed it."
+at = "#doc-approval"
+
+[[step]]
+do = "mark"
+name = "signed-and-in-force"
+
+[[step]]
+do = "say"
+line = "A signed revision is never edited. To change it, open the next one."
+at = "#doc-actions button:text-is(\"Open next revision\")"
+label = "Next revision"
+
+[[step]]
+do = "click"
+selector = "#doc-actions button:text-is(\"Open next revision\")"
+
+[[step]]
+do = "wait_for"
+selector = "#catalogue tbody"
+text = "rev 2 draft"
+
+[[step]]
+do = "say"
+line = "Revision 1 stays in force. Revision 2 is a draft beside it, and the floor follows revision 1 until somebody signs revision 2."
+at = "#catalogue tbody tr:nth-child(1)"
+
+[[step]]
+do = "say"
+line = "The new draft is a copy, and this screen cannot change its words yet. A gap, written down."
+at = "#history tbody"
+
+[[step]]
+do = "mark"
+name = "one-in-force-one-draft"
+
+# The new starter reads what is in force.
+[[step]]
+do = "sign_in"
+user = "NEW-OP"
+password = "new-lab-only"
+settle = 2
+
+[[step]]
+do = "wait_for"
+selector = "#user-name"
+text = "New starter: line operator"
+
+[[step]]
+do = "wait_for"
+selector = "#doc-status"
+text = "approved"
+scroll_to = "#doc-title"
+scroll_block = "start"
+scroll_offset = 230
+
+[[step]]
+do = "say"
+line = "The new starter opens it. They read revision 1, the one in force, never the draft."
+at = "#doc-rev"
+
+[[step]]
+do = "say"
+line = "The steps are the ones the supervisor wrote and the administrator signed. The station screen at the machine shows no instruction yet; it is read here."
+at = "#doc-body"
+
+[[step]]
+do = "mark"
+name = "the-operator-reads-revision-1"
+
+[[step]]
+do = "say"
+line = "And no form to write one, no button to sign one: the Operator role holds neither."
+at = "#catalogue"
+
+# -------------------------------------------------------------- it refuses
+
+[[step]]
+part = "refuses"
+do = "goto"
+url = "/dashboard/admin"
+settle = 2
+
+[[step]]
+do = "wait_for"
+selector = "#denied h2"
+text = "Not your screen"
+
+[[step]]
+do = "say"
+line = "Admin is not in the operator's menu. Typed in by address, the MES refuses: not your screen. Admin needs users.manage, and this role does not hold it."
+at = "#denied"
+
+[[step]]
+do = "mark"
+name = "refused-not-your-screen"
+
+[[step]]
+do = "hold"
+seconds = 3
+
+# ------------------------------------------------------------ you now know
+
+[[step]]
+part = "know"
+do = "slide"
+name = "you-now-know"
+title = "You now know how to"
+lines = [
+  "Say what a role is, a named bundle of capabilities and not a rank, and read one on the Admin screen.",
+  "Add an account in a role, and say what that person may and may not do from their next click.",
+  "Tell a draft from the revision in force, and say who drafts it, who signs it, and which one the floor reads.",
+]
+
+[[step]]
+do = "say"
+line = "Every power is a capability; every instruction has one revision in force."
+
+[[step]]
+do = "mark"
+name = "you-now-know"
+
+[[step]]
+do = "hold"
+seconds = 3
