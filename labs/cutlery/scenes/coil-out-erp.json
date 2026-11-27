@@ -1,0 +1,55 @@
+{
+ "_what": "The coil-out scene with its fork order dropped by a real ERPNext instead of seeded by the pack. Everything about the breakdown is coil-out.json's, which this extends: the same hour, the same fault, the same repair order. Two things differ. The pack's own FORK1 orders are left out of the copy, so the MES has that order only because ERPNext submitted it and the sync worker took it. And `erp` below is the one set of ids both sides read: labs/erpnext/seed_cutlery.py seeds ERPNext from it, the ERP take and the MES take (scripts/scenes/film/coil-out-*.toml) name the same order, part and price, and a test holds the three to it.",
+ "extends": "coil-out.json",
+ "name": "coil-out-erp",
+ "masterdata_left_out": {
+  "_why": "ERPNext drops WO-FORK1-0001. With the pack's own row in the copy the import would find an order of that code already running and change nothing, and the film would show an ERP order the MES never took. WO-FORK1-0002 goes too: it is planned on FORK1LINE at priority 10, and the floor would put it on the line ahead of the ERP's order. The floor's planner continues FORK1's book from the ERP order instead, as it does for every line.",
+  "work_orders.json": [
+   "WO-FORK1-0001",
+   "WO-FORK1-0002"
+  ]
+ },
+ "erp": {
+  "_what": "What ERPNext holds for the cutlery plant, as a second company on the site (the first is the bottling demo's). Prices are the coil-out design's, made up to be plausible: open-source ERP, simulated company, simulated costs.",
+  "company": "Cutlery Works",
+  "abbr": "CW",
+  "currency": "USD",
+  "work_order": "WO-FORK1-0001",
+  "naming_series": "WO-FORK1-.####",
+  "item": "UT-FORK",
+  "item_name": "Fork (PP)",
+  "quantity": 1950,
+  "_quantity": "Sized so the order is finished just after the mould restarts: FORK1_Mark, the order's last step, has counted about 990 good forks at minute 44 and about 1930 at minute 86 of the generated hour, and the floor finishes an order when its last step reaches the quantity. Measured on the hour scene.py generates; the downstream stations keep counting while the mould is down, which the honesty notes say.",
+  "material": {
+   "code": "RAW-PP",
+   "name": "Polypropylene resin",
+   "uom": "Kg",
+   "per_unit": 0.0039,
+   "price": 1.5,
+   "on_hand": 4500
+  },
+  "_material": "3.9 g of resin a fork, the coil-out answer key's centre weight, at its made-up 1.50 a kilogram.",
+  "work_center": "FORK1LINE",
+  "machines": [
+   "FORK1_Mold",
+   "FORK1_Degate",
+   "FORK1_Mark"
+  ],
+  "operations": [
+   "Mold",
+   "Degate",
+   "Mark"
+  ],
+  "cost_center": "CC-MOULD01",
+  "spare": {
+   "code": "SP-HEATER-BAND",
+   "name": "Barrel heater band",
+   "uom": "Nos",
+   "price": 140.0,
+   "on_hand": 1
+  },
+  "repair_order": "CM-00001",
+  "overproduction_percent": 5,
+  "_overproduction_percent": "The floor finishes an order on the first look after its last step reaches the quantity, so it is always a few forks over. ERPNext refuses a Manufacture entry past the order plus its allowance, which is 0 out of the box; 5 % is what a plant that runs a line past its count sets. It is a site setting, so the bottling company has it too."
+ }
+}
