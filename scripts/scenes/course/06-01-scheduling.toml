@@ -1,0 +1,529 @@
+# Class 5.1 of the course, *Scheduling*: the board, the calendar under it, and
+# what the plan promises.
+#
+# It starts from a card of words (no drawing): three fork orders, one moulding
+# line, a customer asking when, and a whiteboard that says the day after
+# tomorrow. The idea
+# cards name the three words of the class (schedule, calendar, promise) and the
+# three rules the MES plans by. Then the product, signed in as the lab admin
+# (the one built-in role that may plan): a new fork order made on Orders with a
+# due date, the empty board on Orders > Schedule, three orders planned one at a
+# time into a staircase, the promise that says on time, the calendar that says
+# the plant never stops, a day shift added, the promise that does not move by
+# itself, the same order planned again and now late, and the order held. Then
+# what it refuses: planning an order that is on hold. Filmed on a scratch
+# cutlery plant at the real clock, every screen as the product draws it.
+#
+# The due date is typed as `{today+2}`, which the recorder turns into the date
+# two days after the day of the take: before the shift the new order finishes
+# about a day and a half out, on time; with five eight-hour days it cannot be.
+#
+# Beats changed from the outline (reports/learning-platform-2026-11-14 §5.1),
+# where the product differs: a planned order cannot be held (only a released
+# or running one), so the class holds the new order, which was released when
+# it was made; and the board cannot be dragged, so nothing is moved by hand.
+
+name = "scheduling"
+title = "Scheduling"
+lesson = "5.1"
+take_is = "lesson"
+part = "hook"
+base = "http://127.0.0.1:8040"
+badge = "pre-alpha · simulated plant · v{version}"
+# Planning and the calendar take `scheduling.plan`, which only the admin role
+# holds. A lab account, not a person; the sign-in page is never filmed.
+user = "ADMIN"
+password = "admin"
+# Four and a half to six minutes, as the handoff asks.
+budget_seconds = 360
+gif_skip_seconds = 2.0
+width = 1280
+height = 720
+# Making an order, planning three, adding a shift and holding one are writes,
+# and they are the story.
+allow_writes = true
+what_is_written = "which is how the class makes its plan: Create on Orders makes work order WO-FORK1-0300 for eleven thousand forks and releases it, Plan this order on Orders > Schedule plans WO-FORK1-0001, WO-FORK1-0002 and WO-FORK1-0300 (and WO-FORK1-0300 again), Add shift adds the day shift DAY, and Hold order holds WO-FORK1-0300, each a real `POST` to the take's own scratch plant, made with the screen's own form, under the lab admin signed in. Planning the held order is refused, so it writes nothing."
+
+notes = [
+  "The plant was started from the cutlery pack at the real clock (speed 1), so the minutes the plan books are the minutes the replayed line takes, and no REPLAY banner is drawn. The pack comes with WO-FORK1-0001 running and WO-FORK1-0002 planned, a hundred and more other open orders from the pack's book, no due dates, no shift patterns and an empty board: nothing in the simulation plans an order.",
+  "The class signs in as ADMIN, \"Lab Admin\", the pack's seeded lab account. Planning and adding a shift take `scheduling.plan`, which no other built-in role holds.",
+  "WO-FORK1-0300 is made on camera for 11 000 UT-FORK, due two days after the day of the take (typed as `{today+2}` in the scene file), released to the floor. With no line named it goes to the first routing for forks, RT-FORK1: Mold, then Degate, then Mark. Planned behind the other two, each of its three steps takes about seven and three quarter hours, and it finishes the next day, before its due date.",
+  "The MES plans an order's steps one after another: Degate starts when Mold ends. A line that flows starts degating the first forks long before the last are moulded. The class says so.",
+  "The shift added is DAY, Day shift, 06:00 to 14:00, Monday to Friday (1111100, the plant's own working week the form is pre-filled with). It changes no promise by itself: a promise is worked out when the order is planned. Planned again, WO-FORK1-0300 starts on the next working morning and finishes days after its due date, and the promise says late by that many hours.",
+  "Planning an order again puts it behind whatever every machine already has booked, and the orders it leaves do not close up: the order planned again goes to the back of the queue. That is a gap in the product, written up for the people who fix it; the class says so.",
+  "The promises list asks for fifty open orders, newest first, and its count says fifty, while this plant has more than a hundred. A gap, written up; filmed as drawn and said.",
+  "A planned order cannot be held, only a released or running one, so the order held is WO-FORK1-0300. A hold does not take an order's bars off the board, and no screen does. The class says so.",
+  "Maintenance a machine owes is placed on the board before the work. This fresh plant owes none, so the class says it in one line and points to class 5.2.",
+  "The plan does not watch the floor: a machine that stops re-plans nothing until a person plans again. The class says so.",
+  "The opening beat is a plain card with words on it. There is no artwork of a whiteboard or a fork.",
+]
+
+honesty = [
+  "the plant is a scratch simulated plant, replaying a recorded line at the real clock",
+  "the orders, the shift and the hold were made on camera; the two older orders came with the plant",
+  "planning an order again sends it to the back of every machine's queue; filmed as it happens, and said",
+  "the promises list stops at fifty orders and its count says fifty; filmed as drawn, and said",
+  "the plan runs an order's steps one after another and does not watch the floor; said, not filmed",
+  "maintenance placed before the work is said, not filmed: this plant owes none",
+]
+
+[plant]
+pack = "labs/cutlery"
+speed = 1
+roll_when_timeout_seconds = 600
+
+# ----------------------------------------------------------------- the hook
+
+[[step]]
+do = "slide"
+name = "when-will-it-be-ready"
+title = "When will it be ready?"
+lines = [
+  "Three fork orders, one moulding line",
+  "A customer asks when theirs will be ready",
+  "The whiteboard says the day after tomorrow. Does the line run then?",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Three orders for forks, and one moulding line to make them on."
+
+[[step]]
+do = "say"
+line = "A customer asks when theirs will be ready. The whiteboard says the day after tomorrow. Does the line even run that day?"
+
+[[step]]
+do = "say"
+line = "This class: which order runs where and when, and whether the plant can keep its word."
+
+[[step]]
+do = "mark"
+name = "when-will-it-be-ready"
+
+# ----------------------------------------------------------------- the idea
+
+[[step]]
+part = "idea"
+do = "slide"
+name = "the-words"
+title = "The words"
+lines = [
+  "Schedule: which order runs on which machine, and when",
+  "Calendar: the hours the plant works",
+  "Promise: when the plan says an order finishes, against its due date",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Three words. A schedule says which order runs on which machine, and when."
+
+[[step]]
+do = "say"
+line = "The calendar is the hours the plant works: its shifts, and the days it shuts."
+
+[[step]]
+do = "say"
+line = "A promise is the hour the plan says an order will finish, set against the day it is due."
+
+[[step]]
+do = "mark"
+name = "the-words"
+
+[[step]]
+do = "slide"
+name = "how-it-plans"
+title = "How the MES plans an order"
+lines = [
+  "One job at a time on each machine",
+  "The steps in routing order: mould, degate, mark",
+  "Only working hours count",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "A machine does one job at a time, so an order planned now queues behind what that machine already has."
+
+[[step]]
+do = "say"
+line = "The steps go in routing order. Degating starts when moulding ends, and marking when degating ends."
+
+[[step]]
+do = "say"
+line = "And only working hours count, the ones the calendar says."
+
+[[step]]
+do = "mark"
+name = "how-it-plans"
+
+# ------------------------------------------------------------ on the screen
+
+[[step]]
+part = "screen"
+do = "goto"
+url = "/dashboard/orders"
+settle = 2
+
+[[step]]
+do = "wait_for"
+js = "return document.querySelectorAll('#order-list tbody tr').length > 0 && !!document.querySelector('#new-order');"
+
+[[step]]
+do = "say"
+line = "Orders. A new order for forks, made the way class one point four made one."
+at = "#new-order"
+
+[[step]]
+do = "click"
+selector = "#new-order"
+
+[[step]]
+do = "fill"
+selector = "#no-code"
+text = "WO-FORK1-0300"
+
+[[step]]
+do = "choose"
+selector = "#no-material"
+value = "UT-FORK"
+
+[[step]]
+do = "fill"
+selector = "#no-qty"
+text = "11000"
+
+[[step]]
+do = "fill"
+selector = "#no-due"
+text = "{today+2}"
+
+[[step]]
+do = "say"
+line = "Eleven thousand forks, due the day after tomorrow, released to the floor."
+at = "#new-order-form"
+
+[[step]]
+do = "click"
+selector = "#no-create"
+
+[[step]]
+do = "wait_for"
+selector = "#d-promise"
+text = "not scheduled"
+
+[[step]]
+do = "say"
+line = "The order has its due date. What the plan says is blank: nothing has planned it yet."
+at = "#d-promise"
+
+[[step]]
+do = "click"
+selector = ".subnav a:text-is(\"Schedule\")"
+
+[[step]]
+do = "wait_for"
+selector = "#board"
+text = "Nothing is scheduled in this window"
+
+[[step]]
+do = "choose"
+selector = "#horizon"
+value = "168"
+
+[[step]]
+do = "say"
+line = "Orders, Schedule. The board: time across, seven days of it. Empty, because nothing is planned."
+at = "#board"
+
+[[step]]
+do = "fill"
+selector = "#plan-order"
+text = "WO-FORK1-0001"
+
+[[step]]
+do = "click"
+selector = "#plan-one"
+
+[[step]]
+do = "wait_for"
+js = "const t = document.querySelector('#board [data-total]'); return !!t && / 3 intervals$/.test(t.dataset.total);"
+
+[[step]]
+do = "say"
+line = "Plan the order already running. One bar on each machine, each step starting where the last one ends."
+at = "#board"
+
+[[step]]
+do = "fill"
+selector = "#plan-order"
+text = "WO-FORK1-0002"
+
+[[step]]
+do = "click"
+selector = "#plan-one"
+
+[[step]]
+do = "wait_for"
+js = "const t = document.querySelector('#board [data-total]'); return !!t && / 6 intervals$/.test(t.dataset.total);"
+
+[[step]]
+do = "fill"
+selector = "#plan-order"
+text = "WO-FORK1-0300"
+
+[[step]]
+do = "click"
+selector = "#plan-one"
+
+[[step]]
+do = "wait_for"
+js = "const t = document.querySelector('#board [data-total]'); return !!t && / 9 intervals$/.test(t.dataset.total);"
+
+[[step]]
+do = "say"
+line = "The next order queues behind it on every machine, and the new one behind both. Eleven thousand forks is most of a day on each."
+at = "#board"
+
+[[step]]
+do = "mark"
+name = "the-board"
+
+[[step]]
+do = "say"
+line = "The steps never overlap. A real line starts degating long before moulding ends; this plan waits for the whole step."
+at = "#board"
+
+[[step]]
+do = "click"
+selector = "button.tab[data-tab=promises]"
+
+[[step]]
+do = "wait_for"
+js = "return [...document.querySelectorAll('#promises-table tbody tr')].some(r => r.innerText.includes('WO-FORK1-0300') && r.innerText.includes('on time'));"
+
+[[step]]
+do = "say"
+line = "Promises: for each open order, when the plan says it finishes, against its due date."
+at = "#promises-table tbody tr:has-text(\"WO-FORK1-0300\")"
+
+[[step]]
+do = "say"
+line = "The new order finishes before it is due. On time."
+at = "#promises-table tbody tr:has-text(\"WO-FORK1-0300\") td:nth-child(6)"
+
+[[step]]
+do = "mark"
+name = "on-time"
+
+[[step]]
+do = "say"
+line = "The count says fifty. This plant has more than a hundred open orders: the list stops at fifty. A gap, written up."
+at = "#promise-count"
+
+[[step]]
+do = "click"
+selector = "button.tab[data-tab=calendar]"
+
+[[step]]
+do = "wait_for"
+selector = "#calendar-note"
+text = "running continuously"
+
+[[step]]
+do = "say"
+line = "Calendar. No shifts are defined, so the plant counts as running every hour of every day. That is why the due date looked easy."
+at = "#calendar-note"
+
+[[step]]
+do = "fill"
+selector = "#shift-code"
+text = "DAY"
+
+[[step]]
+do = "fill"
+selector = "#shift-name"
+text = "Day shift"
+
+[[step]]
+do = "say"
+line = "Add the shift this plant really works: six in the morning to two in the afternoon, Monday to Friday."
+at = "#shift-form .row"
+
+[[step]]
+do = "click"
+selector = "#shift-submit"
+
+[[step]]
+do = "wait_for"
+selector = "#shifts-table tbody"
+text = "DAY Day shift"
+
+[[step]]
+do = "say"
+line = "One shift now. Eight hours a day, five days a week."
+at = "#shifts-table tbody tr:has-text(\"DAY Day shift\")"
+
+[[step]]
+do = "mark"
+name = "the-shift"
+
+[[step]]
+do = "click"
+selector = "button.tab[data-tab=promises]"
+
+[[step]]
+do = "wait_for"
+js = "return [...document.querySelectorAll('#promises-table tbody tr')].some(r => r.innerText.includes('WO-FORK1-0300') && r.innerText.includes('on time'));"
+
+[[step]]
+do = "say"
+line = "Back to the promises: still on time. A promise is worked out when the order is planned, and nothing has planned it since."
+at = "#promises-table tbody tr:has-text(\"WO-FORK1-0300\") td:nth-child(6)"
+
+[[step]]
+do = "click"
+selector = "button.tab[data-tab=board]"
+
+[[step]]
+do = "fill"
+selector = "#plan-order"
+text = "WO-FORK1-0300"
+
+[[step]]
+do = "click"
+selector = "#plan-one"
+
+[[step]]
+do = "wait_for"
+selector = "#toast"
+text = "WO-FORK1-0300: finishes"
+
+[[step]]
+do = "say"
+line = "Plan it again. Now it waits for the next working morning, and runs in the day only."
+at = "#board"
+
+[[step]]
+do = "click"
+selector = "button.tab[data-tab=promises]"
+
+[[step]]
+do = "wait_for"
+js = "return [...document.querySelectorAll('#promises-table tbody tr')].some(r => r.innerText.includes('WO-FORK1-0300') && r.innerText.includes('late by'));"
+
+[[step]]
+do = "say"
+line = "The same order on the same machines. Only the calendar changed, and the plan says it is late, by that many hours."
+at = "#promises-table tbody tr:has-text(\"WO-FORK1-0300\") td:nth-child(6)"
+
+[[step]]
+do = "mark"
+name = "late"
+
+[[step]]
+do = "say"
+line = "Planning again also sent it to the back of every machine's queue. A gap, written up."
+at = "#promises-table tbody tr:has-text(\"WO-FORK1-0300\")"
+
+[[step]]
+do = "say"
+line = "And the plan does not watch the floor. When a machine stops, nothing moves until somebody plans again."
+at = "#kpi-late"
+
+[[step]]
+do = "say"
+line = "Maintenance a machine owes goes on the board before the work. This plant owes none yet; class five point two is about that."
+at = "#kpi-maint"
+
+[[step]]
+do = "click"
+selector = ".subnav a:text-is(\"Orders\")"
+
+[[step]]
+do = "click"
+selector = "#order-list tbody tr:has-text(\"WO-FORK1-0300\")"
+
+[[step]]
+do = "click"
+selector = "#order-actions button:text-is(\"Hold…\")"
+
+[[step]]
+do = "fill"
+selector = "#hold-reason"
+text = "customer asked to wait"
+
+[[step]]
+do = "click"
+selector = "#hold-confirm"
+
+[[step]]
+do = "wait_for"
+selector = "#toast"
+text = "WO-FORK1-0300 held"
+
+[[step]]
+do = "say"
+line = "The customer asks to wait, so the order is held, with the reason."
+at = "#d-status"
+
+# --------------------------------------------------------- what it refuses
+
+[[step]]
+part = "refuses"
+do = "click"
+selector = ".subnav a:text-is(\"Schedule\")"
+
+[[step]]
+do = "fill"
+selector = "#plan-order"
+text = "WO-FORK1-0300"
+
+[[step]]
+do = "click"
+selector = "#plan-one"
+
+[[step]]
+do = "wait_for"
+selector = "#toast"
+text = "is on hold; resume it before scheduling it"
+
+[[step]]
+do = "say"
+line = "Planning a held order is refused: resume it first."
+at = "#toast"
+
+[[step]]
+do = "say"
+line = "Its bars stay on the board, though. No screen takes them off."
+at = "#board"
+
+# --------------------------------------------------------- you now know
+
+[[step]]
+part = "know"
+do = "slide"
+name = "you-now-know"
+title = "You now know how to"
+lines = [
+  "Read the schedule board: each machine, time across, an order's steps one after another.",
+  "Say what a promise is, and why it rests on the shifts in the calendar.",
+  "Plan an order, add a shift, and say what the plan does not do by itself.",
+]
+
+[[step]]
+do = "say"
+line = "This was a simulated plant at the real clock. The new order, the shift and the hold were made on camera."
+
+[[step]]
+do = "say"
+line = "That is scheduling: the board, the calendar, and the promise. You now know how to do three things."
+
+[[step]]
+do = "mark"
+name = "you-now-know"
+
+[[step]]
+do = "hold"
+seconds = 3

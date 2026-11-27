@@ -46,6 +46,12 @@ product's sign-in page is never filmed. The scene's own `user` and
 `password` are who the take starts as. Use a pack's lab accounts, never a
 real person's.
 
+A `fill`'s `text` may carry `{today}`, `{today+2}` or `{today-1}`: a date
+counted from the day the take is filmed, as `YYYY-MM-DD`, so a due date typed
+on camera is still ahead when the camera rolls. A date field (`type="date"`)
+is given its date whole rather than typed a key at a time, because its three
+boxes take keys in the browser's own order.
+
 `click`, `fill` and `choose` move a drawn cursor to the thing and press it
 with a ripple. A `<select>` cannot be opened by a script, so on `choose` the
 cursor presses the list and the value changes.
