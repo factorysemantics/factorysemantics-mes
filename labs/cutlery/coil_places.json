@@ -1,0 +1,461 @@
+{
+ "_what": "Where each of the nine moulds' melt-temperature sensor and its four barrel heater bands sit, in plant metres. Copied on 2026-11-27 from the studio's drawing of the plant (studio/out/plant/cutlery/coil-places.json, read only): drawn, not measured. Data for a scene and for the 3D view to point at; no table holds it and nothing in the MES knows a coil as a thing yet.",
+ "_copied_from": "studio/out/plant/cutlery/coil-places.json, schema studio.coil-places/0.1",
+ "schema": "studio.coil-places/0.1",
+ "source": "studio-design (drawn, not measured)",
+ "units": "m",
+ "axes": "plant: +x east, +y north, z up; same as layout.json",
+ "note": "Four barrel heater bands per mould from cad/plant/kinds.py mold(): local x = -2.15+0.3i, y 0, z 1.55, band 0.18 m wide, radius 0.135. Zone 1 is the band nearest the nozzle. The MeltTemp anchor is the drawing's own TAG_ANCHOR.",
+ "moulds": [
+  {
+   "equipment": "FORK1_Mold",
+   "line": "FORK1",
+   "centre": [
+    13.8,
+    5.6
+   ],
+   "rz": 0.0,
+   "melt_temp_sensor": {
+    "id": "FORK1_Mold.MeltTemp",
+    "x": 12.2,
+    "y": 5.6,
+    "z": 1.55
+   },
+   "nearest_zone_to_sensor": 2,
+   "heater_bands": [
+    {
+     "zone": 1,
+     "id": "FORK1_Mold.HeaterZone1",
+     "x": 12.55,
+     "y": 5.6,
+     "z": 1.55,
+     "local_x": -1.25
+    },
+    {
+     "zone": 2,
+     "id": "FORK1_Mold.HeaterZone2",
+     "x": 12.25,
+     "y": 5.6,
+     "z": 1.55,
+     "local_x": -1.55
+    },
+    {
+     "zone": 3,
+     "id": "FORK1_Mold.HeaterZone3",
+     "x": 11.95,
+     "y": 5.6,
+     "z": 1.55,
+     "local_x": -1.85
+    },
+    {
+     "zone": 4,
+     "id": "FORK1_Mold.HeaterZone4",
+     "x": 11.65,
+     "y": 5.6,
+     "z": 1.55,
+     "local_x": -2.15
+    }
+   ]
+  },
+  {
+   "equipment": "FORK2_Mold",
+   "line": "FORK2",
+   "centre": [
+    13.8,
+    11.1
+   ],
+   "rz": 0.0,
+   "melt_temp_sensor": {
+    "id": "FORK2_Mold.MeltTemp",
+    "x": 12.2,
+    "y": 11.1,
+    "z": 1.55
+   },
+   "nearest_zone_to_sensor": 2,
+   "heater_bands": [
+    {
+     "zone": 1,
+     "id": "FORK2_Mold.HeaterZone1",
+     "x": 12.55,
+     "y": 11.1,
+     "z": 1.55,
+     "local_x": -1.25
+    },
+    {
+     "zone": 2,
+     "id": "FORK2_Mold.HeaterZone2",
+     "x": 12.25,
+     "y": 11.1,
+     "z": 1.55,
+     "local_x": -1.55
+    },
+    {
+     "zone": 3,
+     "id": "FORK2_Mold.HeaterZone3",
+     "x": 11.95,
+     "y": 11.1,
+     "z": 1.55,
+     "local_x": -1.85
+    },
+    {
+     "zone": 4,
+     "id": "FORK2_Mold.HeaterZone4",
+     "x": 11.65,
+     "y": 11.1,
+     "z": 1.55,
+     "local_x": -2.15
+    }
+   ]
+  },
+  {
+   "equipment": "FORK3_Mold",
+   "line": "FORK3",
+   "centre": [
+    13.8,
+    16.6
+   ],
+   "rz": 0.0,
+   "melt_temp_sensor": {
+    "id": "FORK3_Mold.MeltTemp",
+    "x": 12.2,
+    "y": 16.6,
+    "z": 1.55
+   },
+   "nearest_zone_to_sensor": 2,
+   "heater_bands": [
+    {
+     "zone": 1,
+     "id": "FORK3_Mold.HeaterZone1",
+     "x": 12.55,
+     "y": 16.6,
+     "z": 1.55,
+     "local_x": -1.25
+    },
+    {
+     "zone": 2,
+     "id": "FORK3_Mold.HeaterZone2",
+     "x": 12.25,
+     "y": 16.6,
+     "z": 1.55,
+     "local_x": -1.55
+    },
+    {
+     "zone": 3,
+     "id": "FORK3_Mold.HeaterZone3",
+     "x": 11.95,
+     "y": 16.6,
+     "z": 1.55,
+     "local_x": -1.85
+    },
+    {
+     "zone": 4,
+     "id": "FORK3_Mold.HeaterZone4",
+     "x": 11.65,
+     "y": 16.6,
+     "z": 1.55,
+     "local_x": -2.15
+    }
+   ]
+  },
+  {
+   "equipment": "SPOON1_Mold",
+   "line": "SPOON1",
+   "centre": [
+    13.8,
+    29.6
+   ],
+   "rz": 0.0,
+   "melt_temp_sensor": {
+    "id": "SPOON1_Mold.MeltTemp",
+    "x": 12.2,
+    "y": 29.6,
+    "z": 1.55
+   },
+   "nearest_zone_to_sensor": 2,
+   "heater_bands": [
+    {
+     "zone": 1,
+     "id": "SPOON1_Mold.HeaterZone1",
+     "x": 12.55,
+     "y": 29.6,
+     "z": 1.55,
+     "local_x": -1.25
+    },
+    {
+     "zone": 2,
+     "id": "SPOON1_Mold.HeaterZone2",
+     "x": 12.25,
+     "y": 29.6,
+     "z": 1.55,
+     "local_x": -1.55
+    },
+    {
+     "zone": 3,
+     "id": "SPOON1_Mold.HeaterZone3",
+     "x": 11.95,
+     "y": 29.6,
+     "z": 1.55,
+     "local_x": -1.85
+    },
+    {
+     "zone": 4,
+     "id": "SPOON1_Mold.HeaterZone4",
+     "x": 11.65,
+     "y": 29.6,
+     "z": 1.55,
+     "local_x": -2.15
+    }
+   ]
+  },
+  {
+   "equipment": "SPOON2_Mold",
+   "line": "SPOON2",
+   "centre": [
+    13.8,
+    35.1
+   ],
+   "rz": 0.0,
+   "melt_temp_sensor": {
+    "id": "SPOON2_Mold.MeltTemp",
+    "x": 12.2,
+    "y": 35.1,
+    "z": 1.55
+   },
+   "nearest_zone_to_sensor": 2,
+   "heater_bands": [
+    {
+     "zone": 1,
+     "id": "SPOON2_Mold.HeaterZone1",
+     "x": 12.55,
+     "y": 35.1,
+     "z": 1.55,
+     "local_x": -1.25
+    },
+    {
+     "zone": 2,
+     "id": "SPOON2_Mold.HeaterZone2",
+     "x": 12.25,
+     "y": 35.1,
+     "z": 1.55,
+     "local_x": -1.55
+    },
+    {
+     "zone": 3,
+     "id": "SPOON2_Mold.HeaterZone3",
+     "x": 11.95,
+     "y": 35.1,
+     "z": 1.55,
+     "local_x": -1.85
+    },
+    {
+     "zone": 4,
+     "id": "SPOON2_Mold.HeaterZone4",
+     "x": 11.65,
+     "y": 35.1,
+     "z": 1.55,
+     "local_x": -2.15
+    }
+   ]
+  },
+  {
+   "equipment": "SPOON3_Mold",
+   "line": "SPOON3",
+   "centre": [
+    13.8,
+    40.6
+   ],
+   "rz": 0.0,
+   "melt_temp_sensor": {
+    "id": "SPOON3_Mold.MeltTemp",
+    "x": 12.2,
+    "y": 40.6,
+    "z": 1.55
+   },
+   "nearest_zone_to_sensor": 2,
+   "heater_bands": [
+    {
+     "zone": 1,
+     "id": "SPOON3_Mold.HeaterZone1",
+     "x": 12.55,
+     "y": 40.6,
+     "z": 1.55,
+     "local_x": -1.25
+    },
+    {
+     "zone": 2,
+     "id": "SPOON3_Mold.HeaterZone2",
+     "x": 12.25,
+     "y": 40.6,
+     "z": 1.55,
+     "local_x": -1.55
+    },
+    {
+     "zone": 3,
+     "id": "SPOON3_Mold.HeaterZone3",
+     "x": 11.95,
+     "y": 40.6,
+     "z": 1.55,
+     "local_x": -1.85
+    },
+    {
+     "zone": 4,
+     "id": "SPOON3_Mold.HeaterZone4",
+     "x": 11.65,
+     "y": 40.6,
+     "z": 1.55,
+     "local_x": -2.15
+    }
+   ]
+  },
+  {
+   "equipment": "KNIFE1_Mold",
+   "line": "KNIFE1",
+   "centre": [
+    13.8,
+    53.6
+   ],
+   "rz": 0.0,
+   "melt_temp_sensor": {
+    "id": "KNIFE1_Mold.MeltTemp",
+    "x": 12.2,
+    "y": 53.6,
+    "z": 1.55
+   },
+   "nearest_zone_to_sensor": 2,
+   "heater_bands": [
+    {
+     "zone": 1,
+     "id": "KNIFE1_Mold.HeaterZone1",
+     "x": 12.55,
+     "y": 53.6,
+     "z": 1.55,
+     "local_x": -1.25
+    },
+    {
+     "zone": 2,
+     "id": "KNIFE1_Mold.HeaterZone2",
+     "x": 12.25,
+     "y": 53.6,
+     "z": 1.55,
+     "local_x": -1.55
+    },
+    {
+     "zone": 3,
+     "id": "KNIFE1_Mold.HeaterZone3",
+     "x": 11.95,
+     "y": 53.6,
+     "z": 1.55,
+     "local_x": -1.85
+    },
+    {
+     "zone": 4,
+     "id": "KNIFE1_Mold.HeaterZone4",
+     "x": 11.65,
+     "y": 53.6,
+     "z": 1.55,
+     "local_x": -2.15
+    }
+   ]
+  },
+  {
+   "equipment": "KNIFE2_Mold",
+   "line": "KNIFE2",
+   "centre": [
+    13.8,
+    59.1
+   ],
+   "rz": 0.0,
+   "melt_temp_sensor": {
+    "id": "KNIFE2_Mold.MeltTemp",
+    "x": 12.2,
+    "y": 59.1,
+    "z": 1.55
+   },
+   "nearest_zone_to_sensor": 2,
+   "heater_bands": [
+    {
+     "zone": 1,
+     "id": "KNIFE2_Mold.HeaterZone1",
+     "x": 12.55,
+     "y": 59.1,
+     "z": 1.55,
+     "local_x": -1.25
+    },
+    {
+     "zone": 2,
+     "id": "KNIFE2_Mold.HeaterZone2",
+     "x": 12.25,
+     "y": 59.1,
+     "z": 1.55,
+     "local_x": -1.55
+    },
+    {
+     "zone": 3,
+     "id": "KNIFE2_Mold.HeaterZone3",
+     "x": 11.95,
+     "y": 59.1,
+     "z": 1.55,
+     "local_x": -1.85
+    },
+    {
+     "zone": 4,
+     "id": "KNIFE2_Mold.HeaterZone4",
+     "x": 11.65,
+     "y": 59.1,
+     "z": 1.55,
+     "local_x": -2.15
+    }
+   ]
+  },
+  {
+   "equipment": "KNIFE3_Mold",
+   "line": "KNIFE3",
+   "centre": [
+    13.8,
+    64.6
+   ],
+   "rz": 0.0,
+   "melt_temp_sensor": {
+    "id": "KNIFE3_Mold.MeltTemp",
+    "x": 12.2,
+    "y": 64.6,
+    "z": 1.55
+   },
+   "nearest_zone_to_sensor": 2,
+   "heater_bands": [
+    {
+     "zone": 1,
+     "id": "KNIFE3_Mold.HeaterZone1",
+     "x": 12.55,
+     "y": 64.6,
+     "z": 1.55,
+     "local_x": -1.25
+    },
+    {
+     "zone": 2,
+     "id": "KNIFE3_Mold.HeaterZone2",
+     "x": 12.25,
+     "y": 64.6,
+     "z": 1.55,
+     "local_x": -1.55
+    },
+    {
+     "zone": 3,
+     "id": "KNIFE3_Mold.HeaterZone3",
+     "x": 11.95,
+     "y": 64.6,
+     "z": 1.55,
+     "local_x": -1.85
+    },
+    {
+     "zone": 4,
+     "id": "KNIFE3_Mold.HeaterZone4",
+     "x": 11.65,
+     "y": 64.6,
+     "z": 1.55,
+     "local_x": -2.15
+    }
+   ]
+  }
+ ]
+}
