@@ -126,10 +126,10 @@ do = "slide"
 name = "how-a-lot-gets-in"
 title = "How a lot gets into a pallet"
 lines = [
-  "The resin lot is issued to the fork order at the mould",
-  "Each fork, stack, wrap and pallet gets a serial: a number of its own",
-  "Forks go into stacks, a stack and a plate into a wrap, wraps onto a pallet",
-  "Each step is written down, so the chain reads either way",
+  "The resin lot is issued to the fork order",
+  "Each piece gets a serial: a number of its own",
+  "Fork into stack, stack into wrap, wrap onto pallet",
+  "Each step is written down",
 ]
 hold = 1.5
 
@@ -210,9 +210,6 @@ at = "#s-count"
 do = "say"
 line = "That is genealogy, drawn as a tree. This wrap holds a paper plate and a stack, and the stack holds a fork, a knife and a spoon."
 at = "#s-tree li:has(> div.node > a:text-is(\"W01-000000003\"))"
-scroll_to = "#s-tree li:has(> div.node > a:text-is(\"W01-000000003\"))"
-scroll_block = "start"
-scroll_offset = 215
 
 [[step]]
 do = "say"
@@ -389,13 +386,12 @@ text = "no lot"
 
 [[step]]
 do = "say"
-line = "A lot it has no record of: no lot. The MES does not guess where a lot went that was never booked in."
-hold = 1.0
+line = "No lot: never booked in here. The MES does not guess where it went."
 at = "#banner"
 
 [[step]]
 do = "say"
-line = "Class 1.2 showed the Floor refusing a lot of a material it did not know. Trace keeps the same rule: no record, no answer."
+line = "Like the Floor in class 1.2: no record, no answer."
 at = "#banner"
 
 [[step]]
@@ -404,7 +400,7 @@ name = "refused-no-lot"
 
 [[step]]
 do = "hold"
-seconds = 2
+seconds = 1
 
 # ------------------------------------------------------------ you now know
 

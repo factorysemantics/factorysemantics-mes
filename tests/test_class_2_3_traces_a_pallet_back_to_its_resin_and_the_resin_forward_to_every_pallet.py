@@ -171,7 +171,7 @@ def test_what_it_refuses_is_a_lot_it_has_no_record_of_and_it_runs_under_twenty_f
 
     assert len(typed) == 1 and typed[0] not in lots_the_pack_books()
     assert waits == ["no lot"]
-    assert "does not guess" in said and "Class 1.2" in said
+    assert "does not guess" in said and "class 1.2" in said.lower()
     assert runner.planned_seconds(dict(scene, step=refuses)) < 25
 
 
