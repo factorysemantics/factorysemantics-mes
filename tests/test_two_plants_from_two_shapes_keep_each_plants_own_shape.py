@@ -376,17 +376,36 @@ def test_forty_stations_cost_about_what_forty_stations_should(tmp_path: Path) ->
     pack plays, which is the simulator underneath it. Forty stations is where
     the second one would hurt first.
     """
+    import gc
     import time
+    from contextlib import contextmanager
 
     from fsmes.shape import read as shape_read
     from fsmes.sim import generate
 
+    # The clock times the converter, not the garbage collector. By this point
+    # the session holds over 400,000 objects, and one full collection of them
+    # costs about 0.1 s here and 0.2 s on a runner - against 0.003 s for the
+    # whole forty-station build. Which build a collection lands in depends on
+    # what every earlier test allocated, so without this the ratio measured
+    # the session, not the code (red twice on #335, 2026-11-27, for a branch
+    # that does not touch this code). Collected before, held off during.
+    @contextmanager
+    def clock():
+        gc.collect()
+        gc.disable()
+        try:
+            yield
+        finally:
+            gc.enable()
+
     def build(raw: dict, name: str) -> float:
         shape = shape_read.of(raw)
-        started = time.perf_counter()
-        plant = from_shape(shape, name=name, buffer=BUFFER)
-        to_pack(plant, tmp_path / name, echo=lambda _line: None)
-        return time.perf_counter() - started
+        with clock():
+            started = time.perf_counter()
+            plant = from_shape(shape, name=name, buffer=BUFFER)
+            to_pack(plant, tmp_path / name, echo=lambda _line: None)
+            return time.perf_counter() - started
 
     small = build(_synthetic(6, 1, 1), "small")
     big = build(_synthetic(40, 5, 3), "big")
@@ -408,9 +427,10 @@ def test_forty_stations_cost_about_what_forty_stations_should(tmp_path: Path) ->
     def shift(pack: Path) -> float:
         config = generate.load_config(pack / "line.json")
         config["duration_s"] = 1800
-        started = time.perf_counter()
-        rows = generate.simulate(config)
-        spent = time.perf_counter() - started
+        with clock():
+            started = time.perf_counter()
+            rows = generate.simulate(config)
+            spent = time.perf_counter() - started
         assert len(rows) == len(config["stations"]) + 1   # a table each, and the line
         return spent
 
