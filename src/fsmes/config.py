@@ -408,6 +408,19 @@ class Settings(BaseSettings):
     # problem.
     opc_health_periods: int = 3
 
+    # A simulated plant that was paused - its processes stopped in place, or
+    # the box asleep - and is now awake again. Seconds of silence after which
+    # waking is treated as a pause rather than a slow tick: the replay
+    # resumes from now instead of playing the paused time in one burst, and
+    # the reader records the paused stretch as time nobody watched (decision
+    # 0030) instead of carrying each machine's last state through it. Zero,
+    # the default, is off: every replay and every reader behave exactly as
+    # they always have. The crew's lab sets it (MES_WAKE_GAP_SECONDS) because
+    # it pauses its plant every night; a scored run or a recorded scene never
+    # should. Keep it well above the health check (a few seconds) - a minute
+    # or more.
+    wake_gap_seconds: float = 0.0
+
     # Tag history is evidence: kept this many days, then pruned hourly by the
     # API process in batches. Zero keeps everything. Bookings, states, checks
     # and the audit trail are never pruned.

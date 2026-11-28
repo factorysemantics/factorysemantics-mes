@@ -550,6 +550,25 @@ async def _wait_for_tick(started: float, tick: int, period: float) -> float:
     return -delay
 
 
+def _resume_after_pause(started: float, behind: float, period: float,
+                        wake_gap_s: float) -> tuple[float, int]:
+    """(the schedule's new start, how many ticks are not played).
+
+    A replay that was stopped in place (SIGSTOP) wakes to find every tick
+    since then overdue: the loop's clock kept running while the process did
+    not. Played as scheduled, that is the whole paused stretch produced in
+    one burst - on 2026-11-12 ten hours of counts against half an hour of
+    running, and OEE withheld on all 83 machines of the lab plant. With
+    `wake_gap_s` set and the line further behind than that, the schedule is
+    moved so this tick is due now: the line carries on from the row it was
+    on, its counters from where they stood, and the paused time is simply
+    not played. Off (zero) the schedule is never moved, as before.
+    """
+    if wake_gap_s <= 0 or behind <= wake_gap_s:
+        return started, 0
+    return started + behind, int(behind / period)
+
+
 async def run(settings: Settings, directory: Path | None = None, speed: float | None = None) -> None:
     directory = Path(directory or settings.replay_dir)
     speed = speed or settings.sim_speed
@@ -589,6 +608,13 @@ async def run(settings: Settings, directory: Path | None = None, speed: float | 
         while True:
             tick += 1
             behind = await _wait_for_tick(started, tick, period)
+            started, not_played = _resume_after_pause(started, behind, period,
+                                                      settings.wake_gap_seconds)
+            if not_played:
+                log.warning("replay woke after a pause; the paused time is not played",
+                            paused_seconds=round(behind, 1), ticks_not_played=not_played,
+                            tick=tick)
+                behind = 0.0
             if behind > period:
                 # Say so rather than quietly running slow: a replay that
                 # cannot keep up produces data whose timestamps mean something
