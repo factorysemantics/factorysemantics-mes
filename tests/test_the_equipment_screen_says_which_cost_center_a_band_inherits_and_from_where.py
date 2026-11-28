@@ -11,7 +11,7 @@ service's (`masterdata.cost_center_holder`) and comes through the read as
 
 The form's place boxes are labelled with their unit, the cost center box says
 that empty means inherit, and the form's title says "Change <name>" while it
-changes a picked row. Setup > Admin says in one line where the screen is.
+changes a picked row. Setup > Configuration says in one line where the screen is.
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ from pathlib import Path
 import pytest
 
 from fsmes.domain import EquipmentLevel
-from fsmes.services import masterdata
+from fsmes.services import auth, masterdata
 
 WEB = Path(__file__).resolve().parents[1] / "src" / "fsmes" / "web"
 
@@ -90,10 +90,16 @@ def test_each_place_box_and_the_cost_center_box_has_a_label_with_its_unit():
 
 
 def test_setup_says_in_one_line_where_equipment_and_its_cost_centers_are_kept():
-    admin = (WEB / "admin.html").read_text(encoding="utf-8")
-    link = re.search(r'cost centers\s+are kept on <a href="/dashboard/masterdata#equipment">([^<]+)</a>', admin)
-    assert link, "Setup > Admin does not say where the equipment screen is"
+    """On Setup > Configuration, which an engineer opens, not on Setup > Admin,
+    which needs users.manage (Scott, via the manager, 2026-11-28: "where an
+    engineer can see it, since the engineer is who assigns")."""
+    config = (WEB / "config.html").read_text(encoding="utf-8")
+    link = re.search(r'cost centers\s+are kept on <a href="/dashboard/masterdata#equipment">([^<]+)</a>', config)
+    assert link, "Setup > Configuration does not say where the equipment screen is"
     assert link.group(1) == "Engineering \u203a Master data \u203a Equipment"
+    assert "/dashboard/masterdata#equipment" not in (WEB / "admin.html").read_text(encoding="utf-8")
+    script = (WEB / "config.js").read_text(encoding="utf-8")
+    assert '$("#equipment-pointer").classList.toggle("hidden", DOMAIN !== "administration")' in script
 
 
 # --------------------------------------------------------------- in a browser
@@ -101,9 +107,17 @@ def test_setup_says_in_one_line_where_equipment_and_its_cost_centers_are_kept():
 DELAY_SECONDS = 0.8
 
 
+def _seed_with_a_supervisor(session) -> None:
+    """The bands, and an account without users.manage, which is how an
+    engineer signs in: Setup > Admin is not on his bar."""
+    _seed(session)
+    auth.create_user(session, code="BCC-SUPER", name="Bcc Super", password="bcc-super", role="supervisor")
+    session.flush()
+
+
 @pytest.fixture(scope="module")
 def plant(serve_plant):
-    with serve_plant(_seed, name="band-cost-center") as served:
+    with serve_plant(_seed_with_a_supervisor, name="band-cost-center") as served:
         yield served
 
 
@@ -167,5 +181,29 @@ def test_the_table_shows_own_inherited_and_none_and_the_title_follows_the_picked
         page.click("#eq-cancel")
         page.wait_for_function(
             "() => document.querySelector('#eq-form-title').textContent === 'Add equipment'", timeout=5000)
+    finally:
+        context.close()
+
+
+@pytest.mark.slow
+@pytest.mark.browser
+def test_someone_without_users_manage_sees_the_line_on_setup_configuration_only(browser, plant):
+    context = browser.new_context(viewport={"width": 1400, "height": 1000})
+    try:
+        plant.sign_in(context, code="BCC-SUPER", password="bcc-super")
+        page = context.new_page()
+        page.goto(f"{plant.base}/dashboard/config/administration", wait_until="load", timeout=30000)
+        page.wait_for_function(
+            "() => document.querySelector('#domain-title').textContent.includes('configuration')",
+            timeout=20000)
+        line = page.locator("#equipment-pointer")
+        assert line.is_visible()
+        assert line.locator("a").get_attribute("href") == "/dashboard/masterdata#equipment"
+
+        page.goto(f"{plant.base}/dashboard/config/engineering", wait_until="load", timeout=30000)
+        page.wait_for_function(
+            "() => document.querySelector('#domain-title').textContent.includes('configuration')",
+            timeout=20000)
+        assert not page.locator("#equipment-pointer").is_visible()
     finally:
         context.close()
