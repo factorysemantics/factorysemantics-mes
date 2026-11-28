@@ -127,6 +127,18 @@ goes under Honesty with a migration line, so plant people can find it.
   pack on two MES servers, stop one and watch the other carry on.
   (`docs/operate/demo-from-your-pc.md`, #245)
 
+- **The 3D line view can be clicked.** Every part under a machine has a
+  marker: on the cutlery plant, a mould's four heater bands are rings on its
+  barrel and its melt sensor a pin. A marker is red while a repair order is
+  open on that part. A click on a marker or a machine opens a panel with its
+  name, code, place, which cost center pays and where that comes from, and
+  the open repair with a link to Maintenance › Work. With `masterdata.write`,
+  **Move** (click the machine's surface, then Save) sets the place and a box
+  sets the part's own cost center; both go through the existing equipment
+  update and are audited. Moving is off on the whole-area plan view, where
+  machines are drawn larger than life; on a phone a "Parts" list opens the
+  panel. No new route, table or column. (#341)
+
 ### Changed
 
 - **Each Export button says which list it downloads**: *Export checks
