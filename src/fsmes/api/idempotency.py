@@ -13,6 +13,7 @@ import json
 from fastapi import Request, Response
 from sqlalchemy import select
 from starlette.concurrency import run_in_threadpool
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from fsmes.config import get_settings
 from fsmes.db import read_only_session, session_scope
@@ -33,36 +34,64 @@ def _actor(request: Request) -> str | None:
     return claims["sub"] if claims else None
 
 
-async def idempotency(request: Request, call_next):
-    key = (request.headers.get(HEADER) or "").strip()
-    if not key or request.method not in WRITES:
-        return await call_next(request)
-    actor = _actor(request)
-    if actor is None:
-        return await call_next(request)  # the route will answer 401 itself
+class Idempotency:
+    """Plain ASGI rather than `@app.middleware("http")`, and on purpose.
 
-    # Database work runs off the event loop. The route's own session commits
-    # in its dependency teardown, which is scheduled after the response is
-    # handed back; a synchronous write here would block the loop while
-    # waiting for a lock that teardown cannot release until the loop is free.
-    # Found live: "database is locked" after five seconds, on every keyed write.
-    seen = await run_in_threadpool(_lookup, actor, key)
-    if seen is not None:
-        status, body = seen
-        return Response(content=json.dumps(body), status_code=status,
-                        media_type="application/json", headers={"Idempotent-Replay": "true"})
+    The key is stored after the route has finished and before the client is
+    answered, so a retry that arrives the moment the answer does is a replay
+    and not a second write. "After the route has finished" has to include its
+    database session's commit, which FastAPI runs in the route's teardown,
+    after the route has sent its last body message.
 
-    response = await call_next(request)
-    chunks = [chunk async for chunk in response.body_iterator]
-    raw = b"".join(chunks)
-    if 200 <= response.status_code < 300:
-        try:
-            body = json.loads(raw) if raw else None
-        except ValueError:
-            body = None
-        await run_in_threadpool(_store, actor, key, request.method, request.url.path, response.status_code, body)
-    return Response(content=raw, status_code=response.status_code,
-                    headers=dict(response.headers), media_type=response.media_type)
+    Starlette 1.7 made `call_next` hold that last message until the outer
+    response has gone out. A store made inside `call_next`'s middleware then
+    waits on SQLite's write lock while the route's session holds it, and the
+    session cannot commit until the store has finished: "database is locked"
+    once `busy_timeout` runs out, on every keyed write, the assistant's
+    "Do it" included. Here the route's messages are held in a list instead,
+    so the route runs to the end of its teardown, then the key is stored,
+    then the held messages are sent.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or scope["method"] not in WRITES:
+            return await self.app(scope, receive, send)
+        request = Request(scope)
+        key = (request.headers.get(HEADER) or "").strip()
+        actor = _actor(request) if key else None
+        if actor is None:
+            # No key, or no one signed in: the route will answer 401 itself.
+            return await self.app(scope, receive, send)
+
+        # Database work runs off the event loop: a synchronous wait for
+        # SQLite's lock here would stop every other request while it waits.
+        seen = await run_in_threadpool(_lookup, actor, key)
+        if seen is not None:
+            status, body = seen
+            replay = Response(content=json.dumps(body), status_code=status,
+                              media_type="application/json", headers={"Idempotent-Replay": "true"})
+            return await replay(scope, receive, send)
+
+        held: list[Message] = []
+
+        async def hold(message: Message) -> None:
+            held.append(message)
+
+        await self.app(scope, receive, hold)
+        start = next((m for m in held if m["type"] == "http.response.start"), None)
+        status = start["status"] if start else 500
+        if 200 <= status < 300:
+            raw = b"".join(m.get("body", b"") for m in held if m["type"] == "http.response.body")
+            try:
+                body = json.loads(raw) if raw else None
+            except ValueError:
+                body = None
+            await run_in_threadpool(_store, actor, key, scope["method"], request.url.path, status, body)
+        for message in held:
+            await send(message)
 
 
 def _lookup(actor: str, key: str) -> tuple[int, object] | None:
