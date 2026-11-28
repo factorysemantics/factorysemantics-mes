@@ -45,7 +45,7 @@ from fsmes.domain import (
 )
 from fsmes.integrations.opc.tag_map import load_tag_map
 from fsmes.kernel.tags import STRUCTURAL_TAGS
-from fsmes.services import NotFound, masterdata, workorders
+from fsmes.services import NotFound, maintenance, masterdata, workorders
 from fsmes.services import connection as connection_service
 
 # One poll should never hand the renderer more work than it can animate. A client
@@ -318,6 +318,60 @@ def _centre(points: list[tuple[float, float]]) -> tuple[float, float]:
     return (min(xs) + max(xs)) / 2.0, (min(ys) + max(ys)) / 2.0
 
 
+def _drawn_y_sign(frame) -> int | None:
+    """How a drawn layout's floor turns back into plant metres, when the
+    layout file says (`"plant_frame": {"x": "x", "z": "-y"}`): the sign of
+    plant y in the view's z. None when it does not say - a layout typed by
+    hand is in whatever metres its author chose, and a heater band's plant
+    place cannot be put on it without guessing."""
+    if not isinstance(frame, dict) or frame.get("x") != "x":
+        return None
+    return {"y": 1, "-y": -1}.get(frame.get("z"))
+
+
+def _repair(order) -> dict:
+    return {"equipment": order.equipment.code, "order": order.code, "summary": order.summary,
+            "status": order.status.value, "kind": order.kind.value}
+
+
+def _what_it_is_and_who_pays(db: Session, node: Equipment, repairs: dict) -> dict:
+    """What the 3D view's panel says of a machine or a part: who pays for it,
+    and from where (its own, or inherited from the mould or the line, as Setup
+    shows it), and the repair orders open on it."""
+    holder = masterdata.cost_center_holder(db, node)
+    open_here = repairs.get(node.id, [])
+    return {
+        "what": masterdata.what_it_is(node),
+        "cost_center": holder.cost_center if holder is not None else None,
+        "own_cost_center": node.cost_center,
+        "cost_center_from": holder.name if holder is not None and holder is not node else None,
+        "place": None if (held := masterdata.position(node)) is None
+        else {"x": held[0], "y": held[1], "z": held[2]},
+        "repairs": [_repair(order) for order in open_here],
+        "repairs_total": len(open_here),
+    }
+
+
+def _part(db: Session, part: Equipment, station: dict, repairs: dict) -> dict:
+    """A part of a machine as the 3D view draws it. `at` is where its marker
+    sits, in view metres from the machine's centre, worked out from the
+    part's plant place and the machine's frame; None when either is
+    unknown, and the view puts it on a spot of its own on the machine and
+    says so (`placed`: "held" or "default")."""
+    out = {"code": part.code, "name": part.name, **_what_it_is_and_who_pays(db, part, repairs)}
+    frame, place = station["frame"], out["place"]
+    if frame is None or place is None:
+        out.update(at=None, placed="default")
+        return out
+    out["at"] = {
+        "x": round(place["x"] - frame["x0"] - station["x"], 3),
+        "y": None if place["z"] is None else round(place["z"] - frame["z0"], 3),
+        "z": round((place["y"] - frame["y0"]) * frame["y_sign"] - station["z"], 3),
+    }
+    out["placed"] = "held"
+    return out
+
+
 def layout(db: Session, line_code: str | None = None) -> dict:
     """The scene: which machines, in what order, in what shape, where.
 
@@ -358,17 +412,23 @@ def layout(db: Session, line_code: str | None = None) -> dict:
         xs = [w[0] - cx for w in held.values()]
         row_start = min(xs)
 
+    y_sign = _drawn_y_sign(line_conf.get("plant_frame", defaults.get("plant_frame")))
+    repairs = maintenance.open_on(db, ordered)
     stations = []
     unplaced = 0
     for index, unit in enumerate(ordered):
         conf = station_conf.get(unit.code) or {}
         where = held.get(unit.id)
         height = None
+        frame = None
         if drawn_place(unit) is not None:
             placed = "drawn"
             x, z, rot = float(conf.get("x", index * spacing)), float(conf.get("z", 0.0)), float(conf.get("rot", 0.0))
+            if y_sign is not None:
+                frame = {"x0": 0.0, "y0": 0.0, "y_sign": y_sign, "z0": 0.0}
         elif where is not None:
             placed = "held"
+            frame = {"x0": cx, "y0": cy, "y_sign": 1, "z0": where[2] or 0.0}
             # The MES's y across the floor is the view's z; its heading turns
             # clockwise seen from above and the view's rot the other way.
             x, z = round(where[0] - cx, 2), round(where[1] - cy, 2)
@@ -396,8 +456,13 @@ def layout(db: Session, line_code: str | None = None) -> dict:
                 "height": height,
                 "cycle_seconds": unit.ideal_cycle_seconds,
                 "analog": analogs.get(unit.code),
+                "frame": frame,
             }
         )
+        stations[-1].update(_what_it_is_and_who_pays(db, unit, repairs))
+        parts = [_part(db, part, stations[-1], repairs)
+                 for part in masterdata.parts_of(db, unit)]
+        stations[-1].update(parts=parts, parts_total=len(parts))
 
     lines = [{"code": c.code, "name": c.name, "stations": len(u), "area": False}
              for c, u in _work_centres(db)]
@@ -413,6 +478,9 @@ def layout(db: Session, line_code: str | None = None) -> dict:
         },
         "conveyor": {"capacity": capacity, "spacing": spacing},
         "plan": plan,
+        # Where a click on a machine can be turned back into plant metres:
+        # only where machines are drawn at their true size.
+        "movable": not plan,
         "stations": stations,
         "lines": lines,
     }
@@ -517,8 +585,14 @@ def events(db: Session, line_code: str | None = None, since: int = -1) -> dict:
             }
         )
 
+    open_now = [(eq_id, order) for eq_id, orders in maintenance.open_on(db, ordered).items()
+                for order in orders]
     return {
         "line": centre.code,
+        # Open repair orders on the line's machines and their parts: what
+        # turns a marker red while the view is open.
+        "repairs": [_repair(order) for _, order in open_now],
+        "repairs_total": len(open_now),
         "cursor": head,
         "truncated": truncated,
         "stations": stations,

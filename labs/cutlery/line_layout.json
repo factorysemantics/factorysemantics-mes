@@ -1,7 +1,11 @@
 {
   "_comment": "Geometry for the 3D line view of the cutlery plant: 83 machines on 61 lines, where studio's plant design puts them (positions/<LINE>.json, metres, x along the plant, z across it). Each machine is drawn with the model named here from models/ beside this file. Written by make_layout.py - edit the positions files or the drawing they came from, not this one.",
   "defaults": {
-    "unit_label": "unit"
+    "unit_label": "unit",
+    "plant_frame": {
+      "x": "x",
+      "z": "-y"
+    }
   },
   "lines": {
     "FORK1LINE": {
