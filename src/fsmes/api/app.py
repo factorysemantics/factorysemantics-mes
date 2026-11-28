@@ -186,9 +186,9 @@ def create_app() -> FastAPI:
         ),
     )
 
-    from fsmes.api.idempotency import idempotency
+    from fsmes.api.idempotency import Idempotency
 
-    app.middleware("http")(idempotency)
+    app.add_middleware(Idempotency)
 
     for exc_type, status in _ERROR_STATUS.items():
         @app.exception_handler(exc_type)

@@ -94,6 +94,72 @@ def test_two_batches_booked_at_the_same_time_do_not_lock_each_other_out(file_dat
     assert written == WRITERS * ROUNDS, f"{written} rows booked, expected {WRITERS * ROUNDS}"
 
 
+@pytest.fixture()
+def keyed_plant(tmp_path, monkeypatch):
+    """The demo plant on a file database, served by the real app with no
+    session override, signed in as ADMIN.
+
+    Every other API test points `get_db` at one shared session, so the
+    idempotency middleware never meets a second connection there - which is
+    how a keyed write that deadlocked on every fresh install passed the whole
+    suite. A short busy timeout makes that deadlock a fast failure.
+    """
+    from fastapi.testclient import TestClient
+
+    from fsmes import config
+    from fsmes import db as db_module
+    from fsmes.api.app import create_app
+    from fsmes.seed import seed_demo_plant
+
+    cached = (config.get_settings, db_module.get_engine, db_module.get_sessionmaker)
+    monkeypatch.setenv("MES_DATABASE_URL", f"sqlite:///{(tmp_path / 'keyed.db').as_posix()}")
+    monkeypatch.setenv("MES_SQLITE_BUSY_TIMEOUT_MS", "1000")
+    for c in cached:
+        c.cache_clear()
+    Base.metadata.create_all(db_module.get_engine())
+    with db_module.session_scope() as db:
+        seed_demo_plant(db)
+    with TestClient(create_app(), raise_server_exceptions=False) as client:
+        reply = client.post("/auth/login", json={"code": "ADMIN", "password": "admin"})
+        assert reply.status_code == 200, reply.text
+        client.headers["Authorization"] = f"Bearer {reply.json()['token']}"
+        yield client
+    db_module.get_engine().dispose()
+    for c in cached:
+        c.cache_clear()
+
+
+def test_a_keyed_write_is_done_once_and_replayed_on_a_file_database(keyed_plant):
+    """The path the assistant's "Do it" takes: a write carrying
+    `Idempotency-Key`, with the route's own session and the middleware's
+    store each on a connection of their own.
+
+    Found 2026-11-27 on a fresh `pip install`: Starlette 1.7 and later hold a
+    route's last message until the whole response has gone out, the route's
+    session commits after that, and a store made from inside `call_next`
+    waited on the lock that session held - 500, "database is locked".
+    """
+    from fsmes.db import session_scope
+
+    new = {"code": "KEYED1", "name": "Keyed", "password": "a-long-enough-password",
+           "role": "operator"}
+    headers = {"Idempotency-Key": "do-it-once"}
+
+    first = keyed_plant.post("/auth/users", json=new, headers=headers)
+    assert first.status_code == 201, first.text
+    assert "Idempotent-Replay" not in first.headers
+
+    again = keyed_plant.post("/auth/users", json=new, headers=headers)
+    assert again.status_code == 201, again.text
+    assert again.headers.get("Idempotent-Replay") == "true"
+    assert again.json() == first.json()
+
+    with session_scope() as db:
+        stored = db.scalars(select(IdempotencyKey)).all()
+    assert [(k.actor, k.key, k.status_code) for k in stored] == [("ADMIN", "do-it-once", 201)], (
+        f"{len(stored)} keys stored, expected 1")
+
+
 def test_a_transaction_is_not_held_open_across_a_network_call():
     """Every transaction takes SQLite's one write lock now, reads included, so
     a session held open across a network call stops every other writer for as
