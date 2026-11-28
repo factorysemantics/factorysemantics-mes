@@ -60,7 +60,7 @@ function drawEquipment() {
     code.append(e.level === "work_unit" ? FS.link("machine", e.code) : e.level === "work_center" ? FS.link("line", e.code) : e.code);
     tr.append(code, el("td", null, e.name), el("td", "muted", e.level.replace("_", " ")),
               el("td", "muted", e.parent || "—"), el("td", "num", e.ideal_cycle_seconds ?? "—"),
-              el("td", "muted", e.cost_center || (e.bills_to ? `${e.bills_to} (inherited)` : "—")),
+              el("td", "muted", e.cost_center || "—"),
               el("td", "muted small", place(e)));
     if (FS.can("masterdata.write")) {
       tr.title = "Change its place or cost center";

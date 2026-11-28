@@ -210,16 +210,16 @@ text = "FORK1"
 [[step]]
 do = "wait_for"
 selector = "#eq-count"
-text = "4 of 4 matching, 150 in the plant"
+text = "9 of 9 matching, 195 in the plant"
 scroll_to = "#eq-count"
 scroll_block = "start"
 scroll_offset = 215
 
 [[step]]
 do = "say"
-line = "Master data, Equipment: what the plant is made of. A hundred and fifty places; four match FORK1."
+line = "Master data, Equipment: what the plant is made of. A hundred and ninety-five places; nine match FORK1."
 at = "#eq-count"
-label = "150"
+label = "195"
 
 [[step]]
 do = "say"
@@ -354,7 +354,7 @@ text = "FORK4"
 [[step]]
 do = "wait_for"
 selector = "#eq-count"
-text = "2 of 2 matching, 152 in the plant"
+text = "2 of 2 matching, 197 in the plant"
 scroll_to = "#eq-count"
 scroll_block = "start"
 scroll_offset = 215
@@ -513,7 +513,7 @@ text = "LOOSE"
 [[step]]
 do = "wait_for"
 selector = "#eq-count"
-text = "1 of 1 matching, 153 in the plant"
+text = "1 of 1 matching, 198 in the plant"
 
 [[step]]
 do = "click"

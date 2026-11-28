@@ -321,7 +321,10 @@ def test_the_floor_raises_one_corrective_order_for_the_cold_stop_and_closes_it_w
     orders = list(plant.scalars(select(MaintenanceOrder)))
     assert len(orders) == 1, [(o.code, o.summary) for o in orders]  # not the warm stop at 10
     order = orders[0]
-    assert order.equipment_id == machine.id
+    # Raised on heater band 2 itself (since 2026-11-27), a part of the mould:
+    # the mould is still the machine it is work on.
+    assert order.equipment.code == f"{MOULD}_HeaterZone2"
+    assert masterdata.machine_of(order.equipment).id == machine.id
     assert order.kind.value == "corrective"
     assert order.status.value == "done"
     assert order.findings == "Heater zone 2 open circuit, band replaced"

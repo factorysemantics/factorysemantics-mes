@@ -137,7 +137,8 @@ def test_every_line_of_the_pack_carries_a_cost_center_and_not_one_machine_does_a
     assert all(e.get("cost_center") for e in lines), f"{len(lines)} lines"
     assert not [e for e in machines if e.get("cost_center")], f"{len(machines)} machines"
     assert len(machines) == 83 and "eighty-three machines" in said
-    assert len(plant) == 150 and "A hundred and fifty places" in said
+    # 150 nodes and, since 2026-11-27, the nine moulds' 45 parts (bands and sensors).
+    assert len(plant) == 195 and "A hundred and ninety-five places" in said
 
 
 def test_the_line_and_machine_it_adds_are_new_codes_and_only_the_line_is_given_a_cost_center(scene):
