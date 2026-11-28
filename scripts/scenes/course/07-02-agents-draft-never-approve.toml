@@ -174,11 +174,18 @@ do = "say"
 line = "The AI's account: AGENT, the Plant Agent. Its role is Agent. Class 2.4 showed how a role is a list of rights."
 at = "#users tbody tr:has-text(\"AGENT\")"
 
+# The scroll below names the second role card; it must be the Agent's.
+[[step]]
+do = "wait_for"
+js = "document.querySelector('#roles .role:nth-child(2) strong').textContent === 'Agent'"
+timeout = 5
+
 [[step]]
 do = "say"
 line = "The Agent role's rights: run production, record what it sees, draft instructions, draft reason codes and severities."
 at = "#roles .role:has(strong:text-is(\"Agent\")) .grants"
-scroll_to = "#roles .role:has(strong:text-is(\"Agent\"))"
+# Roles are listed by code: admin, then agent. A scroll is plain CSS.
+scroll_to = "#roles .role:nth-child(2)"
 scroll_block = "start"
 scroll_offset = 230
 
@@ -368,8 +375,9 @@ settle = 2
 do = "wait_for"
 js = "const row = [...document.querySelectorAll('#reasons-table tbody tr')].find((r) => r.textContent.includes('part_stuck')); return !!row && row.textContent.includes('AGENT for ADMIN') && /on the list/i.test(row.textContent);"
 timeout = 20
-scroll_to = "#reasons-table tbody tr:has-text(\"part_stuck\")"
-scroll_block = "center"
+scroll_to = "#reasons-table"
+scroll_block = "start"
+scroll_offset = 230
 
 [[step]]
 do = "say"

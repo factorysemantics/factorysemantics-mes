@@ -293,3 +293,10 @@ def test_the_recorder_plays_every_step_of_it(runner, scene):
         assert handed.count(verb) == sum(1 for step in scene["step"] if step["do"] == verb), verb
     assert handed.count("scroll_to") == sum(1 for step in scene["step"] if step.get("scroll_to"))
     assert handed.count("slide") == 3 and "terminal" not in handed
+
+
+def test_every_scroll_names_plain_css_because_the_page_not_playwright_finds_it(scene):
+    """The first take stopped at a scroll to a `:text-is` selector: a scroll is the page's own querySelector."""
+    scrolls = [s["scroll_to"] for s in scene["step"] if s.get("scroll_to")]
+
+    assert scrolls and [s for s in scrolls if re.search(r":(has-text|text-is|text|visible)\b|>>", s)] == []
