@@ -32,6 +32,8 @@ class EquipmentOut(BaseModel):
     cost_center: str | None = None
     # The one its work bills to, inherited up the tree (`masterdata.cost_center`).
     bills_to: str | None = None
+    # The name of the node `bills_to` is inherited from; null when it is its own or none.
+    bills_from: str | None = None
     # Where it stands, plant metres; null is "nobody has said".
     x: float | None = None
     y: float | None = None
@@ -48,6 +50,7 @@ class EquipmentChange(BaseModel):
 
 
 def _equipment_out(db: Session, eq: Equipment) -> EquipmentOut:
+    holder = masterdata.cost_center_holder(db, eq)
     return EquipmentOut(
         code=eq.code,
         name=eq.name,
@@ -55,7 +58,8 @@ def _equipment_out(db: Session, eq: Equipment) -> EquipmentOut:
         parent=eq.parent.code if eq.parent else None,
         ideal_cycle_seconds=eq.ideal_cycle_seconds,
         cost_center=eq.cost_center,
-        bills_to=masterdata.cost_center(db, eq),
+        bills_to=holder.cost_center if holder is not None else None,
+        bills_from=holder.name if holder is not None and holder is not eq else None,
         x=eq.pos_x, y=eq.pos_y, z=eq.pos_z,
     )
 
