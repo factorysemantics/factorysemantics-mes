@@ -23,7 +23,8 @@ import * as THREE from "three";
 import { footprint } from "./parts.js";
 
 const PLAN_SCALE = 2.5; // as scene.js draws a floor plan
-const CLICK_SLOP = 6; // pixels a pointer may wander and still be a click
+const CLICK_SLOP = 6;
+const PIN = 0.35; // how far a pin's head stands above the part's place, in metres // pixels a pointer may wander and still be a click
 const COLOURS = { ok: 0x4cc3ff, repair: 0xff3b3b };
 
 const $ = (selector) => document.querySelector(selector);
@@ -84,8 +85,9 @@ export class Picker {
 
   build() {
     const ring = new THREE.TorusGeometry(0.19, 0.045, 10, 28);
-    const ball = new THREE.SphereGeometry(0.11, 16, 12);
-    const hit = new THREE.SphereGeometry(0.3, 8, 6);
+    const ball = new THREE.SphereGeometry(0.1, 16, 12);
+    const stem = new THREE.CylinderGeometry(0.015, 0.015, PIN, 6);
+    const hit = new THREE.SphereGeometry(0.26, 8, 6);
     const hitMaterial = new THREE.MeshBasicMaterial({ visible: false });
     for (const station of this.layout.stations) {
       const machine = this.scene.machines.get(station.code);
@@ -95,19 +97,33 @@ export class Picker {
       const spots = parts.filter((p) => !p.at).length;
       let spot = 0;
       for (const part of parts) {
+        // A marker is a group standing where the part is held to sit. A
+        // band is a ring round the barrel (which runs along the machine);
+        // anything else - a sensor, which is usually inside the barrel, or
+        // inside a band - is a pin: its foot at the place, its head up
+        // where it can be seen and clicked.
         const band = /band|heater/i.test(part.name);
-        const mesh = new THREE.Mesh(band ? ring : ball, new THREE.MeshStandardMaterial({
+        const material = new THREE.MeshStandardMaterial({
           color: COLOURS.ok, emissive: COLOURS.ok, emissiveIntensity: 0.9, roughness: 0.4,
-        }));
-        mesh.renderOrder = 2;
-        // A band rings the barrel, which runs along the machine.
-        if (band) mesh.rotation.y = Math.PI / 2 + THREE.MathUtils.degToRad(station.rot || 0);
+        });
+        const mesh = new THREE.Group();
+        const head = new THREE.Mesh(band ? ring : ball, material);
+        if (band) head.rotation.y = Math.PI / 2 + THREE.MathUtils.degToRad(station.rot || 0);
+        else {
+          head.position.y = PIN;
+          const foot = new THREE.Mesh(stem, material);
+          foot.position.y = PIN / 2;
+          mesh.add(foot);
+        }
         const target = new THREE.Mesh(hit, hitMaterial);
         target.userData.part = part.code;
-        mesh.add(target);
+        head.add(target);
+        head.userData.part = part.code;
+        mesh.add(head);
+        mesh.userData.part = part.code;
         mesh.scale.setScalar(this.scale);
         this.scene.scene.add(mesh);
-        const marker = { mesh, part, station, spot: part.at ? null : spot++, spots };
+        const marker = { mesh, head, material, part, station, spot: part.at ? null : spot++, spots };
         this.markers.set(part.code, marker);
         this.place(marker);
       }
@@ -137,9 +153,9 @@ export class Picker {
       // the one picked is drawn bigger instead.
       const hex = this.repairs.has(code) ? COLOURS.repair : COLOURS.ok;
       const picked = Boolean(this.picked && this.picked.code === code);
-      marker.mesh.material.color.setHex(hex);
-      marker.mesh.material.emissive.setHex(hex);
-      marker.mesh.scale.setScalar(this.scale * (picked ? 1.6 : 1));
+      marker.material.color.setHex(hex);
+      marker.material.emissive.setHex(hex);
+      marker.head.scale.setScalar(picked ? 1.6 : 1);
       marker.mesh.userData.repair = this.repairs.has(code);
       marker.mesh.userData.picked = picked;
     }
@@ -188,15 +204,14 @@ export class Picker {
   click(x, y) {
     if (this.moving) return this.moveTo(x, y);
     // The marker drawn under the pointer first; only then the larger, unseen
-    // target round each one, which makes a small marker easy to hit but would
-    // let a sensor tucked inside a band take the band's click.
-    const meshes = [...this.markers.values()].map((m) => m.mesh);
-    const [onMarker] = this.cast(x, y, meshes, false).concat(this.cast(x, y, meshes));
+    // target round each one, which makes a small marker easy to hit (and a
+    // click through a ring's hole still the ring's).
+    const heads = [...this.markers.values()].map((m) => m.head);
+    const [onMarker] = this.cast(x, y, heads, false).concat(this.cast(x, y, heads));
     if (onMarker) {
       let node = onMarker.object;
-      while (node && !node.userData.part) node = node.children.find((c) => c.userData.part) || node.parent;
-      const code = node ? node.userData.part : null;
-      if (code) return this.open("part", code);
+      while (node && !node.userData.part) node = node.parent;
+      if (node) return this.open("part", node.userData.part);
     }
     const groups = [...this.scene.machines.values()].map((m) => m.group);
     const [onMachine] = this.cast(x, y, groups);

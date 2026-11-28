@@ -81,11 +81,12 @@ def _open(page, base):
         }""", timeout=20000)
 
 
-#: Where on the screen the camera shows a marker, in CSS pixels.
+#: Where on the screen the camera shows a marker's head (a band's ring, a
+#: sensor's pin), in CSS pixels.
 ON_SCREEN = """(code) => {
-  const l = window.__line, cam = l.scene.camera, mesh = l.picker.markers.get(code).mesh;
+  const l = window.__line, cam = l.scene.camera, head = l.picker.markers.get(code).head;
   l.scene.controls.update(); cam.updateMatrixWorld();
-  const v = mesh.getWorldPosition(mesh.position.clone()).project(cam);
+  const v = head.getWorldPosition(cam.position.clone()).project(cam);
   const box = l.scene.renderer.domElement.getBoundingClientRect();
   return [box.left + (v.x + 1) / 2 * box.width, box.top + (1 - v.y) / 2 * box.height];
 }"""
