@@ -62,6 +62,15 @@ class Breakdown:
     #: for a breakdown mended without one. A code and a count, never a price.
     part_code: str | None = None
     part_qty: float | None = None
+    #: The part of the machine the repair order is raised on - heater band 2
+    #: of the mould - when the script names one; `None` raises it on the
+    #: machine itself. The machine is still what is watched and what stops.
+    on: str | None = None
+
+    @property
+    def raised_on(self) -> str:
+        """The equipment code the corrective order names."""
+        return self.on or self.machine
 
 
 def breakdowns(script: dict) -> list[Breakdown]:
@@ -87,6 +96,7 @@ def breakdowns(script: dict) -> list[Breakdown]:
             findings=str(entry["findings"]),
             part_code=(entry.get("part") or {}).get("code"),
             part_qty=(float(entry["part"]["quantity"]) if (entry.get("part") or {}).get("code") else None),
+            on=str(entry["on"]) if entry.get("on") else None,
         ))
     return out
 

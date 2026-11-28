@@ -137,8 +137,10 @@ REQUIRED: dict[str, tuple[str, ...]] = {
 OPTIONAL: dict[str, tuple[str, ...]] = {
     # `cost_center` is where this node's work is billed; everything under it
     # inherits it (`services.masterdata.cost_center`), so a pack sets it once
-    # per line.
-    "equipment": ("parent", "ideal_cycle_seconds", "cost_center"),
+    # per line. `position` is where it stands, {"x", "y", "z"} in plant
+    # metres (x east, y north, z up), as the layout or a drawing says; left
+    # out is "nobody has said", which is every pack written before it.
+    "equipment": ("parent", "ideal_cycle_seconds", "cost_center", "position"),
     "materials": ("unit", "type", "counted_in_pieces"),
     "bom": ("operation_seq",),
     "routings": (),
@@ -428,6 +430,17 @@ def problems(directory: Path) -> list[str]:
                                             and 0 < len(cost_center.strip()) <= 40):
             out.append(f"equipment.json #{index} bills to {cost_center!r}; a cost center "
                        "is a code of 1 to 40 characters.")
+        place = row.get("position")
+        if place is not None and not (
+                isinstance(place, dict) and set(place) - {"x", "y", "z", "heading"} <= {
+                    k for k in place if k.startswith("_")}
+                and all(isinstance(place.get(k), (int, float)) and not isinstance(place.get(k), bool)
+                        for k in ("x", "y"))
+                and all(place.get(k) is None or (isinstance(place[k], (int, float))
+                                                 and not isinstance(place[k], bool))
+                        for k in ("z", "heading"))):
+            out.append(f"equipment.json #{index} stands at {place!r}; a position is "
+                       '{"x": .., "y": .., "z": ..} in metres, x and y both given.')
     for index, row in enumerate(data.rows("maintenance_plans"), start=1):
         machine = row.get("equipment")
         if machine and machine not in known_equipment:
@@ -736,6 +749,11 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
             ideal_cycle_seconds=row.get("ideal_cycle_seconds", cycles.get(code)),
             cost_center=row.get("cost_center"),
         )
+        if row.get("position"):
+            place = row["position"]
+            made.pos_x, made.pos_y = float(place["x"]), float(place["y"])
+            made.pos_z = None if place.get("z") is None else float(place["z"])
+            made.heading = None if place.get("heading") is None else float(place["heading"])
         session.add(made)
         equipment[code] = made
         count("equipment", made=True)

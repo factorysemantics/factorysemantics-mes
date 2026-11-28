@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, undefer_group
 
 from fsmes.api.deps import ActorDep, DbDep, require
 from fsmes.domain import Equipment, EquipmentLevel, Material, MaterialType, Person, Routing
@@ -32,6 +32,19 @@ class EquipmentOut(BaseModel):
     cost_center: str | None = None
     # The one its work bills to, inherited up the tree (`masterdata.cost_center`).
     bills_to: str | None = None
+    # Where it stands, plant metres; null is "nobody has said".
+    x: float | None = None
+    y: float | None = None
+    z: float | None = None
+
+
+class EquipmentChange(BaseModel):
+    """Only what is sent is changed: `cost_center` ("" or null clears it back
+    to inheriting), and `x`, `y`, `z` together as its place."""
+    cost_center: str | None = None
+    x: float | None = None
+    y: float | None = None
+    z: float | None = None
 
 
 def _equipment_out(db: Session, eq: Equipment) -> EquipmentOut:
@@ -43,6 +56,7 @@ def _equipment_out(db: Session, eq: Equipment) -> EquipmentOut:
         ideal_cycle_seconds=eq.ideal_cycle_seconds,
         cost_center=eq.cost_center,
         bills_to=masterdata.cost_center(db, eq),
+        x=eq.pos_x, y=eq.pos_y, z=eq.pos_z,
     )
 
 
@@ -56,7 +70,7 @@ def list_equipment(
     a plant's equipment is hundreds of rows, and every screen that fills a
     picker from it wants all of them - but filterable, so a screen or an
     agent can ask for a line's machines by name instead of reading the plant."""
-    query = select(Equipment).order_by(Equipment.id)
+    query = select(Equipment).order_by(Equipment.id).options(undefer_group("position"))
     if level:
         query = query.where(Equipment.level == level)
     if q:
@@ -78,6 +92,13 @@ def create_equipment(body: EquipmentIn, db: DbDep, actor: ActorDep) -> Equipment
         actor=actor,
     )
     return _equipment_out(db, eq)
+
+
+@router.put("/equipment/{code}", dependencies=[require("masterdata.write")])
+def change_equipment(code: str, body: EquipmentChange, db: DbDep, actor: ActorDep) -> dict:
+    """Set a node's own cost center or its place - a heater band's, a machine's."""
+    changed = masterdata.change_equipment(db, code, body.model_dump(exclude_unset=True), actor=actor)
+    return {"changed": changed, **_equipment_out(db, masterdata.get_equipment(db, code)).model_dump()}
 
 
 class MaterialIn(BaseModel):

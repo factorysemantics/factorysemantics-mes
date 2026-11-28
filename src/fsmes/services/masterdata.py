@@ -148,6 +148,49 @@ def pick_machine(session: Session, operation) -> int:
     return min(members, key=lambda eq: eq.code).id
 
 
+def machine_of(equipment: Equipment) -> Equipment:
+    """The machine a node is part of: itself for a machine or anything above
+    one, and for a part of a machine (an equipment module - a heater band on
+    a mould's barrel, a robot in a cell) the work unit it hangs under, however
+    deep. A part whose tree reaches no machine answers with itself.
+
+    The question every screen about a machine asks of a row on one of its
+    parts: a repair order on band 2 is work on the mould, the mould is what
+    stops, and the mould is what the station screen and the line show.
+    """
+    if equipment.level != EquipmentLevel.EQUIPMENT_MODULE:
+        return equipment
+    node: Equipment | None = equipment.parent
+    seen = {equipment.id}
+    while node is not None and node.id not in seen:
+        if node.level == EquipmentLevel.WORK_UNIT:
+            return node
+        seen.add(node.id)
+        node = node.parent
+    return equipment
+
+
+def parts_of(session: Session, machine: Equipment) -> list[Equipment]:
+    """The parts of a machine that are things of their own (equipment modules
+    under it), by code. None for a machine nobody broke into parts."""
+    return [eq for eq in descendants(session, machine)
+            if eq.level == EquipmentLevel.EQUIPMENT_MODULE]
+
+
+def with_parts(session: Session, machine: Equipment) -> list[int]:
+    """The machine's id and its parts' ids: what a question about "the work on
+    this machine" filters on, so an order raised on one of its heater bands
+    is on the mould's list too."""
+    return [machine.id, *(eq.id for eq in parts_of(session, machine))]
+
+
+def what_it_is(equipment: Equipment) -> str:
+    """How a row on a node reads to a person: the node's name, and for a part
+    the machine it is part of - "Heater band 2, FORK1 Mold"."""
+    machine = machine_of(equipment)
+    return equipment.name if machine is equipment else f"{equipment.name}, {machine.name}"
+
+
 def work_center_of(session: Session, equipment: Equipment) -> Equipment | None:
     """The line a machine belongs to, however deep it sits beneath it.
 
@@ -235,6 +278,48 @@ def create_equipment(
         after={"name": name, "level": level.value, "parent": parent_code},
     )
     return obj
+
+
+def set_cost_center(session: Session, code: str, cost_center: str | None, *,
+                    actor: str) -> bool:
+    """Give a node a cost center of its own, or clear it so it inherits its
+    parent's again. Audited. False, and nothing written, when it already
+    says that. A code of 1 to 40 characters, never an amount."""
+    equipment = get_equipment(session, code)
+    after = (cost_center or "").strip() or None
+    if after is not None and len(after) > 40:
+        raise Invalid("a cost center is a code of at most 40 characters")
+    if equipment.cost_center == after:
+        return False
+    before = equipment.cost_center
+    equipment.cost_center = after
+    audit.record(session, actor=actor, action="equipment.cost_center",
+                 entity_type="equipment", entity_id=code,
+                 before={"cost_center": before}, after={"cost_center": after})
+    return True
+
+
+def change_equipment(session: Session, code: str, changes: dict, *, actor: str) -> list[str]:
+    """What Setup's equipment form changes on a node that exists: its own cost
+    center (`cost_center`; empty clears it back to inheriting) and where it
+    stands (`x`, `y`, `z` in plant metres; x and y together). Only the keys
+    given are touched. Returns what changed, by name; each change is audited.
+    """
+    get_equipment(session, code)
+    changed: list[str] = []
+    if "cost_center" in changes and set_cost_center(session, code, changes["cost_center"], actor=actor):
+        changed.append("cost_center")
+    if any(k in changes for k in ("x", "y", "z")):
+        x, y = changes.get("x"), changes.get("y")
+        if x is None or y is None:
+            raise Invalid("a place needs both x and y, in metres")
+        held = position(get_equipment(session, code))
+        heading = held[3] if held else None
+        if place_equipment(session, code, x=float(x), y=float(y),
+                           z=None if changes.get("z") is None else float(changes["z"]),
+                           heading=heading, actor=actor):
+            changed.append("position")
+    return changed
 
 
 def create_material(

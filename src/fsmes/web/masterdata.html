@@ -45,13 +45,14 @@
   <main class="object-main">
     <section class="tab-panel" data-panel="equipment">
       <div class="panel" data-needs-cap="masterdata.write">
-        <h2>Add equipment</h2>
+        <h2 id="eq-form-title">Add equipment <span class="muted small">— or pick a row below to change its place or cost center</span></h2>
         <form id="eq-form" class="stack" data-assist="masterdata-equipment-form">
           <div class="row">
             <input id="eq-code" placeholder="Code" required data-assist="masterdata-equipment-code">
             <input id="eq-name" placeholder="Name" required data-assist="masterdata-equipment-name">
             <select id="eq-level" aria-label="Level" data-assist="masterdata-equipment-level">
               <option value="work_unit">machine (work unit)</option>
+              <option value="equipment_module">part of a machine (module)</option>
               <option value="work_center">line (work center)</option>
               <option value="area">area</option>
               <option value="site">site</option>
@@ -60,7 +61,13 @@
             <select id="eq-parent" aria-label="Parent" data-assist="masterdata-equipment-parent"><option value="">no parent</option></select>
             <input id="eq-cycle" type="number" step="any" placeholder="Rated cycle (s)" data-assist="masterdata-equipment-cycle">
             <input id="eq-cc" placeholder="Cost center" data-assist="masterdata-equipment-cost-center">
+          </div>
+          <div class="row">
+            <input id="eq-x" type="number" step="any" placeholder="x (m)" aria-label="Place x, metres east" data-assist="masterdata-equipment-x">
+            <input id="eq-y" type="number" step="any" placeholder="y (m)" aria-label="Place y, metres north" data-assist="masterdata-equipment-y">
+            <input id="eq-z" type="number" step="any" placeholder="z (m)" aria-label="Place z, metres up" data-assist="masterdata-equipment-z">
             <button id="eq-submit" data-assist="masterdata-equipment-submit">Add</button>
+            <button id="eq-cancel" type="button" class="ghost hidden">Cancel</button>
           </div>
         </form>
       </div>
@@ -71,6 +78,7 @@
           <select id="eq-filter-level" aria-label="Level">
             <option value="">Any level</option>
             <option value="work_unit">machine</option>
+            <option value="equipment_module">part of a machine</option>
             <option value="work_center">line</option>
             <option value="area">area</option>
             <option value="site">site</option>
@@ -78,7 +86,7 @@
           </select>
         </div>
         <div class="table-wrap"><table id="eq-table" data-assist="masterdata-equipment-table">
-          <thead><tr><th>Code</th><th>Name</th><th>Level</th><th>Parent</th><th class="num">Rated cycle</th><th>Cost center</th></tr></thead>
+          <thead><tr><th>Code</th><th>Name</th><th>Level</th><th>Parent</th><th class="num">Rated cycle</th><th>Cost center</th><th>Place (m)</th></tr></thead>
           <tbody></tbody>
         </table></div>
         <div id="eq-pager" class="pager"></div>

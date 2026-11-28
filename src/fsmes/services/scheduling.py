@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 
 from fsmes.db import utcnow
 from fsmes.domain import (
+    Equipment,
     MaintenanceOrder,
     MaintenanceStatus,
     ScheduledSlot,
@@ -131,8 +132,11 @@ def _place_maintenance(session: Session, equipment_id: int,
     between a schedule and a wish: the machine is going to stop for the
     service either way, and only one of the two ways is planned.
     """
+    # The machine's own and its parts': band 2's repair stops the mould.
+    machine = session.get(Equipment, equipment_id)
     owed = list(session.scalars(select(MaintenanceOrder).where(
-        MaintenanceOrder.equipment_id == equipment_id,
+        MaintenanceOrder.equipment_id.in_(
+            masterdata.with_parts(session, machine) if machine else [equipment_id]),
         MaintenanceOrder.status.in_(
             (MaintenanceStatus.DUE, MaintenanceStatus.IN_PROGRESS)))))
     cursor = earliest

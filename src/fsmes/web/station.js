@@ -637,7 +637,7 @@ async function renderMaintenance() {
   }
   const open = page.items || [];
   const showing = JSON.stringify([page.total, open.map(
-    (order) => [order.code, order.kind, order.summary, order.reason, order.status])]);
+    (order) => [order.code, order.kind, order.on, order.summary, order.reason, order.status])]);
   if (alreadyShowing(list, showing)) return;
   // Rule 4: a list that stops short must never look complete.
   setText(count, page.total > open.length
@@ -650,7 +650,10 @@ async function renderMaintenance() {
   for (const order of open) {
     const li = el("li", order.status === "in_progress" ? "running-op" : null);
     const what = el("div", "what");
-    what.appendChild(el("div", "mono", `${order.code} · ${order.kind}`));
+    // An order on one of this machine's parts says which part: the station
+    // screen is the mould's, and the repair is on heater band 2 of it.
+    what.appendChild(el("div", "mono", `${order.code} · ${order.kind}`
+      + (order.equipment !== machine && order.on ? ` · ${order.on}` : "")));
     what.appendChild(el("div", "muted small",
       order.summary + (order.reason ? ` — ${order.reason}` : "")));
     li.appendChild(what);

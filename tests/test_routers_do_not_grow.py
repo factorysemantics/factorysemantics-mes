@@ -47,7 +47,8 @@ CEILINGS: dict[str, tuple[int, str]] = {
     "kpis.py": (39, ""),               # 37 lines on 2026-11-14
     "line.py": (67, ""),               # 63 lines on 2026-11-14
     "maintenance.py": (556, ""),        # 529 lines on 2026-11-14
-    "masterdata.py": (266, ""),         # 253 lines on 2026-11-14
+    "masterdata.py": (284, "PUT /equipment/{code}: Setup sets a part's place and own "
+                           "cost center; the rule is masterdata.change_equipment"),  # 253 on 2026-11-14
     "ops.py": (258, ""),                # 245 lines on 2026-11-14
     "quality.py": (1061, ""),            # 1010 lines on 2026-11-14
     "rate_orders.py": (50, ""),        # 47 lines on 2026-11-14
