@@ -1127,7 +1127,31 @@ def history_interval_ms(settings: Settings) -> int:
     return max(int(settings.opc_publish_ms) * ratio, least_ms)
 
 
-async def _health_watchdog(client: Client, link: _Link, every: float) -> None:
+class SleptThroughIt(TimeoutError):
+    """This reader was not running for longer than the plant's wake gap.
+
+    Raised by the watchdog, like a failed health check, so the connection
+    ends the one way that records it: the machines are disconnected from the
+    last moment there was proof (`_Link.seen`), and the next subscription
+    opens fresh intervals from now."""
+
+
+def _slept_for(link: _Link, wake_gap_s: float) -> float | None:
+    """Seconds since the last proof, when that is longer than the wake gap.
+
+    A health check runs every few seconds, so a stretch longer than the gap
+    between two of them is this process having been stopped (SIGSTOP) or the
+    box asleep - nobody was watching, whatever the server says now. Wall
+    clock on purpose: the loop's own clock does not advance while a box is
+    suspended. None when the gap is off (zero) or was not exceeded."""
+    if wake_gap_s <= 0 or link.seen is None:
+        return None
+    slept = (link._now() - link.seen).total_seconds()
+    return slept if slept > wake_gap_s else None
+
+
+async def _health_watchdog(client: Client, link: _Link, every: float,
+                           wake_gap_s: float = 0.0) -> None:
     """Ask the server whether the session is still there, and stop the
     connection when it is not.
 
@@ -1142,6 +1166,11 @@ async def _health_watchdog(client: Client, link: _Link, every: float) -> None:
     """
     while True:
         await asyncio.sleep(every)
+        slept = _slept_for(link, wake_gap_s)
+        if slept is not None:
+            raise SleptThroughIt(
+                f"the reader was paused for {slept:.0f} s (over the plant's wake gap of "
+                f"{wake_gap_s:g} s); nobody watched the machines in that time")
         await client.check_connection()
         link.proof()
 
@@ -1233,7 +1262,8 @@ async def run(settings: Settings, holds=None, node: str | None = None) -> None:
                 # for ever: the server can go away and the agent will sit
                 # there with every machine's last state still open and still
                 # accruing run time nobody watched.
-                watchdog = asyncio.create_task(_health_watchdog(client, link, every))
+                watchdog = asyncio.create_task(
+                    _health_watchdog(client, link, every, settings.wake_gap_seconds))
                 held = [watchdog]
                 if order_nodes:
                     held.append(asyncio.create_task(_order_code_loop(order_nodes)))
@@ -1256,6 +1286,12 @@ async def run(settings: Settings, holds=None, node: str | None = None) -> None:
                     # The handler is rebuilt per connection, so this is the
                     # last chance to book what it received.
                     await handler.stop("connection closing")
+        except SleptThroughIt as exc:
+            # Not the server's fault and nothing to wait for: say why, and
+            # subscribe again at once.
+            reason = str(exc)
+            log.warning("the reader woke after a pause; the paused time is recorded as unwatched",
+                        error=reason)
         except (TimeoutError, OSError) as exc:
             reason = f"the OPC server did not answer: {exc}"
             log.warning("OPC connection lost, retrying in 3s", error=str(exc))
