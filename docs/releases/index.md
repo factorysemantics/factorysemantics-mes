@@ -10,6 +10,7 @@ anyone reads numbers off. These pages are the summary a person reads first.
 
 | Version | Date | What it is |
 |---|---|---|
+| [0.6.0](0.6.0.md) | 2026-11-28 | the assistant's "Do it" works again on a fresh install; a repair order records the part it used and the ERP books it once; the cutlery moulds have heater bands and a melt sensor, and every machine says which cost center it pays into; the Quality page grades and filters non-conformances by severity and names the gauge of every reading; one OEE list for the whole plant; gauge studies as a module a plant switches on; two additive migrations, applied by the first start
 | [0.5.0](0.5.0.md) | 2026-11-12 | the Floor sorts lowest OEE first; Export xlsx on every list; Raise and Close a non-conformance on the Quality page; work instructions from an open order; three additive migrations, applied with `fsmes init-db` |
 | [0.4.2](0.4.2.md) | 2026-10-26 | the Maintenance screen loads on PostgreSQL again, after one `fsmes init-db` (SQLite plants never had the fault); every header dot says live when it is; the Orders page opens with the New-order form closed |
 | [0.4.1](0.4.1.md) | 2026-10-23 | an evening on a Windows PC that goes cleanly: a stop that waits until its own ports are free so the next start works, `stop --force` answered in a sentence instead of refused, and three pages that say how to tell which Python owns the `fsmes` you type |

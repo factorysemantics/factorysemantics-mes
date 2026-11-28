@@ -10,14 +10,170 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-11-28
+
 ### Added
 
-- **Every cutlery line bills to a cost center of its own.** The cutlery pack
-  sets one per line (`CC-MOULD01` ... `CC-PAL04`, scheme in
-  `labs/cutlery/masterdata/README.md`), so the routing rows on Setup > Admin
-  > Routings name a real one instead of "cost center unknown". A pack's
-  `equipment.json` may now carry `cost_center`; `fsmes pack apply` sets it and
-  `fsmes pack check` refuses one that is not a code of 1 to 40 characters.
+- **Gauge studies (gage R&R): is it the gauge or the process?** A new
+  **Quality › Gauge studies** screen plans a crossed study (gauge, material,
+  characteristic, appraisers, parts, trials, tolerance from the plant's
+  specification), takes readings one at a time and judges it when the grid is
+  full: %study variation, %tolerance and distinct categories by the AIAG
+  ANOVA method, checked against the manual's published example. It refuses a
+  plan that cannot separate anything, a reading taken twice or outside the
+  plan, and withholds the verdict for too few parts, parts that do not span
+  the tolerance, or a gauge out of calibration; an unfinished study is "not
+  judged", never "fine". One service call sets the newest study beside the
+  control chart's Cpk and answers gauge, process, neither or not known; the
+  AI tab can ask it. Planning needs the new capability `quality.study`
+  (Administrator only); recording needs `quality.record`. Five MCP tools; the
+  AI tab gets only the three reads. Migration `f3a9c1d27b64`. (#285)
+
+- **Gauge studies are a module a plant switches on.** `gauge_studies` is the
+  first opt-in module: `all`, the default, leaves it out, and a plant asks for
+  it with `[modules] gauge_studies = true` (or `MES_MODULES=all,gauge_studies`).
+  Off, its routes answer 404, its screen is not served and its nav chip is
+  gone; this is generic, so any switched-off module's screen now leaves the
+  nav. The cutlery pack switches it on; bottling and machining do not. Its
+  tables are made by the migration either way and kept if it is switched off.
+  (#294)
+
+- **A repair order records the part it used, and the ERP books it once.**
+  The Maintenance and station complete forms take a part code and a count
+  (no price). History shows "Part used", the export has "Part used" and
+  "Part qty". A code without a count, a count without a code, or a count of
+  zero or less is refused. Closing queues one `PartUsed` message to the ERP
+  in the same transaction, keyed `<repair order>:part:<part code>`; the
+  ERPNext connector books a submitted Material Issue from the item's
+  warehouse on the machine's cost center. A connector without
+  `send_part_used` marks the message dead at once with a sentence saying the
+  part is recorded in the MES only. Migration `e7b2d4f9a1c3`. (#326)
+
+- **Heater bands and the melt sensor are parts of their mould.** The cutlery
+  pack holds each of the nine moulds' four heater bands and its melt sensor
+  as `equipment_module` rows under the mould, each with its place (150 rows
+  become 195). Engineering › Master data › Equipment changes a node's place
+  or its own cost center through the new `PUT /masterdata/equipment/{code}`
+  (`masterdata.write`, audited; no MCP tool, on purpose: the cost center
+  decides which ERP account a repair is charged to). A repair on a band
+  still counts as its machine down; the ERP's part-used message names the
+  band and the cost center it resolves to. No schema change. (#335)
+
+- **The equipment screen says which cost center a node pays into, and from
+  where.** A row with no cost center of its own shows the one it inherits,
+  in grey, with the node it comes from ("CC-MOULD01 from Moulding line
+  FORK1"); the place boxes say Along, Across and Up in metres; the form's
+  title names the row being changed. `GET /masterdata/equipment` gains
+  `bills_to` (the cost center the server bills the node to) and `bills_from`
+  (the node that sets it). (#295, #338)
+
+- **Routing steps name the cost center their machine bills to.** Setup ›
+  Admin › Routings: each machine in the drop-down and each step in the list
+  ends with its cost center, its own or else its cell's or line's, or says
+  "unknown". If the page cannot load its lists it says so and the header dot
+  turns to "reconnecting…". (#246)
+
+- **Every cutlery line bills to a cost center of its own** (`CC-MOULD01` …
+  `CC-PAL04`). A pack's `equipment.json` may now carry `cost_center`;
+  `fsmes pack apply` sets it and `fsmes pack check` refuses one that is not
+  a code of 1 to 40 characters. (#248)
+
+- **One screen ranks every machine in the plant by OEE, worst first.**
+  Engineering › Analysis offers "All machines" first in the line picker:
+  every machine, worst OEE first, with its line, and machines with no figure
+  after every rated one with their reason. `GET /analysis/oee?line=*` and its
+  xlsx mean the whole plant; each row now carries `line_code` and
+  `line_name`. One line at a time is unchanged and is still what the screen
+  opens on. (#247)
+
+- **A supervisor grades a non-conformance when taking it under review**, from
+  the plant's own severities, beside **Take under review**; the MCP tool
+  `review_nonconformance` takes `severity` too. A word not on the list is
+  refused and nothing is picked up. (#284)
+
+- **The non-conformance list narrows to one severity.** A **Severity** filter
+  beside the status filter on Quality, kept in the address bar and applied
+  to the export; `GET /quality/nonconformances` takes `severity`, repeatable.
+  A filter, not a sort: a plant's severities are its own words and have no
+  rank the product could know. (#288)
+
+- **Every door that records a check can name its gauge.** The Floor's
+  Quality check and the station's Quality panel get an optional **Gauge**
+  box filled from the plant's register (an overdue gauge is offered and
+  labelled "calibration overdue"); the MCP `record_check` tool takes
+  `equipment` and `gauge`. Quality's Inspection history has a **Gauge**
+  column; a reading with none says "not recorded". (#252, #272, #282, #317)
+
+- **A paused simulated plant can wake without playing the paused hours.** A
+  new setting, `wake_gap_seconds` (`MES_WAKE_GAP_SECONDS`), off by default.
+  Set, a CSV replay that finds itself further behind than the gap moves its
+  schedule to now, and the OPC reader ends a connection it has had no proof
+  of for longer than the gap, so the gap is recorded as disconnected
+  (decision 0030), not booked. Off, nothing changes; no shipped pack sets it.
+  (#334)
+
+- **The cutlery plant's 83 machines stand where its drawing puts them, each
+  with its model**, in the 3D line view (seven generic glTF models; it ships
+  in the wheel, so `fsmes demo cutlery` has it). (#253)
+
+- **A floor script can inspect pieces from a named station**, and make their
+  spread follow a tag above a threshold (`pieces` in `floor.json`). The
+  cutlery lab uses it for two scenes that need a checkout, `hot-mould` and
+  `coil-out` (a heater band burns out on FORK1's mould), and a second seeded
+  ERPNext company for filming the coil-out order on both sides. (#266, #319,
+  #324)
+
+- **Docs: a ten-minute demo from your own PC** — PostgreSQL, the cutlery
+  pack on two MES servers, stop one and watch the other carry on.
+  (`docs/operate/demo-from-your-pc.md`, #245)
+
+- **The 3D line view can be clicked.** Every part under a machine has a
+  marker: on the cutlery plant, a mould's four heater bands are rings on its
+  barrel and its melt sensor a pin. A marker is red while a repair order is
+  open on that part. A click on a marker or a machine opens a panel with its
+  name, code, place, which cost center pays and where that comes from, and
+  the open repair with a link to Maintenance › Work. With `masterdata.write`,
+  **Move** (click the machine's surface, then Save) sets the place and a box
+  sets the part's own cost center; both go through the existing equipment
+  update and are audited. Moving is off on the whole-area plan view, where
+  machines are drawn larger than life; on a phone a "Parts" list opens the
+  panel. No new route, table or column. (#341)
+
+### Changed
+
+- **Each Export button says which list it downloads**: *Export checks
+  (xlsx)*, *Export non-conformances (xlsx)*, *Export orders (xlsx)* and so
+  on, on every page. Quality's date boxes read *Raised from/to* and *Taken
+  from/to*. (#314)
+
+- **The Admin page says what is on it.** A row at the top, *On this page:
+  People · Roles · Routings*, jumps to each panel; every form and every box
+  on the page is named for what it belongs to ("Routing code", "Step 20
+  machine", "New person's code"), for screen readers and anything else that
+  reads the page. (#309, #312, #322)
+
+- **Master data says where routings are kept**, with a link to Setup ›
+  Admin › Routings; Setup › Admin says where equipment and its cost centers
+  are kept. (#273, #338)
+
+- **Nothing at a page's end hides under the floating Assistant and Design
+  buttons**; a page that shows them keeps room at its end. (#313)
+
+- **The adjustments queue says when an approved write is checked** —
+  "verifying at <time>" — and the check is counted on the plant's own clock,
+  so a plant replayed at ten times speed checks in about 36 s instead of six
+  minutes. At normal speed nothing changes. The queue row carries
+  `verify_due_at`. (#339)
+
+- **The course: seven modules, twenty-five classes**, each a scene the
+  recorder plays on a plant and a test that holds its lines true; the
+  recorder now draws a cursor and a labelled box round what each line is
+  about. Scripts and tests in the repository only; nothing in the package.
+  (#251, #254–#259, #261–#265, #267–#271, #276–#278, #280, #310, #311, #318,
+  #320, #321, #323, #325, #327–#332, #337)
+
+- **Dependencies.** typer 0.29, fastapi 0.162.5, anthropic 2.8, playwright
+  1.65.1, opentelemetry-api 1.45.2, among others. (#249, #260)
 
 ### Fixed
 
@@ -28,6 +184,46 @@ goes under Honesty with a migration line, so plant people can find it.
   waited on the route's own unfinished transaction. The middleware is now
   plain ASGI and stores the key after the route has committed and before
   the answer goes out. It works on Starlette 1.6 to 1.10; nothing is pinned.
+  (#333)
+
+- **The hand-raise form offers the plant's severities again.** It asked an
+  address that answered 404 and offered only "The plant's default", so every
+  non-conformance raised by hand came out at the default. (#279)
+
+- **Book output fills the order list as you type the machine**, not only
+  after leaving the box, and no longer blanks it on every two-second
+  refresh. (#274)
+
+- **Admin's routing form fills when people and roles are refused** to the
+  person looking: routings, materials and machines draw from their own
+  answers, and the refused part says so in its own words. (#303)
+
+- **The walk-through's ring follows its control** when the page scrolls,
+  redraws or moves it, instead of staying where the control was. (#304)
+
+- **An export button keeps its count while its screen refreshes.** (#316)
+
+- **The Gauges page says a gauge's status in words**: "out of service", not
+  "out of_service". (#336)
+
+### Honesty
+
+- **The Floor's quality check says what the control chart raised.** A
+  reading in spec that tripped a chart rule came back "Check passed." on the
+  Floor while a hold had just been raised on that material; the station said
+  it. Both screens now say the chart signal first, then the non-conformance,
+  then in spec, in the station's words. *Migration:* none. (#296)
+
+- **The Floor's quality check takes the reading as measured.** Its Measured
+  box refused anything finer than 0.1, so a reading of 26.35 had to be
+  rounded before it could be recorded; it now takes any precision, as the
+  station's box always has. *Migration:* none; readings already recorded
+  stay as they were typed. (#281)
+
+- **The chat withholds a Cpk the SPC screen withholds.** On an
+  out-of-control chart the AI tab's tools passed Cp, Cpk and Pp to the model,
+  which quoted one the SPC screen prints as "withheld". The tools now hand
+  over "withheld" and the reason instead. *Migration:* none. (#289)
 
 ## [0.5.0] — 2026-11-12
 
@@ -5493,7 +5689,8 @@ number in it comes from a simulated plant.
   MES was not watching. Unlabelled downtime is reported as unlabelled. These
   are the house rules and they are tested.
 
-[Unreleased]: https://github.com/factorysemantics/factorysemantics-mes/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/factorysemantics/factorysemantics-mes/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/factorysemantics/factorysemantics-mes/releases/tag/v0.6.0
 [0.5.0]: https://github.com/factorysemantics/factorysemantics-mes/releases/tag/v0.5.0
 [0.4.2]: https://github.com/factorysemantics/factorysemantics-mes/releases/tag/v0.4.2
 [0.4.1]: https://github.com/factorysemantics/factorysemantics-mes/releases/tag/v0.4.1

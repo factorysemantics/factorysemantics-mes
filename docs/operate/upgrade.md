@@ -10,6 +10,82 @@ carries an **Honesty** section for anything that changed what a number
 before upgrading a plant that anyone reads numbers off, because a number that
 changes meaning without anyone noticing is worse than one that breaks.
 
+## 0.5.0 to 0.6.0
+
+**Two migrations** — 0.5.0's head was `c8e2f4a6d1b7`; 0.6.0's is
+`e7b2d4f9a1c3`. Both add; neither changes or removes a row:
+
+| Migration | What it adds |
+|---|---|
+| `f3a9c1d27b64` | two tables: `gauge_studies` and `gauge_study_readings`, for the gauge studies module. Made whether or not a plant switches the module on; a plant that never plans a study has nothing in them |
+| `e7b2d4f9a1c3` | two columns on `maintenance_orders`: `part_code`, `part_qty`. Empty means no part was recorded, which is every repair order you have |
+
+```bash
+pg_dump -Fc -d yourplantdb -f before-0.6.0.dump  # first, always (on SQLite: fsmes backup)
+py -m pip install --upgrade factorysemantics-mes  # or: pipx upgrade factorysemantics-mes
+fsmes --version                                   # 0.6.0
+fsmes db-status --pack packs/yourplant            # behind: c8e2f4a6d1b7, head e7b2d4f9a1c3
+fsmes init-db   --pack packs/yourplant            # c8e2f4a6d1b7 -> e7b2d4f9a1c3
+fsmes db-status --pack packs/yourplant            # should now agree; it exits non-zero if not
+```
+
+For a plant in a fleet, `--plant yourplant` instead of `--pack`;
+`fsmes plant <name> migrate` does the same and refuses a running plant.
+
+No OEE, count or state rule changed. The changelog's **Honesty** entries are
+about what the screens *say*: the Floor's quality check now reports a chart
+signal it used to hide, takes a reading at the precision it was measured,
+and the chat withholds a Cpk the SPC screen withholds.
+
+**A plant made by `fsmes demo bottling`: start it.** As in 0.5.0, the first
+start copies the database beside itself, brings it up to date and says so in
+one line.
+
+**A cutlery plant made by 0.5.0** starts and works on the new schema, but
+keeps the pack copy it was built from: 150 machines, no heater bands, no
+line cost centers, no 3D models. `--refresh` replaces the pack copy and does
+not touch the database; `fsmes pack apply` on the refreshed copy then adds
+the bands (195 rows) but leaves the cost centers empty on rows that already
+exist. A fresh home is the clean way to see 0.6.0's plant:
+`fsmes demo cutlery --home <a new folder>` builds 195 rows with 61 cost
+centers, and the old home is left as it was.
+
+**Tried, and how far.** On 2026-11-28, all on Linux:
+
+- *PostgreSQL.* A schema made by the 0.5.0 wheel from PyPI (`init-db`, then
+  `seed`) on an empty PostgreSQL 18.6, then the 0.6.0 wheel:
+
+  ```text
+  $ fsmes db-status
+  Current: c8e2f4a6d1b7
+  Head:    e7b2d4f9a1c3
+  The database is behind. Bring it up with `fsmes init-db`.
+  $ fsmes init-db
+  Database schema upgraded: c8e2f4a6d1b7 -> e7b2d4f9a1c3.
+  $ fsmes db-status
+  Current: e7b2d4f9a1c3
+  Head:    e7b2d4f9a1c3
+  The database is at the current schema.
+  ```
+
+  The two tables and two columns were there. Served by 0.6.0, `/health`,
+  `/masterdata/equipment`, `/analysis/oee`, `/dashboard/summary` and
+  `/maintenance/orders` answered 200.
+- *The demo plant.* `fsmes demo bottling` from the 0.5.0 wheel off PyPI in an
+  empty venv, stopped; then the 0.6.0 wheel in a second empty venv,
+  `fsmes demo bottling`, nothing else typed:
+
+  ```text
+  bottling: database backed up to .../data/bottling.db.pre-migrate-20261128-054632, schema c8e2f4a6d1b7 -> e7b2d4f9a1c3
+  ```
+
+  `fsmes db-status --plant bottling` said the current schema; the same five
+  reads answered 200. A write sent with `Idempotency-Key` (what the
+  assistant's "Do it" sends) answered 500 under 0.5.0 and 201 under 0.6.0.
+  It stopped clean.
+- *The cutlery plant*, made by 0.5.0 and started under 0.6.0: the schema
+  came up the same way, and the pack copy behaved as described above.
+
 ## 0.4.2 to 0.5.0
 
 **Three migrations** — 0.4.2's head was `2c6e817b9faf`; 0.5.0's is
