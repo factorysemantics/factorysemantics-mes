@@ -114,7 +114,7 @@ def shape(session: Session) -> dict:
     """Everything about the plant either seeder is responsible for, as plain
     values, without ids (they say which row was written first, nothing more)."""
     equipment = {e.code: (e.name, e.level.value, e.parent.code if e.parent else None,
-                          e.ideal_cycle_seconds, e.cost_center)
+                          e.ideal_cycle_seconds, e.cost_center, e.pos_x, e.pos_y, e.pos_z)
                  for e in session.scalars(select(Equipment))}
     materials = {m.code: (m.name, m.unit, m.type.value, m.counted_in_pieces)
                  for m in session.scalars(select(Material))}
@@ -170,7 +170,9 @@ def test_the_committed_line_json_and_tag_map_are_the_lab_s_hundredth_scale_build
 
 def test_the_committed_masterdata_is_what_init_py_write_masterdata_writes(tmp_path):
     written = init.write_masterdata(CUTLERY, tmp_path)
-    assert written["equipment"] == 150 and written["work_orders"] == 122, written
+    # 150 nodes, and since 2026-11-27 the 45 parts of the nine moulds - four
+    # heater bands and a melt temperature sensor each, from coil_places.json.
+    assert written["equipment"] == 195 and written["work_orders"] == 122, written
     for kind in init.GENERATED_KINDS:
         assert (DATA / f"{kind}.json").read_text(encoding="utf-8") == \
             (tmp_path / f"{kind}.json").read_text(encoding="utf-8"), (

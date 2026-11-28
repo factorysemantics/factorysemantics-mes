@@ -53,7 +53,7 @@ from fsmes.domain import (
     WorkOrder,
 )
 from fsmes.kernel.tags import STRUCTURAL_TAGS
-from fsmes.services import analysis, coverage, spc
+from fsmes.services import analysis, coverage, masterdata, spc
 
 #: What the blocks that are lists of records say instead of a coverage figure
 #: - the control chart's own sentence, from `services.spc`, because a chart
@@ -451,7 +451,7 @@ def maintenance_orders(session: Session, unit: Equipment | None, start: datetime
                 "coverage": "absent", "coverage_note": RECORDS_NOT_A_RATE}
     rows = list(session.scalars(
         select(MaintenanceOrder).where(
-            MaintenanceOrder.equipment_id == unit.id,
+            MaintenanceOrder.equipment_id.in_(masterdata.with_parts(session, unit)),
             MaintenanceOrder.raised_at <= end,
             (MaintenanceOrder.completed_at.is_(None))
             | (MaintenanceOrder.completed_at >= start))

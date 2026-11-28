@@ -30,6 +30,61 @@
     "parent": "FORK1LINE"
   },
   {
+    "code": "FORK1_Mold_HeaterZone1",
+    "name": "Heater band 1",
+    "level": "equipment_module",
+    "parent": "FORK1_Mold",
+    "position": {
+      "x": 12.55,
+      "y": 5.6,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "FORK1_Mold_HeaterZone2",
+    "name": "Heater band 2",
+    "level": "equipment_module",
+    "parent": "FORK1_Mold",
+    "position": {
+      "x": 12.25,
+      "y": 5.6,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "FORK1_Mold_HeaterZone3",
+    "name": "Heater band 3",
+    "level": "equipment_module",
+    "parent": "FORK1_Mold",
+    "position": {
+      "x": 11.95,
+      "y": 5.6,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "FORK1_Mold_HeaterZone4",
+    "name": "Heater band 4",
+    "level": "equipment_module",
+    "parent": "FORK1_Mold",
+    "position": {
+      "x": 11.65,
+      "y": 5.6,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "FORK1_Mold_MeltTemp",
+    "name": "Melt temperature sensor",
+    "level": "equipment_module",
+    "parent": "FORK1_Mold",
+    "position": {
+      "x": 12.2,
+      "y": 5.6,
+      "z": 1.55
+    }
+  },
+  {
     "code": "FORK1_Degate",
     "name": "FORK1 Degate",
     "level": "work_unit",
@@ -53,6 +108,61 @@
     "name": "FORK2 Mold",
     "level": "work_unit",
     "parent": "FORK2LINE"
+  },
+  {
+    "code": "FORK2_Mold_HeaterZone1",
+    "name": "Heater band 1",
+    "level": "equipment_module",
+    "parent": "FORK2_Mold",
+    "position": {
+      "x": 12.55,
+      "y": 11.1,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "FORK2_Mold_HeaterZone2",
+    "name": "Heater band 2",
+    "level": "equipment_module",
+    "parent": "FORK2_Mold",
+    "position": {
+      "x": 12.25,
+      "y": 11.1,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "FORK2_Mold_HeaterZone3",
+    "name": "Heater band 3",
+    "level": "equipment_module",
+    "parent": "FORK2_Mold",
+    "position": {
+      "x": 11.95,
+      "y": 11.1,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "FORK2_Mold_HeaterZone4",
+    "name": "Heater band 4",
+    "level": "equipment_module",
+    "parent": "FORK2_Mold",
+    "position": {
+      "x": 11.65,
+      "y": 11.1,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "FORK2_Mold_MeltTemp",
+    "name": "Melt temperature sensor",
+    "level": "equipment_module",
+    "parent": "FORK2_Mold",
+    "position": {
+      "x": 12.2,
+      "y": 11.1,
+      "z": 1.55
+    }
   },
   {
     "code": "FORK2_Degate",
@@ -80,6 +190,61 @@
     "parent": "FORK3LINE"
   },
   {
+    "code": "FORK3_Mold_HeaterZone1",
+    "name": "Heater band 1",
+    "level": "equipment_module",
+    "parent": "FORK3_Mold",
+    "position": {
+      "x": 12.55,
+      "y": 16.6,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "FORK3_Mold_HeaterZone2",
+    "name": "Heater band 2",
+    "level": "equipment_module",
+    "parent": "FORK3_Mold",
+    "position": {
+      "x": 12.25,
+      "y": 16.6,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "FORK3_Mold_HeaterZone3",
+    "name": "Heater band 3",
+    "level": "equipment_module",
+    "parent": "FORK3_Mold",
+    "position": {
+      "x": 11.95,
+      "y": 16.6,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "FORK3_Mold_HeaterZone4",
+    "name": "Heater band 4",
+    "level": "equipment_module",
+    "parent": "FORK3_Mold",
+    "position": {
+      "x": 11.65,
+      "y": 16.6,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "FORK3_Mold_MeltTemp",
+    "name": "Melt temperature sensor",
+    "level": "equipment_module",
+    "parent": "FORK3_Mold",
+    "position": {
+      "x": 12.2,
+      "y": 16.6,
+      "z": 1.55
+    }
+  },
+  {
     "code": "FORK3_Degate",
     "name": "FORK3 Degate",
     "level": "work_unit",
@@ -103,6 +268,61 @@
     "name": "SPOON1 Mold",
     "level": "work_unit",
     "parent": "SPOON1LINE"
+  },
+  {
+    "code": "SPOON1_Mold_HeaterZone1",
+    "name": "Heater band 1",
+    "level": "equipment_module",
+    "parent": "SPOON1_Mold",
+    "position": {
+      "x": 12.55,
+      "y": 29.6,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "SPOON1_Mold_HeaterZone2",
+    "name": "Heater band 2",
+    "level": "equipment_module",
+    "parent": "SPOON1_Mold",
+    "position": {
+      "x": 12.25,
+      "y": 29.6,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "SPOON1_Mold_HeaterZone3",
+    "name": "Heater band 3",
+    "level": "equipment_module",
+    "parent": "SPOON1_Mold",
+    "position": {
+      "x": 11.95,
+      "y": 29.6,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "SPOON1_Mold_HeaterZone4",
+    "name": "Heater band 4",
+    "level": "equipment_module",
+    "parent": "SPOON1_Mold",
+    "position": {
+      "x": 11.65,
+      "y": 29.6,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "SPOON1_Mold_MeltTemp",
+    "name": "Melt temperature sensor",
+    "level": "equipment_module",
+    "parent": "SPOON1_Mold",
+    "position": {
+      "x": 12.2,
+      "y": 29.6,
+      "z": 1.55
+    }
   },
   {
     "code": "SPOON1_Degate",
@@ -130,6 +350,61 @@
     "parent": "SPOON2LINE"
   },
   {
+    "code": "SPOON2_Mold_HeaterZone1",
+    "name": "Heater band 1",
+    "level": "equipment_module",
+    "parent": "SPOON2_Mold",
+    "position": {
+      "x": 12.55,
+      "y": 35.1,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "SPOON2_Mold_HeaterZone2",
+    "name": "Heater band 2",
+    "level": "equipment_module",
+    "parent": "SPOON2_Mold",
+    "position": {
+      "x": 12.25,
+      "y": 35.1,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "SPOON2_Mold_HeaterZone3",
+    "name": "Heater band 3",
+    "level": "equipment_module",
+    "parent": "SPOON2_Mold",
+    "position": {
+      "x": 11.95,
+      "y": 35.1,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "SPOON2_Mold_HeaterZone4",
+    "name": "Heater band 4",
+    "level": "equipment_module",
+    "parent": "SPOON2_Mold",
+    "position": {
+      "x": 11.65,
+      "y": 35.1,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "SPOON2_Mold_MeltTemp",
+    "name": "Melt temperature sensor",
+    "level": "equipment_module",
+    "parent": "SPOON2_Mold",
+    "position": {
+      "x": 12.2,
+      "y": 35.1,
+      "z": 1.55
+    }
+  },
+  {
     "code": "SPOON2_Degate",
     "name": "SPOON2 Degate",
     "level": "work_unit",
@@ -153,6 +428,61 @@
     "name": "SPOON3 Mold",
     "level": "work_unit",
     "parent": "SPOON3LINE"
+  },
+  {
+    "code": "SPOON3_Mold_HeaterZone1",
+    "name": "Heater band 1",
+    "level": "equipment_module",
+    "parent": "SPOON3_Mold",
+    "position": {
+      "x": 12.55,
+      "y": 40.6,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "SPOON3_Mold_HeaterZone2",
+    "name": "Heater band 2",
+    "level": "equipment_module",
+    "parent": "SPOON3_Mold",
+    "position": {
+      "x": 12.25,
+      "y": 40.6,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "SPOON3_Mold_HeaterZone3",
+    "name": "Heater band 3",
+    "level": "equipment_module",
+    "parent": "SPOON3_Mold",
+    "position": {
+      "x": 11.95,
+      "y": 40.6,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "SPOON3_Mold_HeaterZone4",
+    "name": "Heater band 4",
+    "level": "equipment_module",
+    "parent": "SPOON3_Mold",
+    "position": {
+      "x": 11.65,
+      "y": 40.6,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "SPOON3_Mold_MeltTemp",
+    "name": "Melt temperature sensor",
+    "level": "equipment_module",
+    "parent": "SPOON3_Mold",
+    "position": {
+      "x": 12.2,
+      "y": 40.6,
+      "z": 1.55
+    }
   },
   {
     "code": "SPOON3_Degate",
@@ -180,6 +510,61 @@
     "parent": "KNIFE1LINE"
   },
   {
+    "code": "KNIFE1_Mold_HeaterZone1",
+    "name": "Heater band 1",
+    "level": "equipment_module",
+    "parent": "KNIFE1_Mold",
+    "position": {
+      "x": 12.55,
+      "y": 53.6,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "KNIFE1_Mold_HeaterZone2",
+    "name": "Heater band 2",
+    "level": "equipment_module",
+    "parent": "KNIFE1_Mold",
+    "position": {
+      "x": 12.25,
+      "y": 53.6,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "KNIFE1_Mold_HeaterZone3",
+    "name": "Heater band 3",
+    "level": "equipment_module",
+    "parent": "KNIFE1_Mold",
+    "position": {
+      "x": 11.95,
+      "y": 53.6,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "KNIFE1_Mold_HeaterZone4",
+    "name": "Heater band 4",
+    "level": "equipment_module",
+    "parent": "KNIFE1_Mold",
+    "position": {
+      "x": 11.65,
+      "y": 53.6,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "KNIFE1_Mold_MeltTemp",
+    "name": "Melt temperature sensor",
+    "level": "equipment_module",
+    "parent": "KNIFE1_Mold",
+    "position": {
+      "x": 12.2,
+      "y": 53.6,
+      "z": 1.55
+    }
+  },
+  {
     "code": "KNIFE1_Degate",
     "name": "KNIFE1 Degate",
     "level": "work_unit",
@@ -205,6 +590,61 @@
     "parent": "KNIFE2LINE"
   },
   {
+    "code": "KNIFE2_Mold_HeaterZone1",
+    "name": "Heater band 1",
+    "level": "equipment_module",
+    "parent": "KNIFE2_Mold",
+    "position": {
+      "x": 12.55,
+      "y": 59.1,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "KNIFE2_Mold_HeaterZone2",
+    "name": "Heater band 2",
+    "level": "equipment_module",
+    "parent": "KNIFE2_Mold",
+    "position": {
+      "x": 12.25,
+      "y": 59.1,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "KNIFE2_Mold_HeaterZone3",
+    "name": "Heater band 3",
+    "level": "equipment_module",
+    "parent": "KNIFE2_Mold",
+    "position": {
+      "x": 11.95,
+      "y": 59.1,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "KNIFE2_Mold_HeaterZone4",
+    "name": "Heater band 4",
+    "level": "equipment_module",
+    "parent": "KNIFE2_Mold",
+    "position": {
+      "x": 11.65,
+      "y": 59.1,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "KNIFE2_Mold_MeltTemp",
+    "name": "Melt temperature sensor",
+    "level": "equipment_module",
+    "parent": "KNIFE2_Mold",
+    "position": {
+      "x": 12.2,
+      "y": 59.1,
+      "z": 1.55
+    }
+  },
+  {
     "code": "KNIFE2_Degate",
     "name": "KNIFE2 Degate",
     "level": "work_unit",
@@ -228,6 +668,61 @@
     "name": "KNIFE3 Mold",
     "level": "work_unit",
     "parent": "KNIFE3LINE"
+  },
+  {
+    "code": "KNIFE3_Mold_HeaterZone1",
+    "name": "Heater band 1",
+    "level": "equipment_module",
+    "parent": "KNIFE3_Mold",
+    "position": {
+      "x": 12.55,
+      "y": 64.6,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "KNIFE3_Mold_HeaterZone2",
+    "name": "Heater band 2",
+    "level": "equipment_module",
+    "parent": "KNIFE3_Mold",
+    "position": {
+      "x": 12.25,
+      "y": 64.6,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "KNIFE3_Mold_HeaterZone3",
+    "name": "Heater band 3",
+    "level": "equipment_module",
+    "parent": "KNIFE3_Mold",
+    "position": {
+      "x": 11.95,
+      "y": 64.6,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "KNIFE3_Mold_HeaterZone4",
+    "name": "Heater band 4",
+    "level": "equipment_module",
+    "parent": "KNIFE3_Mold",
+    "position": {
+      "x": 11.65,
+      "y": 64.6,
+      "z": 1.55
+    }
+  },
+  {
+    "code": "KNIFE3_Mold_MeltTemp",
+    "name": "Melt temperature sensor",
+    "level": "equipment_module",
+    "parent": "KNIFE3_Mold",
+    "position": {
+      "x": 12.2,
+      "y": 64.6,
+      "z": 1.55
+    }
   },
   {
     "code": "KNIFE3_Degate",

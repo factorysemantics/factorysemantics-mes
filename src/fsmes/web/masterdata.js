@@ -42,7 +42,8 @@ function fill(select, items, label, keepFirst) {
 async function loadEquipment() {
   equipment = await api("/masterdata/equipment");
   drawEquipment();
-  fill($("#eq-parent"), equipment.filter((e) => e.level !== "work_unit"), (e) => `${e.code} (${e.level.replace("_", " ")})`, "no parent");
+  // A machine can be a parent now: its parts (a mould's heater bands) hang under it.
+  fill($("#eq-parent"), equipment.filter((e) => e.level !== "equipment_module"), (e) => `${e.code} (${e.level.replace("_", " ")})`, "no parent");
 }
 
 function drawEquipment() {
@@ -50,6 +51,7 @@ function drawEquipment() {
     (!filters.eqLevel || e.level === filters.eqLevel) && has(`${e.code} ${e.name}`, filters.eqQ));
   const page = FS.clientPage(matching, filters.eqOffset, PAGE);
   filters.eqOffset = page.offset;
+  $("#eq-table").classList.toggle("row-select", FS.can("masterdata.write"));
   const body = $("#eq-table tbody");
   body.replaceChildren();
   for (const e of page.items) {
@@ -58,23 +60,78 @@ function drawEquipment() {
     code.append(e.level === "work_unit" ? FS.link("machine", e.code) : e.level === "work_center" ? FS.link("line", e.code) : e.code);
     tr.append(code, el("td", null, e.name), el("td", "muted", e.level.replace("_", " ")),
               el("td", "muted", e.parent || "—"), el("td", "num", e.ideal_cycle_seconds ?? "—"),
-              el("td", "muted", e.cost_center || "—"));
+              el("td", "muted", e.cost_center || "—"),
+              el("td", "muted small", place(e)));
+    if (FS.can("masterdata.write")) {
+      tr.title = "Change its place or cost center";
+      tr.addEventListener("click", (event) => { if (!event.target.closest("a")) pick(e); });
+    }
     body.append(tr);
   }
-  if (!page.items.length) { const tr = el("tr"); const td = el("td", "muted", "No equipment matches."); td.colSpan = 6; tr.append(td); body.append(tr); }
+  if (!page.items.length) { const tr = el("tr"); const td = el("td", "muted", "No equipment matches."); td.colSpan = 7; tr.append(td); body.append(tr); }
   $("#eq-count").textContent = FS.countText(page, equipment.length);
   FS.pager($("#eq-pager"), page, (offset) => { filters.eqOffset = offset; drawEquipment(); });
 }
 
+/* Where a node stands, as held: "12.25, 5.6, 1.55", or a dash for nobody has said. */
+function place(e) {
+  if (e.x === null || e.x === undefined || e.y === null || e.y === undefined) return "—";
+  return [e.x, e.y, e.z].filter((v) => v !== null && v !== undefined).join(", ");
+}
+
+/* The form changes a row that exists: its own cost center and its place.
+   Code, name, level and parent stay as they are; they are not what an
+   engineer assigning a heater band is changing. */
+let picked = null;
+function pick(e) {
+  picked = e.code;
+  $("#eq-code").value = e.code; $("#eq-name").value = e.name; $("#eq-level").value = e.level;
+  $("#eq-parent").value = e.parent || ""; $("#eq-cycle").value = e.ideal_cycle_seconds ?? "";
+  $("#eq-cc").value = e.cost_center || "";
+  $("#eq-x").value = e.x ?? ""; $("#eq-y").value = e.y ?? ""; $("#eq-z").value = e.z ?? "";
+  for (const id of ["eq-code", "eq-name", "eq-level", "eq-parent", "eq-cycle"]) $(`#${id}`).disabled = true;
+  $("#eq-code").required = false; $("#eq-name").required = false;
+  $("#eq-submit").textContent = `Save ${e.code}`;
+  $("#eq-cancel").classList.remove("hidden");
+  $("#eq-cc").focus();
+}
+function unpick() {
+  picked = null;
+  $("#eq-form").reset();
+  for (const id of ["eq-code", "eq-name", "eq-level", "eq-parent", "eq-cycle"]) $(`#${id}`).disabled = false;
+  $("#eq-code").required = true; $("#eq-name").required = true;
+  $("#eq-submit").textContent = "Add";
+  $("#eq-cancel").classList.add("hidden");
+}
+const num = (id) => ($(id).value === "" ? null : Number($(id).value));
+
 function wireEquipment() {
+  $("#eq-cancel").addEventListener("click", unpick);
   $("#eq-form").addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (picked) {
+      try {
+        const body = { cost_center: $("#eq-cc").value.trim() || null };
+        if (num("#eq-x") !== null || num("#eq-y") !== null || num("#eq-z") !== null) {
+          Object.assign(body, { x: num("#eq-x"), y: num("#eq-y"), z: num("#eq-z") });
+        }
+        const out = await api(`/masterdata/equipment/${encodeURIComponent(picked)}`, { method: "PUT", body });
+        toast(out.changed.length ? `${out.code}: ${out.changed.join(" and ").replace("_", " ")} saved` : `${out.code}: nothing changed`);
+        unpick();
+        await loadEquipment();
+      } catch (err) { toast(err.message, "bad"); }
+      return;
+    }
     try {
       const out = await api("/masterdata/equipment", { method: "POST", body: {
         code: $("#eq-code").value.trim().toUpperCase(), name: $("#eq-name").value.trim(),
         level: $("#eq-level").value, parent: $("#eq-parent").value || null,
         ideal_cycle_seconds: $("#eq-cycle").value ? Number($("#eq-cycle").value) : null,
         cost_center: $("#eq-cc").value.trim() || null } });
+      if (num("#eq-x") !== null || num("#eq-y") !== null) {
+        await api(`/masterdata/equipment/${encodeURIComponent(out.code)}`, { method: "PUT",
+          body: { x: num("#eq-x"), y: num("#eq-y"), z: num("#eq-z") } });
+      }
       toast(`${out.code} added`);
       $("#eq-form").reset();
       await loadEquipment();

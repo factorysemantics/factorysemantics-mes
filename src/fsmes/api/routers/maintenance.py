@@ -11,7 +11,7 @@ from sqlalchemy import func, select
 from fsmes.api import export, paging
 from fsmes.api.deps import ActorDep, DbDep, UserDep, require
 from fsmes.domain import DispatchRule, MaintenanceOrder, Person
-from fsmes.services import auth, dispatch, maintenance
+from fsmes.services import auth, dispatch, maintenance, masterdata
 
 router = APIRouter()
 
@@ -148,6 +148,10 @@ def _order_out(o, names: dict[str, str] | None = None) -> dict:
     names = names if names is not None else {}
     return {
         "code": o.code, "equipment": o.equipment.code, "kind": o.kind.value,
+        # The machine the work is on, and how it reads: an order on heater
+        # band 2 is "Heater band 2, FORK1 Mold", and its machine is the mould.
+        "machine": masterdata.machine_of(o.equipment).code,
+        "on": masterdata.what_it_is(o.equipment),
         "status": o.status.value, "summary": o.summary, "reason": o.reason,
         "plan": o.plan.code if o.plan else None,
         "raised_at": o.raised_at, "started_at": o.started_at,

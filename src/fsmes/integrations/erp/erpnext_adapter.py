@@ -230,6 +230,8 @@ def _part_used_remarks(payload: dict, marker: str) -> str:
     """The stock entry's remarks: what was used, on which repair, and the
     machine's minutes down as the repair order holds them (line minutes)."""
     where = payload["equipment"] + (f" ({payload['work_center']})" if payload.get("work_center") else "")
+    if payload.get("equipment_module"):
+        where = f"{payload['equipment_module']} on {where}"
     text = (f"MES-TWIN repair order {payload['repair_order']} on {where}: "
             f"{float(payload['quantity']):g} x {payload['part_code']} used")
     if payload.get("minutes_down") is not None:
@@ -242,7 +244,10 @@ def _part_used_remarks(payload: dict, marker: str) -> str:
 
 
 def _part_used_comment(payload: dict, entry: str | None) -> str:
-    text = f"MES-TWIN: repair order {payload['repair_order']} on {payload['equipment']}"
+    on = payload["equipment"]
+    if payload.get("equipment_module"):
+        on = f"{payload['equipment_module']} on {on}"
+    text = f"MES-TWIN: repair order {payload['repair_order']} on {on}"
     if payload.get("minutes_down") is not None:
         text += f", {float(payload['minutes_down']):g} min down"
     return text + f"; {float(payload['quantity']):g} x {payload['part_code']} issued" + (

@@ -515,8 +515,11 @@ def history(session: Session, equipment_code: str | None = None, limit: int = 50
     """
     query = select(MaintenanceOrder).order_by(MaintenanceOrder.id.desc())
     if equipment_code:
+        # A machine's orders are its own and its parts': a repair raised on
+        # heater band 2 is on the mould's list, because the mould is what stops.
         equipment = masterdata.get_equipment(session, equipment_code)
-        query = query.where(MaintenanceOrder.equipment_id == equipment.id)
+        query = query.where(MaintenanceOrder.equipment_id.in_(
+            masterdata.with_parts(session, equipment)))
     if status:
         query = query.where(MaintenanceOrder.status.in_([MaintenanceStatus(s) for s in status]))
     if kind:

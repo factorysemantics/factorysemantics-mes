@@ -693,7 +693,7 @@ def open_maintenance_in(db: Session, unit: Equipment, start: datetime,
     """
     return [row.code for row in db.scalars(
         select(MaintenanceOrder).where(
-            MaintenanceOrder.equipment_id == unit.id,
+            MaintenanceOrder.equipment_id.in_(masterdata.with_parts(db, unit)),
             MaintenanceOrder.raised_at <= end,
             (MaintenanceOrder.completed_at.is_(None))
             | (MaintenanceOrder.completed_at >= start))

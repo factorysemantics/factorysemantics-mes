@@ -922,9 +922,12 @@ def _decide(session: Session, order: MaintenanceOrder, now: datetime, crew: _Cre
     window = _window(session, order, now, plan_minutes, assumed)
     if shifts is None:
         shifts = {}
-    if order.equipment_id not in shifts:
-        shifts[order.equipment_id] = calendar.shift_for(session, now, order.equipment_id)
-    shift = shifts[order.equipment_id]
+    # A part's work is on its machine's shift: band 2's repair is rostered
+    # where the mould is, not wherever a band with no pattern of its own falls.
+    on = masterdata.machine_of(order.equipment).id
+    if on not in shifts:
+        shifts[on] = calendar.shift_for(session, now, on)
+    shift = shifts[on]
     decision.shift = shift.key() if shift else None
 
     nobody_on_shift = True
@@ -1403,11 +1406,16 @@ def shift_view(session: Session, shift: str | None = None,
     waiting_by: dict[str, list[dict]] = defaultdict(list)
     came_due = by_rules = by_hand = done = running = 0
     for order in rows:
-        machine_state = state_of.get(order.equipment_id)
+        # An order on a part of a machine (heater band 2) waits on the
+        # machine's state: the band has none of its own, the mould stops.
+        machine = masterdata.machine_of(order.equipment)
+        machine_state = state_of.get(machine.id)
         said = {
             "code": order.code,
             "equipment": order.equipment.code,
             "equipment_name": order.equipment.name,
+            "machine": machine.code,
+            "on": masterdata.what_it_is(order.equipment),
             "machine_state": machine_state,
             "summary": order.summary,
             "reason": order.reason,

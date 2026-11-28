@@ -157,6 +157,16 @@ EXCLUDED: dict[str, str] = {
         "the other half of setting it: taking the target away is the same "
         "person's decision, for the same reason.",
 
+    # ---- where a node bills and stands: an engineer's call ----------------
+    "PUT /masterdata/equipment/{code}":
+        "a node's own cost center decides which account a repair is charged "
+        "to in the ERP - heater band 2 billed apart from its mould - and its "
+        "place is a measurement off the floor plan. Both are an engineer's, "
+        "on Setup's equipment form with masterdata.write. The assistant "
+        "reads where a node bills (equipment_tree) and does not move "
+        "money between accounts or machines across the floor; "
+        "create_equipment sets a cost center when a node is first made.",
+
     # ---- roles: a judgement call, said out loud --------------------------
     "DELETE /admin/roles/{code}":
         "a judgement call, decided against. create_role and update_role exist "

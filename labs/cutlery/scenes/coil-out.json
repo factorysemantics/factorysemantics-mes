@@ -271,6 +271,8 @@
   {
    "_why": "What the floor does when a machine stops and its own tag says why: the supervisor raises a corrective order against the machine through the MES (POST /maintenance/corrective, the same service call the raise_corrective_maintenance tool makes), the technician starts it at once, and when the machine reports running again completes it with what was found and the minutes the MES's own state record holds it down for. A stop with the melt reading normal - the everyday minute-10 stop - is not this breakdown and raises nothing.",
    "machine": "FORK1_Mold",
+   "on": "FORK1_Mold_HeaterZone2",
+   "_on": "The order is raised on the band itself, the mould's part with its own place (coil_places.json's FORK1_Mold.HeaterZone2), billing where the mould bills until Setup gives it a cost center of its own; the mould is still what is watched, what stops and what the station screen shows the order on.",
    "when": {
     "state": "down",
     "tag": "MeltTemp",

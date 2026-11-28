@@ -84,6 +84,40 @@ def cost_centers(factory: dict) -> dict[str, str]:
     return out
 
 
+def mould_parts(scenario_dir: Path = HERE) -> dict[str, list[dict]]:
+    """Each mould's four barrel heater bands and its melt temperature sensor,
+    as parts of the mould (equipment modules), by the mould's code.
+
+    Their places are the studio's drawing, copied into `coil_places.json`
+    (drawn, not measured). The codes are the file's ids with the dot made an
+    underscore - `FORK1_Mold.HeaterZone2` is `FORK1_Mold_HeaterZone2` - so a
+    search for one finds the other. No cost center of their own: a band bills
+    where its mould does until an engineer says otherwise.
+
+    The drawing is the pack's, not the build's: a lab folder that
+    `build_config.py` wrote has no copy, and reads the one beside this file.
+    A copy of the pack with neither has no parts, which is what it had before.
+    """
+    path = scenario_dir / "coil_places.json"
+    if not path.exists():
+        path = HERE / "coil_places.json"
+    if not path.exists():
+        return {}
+    out: dict[str, list[dict]] = {}
+    for mould in json.loads(path.read_text(encoding="utf-8"))["moulds"]:
+        code = mould["equipment"]
+        rows = [{"code": band["id"].replace(".", "_"), "name": f"Heater band {band['zone']}",
+                 "level": "equipment_module", "parent": code,
+                 "position": {k: band[k] for k in ("x", "y", "z")}}
+                for band in sorted(mould["heater_bands"], key=lambda b: b["zone"])]
+        sensor = mould["melt_temp_sensor"]
+        rows.append({"code": sensor["id"].replace(".", "_"), "name": "Melt temperature sensor",
+                     "level": "equipment_module", "parent": code,
+                     "position": {k: sensor[k] for k in ("x", "y", "z")}})
+        out[code] = rows
+    return out
+
+
 # Sized for a two-hour run at the nominal rate, so a scored hour never runs
 # out of order and a standing instance at 1x has an hour of slack.
 HOURS_OF_ORDER = 2.0
@@ -129,6 +163,7 @@ def seed(session: Session, scenario_dir: Path = HERE) -> dict | None:
     factory = json.loads((scenario_dir / "line.json").read_text(encoding="utf-8"))
     cycles = {m.equipment: m.cycle_seconds for m in load_tag_map(scenario_dir / "tag_map.json")}
     billed_to = cost_centers(factory)
+    parts = mould_parts(scenario_dir)
 
     enterprise = _get_or_create(session, ENTERPRISE[0], name=ENTERPRISE[1], level=EquipmentLevel.ENTERPRISE)
     site = _get_or_create(session, SITE[0], name=SITE[1], level=EquipmentLevel.SITE, parent=enterprise)
@@ -151,6 +186,14 @@ def seed(session: Session, scenario_dir: Path = HERE) -> dict | None:
                                        level=EquipmentLevel.WORK_UNIT, parent=centre,
                                        ideal_cycle_seconds=cycles[code])
         session.add_all(stations.values())
+        for mould, rows in parts.items():
+            if mould in stations:
+                for row in rows:
+                    place = row["position"]
+                    session.add(Equipment(code=row["code"], name=row["name"],
+                                          level=EquipmentLevel.EQUIPMENT_MODULE,
+                                          parent=stations[mould], pos_x=place["x"],
+                                          pos_y=place["y"], pos_z=place["z"]))
 
         kind = meta["kind"]
         product = _material(session, meta["material"],
@@ -216,6 +259,7 @@ def masterdata_rows(scenario_dir: Path = HERE) -> dict[str, list[dict]]:
     factory = json.loads((scenario_dir / "line.json").read_text(encoding="utf-8"))
     cycles = {m.equipment for m in load_tag_map(scenario_dir / "tag_map.json")}
     billed_to = cost_centers(factory)
+    parts = mould_parts(scenario_dir)
     equipment = [{"code": ENTERPRISE[0], "name": ENTERPRISE[1], "level": "enterprise"},
                  {"code": SITE[0], "name": SITE[1], "level": "site", "parent": ENTERPRISE[0]}]
     areas: set[str] = set()
@@ -243,6 +287,7 @@ def masterdata_rows(scenario_dir: Path = HERE) -> dict[str, list[dict]]:
                 raise ValueError(f"tag_map.json has no entry for {code}; the seed and the tag map disagree.")
             equipment.append({"code": code, "name": f"{name} {station['name']}",
                               "level": "work_unit", "parent": centre})
+            equipment.extend(parts.get(code, []))
         kind = meta["kind"]
         product = meta["material"]["code"]
         material(meta["material"], "finished" if kind in ("wrapper", "palletizer") else "intermediate",
