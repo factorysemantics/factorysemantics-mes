@@ -1,0 +1,491 @@
+# Class 6.2 of the course, *Agents - draft, never approve*: the AI works as an
+# account of its own, with a role like anyone's; asked for a new stop reason,
+# the Assistant proposes a draft, a person says Do it, and the draft waits on
+# the Floor until somebody who may sign it does. Asked to put its own draft in
+# force, it cannot.
+#
+# It starts from a card of words (no drawing): the assistant can write a new
+# word in seconds, so who puts it in force? The idea card names the agent, a
+# draft, approve and Waiting for you. Then the product as the plant's
+# administrator sees it: Admin, the AGENT account and the Agent role, whose own
+# description says it never approves; the Reasons screen and the Assistant,
+# asked for a reason part_stuck, its proposal boxed, Do it pressed; the Floor's
+# Waiting for you row, drafted by AGENT for ADMIN, Review, Before you sign,
+# Approve, in force; the Reasons row with both names on it. A second draft,
+# tool_change, then what it refuses: asked to approve tool_change itself, it
+# cannot, and the answer is boxed, never quoted. Filmed on a scratch cutlery
+# plant, every screen as the product draws it, the Assistant moved left.
+#
+# The Assistant answers only on a plant started with ANTHROPIC_API_KEY in its
+# environment. The recorder's scratch plant inherits the recorder's own
+# environment, so the take is run with the key loaded, never printed:
+#
+#   set -a; . <the plant owner's env file>; set +a
+#   python scripts/record-scene.py scripts/scenes/course/07-02-agents-draft-never-approve.toml
+
+name = "agents-draft-never-approve"
+title = "Agents — draft, never approve"
+lesson = "6.2"
+take_is = "lesson"
+part = "hook"
+base = "http://127.0.0.1:8040"
+badge = "pre-alpha · simulated plant · v{version}"
+# The administrator: the shipped supervisor does not hold `process.define`, so
+# the Assistant may not draft a reason for one, nor `process.approve` to sign.
+user = "ADMIN"
+password = "admin"
+# About five minutes scripted, and the Assistant looking things up, four times.
+budget_seconds = 420
+gif_skip_seconds = 2.0
+width = 1280
+height = 720
+# The class is about the Assistant, which a take otherwise hides.
+assistant = true
+
+# The take asks the Assistant three things, confirms two drafts and signs one.
+# Honoured only against a loopback plant: the scratch plant below.
+allow_writes = true
+what_is_written = "two downtime reason drafts, part_stuck and tool_change, by the plant agent on behalf of ADMIN; part_stuck signed by ADMIN; the three questions asked and their trace"
+
+notes = [
+  "The plant was started from the cutlery pack at ten times wall clock, by the recorder, with `fsmes fleet start --speed 10`. The replay bar at the top of every page says so. Reason codes and drafts do not wait on production.",
+  "The Assistant answers because the scratch plant was started with an Anthropic API key in its environment, the key a plant's owner supplies. The key is never shown, logged or filmed.",
+  "On the product the Assistant's button and panel sit at the bottom right. In this take the recorder moves them to the left (`assistant = true`), because the bottom right is under the caption bar and the narrator's corner. Nothing else about them is changed.",
+  "The take is the administrator's, ADMIN. The shipped Supervisor role holds neither `process.define` nor `process.approve`: the Assistant will not propose a reason for a supervisor, and a supervisor cannot sign one.",
+  "The People list on Admin is filtered to the word agent before it is on the frame, so only the AGENT account is shown.",
+  "The Assistant's words are the model's own and differ from take to take; no caption quotes them. What the captions say comes from the screens: the proposal card's own note, the Waiting for you row, the review and the Reasons table.",
+  "The administrator here both asked for the draft and signed it. The product does not stop that; the class says so, and that a plant wanting a second person gives `process.approve` to someone else.",
+  "Asked to approve tool_change itself, the Assistant has no tool that approves: every write it can propose is a draft or a proposal. tool_change was left a draft, waiting on the Floor.",
+  "The opening beat is a plain card with words on it. There is no artwork.",
+]
+
+honesty = [
+  "the plant is a scratch simulated plant, replaying a recorded line at ten times wall clock",
+  "the Assistant's answers are the model's own words, different on every take, and are boxed, never quoted",
+  "the Assistant is shown at the left of the screen; on the product it sits at the bottom right",
+  "the same administrator asked for the draft and signed it; the product does not require a second person, and a plant that wants one gives the right to approve to someone else",
+  "the Assistant waits while it looks things up; the waits are in the take, at a few seconds each",
+]
+
+[plant]
+pack = "labs/cutlery"
+speed = 10
+
+# ----------------------------------------------------------------- the hook
+
+[[step]]
+do = "slide"
+name = "who-puts-it-in-force"
+title = "Who puts it in force?"
+lines = [
+  "The assistant can write a new stop reason in seconds",
+  "Every operator would then see it at the machine",
+  "So who decides that it goes live?",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "The assistant can write a new stop reason in a few seconds. Every operator would then see it at the machine."
+
+[[step]]
+do = "say"
+line = "So who decides that it goes live? In this MES, a person. Never the assistant."
+
+[[step]]
+do = "mark"
+name = "who-puts-it-in-force"
+
+# ----------------------------------------------------------------- the idea
+
+[[step]]
+part = "idea"
+do = "slide"
+name = "the-words"
+title = "The words"
+lines = [
+  "An agent: the account the AI works as, with a role",
+  "A draft: a change written down, that changes nothing yet",
+  "Approve: a person signs the draft, and it is in force",
+  "Waiting for you: the drafts you may sign, on the Floor",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "An agent is the account the AI works as. It has a role, like anyone, and the role says what it may do."
+
+[[step]]
+do = "say"
+line = "A draft is a change written down. It is stored and can be read, but it changes nothing on the floor yet."
+
+[[step]]
+do = "say"
+line = "To approve is to sign a draft. Only an account with the right to approve can, and then the change is in force."
+
+[[step]]
+do = "say"
+line = "Waiting for you is a panel on the Floor. It lists the drafts that you, signed in, may sign."
+
+[[step]]
+do = "mark"
+name = "the-words"
+
+# ------------------------------------------------------------ on the screen
+
+[[step]]
+part = "screen"
+do = "goto"
+url = "/dashboard"
+settle = 2
+
+[[step]]
+do = "say"
+line = "Signed in as the plant's administrator, who may sign. First, the account the AI works as. Setup, then Admin."
+at = "header nav a:text-is(\"Setup\")"
+
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"Setup\")"
+
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"Admin\")"
+
+[[step]]
+do = "wait_for"
+selector = "#roles"
+text = "Agent"
+
+# The People list is filtered before anything below its first rows is on the
+# frame (see the notes).
+[[step]]
+do = "fill"
+selector = "#u-q"
+text = "agent"
+
+[[step]]
+do = "wait_for"
+selector = "#user-count"
+text = "1 of 1 matching"
+
+[[step]]
+do = "say"
+line = "The AI's account: AGENT, the Plant Agent. Its role is Agent. Class 2.4 showed how a role is a list of rights."
+at = "#users tbody tr:has-text(\"AGENT\")"
+
+[[step]]
+do = "say"
+line = "The Agent role's rights: run production, record what it sees, draft instructions, draft reason codes and severities."
+at = "#roles .role:has(strong:text-is(\"Agent\")) .grants"
+scroll_to = "#roles .role:has(strong:text-is(\"Agent\"))"
+scroll_block = "start"
+scroll_offset = 230
+
+[[step]]
+do = "say"
+line = "And what it never holds: the right to approve. Its own description says so. Not an instruction, not a trigger, not a reason code."
+at = "#roles .role:has(strong:text-is(\"Agent\")) p"
+hold = 7.0
+
+[[step]]
+do = "say"
+line = "An administrator could grant it more. That is a person's choice, made on this screen, for one plant."
+at = "#roles .role:has(strong:text-is(\"Agent\")) .grants"
+
+[[step]]
+do = "mark"
+name = "the-agent-role"
+
+[[step]]
+do = "goto"
+url = "/dashboard/reasons"
+settle = 2
+
+[[step]]
+do = "say"
+line = "The Reasons screen: the stop reasons an operator picks from. A new one is written here as a draft."
+at = "#reasons-table"
+
+[[step]]
+do = "say"
+line = "Class 6.1 asked the analyst on the AI tab, which only reads. This is the other one, the Assistant. It may propose a change."
+at = ".assist-launch"
+
+[[step]]
+do = "click"
+selector = ".assist-launch"
+
+[[step]]
+do = "wait_for"
+js = "!!document.querySelector('#assist-input') && !document.querySelector('.assist-panel').classList.contains('hidden')"
+
+[[step]]
+do = "say"
+line = "On the product it sits at the bottom right. Here it is moved to the left, clear of these captions."
+at = ".assist-panel"
+
+[[step]]
+do = "fill"
+selector = "#assist-input"
+text = "Draft a new downtime reason: code part_stuck, name Part stuck in mould, description The part did not eject and was freed by hand."
+
+[[step]]
+do = "click"
+selector = ".assist-ask button"
+
+[[step]]
+do = "mark"
+name = "asked-for-a-draft"
+
+# A caption of its own for the wait, so the still at the proposal does not
+# carry the line that asked.
+[[step]]
+do = "say"
+line = "It looks up the reasons the plant already has, then answers. That takes a few seconds."
+hold = 1.0
+
+[[step]]
+do = "wait_for"
+js = "!document.querySelector('#assist-log .assist-msg.thinking') && !!document.querySelector('#assist-log .assist-card:not(.settled) h4') && document.querySelector('#assist-log .assist-card:not(.settled) h4').textContent.includes('part_stuck')"
+timeout = 120
+
+[[step]]
+do = "say"
+line = "A proposal, on a card. Draft the downtime reason part_stuck, with the three fields filled in from what was asked."
+at = "#assist-log .assist-card:not(.settled)"
+hold = 7.0
+
+[[step]]
+do = "say"
+line = "Read the line under it. Nothing has changed yet. Do it runs this as the plant agent, on behalf of the administrator."
+at = "#assist-log .assist-card:not(.settled) p.note"
+hold = 7.0
+
+[[step]]
+do = "click"
+selector = "#assist-log .assist-card:not(.settled) button:text-is(\"Do it\")"
+
+[[step]]
+do = "say"
+line = "Do it, pressed by a person. The agent now writes the draft."
+hold = 1.0
+
+# The button under the reply, offering to show what was written, is drawn
+# only after a write the plant accepted.
+[[step]]
+do = "wait_for"
+js = "!document.querySelector('#assist-log .assist-msg.thinking') && !!document.querySelector('#assist-log > button.assist-launch')"
+timeout = 120
+
+[[step]]
+do = "say"
+line = "Its answer, in its own words. They change every time, so this class does not read them out."
+at = "#assist-log .assist-msg.bot >> nth=-1"
+hold = 6.0
+
+[[step]]
+do = "mark"
+name = "the-agent-drafts"
+
+[[step]]
+do = "click"
+selector = "header nav a:text-is(\"Floor\")"
+
+[[step]]
+do = "wait_for"
+js = "!document.querySelector('#pending-panel').classList.contains('hidden') && document.querySelector('#pending tbody').textContent.includes('part_stuck')"
+timeout = 30
+scroll_to = "#pending-panel"
+scroll_block = "start"
+scroll_offset = 230
+
+[[step]]
+do = "say"
+line = "The Floor, and Waiting for you. A draft waits here for somebody who may sign it. It never goes live by itself."
+at = "#pending-panel h2"
+
+[[step]]
+do = "say"
+line = "A downtime reason, part_stuck, drafted by AGENT for ADMIN. The agent wrote it, and the person it worked for is named."
+at = "#pending tbody tr:has-text(\"part_stuck\")"
+hold = 7.0
+
+[[step]]
+do = "click"
+selector = "#pending tbody tr:has-text(\"part_stuck\") button:text-is(\"Review\")"
+
+[[step]]
+do = "wait_for"
+js = "!document.querySelector('#review-panel').classList.contains('hidden') && document.querySelectorAll('#review-changes li').length >= 1 && document.querySelector('#review-who').textContent.includes('AGENT')"
+timeout = 20
+scroll_to = "#review-panel"
+scroll_block = "start"
+scroll_offset = 230
+
+[[step]]
+do = "say"
+line = "Before you sign. Who drafted it, and for whom."
+at = "#review-who"
+
+[[step]]
+do = "say"
+line = "What would change, line by line. Today there is no part_stuck. After signing, operators can pick it."
+at = "#review-changes"
+hold = 6.0
+
+[[step]]
+do = "say"
+line = "Approve is the administrator's to press. The agent has no such button, and no such right."
+at = "#review-approve"
+
+[[step]]
+do = "click"
+selector = "#review-approve"
+
+[[step]]
+do = "wait_for"
+selector = "#toast"
+text = "part_stuck is in force"
+timeout = 20
+
+[[step]]
+do = "say"
+line = "The plant says part_stuck is in force."
+at = "#toast"
+hold = 3.0
+
+[[step]]
+do = "mark"
+name = "a-person-signs"
+
+[[step]]
+do = "goto"
+url = "/dashboard/reasons"
+settle = 2
+
+[[step]]
+do = "wait_for"
+js = "const row = [...document.querySelectorAll('#reasons-table tbody tr')].find((r) => r.textContent.includes('part_stuck')); return !!row && row.textContent.includes('AGENT for ADMIN') && /on the list/i.test(row.textContent);"
+timeout = 20
+scroll_to = "#reasons-table tbody tr:has-text(\"part_stuck\")"
+scroll_block = "center"
+
+[[step]]
+do = "say"
+line = "Back on Reasons, the row keeps both names. Drafted by AGENT for ADMIN. Signed by ADMIN."
+at = "#reasons-table tbody tr:has-text(\"part_stuck\")"
+hold = 7.0
+
+[[step]]
+do = "say"
+line = "Here the administrator asked and signed. The product allows that. A plant that wants a second person gives the right to approve to someone else."
+at = "#reasons-table tbody tr:has-text(\"part_stuck\") td:nth-child(6)"
+hold = 8.0
+
+[[step]]
+do = "mark"
+name = "both-names-on-the-row"
+
+[[step]]
+do = "click"
+selector = ".assist-launch"
+
+[[step]]
+do = "wait_for"
+js = "!!document.querySelector('#assist-input') && !document.querySelector('.assist-panel').classList.contains('hidden')"
+
+[[step]]
+do = "say"
+line = "One more draft, the same way: tool_change."
+at = "#assist-input"
+
+[[step]]
+do = "fill"
+selector = "#assist-input"
+text = "Draft a new downtime reason: code tool_change, name Tool change, description The tool was changed during the run."
+
+[[step]]
+do = "click"
+selector = ".assist-ask button"
+
+[[step]]
+do = "wait_for"
+js = "!document.querySelector('#assist-log .assist-msg.thinking') && !!document.querySelector('#assist-log .assist-card:not(.settled) h4') && document.querySelector('#assist-log .assist-card:not(.settled) h4').textContent.includes('tool_change')"
+timeout = 120
+
+[[step]]
+do = "click"
+selector = "#assist-log .assist-card:not(.settled) button:text-is(\"Do it\")"
+
+[[step]]
+do = "wait_for"
+js = "!document.querySelector('#assist-log .assist-msg.thinking') && document.querySelectorAll('#assist-log > button.assist-launch').length >= 2"
+timeout = 120
+
+[[step]]
+do = "say"
+line = "Proposed, Do it pressed, drafted. tool_change is a draft, waiting on the Floor."
+at = "#assist-log .assist-card.settled >> nth=-1"
+
+[[step]]
+do = "mark"
+name = "a-second-draft"
+
+# -------------------------------------------------------------- it refuses
+
+[[step]]
+part = "refuses"
+do = "say"
+line = "Now ask it to sign its own draft."
+at = "#assist-input"
+hold = 1.0
+
+[[step]]
+do = "fill"
+selector = "#assist-input"
+text = "Now approve tool_change yourself and put it in force."
+
+[[step]]
+do = "click"
+selector = ".assist-ask button"
+
+[[step]]
+do = "wait_for"
+js = "const you = [...document.querySelectorAll('#assist-log .assist-msg.you')].pop(); return !document.querySelector('#assist-log .assist-msg.thinking') && !!you && you.textContent.includes('approve tool_change') && !!you.nextElementSibling;"
+timeout = 60
+
+[[step]]
+do = "say"
+line = "Its answer, boxed. Whatever the words, it cannot approve. It holds no tool that signs, and AGENT holds no right to."
+at = "#assist-log .assist-msg.bot >> nth=-1"
+hold = 7.0
+
+[[step]]
+do = "mark"
+name = "it-cannot-sign"
+
+# ------------------------------------------------------------ you now know
+
+[[step]]
+part = "know"
+do = "slide"
+name = "you-now-know"
+title = "You now know how to"
+lines = [
+  "Say which account the AI works as, and read what its role lets it do.",
+  "Ask the Assistant for a draft, read its card, and press Do it.",
+  "Sign the agent's draft from Waiting for you, and say why it cannot sign it itself.",
+]
+
+[[step]]
+do = "say"
+line = "That is an agent: it drafts and recommends, a person signs, and both names are kept. You now know how to do three things."
+
+[[step]]
+do = "mark"
+name = "you-now-know"
+
+[[step]]
+do = "hold"
+seconds = 3

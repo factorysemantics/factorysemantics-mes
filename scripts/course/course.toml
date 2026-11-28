@@ -412,6 +412,13 @@ label = "6.2"
 slug = "agents-draft-never-approve"
 title = "Agents — draft, never approve"
 one_line = "An agent is a role like any other; it may draft and recommend, and approve nothing."
+knows_before = ["6.1", "2.4"]
+outcomes = [
+  "Say which account the AI works as, and read what its role lets it do.",
+  "Ask the Assistant for a draft, read its card, and press Do it.",
+  "Sign the agent's draft from Waiting for you, and say why it cannot sign it itself.",
+]
+scene = "scripts/scenes/course/07-02-agents-draft-never-approve.toml"
 
 [[module.lesson]]
 order = 3
