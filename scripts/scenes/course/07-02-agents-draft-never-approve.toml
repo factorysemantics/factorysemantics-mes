@@ -295,6 +295,17 @@ hold = 6.0
 do = "mark"
 name = "the-agent-drafts"
 
+# The panel stays open from screen to screen once opened, and on the left it
+# would cover Waiting for you. Close it; its button comes back for the next ask.
+[[step]]
+do = "click"
+selector = ".assist-head button:text-is(\"Close\")"
+
+[[step]]
+do = "wait_for"
+js = "!!document.querySelector('body > .assist-launch') && getComputedStyle(document.querySelector('body > .assist-launch')).display !== 'none'"
+timeout = 5
+
 [[step]]
 do = "click"
 selector = "header nav a:text-is(\"Floor\")"

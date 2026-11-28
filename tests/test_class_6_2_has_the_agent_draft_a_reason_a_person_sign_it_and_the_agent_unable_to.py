@@ -300,3 +300,13 @@ def test_every_scroll_names_plain_css_because_the_page_not_playwright_finds_it(s
     scrolls = [s["scroll_to"] for s in scene["step"] if s.get("scroll_to")]
 
     assert scrolls and [s for s in scrolls if re.search(r":(has-text|text-is|text|visible)\b|>>", s)] == []
+
+
+def test_the_panel_is_closed_before_the_floor_so_it_covers_nothing_and_its_button_is_there_for_the_next_ask(scene):
+    """The third take found the panel reopened itself on every screen and hid its own button."""
+    steps = scene["step"]
+    closed = first_index(scene, lambda s: s["do"] == "click" and "Close" in s["selector"])
+    floor = first_index(scene, lambda s: s["do"] == "click" and "Floor" in s["selector"])
+    launches = [i for i, s in enumerate(steps) if s["do"] == "click" and s["selector"] == "body > .assist-launch"]
+
+    assert closed < floor < launches[1]
