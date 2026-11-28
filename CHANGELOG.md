@@ -19,6 +19,16 @@ goes under Honesty with a migration line, so plant people can find it.
   `equipment.json` may now carry `cost_center`; `fsmes pack apply` sets it and
   `fsmes pack check` refuses one that is not a code of 1 to 40 characters.
 
+### Fixed
+
+- **The assistant's "Do it" works again on a fresh install.** On SQLite,
+  every write sent with `Idempotency-Key` (the assistant's "Do it", the MCP
+  write tools) answered 500, "database is locked", once `pip install` picked
+  up Starlette 1.7 or later; 1.10 is what it picks today. The key's store
+  waited on the route's own unfinished transaction. The middleware is now
+  plain ASGI and stores the key after the route has committed and before
+  the answer goes out. It works on Starlette 1.6 to 1.10; nothing is pinned.
+
 ## [0.5.0] — 2026-11-12
 
 ### Added
