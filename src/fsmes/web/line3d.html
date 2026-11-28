@@ -71,12 +71,25 @@
 
 <section id="stations" class="stations"></section>
 
+<button id="pick-list-toggle" type="button" class="pick-list-toggle hidden" aria-controls="pick-list">Parts</button>
+<nav id="pick-list" class="pick-list hidden" aria-label="Machines and their parts"></nav>
+
+<aside id="pick" class="pick hidden" aria-live="polite">
+  <div class="pick-head">
+    <h2 id="pick-title"></h2>
+    <button id="pick-close" type="button" class="pick-close" aria-label="Close">×</button>
+  </div>
+  <div id="pick-body"></div>
+</aside>
+
 <footer id="foot">
   <div class="legend">
     <span><i class="swatch running"></i>running</span>
     <span><i class="swatch idle"></i>idle</span>
     <span><i class="swatch down"></i>down</span>
     <span><i class="swatch setup"></i>changeover</span>
+    <span><i class="swatch part"></i>a part</span>
+    <span><i class="swatch repair"></i>repair open</span>
   </div>
   <div class="spacer"></div>
   <p class="truth">

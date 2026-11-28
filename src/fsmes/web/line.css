@@ -207,6 +207,8 @@ body {
 .swatch.idle    { background: var(--idle); }
 .swatch.down    { background: var(--down); }
 .swatch.setup   { background: var(--setup); }
+.swatch.part    { background: #4cc3ff; border-radius: 50%; }
+.swatch.repair  { background: #ff3b3b; border-radius: 50%; }
 
 .truth { margin: 0; text-align: right; max-width: 46ch; }
 .truth strong { color: var(--text); font-family: var(--mono); }
@@ -224,9 +226,85 @@ body {
 .fatal h1 { font-size: 20px; margin: 0 0 8px; }
 .fatal p { color: var(--muted); margin: 0; max-width: 52ch; }
 
+/* ---------- a machine's parts: the panel a click opens, and the list ---------- */
+.pick {
+  position: fixed;
+  right: 18px;
+  top: 62px;
+  width: 300px;
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+  z-index: 5;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 13px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .45);
+}
+.pick-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.pick-head h2 { font-size: 15px; margin: 0; flex: 1; }
+.pick-close { background: none; border: 0; color: var(--muted); font-size: 20px; cursor: pointer; line-height: 1; }
+.pick-row { display: grid; grid-template-columns: 62px 1fr; gap: 8px; padding: 4px 0; border-top: 1px solid var(--line); }
+.pick-row > span:last-child { display: flex; flex-direction: column; gap: 3px; overflow-wrap: anywhere; }
+.pick-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; padding-top: 2px; }
+.pick-repair { color: #ff6b6b; }
+.pick-part, .pick-list-part, .pick-list-machine {
+  background: none; border: 0; padding: 2px 0; color: var(--accent); cursor: pointer; text-align: left; font: inherit;
+}
+.pick-edit { display: grid; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.pick-edit label { color: var(--muted); font-size: 11px; }
+.pick-edit input { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font: inherit; }
+.pick-buttons { display: flex; gap: 6px; }
+.pick-buttons button { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; font: inherit; cursor: pointer; }
+.pick-buttons button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pick-buttons button:disabled { opacity: .45; cursor: not-allowed; }
+.pick-note { margin: 0; color: var(--muted); font-size: 12px; min-height: 1em; }
+body.pick-moving #stage { cursor: crosshair; }
+
+.pick-list-toggle {
+  position: fixed;
+  left: 18px;
+  bottom: 52px;
+  z-index: 4;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.pick-list {
+  position: fixed;
+  left: 18px;
+  bottom: 92px;
+  width: 240px;
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
+  z-index: 4;
+  background: rgba(22, 27, 34, .96);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+.pick-list-total { margin: 0 0 6px; color: var(--muted); font-size: 12px; }
+.pick-list-group { padding: 4px 0; border-top: 1px solid var(--line); }
+.pick-list-machine { color: var(--text); font-weight: 600; }
+.pick-list ul { list-style: none; margin: 0; padding: 0 0 0 10px; }
+.pick-list-part.repair { color: #ff6b6b; }
+.pick-list-part.repair::after { content: " · repair open"; font-size: 11px; }
+
 @media (max-width: 900px) {
   .stations { display: none; }
   .truth { display: none; }
+  .legend { flex-wrap: wrap; gap: 6px 12px; max-width: calc(100vw - 150px); }
+  /* A phone: the panel is a sheet across the bottom, and the list a column
+     beside the view, so a part too small to hit is one tap away. */
+  .pick { left: 16px; right: 16px; top: auto; bottom: 16px; width: auto; max-height: 55vh; }
+  .pick-list { left: 16px; right: auto; width: min(240px, calc(100vw - 32px)); }
 }
 
 /* The line's name and provenance badges lived in its bespoke header;

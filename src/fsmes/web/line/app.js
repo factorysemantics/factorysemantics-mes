@@ -10,6 +10,7 @@
 import { LineScene } from "./scene.js";
 import { LineFlow } from "./flow.js";
 import { DemoFeed, LiveFeed } from "./feed.js";
+import { Picker } from "./pick.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -197,6 +198,12 @@ async function main() {
 
   const names = new Map(layout.stations.map((s) => [s.code, s.name]));
 
+  // Markers on each machine's parts, and the panel a click opens. Whether
+  // Move is offered is the signed-in person's to know; the server refuses
+  // anyone else whatever this says.
+  const who = DEMO ? null : await window.FS.whoami().catch(() => null);
+  const picker = new Picker(scene, layout, { canMove: Boolean(who) && window.FS.can("masterdata.write") });
+
   feed.onResync = () => {
     // Units we were not shown still happened; clearing is the honest response to
     // a gap, rather than animating a backlog that no longer reflects the line.
@@ -208,6 +215,7 @@ async function main() {
 
   let previous = performance.now();
   let lastStations = [];
+  let lastRepairs = null;
 
   function frame(now) {
     requestAnimationFrame(frame);
@@ -233,6 +241,10 @@ async function main() {
     scene.update(dt, flow);
     scene.render();
 
+    if (feed.repairs && feed.repairs !== lastRepairs) {
+      lastRepairs = feed.repairs;
+      picker.applyRepairs(lastRepairs);
+    }
     if (feed.stations !== lastStations) {
       lastStations = feed.stations;
       scene.applyStates(lastStations);
@@ -247,7 +259,7 @@ async function main() {
   // ?debug=1 exposes the moving parts for the console. Tuning belt speeds and
   // robot timings from the outside is otherwise guesswork.
   if (params.get("debug") === "1") {
-    window.__line = { scene, flow, feed, layout };
+    window.__line = { scene, flow, feed, layout, picker };
   }
 
   window.FS.live(true, DEMO ? "recorded" : "live");
