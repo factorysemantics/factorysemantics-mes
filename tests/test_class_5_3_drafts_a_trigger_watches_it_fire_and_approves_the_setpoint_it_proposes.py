@@ -7,7 +7,8 @@ a dial turned down, nobody knowing who), the three words of the class
 machine. Then the product: a trigger drafted by the lab shift supervisor, who
 cannot approve it; the lab administrator putting it in force; the trigger
 firing and proposing a lower setpoint; the administrator approving it; and the
-setpoint read back on Tags. Then what it refuses: a setpoint outside the
+setpoint read back on Tags, and the melt temperature itself coming down toward
+it on the machine's trend. Then what it refuses: a setpoint outside the
 bounds the tag declares. This file holds the scene file to what the handoff
 asks of it. No plant and no browser: the scene is loaded and walked the way
 the recorder walks it.
@@ -155,6 +156,26 @@ def test_the_take_waits_for_the_firing_and_for_the_write_before_it_says_them(sce
     )
     page = TRIGGERS_PAGE.read_text(encoding="utf-8")
     assert "drafted — approve it to put it in force" in page and "in force`" in page
+
+
+def test_after_the_write_the_take_shows_the_melt_temperature_coming_down_on_its_own_trend_beside_the_setpoint(scene):
+    screen = steps_of(scene, "screen")
+    names = [s.get("name") for s in screen if s["do"] == "mark"]
+    falls = names.index("the-temperature-falls")
+    clicks = [s["selector"] for s in screen if s["do"] == "click"]
+    chosen = {s["selector"]: s["value"] for s in screen if s["do"] == "choose"}
+    waits = [s.get("js", "") for s in screen if s["do"] == "wait_for"]
+
+    # It comes after the setpoint is read back, never before the write.
+    assert names.index("approved-and-written") < names.index("the-setpoint") < falls
+    # The trend is opened by clicking MeltTemp's own row on Tags, as a person would.
+    assert any("MeltTemp" in c and "#tags-table" in c and "MeltTempSP" in c and ":not(" in c for c in clicks)
+    assert chosen["#trend-tag-2"] == "MeltTempSP"
+    # The live reading is waited for, below where the trigger fired; nothing is put there by the take.
+    assert any("MeltTemp" in js and "< 213" in js for js in waits)
+    assert any("#trend" in js and "MeltTempSP" in js for js in waits)
+    assert any("coming down toward 211" in line for line in said(scene, "screen"))
+    assert not [s for s in scene["step"] if s["do"] == "fill" and "MeltTemp" in s.get("selector", "")]
 
 
 def test_the_honest_limits_are_said_in_the_films_own_lines(scene):

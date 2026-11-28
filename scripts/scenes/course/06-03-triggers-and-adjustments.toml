@@ -12,7 +12,8 @@
 # approved and in force; What fired, where it fires; Adjustments, where its
 # recommendation waits with its reason; the administrator's approval, the row
 # naming who approved; and Tags, where the fork mould's setpoint now reads the
-# new value. Then what it refuses: a setpoint outside the bounds the tag
+# new value; then MeltTemp itself, the melt temperature, and its trend with
+# the setpoint beside it, coming down toward 211 after the write. Then what it refuses: a setpoint outside the bounds the tag
 # declares. Filmed on a scratch cutlery plant at ten times the clock, every
 # screen as the product draws it.
 #
@@ -22,7 +23,9 @@
 # approve right, which the class says over the roles, and a trigger's
 # recommendation carries its evidence by construction. The class films the
 # refusal a screen does make, the bounds. The six-minute check that the
-# machine followed is said, not filmed: it is longer than the class.
+# machine followed is said, not filmed: it is longer than the class, and the
+# recorder has no cut inside a take. The temperature coming down is filmed:
+# at ten times the clock the mould's two-minute lag passes in twelve seconds.
 
 name = "triggers-and-adjustments"
 title = "Triggers and adjustments — the only path to a PLC"
@@ -58,7 +61,8 @@ notes = [
   "Approve on Adjustments asks for an optional note in the browser's own prompt box. The recorder's browser dismisses it unanswered, so no note is written and no box is filmed. A gap, written up: a browser box is not the product's own form.",
   "Once the agent has written the value the row says written and when, and no longer who approved. A gap, written up; the class boxes the row while it still says approved by ADMIN, and says the name leaves.",
   "The tile Approved, not yet written counts the written ones too. A gap, written up; the class does not point at it.",
-  "The check that the machine followed waits three times the tag's lag, at least half a minute: 360 seconds on this pack, longer than the class, and the row's verifying in 360 s does not count down. It compares one reading before the write with one after, and on this pack the melt temperature wanders as far as the change, so on a trial take the mould followed and the check said failed. A gap, written up; the class says the check, not its verdict.",
+  "The check that the machine followed waits three times the tag's lag, at least half a minute: 360 seconds on this pack, longer than the class, and the row's verifying in 360 s does not count down. The wait is counted on the wall clock while the lag is counted on the line's, so ten times the clock does not shorten it: here it is an hour of line time, and the recorder has no cut inside a take to skip it. It compares one reading before the write with one after, and on this pack the melt temperature wanders as far as the change: on one trial take the mould followed and the check said failed, on a trial by hand it said followed (217.27 to 211.39). A gap, written up; the class says the check, not its verdict.",
+  "The melt temperature's fall is filmed: its live reading on Tags, then its trend, opened by clicking that row, with MeltTempSP chosen as the second tag. The lag is 120 line seconds, twelve seconds of the take, so by the time the trend opens the mould has mostly followed. The trend is drawn once, when the page opens, from what the plant recorded. The take waits for the live reading to be below 213 before it says so; the trend is filmed as drawn.",
   "Who approved and when is also on Setup > Ops, in the audit trail, but that page opens on the plant's own file paths, and a frame must not show them; the class shows the name on the queue instead.",
   "The opening beat is a plain card with words on it. There is no artwork of a dial, a mould or a person.",
 ]
@@ -68,6 +72,7 @@ honesty = [
   "the trigger's line is set just above the mould's normal wander so it fires within the class; said",
   "the trigger, its recommendation and both approvals were made on camera",
   "the six-minute check that the machine followed is said, not filmed, and on this pack it can say failed when the mould followed",
+  "the melt temperature coming down is the plant's own trend, filmed as drawn, a degree or two of wander and all",
   "the approver's name leaves the queue once the value is written; filmed as drawn, and said",
 ]
 
@@ -428,12 +433,57 @@ at = "#tags-table tbody tr:has-text(\"MeltTempSP\") td:nth-child(3)"
 do = "mark"
 name = "the-setpoint"
 
+# The machine following its new setpoint: MeltTemp's own row, read live, then
+# its trend, opened by clicking the row as a person would, with the setpoint
+# beside it. The trend is drawn once, when the page opens, from what the plant
+# recorded; the wait is for the live reading to have come down, never a value
+# the take puts there.
+[[step]]
+do = "wait_for"
+js = "return [...document.querySelectorAll('#tags-table tbody tr')].some((r) => r.children[1] && /^MeltTemp\\b/.test(r.children[1].textContent.trim()) && !r.children[1].textContent.includes('MeltTempSP') && parseFloat(r.children[2].textContent) < 213);"
+timeout = 90
+
+[[step]]
+do = "say"
+line = "MeltTemp, the temperature the mould actually has, is down from the 215 that fired the trigger. One reading wanders; its trend says more."
+at = "#tags-table tbody tr:has-text(\"MeltTemp\"):not(:has-text(\"MeltTempSP\")) td:nth-child(3)"
+
+[[step]]
+do = "click"
+selector = "#tags-table tbody tr:has-text(\"MeltTemp\"):not(:has-text(\"MeltTempSP\")) td:nth-child(3)"
+
+[[step]]
+do = "wait_for"
+js = "return !!document.querySelector('#trend svg[data-kind=\"line\"]') && [...document.querySelectorAll('#trend-tag-2 option')].some((o) => o.value === 'MeltTempSP');"
+scroll_to = "#trend"
+scroll_block = "start"
+scroll_offset = 220
+
+[[step]]
+do = "choose"
+selector = "#trend-tag-2"
+value = "MeltTempSP"
+
+[[step]]
+do = "wait_for"
+js = "return [...document.querySelectorAll('#trend svg[data-kind=\"line\"]')].some((svg) => svg.textContent.includes('MeltTempSP')) || (document.querySelector('#trend') || {innerText: ''}).innerText.includes('MeltTempSP');"
+
+[[step]]
+do = "say"
+line = "Its trend, with the setpoint beside it: up past 215 before the write, coming down toward 211 since. It still wanders, so the fall is in the line."
+at = "#trend"
+
+[[step]]
+do = "mark"
+name = "the-temperature-falls"
+
 # -------------------------------------------------------------- it refuses
 
 [[step]]
 part = "refuses"
-do = "click"
-selector = "nav.subnav a:text-is(\"Adjustments\")"
+do = "goto"
+url = "/dashboard/adjustments"
+settle = 2
 
 [[step]]
 do = "wait_for"
