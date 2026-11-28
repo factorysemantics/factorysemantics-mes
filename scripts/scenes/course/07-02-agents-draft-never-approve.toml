@@ -212,7 +212,7 @@ settle = 2
 [[step]]
 do = "say"
 line = "The Reasons screen: the stop reasons an operator picks from. A new one is written here as a draft."
-at = "#reasons-table"
+at = "#reasons-table thead"
 
 [[step]]
 do = "say"

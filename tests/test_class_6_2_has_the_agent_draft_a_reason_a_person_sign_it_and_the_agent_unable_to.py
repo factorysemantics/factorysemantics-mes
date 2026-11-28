@@ -310,3 +310,8 @@ def test_the_panel_is_closed_before_the_floor_so_it_covers_nothing_and_its_butto
     launches = [i for i, s in enumerate(steps) if s["do"] == "click" and s["selector"] == "body > .assist-launch"]
 
     assert closed < floor < launches[1]
+
+
+def test_no_box_is_round_a_whole_table_that_runs_below_the_frame(scene):
+    """The fourth take boxed all of Reasons, and the box reached into the narrator's corner."""
+    assert [s["at"] for s in scene["step"] if s["do"] == "say" and s.get("at") in ("#reasons-table", "#pending")] == []
