@@ -1,0 +1,513 @@
+# Class 5.3 of the course, *Triggers and adjustments — the only path to a PLC*:
+# a rule that watches a tag, the recommendation it raises, and the person who
+# must say yes before anything reaches a machine.
+#
+# It starts from a card of words (no drawing): the fork mould running hot at
+# night, a dial turned down, and nobody knowing who, when or why. The idea
+# cards name the three words of the class (trigger, setpoint, human in the
+# loop) and the one path a change takes to a machine. Then the product, signed
+# in as the pack's lab shift supervisor: a trigger drafted on Engineering >
+# Triggers, which watches nothing while it is a draft and offers the
+# supervisor no Approve button; then, as the lab administrator, the same draft
+# approved and in force; What fired, where it fires; Adjustments, where its
+# recommendation waits with its reason; the administrator's approval, the row
+# naming who approved; and Tags, where the fork mould's setpoint now reads the
+# new value. Then what it refuses: a setpoint outside the bounds the tag
+# declares. Filmed on a scratch cutlery plant at ten times the clock, every
+# screen as the product draws it.
+#
+# Beats changed from the outline (reports/learning-platform-2026-11-14 §5.3),
+# where the product differs: the outline's refusals (an agent approving, an
+# adjustment with no evidence) have no screen: the agent role holds no
+# approve right, which the class says over the roles, and a trigger's
+# recommendation carries its evidence by construction. The class films the
+# refusal a screen does make, the bounds. The six-minute check that the
+# machine followed is said, not filmed: it is longer than the class.
+
+name = "triggers-and-adjustments"
+title = "Triggers and adjustments — the only path to a PLC"
+lesson = "5.3"
+take_is = "lesson"
+part = "hook"
+base = "http://127.0.0.1:8040"
+badge = "pre-alpha · simulated plant · v{version}"
+# The take starts as the pack's lab shift supervisor, who may draft a trigger
+# and propose a change but approve neither; a `sign_in` step changes, off
+# camera, to the lab administrator, the one built-in role that approves. Lab
+# accounts on the take's own scratch plant, not people; the sign-in page is
+# never filmed.
+user = "WALK-SUP"
+password = "walk-lab-only"
+# Four and a half to six minutes, as the handoff asks.
+budget_seconds = 360
+gif_skip_seconds = 2.0
+width = 1280
+height = 720
+# Drafting a trigger, approving it and approving its recommendation are writes,
+# and they are the story.
+allow_writes = true
+what_is_written = "which is how the class makes its change: Save draft on Triggers drafts trigger T-FORK1-HOT under the lab shift supervisor, Approve puts it in force under the lab administrator, the trigger itself proposes adjustment ADJ-00001 for the fork mould's MeltTempSP, and Approve on Adjustments approves it, after which the plant's own OPC agent writes 211 to the simulated machine; each a real `POST` to the take's own scratch plant, made with the screen's own controls. Proposing 250 is refused, so it writes nothing."
+
+notes = [
+  "The plant was started from the cutlery pack at ten times the clock (speed 10), so a line minute passes in six seconds of the take, and every 2D page carries the product's REPLAY 10× banner across its top. It is filmed as the product draws it.",
+  "The class signs in as two lab accounts on the scratch plant: WALK-SUP, \"Walker: shift supervisor\", in the Supervisor role, and ADMIN, \"Lab Admin\", in the Administrator role. The recorder's `sign_in` step changes who is signed in off camera and loads the page again, so the product's sign-in page is never on camera.",
+  "In the roles this product ships the supervisor and the agent hold `triggers.write` and `adjustments.propose`; only the administrator holds `triggers.approve` and `adjustments.approve`. The class says the agent never approves; it does not film the agent, which has no screen.",
+  "The fork mould's melt temperature runs near 214 degrees on this pack and wanders about two and a half either way. The trigger's line is 215, set just above that on purpose so that it fires within the class; on a real line the line would sit where a hot mould starts to matter. The class says so.",
+  "The trigger's action is propose_adjustment with MeltTempSP to 211, three below where it runs. Its cooldown is 1800 line seconds, three minutes of the take, so it does not fire again while the class watches. A trigger in force is picked up by the OPC agent within half a minute, and the take waits on What fired, off the clock, until it fires.",
+  "The trigger's recommendation names its evidence (the trigger, the tag and the value it read), but the queue shows it only as the Why cell's tooltip, which a video cannot hover. A gap, written up; the class says the reason on the row.",
+  "Approve on Adjustments asks for an optional note in the browser's own prompt box. The recorder's browser dismisses it unanswered, so no note is written and no box is filmed. A gap, written up: a browser box is not the product's own form.",
+  "Once the agent has written the value the row says written and when, and no longer who approved. A gap, written up; the class boxes the row while it still says approved by ADMIN, and says the name leaves.",
+  "The tile Approved, not yet written counts the written ones too. A gap, written up; the class does not point at it.",
+  "The check that the machine followed waits three times the tag's lag, at least half a minute: 360 seconds on this pack, longer than the class, and the row's verifying in 360 s does not count down. It compares one reading before the write with one after, and on this pack the melt temperature wanders as far as the change, so on a trial take the mould followed and the check said failed. A gap, written up; the class says the check, not its verdict.",
+  "Who approved and when is also on Setup > Ops, in the audit trail, but that page opens on the plant's own file paths, and a frame must not show them; the class shows the name on the queue instead.",
+  "The opening beat is a plain card with words on it. There is no artwork of a dial, a mould or a person.",
+]
+
+honesty = [
+  "the plant is a scratch simulated plant, replaying a recorded line at ten times the clock",
+  "the trigger's line is set just above the mould's normal wander so it fires within the class; said",
+  "the trigger, its recommendation and both approvals were made on camera",
+  "the six-minute check that the machine followed is said, not filmed, and on this pack it can say failed when the mould followed",
+  "the approver's name leaves the queue once the value is written; filmed as drawn, and said",
+]
+
+[plant]
+pack = "labs/cutlery"
+speed = 10
+roll_when_timeout_seconds = 300
+
+# ----------------------------------------------------------------- the hook
+
+[[step]]
+do = "slide"
+name = "who-turned-the-dial"
+title = "Who turned the dial?"
+lines = [
+  "Night shift. The fork mould runs hot",
+  "Someone turns its melt temperature down a few degrees",
+  "By morning, nobody knows who, when, or why",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Night shift, and the fork mould is running hot."
+
+[[step]]
+do = "say"
+line = "Someone turns its melt temperature down a few degrees. The forks come out fine. By morning nobody knows who did it, when, or why."
+
+[[step]]
+do = "say"
+line = "This class: how a change reaches a machine through the MES, and who has to say yes."
+
+[[step]]
+do = "mark"
+name = "who-turned-the-dial"
+
+# ----------------------------------------------------------------- the idea
+
+[[step]]
+part = "idea"
+do = "slide"
+name = "the-words"
+title = "The words"
+lines = [
+  "Trigger: a rule that watches one tag and acts when it crosses a line",
+  "Setpoint: the value a machine is told to hold, the dial",
+  "Human in the loop: a person says yes before anything reaches the machine",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Three words. A trigger is a rule: it watches one tag and does one thing when the tag crosses a line."
+
+[[step]]
+do = "say"
+line = "A setpoint is the value a machine is told to hold. It is the dial: the machine works to reach it."
+
+[[step]]
+do = "say"
+line = "Human in the loop means a person says yes before anything reaches the machine."
+
+[[step]]
+do = "mark"
+name = "the-words"
+
+[[step]]
+do = "slide"
+name = "the-one-path"
+title = "The one path to a machine"
+lines = [
+  "A rule or a person proposes a new setpoint, with a reason",
+  "Someone allowed to approve says yes",
+  "Only then the agent writes it, and checks the machine followed",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "A change starts as a proposal: a new setpoint and the reason for it, from a rule or a person."
+
+[[step]]
+do = "say"
+line = "Someone allowed to approve says yes: here, the administrator. The agent that reads the machines never approves."
+
+[[step]]
+do = "say"
+line = "Only then does the agent write the new value to the machine, and later it checks that the machine followed."
+
+[[step]]
+do = "mark"
+name = "the-one-path"
+
+# ------------------------------------------------------------ on the screen
+
+[[step]]
+part = "screen"
+do = "goto"
+url = "/dashboard/triggers"
+settle = 2
+
+[[step]]
+do = "wait_for"
+js = "return !!document.querySelector('#trigger-form') && document.querySelectorAll('#t-machine option').length > 1 && document.querySelectorAll('#t-action option').length > 0;"
+
+[[step]]
+do = "say"
+line = "Triggers, as the shift supervisor. Class three point one showed MeltTempSP, the mould's setpoint, as writable. This rule may ask to change it."
+at = "#trigger-form"
+
+[[step]]
+do = "fill"
+selector = "#t-code"
+text = "T-FORK1-HOT"
+
+[[step]]
+do = "fill"
+selector = "#t-name"
+text = "Fork mould running hot"
+
+[[step]]
+do = "choose"
+selector = "#t-machine"
+value = "FORK1_Mold"
+
+[[step]]
+do = "fill"
+selector = "#t-tag"
+text = "MeltTemp"
+
+[[step]]
+do = "choose"
+selector = "#t-condition"
+value = "above"
+
+[[step]]
+do = "fill"
+selector = "#t-threshold"
+text = "215"
+
+[[step]]
+do = "say"
+line = "It watches MeltTemp on the fork mould, and acts when it goes above 215 degrees."
+at = "#t-threshold"
+
+[[step]]
+do = "say"
+line = "It runs near 214 and wanders, so 215 is set close on purpose, to fire within this class."
+at = "#t-tag"
+
+[[step]]
+do = "fill"
+selector = "#t-cooldown"
+text = "1800"
+
+[[step]]
+do = "choose"
+selector = "#t-action"
+value = "propose_adjustment"
+
+[[step]]
+do = "say"
+line = "The one thing it does: propose an adjustment. Never write one."
+at = "#action-help"
+
+[[step]]
+do = "fill"
+selector = "#t-params"
+text = "{\"setpoint\":\"MeltTempSP\",\"value\":211,\"rationale\":\"melt above 215: lower by 3\"}"
+
+[[step]]
+do = "say"
+line = "What it proposes: MeltTempSP to 211, three degrees lower, and the reason, in words."
+at = "#t-params"
+
+[[step]]
+do = "click"
+selector = "#t-submit"
+
+[[step]]
+do = "wait_for"
+selector = "#toast"
+text = "drafted — approve it to put it in force"
+
+[[step]]
+do = "say"
+line = "Saved as a draft. A draft watches nothing."
+at = "#toast"
+
+[[step]]
+do = "wait_for"
+selector = "#triggers-table"
+text = "T-FORK1-HOT"
+scroll_to = "#triggers-table tbody tr"
+scroll_text = "T-FORK1-HOT"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "And the supervisor has no Approve button. Putting a rule in force is not theirs to do."
+at = "#triggers-table tbody tr:has-text(\"T-FORK1-HOT\") td:nth-child(5)"
+
+[[step]]
+do = "mark"
+name = "a-draft"
+
+# The lab administrator, off camera; the page loads again.
+[[step]]
+do = "sign_in"
+user = "ADMIN"
+password = "admin"
+settle = 2
+
+[[step]]
+do = "wait_for"
+selector = "#triggers-table"
+text = "Approve"
+scroll_to = "#triggers-table tbody tr"
+scroll_text = "T-FORK1-HOT"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "Now the lab administrator. The same draft, and an Approve button."
+at = "#triggers-table tbody tr:has-text(\"T-FORK1-HOT\") button:text-is(\"Approve\")"
+
+[[step]]
+do = "click"
+selector = "#triggers-table tbody tr:has-text(\"T-FORK1-HOT\") button:text-is(\"Approve\")"
+
+[[step]]
+do = "wait_for"
+selector = "#toast"
+text = "T-FORK1-HOT in force"
+
+[[step]]
+do = "say"
+line = "In force. The agent reading the machines picks it up within half a minute."
+at = "#toast"
+
+[[step]]
+do = "say"
+line = "Its status now says approved."
+at = "#triggers-table tbody tr:has-text(\"T-FORK1-HOT\") td:nth-child(5)"
+
+[[step]]
+do = "mark"
+name = "in-force"
+
+[[step]]
+do = "click"
+selector = "button.tab[data-tab=\"firings\"]"
+
+[[step]]
+do = "say"
+line = "What fired lists every time a trigger acted: when, on which value, and what it did."
+at = "button.tab[data-tab=\"firings\"]"
+
+# The trigger fires when the mould next reads above 215; the take waits.
+[[step]]
+do = "wait_for"
+selector = "#firings-table"
+text = "ADJ-00001"
+timeout = 150
+
+[[step]]
+do = "say"
+line = "There: MeltTemp read above 215, and the trigger proposed adjustment one. Nothing is written yet."
+at = "#firings-table tbody tr:first-child td:nth-child(7)"
+
+[[step]]
+do = "mark"
+name = "it-fired"
+
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"Adjustments\")"
+
+[[step]]
+do = "wait_for"
+selector = "#queue-table"
+text = "ADJ-00001"
+scroll_to = "#queue-table tbody tr"
+scroll_text = "ADJ-00001"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "Adjustments: the queue. Adjustment one, proposed by the trigger: MeltTempSP from 214 to 211."
+at = "#queue-table tbody tr:has-text(\"ADJ-00001\") td:nth-child(7)"
+
+[[step]]
+do = "say"
+line = "With its reason, in the trigger's words. The value it read is kept with it too, but only as a tooltip. A gap, written up."
+at = "#queue-table tbody tr:has-text(\"ADJ-00001\") td:nth-child(6)"
+
+[[step]]
+do = "say"
+line = "The administrator approves."
+at = "#queue-table tbody tr:has-text(\"ADJ-00001\") button:text-is(\"Approve\")"
+
+[[step]]
+do = "click"
+selector = "#queue-table tbody tr:has-text(\"ADJ-00001\") button:text-is(\"Approve\")"
+
+[[step]]
+do = "wait_for"
+selector = "#queue-table"
+text = "approved by ADMIN"
+
+[[step]]
+do = "say"
+line = "The row says who approved. A moment later the agent writes it, the row says written and when, and the name leaves the row. A gap, written up."
+at = "#queue-table tbody tr:has-text(\"ADJ-00001\") td:nth-child(9)"
+
+[[step]]
+do = "wait_for"
+selector = "#queue-table"
+text = "verifying in"
+
+[[step]]
+do = "say"
+line = "In six minutes the agent reads the melt temperature again and checks it followed. That is longer than this class, so it is said, not shown."
+at = "#queue-table tbody tr:has-text(\"ADJ-00001\") td:nth-child(9)"
+
+[[step]]
+do = "mark"
+name = "approved-and-written"
+
+# The machine's own tags, by the Engineering menu and its Tags chip.
+[[step]]
+do = "click"
+selector = "nav.subnav a:text-is(\"Tags\")"
+
+[[step]]
+do = "wait_for"
+js = "return [...document.querySelectorAll('#machine option')].some((o) => o.value === 'FORK1_Mold');"
+
+[[step]]
+do = "choose"
+selector = "#machine"
+value = "FORK1_Mold"
+
+[[step]]
+do = "wait_for"
+js = "return [...document.querySelectorAll('#tags-table tbody tr')].some((r) => r.textContent.includes('MeltTempSP') && r.children[2] && r.children[2].textContent.trim().startsWith('211'));"
+scroll_to = "#tags-table"
+scroll_block = "start"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "On Tags, the fork mould's setpoint now reads 211. The MES wrote it, and only because a person said yes."
+at = "#tags-table tbody tr:has-text(\"MeltTempSP\") td:nth-child(3)"
+
+[[step]]
+do = "mark"
+name = "the-setpoint"
+
+# -------------------------------------------------------------- it refuses
+
+[[step]]
+part = "refuses"
+do = "click"
+selector = "nav.subnav a:text-is(\"Adjustments\")"
+
+[[step]]
+do = "wait_for"
+js = "return document.querySelectorAll('#p-machine option').length > 0 && !!document.querySelector('#p-submit');"
+
+[[step]]
+do = "choose"
+selector = "#p-machine"
+value = "FORK1_Mold"
+
+[[step]]
+do = "choose"
+selector = "#p-tag"
+value = "MeltTempSP"
+
+[[step]]
+do = "fill"
+selector = "#p-value"
+text = "250"
+
+[[step]]
+do = "fill"
+selector = "#p-rationale"
+text = "run it hotter"
+
+[[step]]
+do = "click"
+selector = "#p-submit"
+
+[[step]]
+do = "wait_for"
+selector = "#toast"
+text = "outside the declared bounds 200-235"
+
+[[step]]
+do = "say"
+line = "A setpoint outside the bounds the machine declares is refused: 250 is above 235."
+at = "#toast"
+
+[[step]]
+do = "say"
+line = "It is checked again at approval, and again by the agent as it writes."
+at = "#p-bounds"
+
+# --------------------------------------------------------- you now know
+
+[[step]]
+part = "know"
+do = "slide"
+name = "you-now-know"
+title = "You now know how to"
+lines = [
+  "Draft a trigger, and say why a draft watches nothing until it is approved.",
+  "Follow a recommended setpoint from the rule that raised it to the person who approved it.",
+  "Say why nothing reaches a machine until a person with the right to approve says yes.",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Who drafted the rule, who approved it, and who approved the change are each kept on the plant's audit trail."
+
+[[step]]
+do = "say"
+line = "This was a simulated plant at ten times the clock. The trigger, its proposal and both approvals were made on camera."
+
+[[step]]
+do = "say"
+line = "A rule proposes, a person approves, the agent writes. You now know how to do three things."
+
+[[step]]
+do = "mark"
+name = "you-now-know"
+
+[[step]]
+do = "hold"
+seconds = 3
