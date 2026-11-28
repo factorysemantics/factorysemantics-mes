@@ -132,11 +132,20 @@ function who(code, name) {
   return span;
 }
 
+/* Where an order is: the machine, or for an order on a part of one the part
+   and its machine - "Heater band 2, FORK1 Mold" - linked to the machine,
+   because the machine is the page that exists and the thing that stops. */
+function onLink(o) {
+  return o.machine && o.machine !== o.equipment
+    ? FS.link("machine", o.machine, null, o.on)
+    : FS.link("machine", o.equipment);
+}
+
 function shiftRow(o) {
   const li = el("li", o.status === "in_progress" ? "running-op" : null);
   const what = el("div", "what");
   const head = el("div", "mono");
-  head.append(`${o.code} · `, FS.link("machine", o.equipment),
+  head.append(`${o.code} · `, onLink(o),
               ` · ${o.status.replace("_", " ")}`);
   if (!o.this_shift) head.append(el("span", "beside", " · raised before this shift"));
   what.append(head);
@@ -228,7 +237,7 @@ function waitingRow(o) {
   const li = el("li");
   const what = el("div", "what");
   const head = el("div", "mono");
-  head.append(`${o.code} · `, FS.link("machine", o.equipment));
+  head.append(`${o.code} · `, onLink(o));
   if (o.machine_state) head.append(el("span", "beside", ` · ${o.machine_state}`));
   what.append(head);
   what.append(el("div", null, o.summary
@@ -638,7 +647,7 @@ async function loadWork() {
     const li = el("li", o.status === "in_progress" ? "running-op" : null);
     const what = el("div", "what");
     const head = el("div", "mono");
-    head.append(`${o.code} · `, FS.link("machine", o.equipment), ` · ${o.kind}`);
+    head.append(`${o.code} · `, onLink(o), ` · ${o.kind}`);
     what.append(head);
     const line = el("div", "muted small");
     line.append(o.summary + (o.reason ? ` — ${o.reason}` : ""));
@@ -710,7 +719,7 @@ function wireWork() {
       const out = await api("/maintenance/corrective", { method: "POST", body: {
         equipment: $("#cm-machine").value, summary: $("#cm-summary").value.trim(),
         reason: $("#cm-reason").value.trim() || null } });
-      toast(`${out.code} raised on ${out.equipment}`);
+      toast(`${out.code} raised on ${out.on || out.equipment}`);
       $("#cm-summary").value = ""; $("#cm-reason").value = "";
       await Promise.all([loadWork(), loadDueTab()]);
     } catch (err) { toast(err.message, "bad"); }
@@ -813,7 +822,7 @@ async function loadHistory() {
   for (const o of done) {
     const tr = el("tr");
     tr.append(el("td", "code", o.code));
-    const where = el("td"); where.append(FS.link("machine", o.equipment)); tr.append(where);
+    const where = el("td"); where.append(onLink(o)); tr.append(where);
     tr.append(el("td", "muted", o.kind));
     tr.append(el("td", null, o.summary));
     tr.append(el("td", "muted small", o.findings || ""));

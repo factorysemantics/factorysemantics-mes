@@ -293,7 +293,10 @@ def part_used(session: Session, order: MaintenanceOrder) -> PartUsed:
     """The part a closed repair order used, in the terms an ERP books stock against."""
     if not order.part_code or not order.part_qty:
         raise Invalid(f"{order.code} names no part")
-    machine = order.equipment
+    # Raised on a part of the machine - heater band 2 - the machine is still
+    # the one that stopped and the one on an order; the part says which piece
+    # was mended, and its cost center (inherited unless set) is what is billed.
+    machine = masterdata.machine_of(order.equipment)
     line = masterdata.work_center_of(session, machine)
     running = _order_running_on(session, machine.id, order.started_at or order.raised_at)
     return PartUsed(
@@ -301,11 +304,12 @@ def part_used(session: Session, order: MaintenanceOrder) -> PartUsed:
         repair_order=order.code, part_code=order.part_code, quantity=order.part_qty,
         equipment=machine.code,
         work_center=line.code if line else None,
-        cost_center=masterdata.cost_center(session, machine),
+        cost_center=masterdata.cost_center(session, order.equipment),
         performed_by=order.performed_by, completed_at=order.completed_at,
         minutes_down=order.downtime_minutes,
         work_order=running.code if running else None,
         work_order_erp_reference=running.erp_reference if running else None,
+        equipment_module=order.equipment.code if machine is not order.equipment else None,
     )
 
 

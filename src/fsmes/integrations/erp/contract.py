@@ -146,7 +146,10 @@ class PartUsed(BaseModel):
     quantity: float
     equipment: str                      # the machine (ISA-95 work unit)
     work_center: str | None = None      # the line it belongs to
-    cost_center: str | None = None      # the machine's, inherited unless the cell overrides
+    # The part's, inherited from the machine unless an engineer gave the part
+    # its own - heater band 2 billed apart from its mould - and the machine's
+    # inherited from its line unless the cell overrides.
+    cost_center: str | None = None
     performed_by: str | None = None     # the person code who closed the job
     completed_at: datetime | None = None
     minutes_down: float | None = None
@@ -155,6 +158,10 @@ class PartUsed(BaseModel):
     # not on an order: a repair belongs to the machine, not to an order.
     work_order: str | None = None
     work_order_erp_reference: str | None = None
+    # The part of the machine the repair was on, when the order was raised on
+    # one (an ISA-95 equipment module: `FORK1_Mold_HeaterZone2`); null when it
+    # was raised on the machine itself.
+    equipment_module: str | None = None
 
 # The outbox kinds this contract can parse, and therefore the only ones the
 # ERP sync may take. The outbox is a domain event log now - it also carries

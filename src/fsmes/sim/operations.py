@@ -2046,7 +2046,7 @@ class Floor:
     async def _raise_breakdown(self, rule) -> str | None:
         """Raise the corrective order and start it; its code, or `None`."""
         r = await self.post("/maintenance/corrective", json={
-            "equipment": rule.machine, "summary": rule.summary, "reason": rule.reason,
+            "equipment": rule.raised_on, "summary": rule.summary, "reason": rule.reason,
             "skill": rule.skill, "priority": rule.priority, "needs_stop": True})
         if r.status_code >= 400:
             log.warning("the breakdown's order was refused", machine=rule.machine,
