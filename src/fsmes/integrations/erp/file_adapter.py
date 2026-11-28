@@ -50,14 +50,23 @@ from fsmes import shadow
 from fsmes.db import utcnow
 from fsmes.integrations.erp import b2mml
 from fsmes.integrations.erp.base import CheckResult, ErpConnector, Requirement, SetupOutcome
-from fsmes.integrations.erp.contract import Confirmation, OperationConfirmation, ProductionRequest, as_payload
+from fsmes.integrations.erp.contract import (
+    Confirmation,
+    OperationConfirmation,
+    ProductionRequest,
+    SparePart,
+    as_payload,
+)
 
 log = structlog.get_logger("erp.file")
 
 
 class FileErpAdapter(ErpConnector):
-    def __init__(self, inbox: Path, outbox: Path, archive: Path):
+    def __init__(self, inbox: Path, outbox: Path, archive: Path, parts_file: Path | None = None):
         self.inbox, self.outbox, self.archive = Path(inbox), Path(outbox), Path(archive)
+        # The ERP's parts list as a file the ERP side writes: a JSON list of
+        # {code, name, unit, in_stores}. Read, never written or moved.
+        self.parts_file = Path(parts_file) if parts_file else None
         # Making them here rather than in `setup()` is deliberate: a worker
         # that starts before anyone has run `fsmes erp setup` must still
         # work. `setup()` reports what this made, so the command tells the
@@ -108,6 +117,17 @@ class FileErpAdapter(ErpConnector):
                 continue
             self._consume(path, self.archive / path.name)
         return orders
+
+    def list_parts(self) -> list[SparePart]:
+        """The parts file, read as it is. A missing or unreadable file is
+        raised, so the close form says the list is not answering rather
+        than offering an empty one as if the stores held nothing."""
+        if self.parts_file is None or not self.parts_file.is_file():
+            raise FileNotFoundError(f"no parts file at {self.parts_file}")
+        rows = json.loads(self.parts_file.read_text(encoding="utf-8"))
+        if not isinstance(rows, list):
+            raise ValueError(f"{self.parts_file} holds {type(rows).__name__}, not a list of parts")
+        return [SparePart.from_payload(row) for row in rows]
 
     def acknowledge(self, order_code: str) -> None:
         # Archiving the inbox file is the acknowledgement - and in shadow

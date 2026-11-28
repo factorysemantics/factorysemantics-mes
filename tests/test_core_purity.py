@@ -172,6 +172,8 @@ CONTRACTS: dict[tuple[str, str], str] = {
         "the typed inbound contract - what another system may tell this MES",
     ("fsmes.services.erp", "fsmes.integrations.erp.contract"):
         "the typed ERP contract - what crosses that border, in both directions",
+    ("fsmes.services.spare_parts", "fsmes.integrations.erp.contract"):
+        "the same contract's SparePart - a part's code, name, unit and count, no price",
     ("fsmes.services.outbox", "fsmes.integrations.events"):
         "the typed domain-event contract - what the outbox carries that no ERP asked for",
     ("fsmes.services.line", "fsmes.integrations.opc.tag_map"):

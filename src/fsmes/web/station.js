@@ -676,6 +676,7 @@ async function renderMaintenance() {
         completing = order.code;
         $("#maint-findings").value = "";
         $("#maint-part-code").value = ""; $("#maint-part-qty").value = "";
+        FS.partPicker("#maint-part-code").open();
         $("#maint-complete").classList.remove("hidden");
         $("#maint-findings").focus();
       });

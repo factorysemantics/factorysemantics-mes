@@ -34,6 +34,7 @@ from fsmes.services import (
     erp,
     masterdata,
     plant_settings,
+    spare_parts,
 )
 
 # What this plant assumes when nothing has told it otherwise. These stay as
@@ -430,6 +431,9 @@ def complete(session: Session, code: str, *, findings: str | None = None,
     order.findings = findings
     order.part_code = part_code
     order.part_qty = float(part_qty) if part_code is not None else None
+    # The name the ERP's list gave the code, from the copy the close form
+    # read; never a fresh call to the ERP, which may be the thing that is down.
+    order.part_name = spare_parts.name_of(part_code) if part_code is not None else None
     if downtime_minutes is not None:
         if float(downtime_minutes) < 0:
             raise Invalid("downtime_minutes cannot be negative")
@@ -451,7 +455,8 @@ def complete(session: Session, code: str, *, findings: str | None = None,
                  after={"order": code, "findings": findings,
                         "performed_by": whose,
                         "downtime_minutes": order.downtime_minutes,
-                        "part_code": order.part_code, "part_qty": order.part_qty})
+                        "part_code": order.part_code, "part_qty": order.part_qty,
+                        "part_name": order.part_name})
     # In this transaction, beside the close it reports: a part used and its
     # message exist together or not at all.
     erp.enqueue_part_used(session, order)

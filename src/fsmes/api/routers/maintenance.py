@@ -10,8 +10,10 @@ from sqlalchemy import func, select
 
 from fsmes.api import export, paging
 from fsmes.api.deps import ActorDep, DbDep, UserDep, require
+from fsmes.config import get_settings
 from fsmes.domain import DispatchRule, MaintenanceOrder, Person
-from fsmes.services import auth, dispatch, maintenance, masterdata
+from fsmes.integrations.erp.base import parts_source
+from fsmes.services import auth, dispatch, maintenance, masterdata, spare_parts
 
 router = APIRouter()
 
@@ -160,7 +162,7 @@ def _order_out(o, names: dict[str, str] | None = None) -> dict:
         # code - which is a finding and not a blank.
         "performed_by_name": names.get(o.performed_by) if o.performed_by else None,
         "findings": o.findings, "downtime_minutes": o.downtime_minutes,
-        "part_code": o.part_code, "part_qty": o.part_qty,
+        "part_code": o.part_code, "part_qty": o.part_qty, "part_name": o.part_name,
         "document": o.plan.document_code if o.plan else None,
         "skill": o.skill_code, "priority": o.priority,
         # What the job needs of the line. `needs_stop` is why an order can sit
@@ -285,6 +287,7 @@ MAINTENANCE_EXPORT = (
     export.Column("Findings", "findings"),
     export.Column("Down (min)", "downtime_minutes"),
     export.Column("Part used", "part_code"),
+    export.Column("Part name", "part_name"),
     export.Column("Part qty", "part_qty"),
     export.Column("By", "performed_by"),
     export.Column("By (name)", "performed_by_name"),
@@ -336,6 +339,16 @@ def corrective(body: CorrectiveIn, db: DbDep, actor: ActorDep) -> dict:
         reason=body.reason, skill_code=body.skill, priority=body.priority,
         needs_stop=body.needs_stop, window=body.window,
         actor=actor))
+
+
+@router.get("/parts")
+def parts(db: DbDep) -> dict:
+    """What the close form's Part used box offers: the ERP's parts list
+    (no price), or the codes used before. A read; nothing is written."""
+    settings = get_settings()
+    connected, lister, key = parts_source(settings)
+    return spare_parts.offer(db, connected=connected, lister=lister, key=key,
+                             minutes=settings.erp_parts_copy_minutes)
 
 
 @router.post("/orders/{code}/start", dependencies=[require("maintenance.perform")])

@@ -329,6 +329,92 @@
     return { part_code: code || null, part_qty: qty === "" ? null : Number(qty) };
   };
 
+  /* The Part used box's list: the ERP's parts (code, name, count in stores,
+     never a price) or, with no ERP list, the codes this plant used before.
+     Read from /maintenance/parts each time the close form opens; the MES
+     holds the ERP's list a few minutes and writes none of it down. The note
+     under the box says which list it is, or that the ERP is not answering -
+     and a typed code is always saved as typed. Shared by the Maintenance
+     page and the station screen, the two close forms. */
+  FS.partPicker = function partPicker(codeSel) {
+    const input = document.querySelector(codeSel);
+    if (!input) return { open() {} };
+    let box = input.parentElement.querySelector(".part-options");
+    let note = input.parentElement.querySelector(".part-note");
+    if (!box) {
+      box = FS.el("ul", "part-options hidden");
+      box.setAttribute("role", "listbox");
+      note = FS.el("p", "part-note muted small");
+      input.after(box, note);
+      input.setAttribute("autocomplete", "off");
+    }
+    let offer = null;
+    const said = { off: "No ERP is connected.", no_list: "This ERP connection offers no parts list.",
+                   not_answering: "The ERP's parts list is not answering. Type the part's code; it is saved as typed." };
+    const choices = () => (offer && offer.erp === "listed"
+      ? offer.items.map((p) => ({ code: p.code, label: `${p.code} — ${p.name || "no name in the ERP"}, ` +
+          (p.in_stores === null ? "count not given" : `${FS.fmt.qty(p.in_stores)}${p.unit && p.unit !== "Nos" ? " " + p.unit : ""} in stores`) }))
+      : (offer ? offer.used_before.map((p) => ({ code: p.code, label: p.name ? `${p.code} — ${p.name}, used before` : `${p.code}, used before` })) : []));
+    const listed = () => offer && offer.erp === "listed";
+    const status = () => {
+      if (!offer) return "Reading the ERP's parts list…";
+      if (listed()) return `From the ERP's parts list, read ${FS.fmt.clock(offer.read_at)} — ${offer.total} ${offer.total === 1 ? "part" : "parts"}. A count is what the ERP said then.`;
+      const before = offer.used_before_total
+        ? ` Codes used before on this plant are offered (${offer.used_before_total}).`
+        : (offer.erp === "not_answering" ? "" : " Type the part's code.");
+      return (said[offer.erp] || said.off) + before;
+    };
+    const draw = () => {
+      const typed = input.value.trim().toUpperCase();
+      const all = choices();
+      const hits = all.filter((c) => !typed || c.label.toUpperCase().includes(typed));
+      box.replaceChildren();
+      for (const c of hits.slice(0, 12)) {
+        const li = FS.el("li", null, c.label);
+        li.setAttribute("role", "option");
+        li.dataset.code = c.code;
+        li.addEventListener("mousedown", (event) => {
+          event.preventDefault();
+          input.value = c.code;
+          box.classList.add("hidden");
+          warn(true);
+        });
+        box.append(li);
+      }
+      if (hits.length > 12) box.append(FS.el("li", "muted small", `12 of ${hits.length} shown; type more of the code or name`));
+      box.classList.toggle("hidden", !hits.length || document.activeElement !== input);
+    };
+    // While typing, warn only once nothing in the list matches; on leaving
+    // the field, warn unless what is there is one of the ERP's codes.
+    const warn = (left = false) => {
+      const typed = input.value.trim().toUpperCase();
+      const known = left
+        ? offer && offer.items.some((p) => p.code.toUpperCase() === typed)
+        : offer && offer.items.some((p) => `${p.code} ${p.name || ""}`.toUpperCase().includes(typed));
+      const unknown = listed() && typed && !known;
+      note.classList.toggle("warn", Boolean(unknown));
+      note.textContent = unknown
+        ? `${input.value.trim()} is not in the ERP's parts list. It is saved as typed; the ERP may refuse it, and the message then waits in the outbox.`
+        : status();
+    };
+    if (!input.dataset.picker) {
+      input.dataset.picker = "1";
+      input.addEventListener("input", () => { draw(); warn(); });
+      input.addEventListener("focus", draw);
+      input.addEventListener("blur", () => { box.classList.add("hidden"); warn(true); });
+    }
+    return {
+      async open() {
+        offer = null;
+        warn();
+        try { offer = await FS.api("/maintenance/parts"); }
+        catch (err) { offer = { erp: "not_answering", items: [], total: 0, used_before: [], used_before_total: 0 }; }
+        warn();
+        draw();
+      },
+    };
+  };
+
   /* ---------- toast ---------- */
 
   FS.toast = function toast(message, kind = "good") {

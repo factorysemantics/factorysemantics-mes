@@ -4,7 +4,7 @@ a real ERP integration changes the three URLs, not the MES."""
 import httpx
 
 from fsmes.integrations.erp.base import CheckResult, ErpConnector, Requirement
-from fsmes.integrations.erp.contract import Confirmation, ProductionRequest, as_payload
+from fsmes.integrations.erp.contract import Confirmation, ProductionRequest, SparePart, as_payload
 
 #: How long this connector waits on one request. The literal this product
 #: shipped, and the fallback for an adapter nobody has handed a policy; what
@@ -35,6 +35,13 @@ class RestErpAdapter(ErpConnector):
     def send_confirmation(self, confirmation: Confirmation) -> None:
         self.client.post("/confirmations", json=as_payload(confirmation),
                          timeout=self.timeout).raise_for_status()
+
+    def list_parts(self) -> list[SparePart]:
+        """`GET /parts`: a JSON list of {code, name, unit, in_stores}. Any
+        other field a row carries - a price - is dropped by `SparePart`."""
+        response = self.client.get("/parts", timeout=self.timeout)
+        response.raise_for_status()
+        return [SparePart.from_payload(row) for row in response.json()]
 
     # ------------------------------------------------------------- the far side
     def requirements(self) -> list[Requirement]:
@@ -68,6 +75,15 @@ class RestErpAdapter(ErpConnector):
                      "`contract.OrderCompletion` — and answer 2xx only if it was stored",
                 why="this is the whole outbound half. A 2xx for a confirmation the ERP did not "
                     "keep makes the MES believe production was booked when it was not",
+                created_by_setup=False,
+            ),
+            Requirement(
+                name="GET /parts",
+                where="the ERP's HTTP API",
+                what="optional: the spare parts, as JSON objects with `code`, `name`, `unit` and "
+                     "`in_stores`. No price is read; one sent is dropped",
+                why="without it the repair order's Part used box offers only the codes this plant "
+                    "has used before",
                 created_by_setup=False,
             ),
         ]

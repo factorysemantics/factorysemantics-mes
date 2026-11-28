@@ -27,6 +27,8 @@ MES_ERPNEXT_API_SECRET=...
 MES_ERPNEXT_COMPANY="Your Company"    # optional; empty imports every company on the site
 MES_ERPNEXT_POST_STOCK_ENTRY=true     # false records what the MES counted without moving stock
 MES_ERP_POLL_SECONDS=5
+MES_ERPNEXT_PARTS_GROUP="Spare Parts"  # the item group the repair order's Part used box offers
+MES_ERPNEXT_PARTS_WAREHOUSE=          # optional; empty adds up every warehouse holding the part
 ```
 
 Username and password (`MES_ERPNEXT_USER`, `MES_ERPNEXT_PASSWORD`) work too;
@@ -91,6 +93,11 @@ a reason to refuse to run.
 | in | submitted **Work Order** (docstatus 1), not yet taken by the MES, of `MES_ERPNEXT_COMPANY` if one is set | production request → work order with the routing's operations |
 | out, per operation | a comment on the Work Order: operation, equipment, cost centre, good and scrap, machine minutes, lots consumed | operation confirmation from the outbox |
 | out, on completion | quantities recorded on the Work Order; a **Manufacture stock entry** when `POST_STOCK_ENTRY` is on | order confirmation |
+
+The repair order's close form reads the **Items** in the spare-parts item
+group, with their code, name, stock unit and `Bin` count, to offer them in
+Part used. It never asks for a valuation or a rate. When the job closes, the
+part goes back out as a **Material Issue** against the machine's cost center.
 
 Machine-counted scrap is recorded on the order itself, not only in a
 comment, because it is the number the plant argues about and ERPNext has

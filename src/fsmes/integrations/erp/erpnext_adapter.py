@@ -36,7 +36,7 @@ import httpx
 import structlog
 
 from fsmes.integrations.erp.base import CheckResult, ErpConnector, Requirement, SetupOutcome
-from fsmes.integrations.erp.contract import ProductionRequest, as_payload
+from fsmes.integrations.erp.contract import ProductionRequest, SparePart, as_payload
 
 log = structlog.get_logger("erp.erpnext")
 
@@ -306,6 +306,8 @@ def from_settings(settings) -> "ErpNextAdapter":
         ),
         post_stock_entry=settings.erpnext_post_stock_entry,
         company=settings.erpnext_company,
+        parts_group=settings.erpnext_parts_group,
+        parts_warehouse=settings.erpnext_parts_warehouse,
     )
     # The ninth `erp*` setting this reads, and the three beside it: what the
     # pack compiled, in force from the moment the connector exists. The sync
@@ -318,8 +320,12 @@ def from_settings(settings) -> "ErpNextAdapter":
 class ErpNextAdapter(ErpConnector):
     """Transport only — every MES-side rule stays in services.erp."""
 
-    def __init__(self, client: ErpNextClient, *, post_stock_entry: bool = True, company: str = ""):
+    def __init__(self, client: ErpNextClient, *, post_stock_entry: bool = True, company: str = "",
+                 parts_group: str = "Spare Parts", parts_warehouse: str = ""):
         self.client = client
+        # Which items the repair order's close form offers, and whose count.
+        self.parts_group = parts_group
+        self.parts_warehouse = parts_warehouse
         self.post_stock_entry = post_stock_entry
         # What this plant asks of the link. The shipped answers until the
         # sync worker hands over the plant's own, which it does once a cycle.
@@ -544,6 +550,31 @@ class ErpNextAdapter(ErpConnector):
                 # The stock is booked and is the news; a lost note about it
                 # must not make the outbox post the issue a second time.
                 log.warning("could not leave the repair comment", order=reference)
+
+    def list_parts(self) -> list[SparePart]:
+        """The items in the spare-parts group, with their count in stores.
+
+        Asks for the item's code, name and stock unit and nothing else: the
+        valuation ERPNext keeps beside them is never requested, and
+        `SparePart` would drop it if a bench sent it anyway. The count is
+        the items' `Bin` rows added up - in `parts_warehouse` when one is
+        set - and null for an item with no stock line at all, which is a
+        part nobody has counted rather than none.
+        """
+        items = self.client.list(
+            "Item", filters=[["item_group", "=", self.parts_group], ["disabled", "=", 0]],
+            fields=["name", "item_name", "stock_uom"], limit=500, order_by="name asc")
+        if not items:
+            return []
+        filters = [["item_code", "in", [i["name"] for i in items]]]
+        if self.parts_warehouse:
+            filters.append(["warehouse", "=", self.parts_warehouse])
+        counted: dict[str, float] = {}
+        for row in self.client.list("Bin", filters=filters,
+                                    fields=["item_code", "actual_qty"], limit=5000):
+            counted[row["item_code"]] = counted.get(row["item_code"], 0.0) + float(row.get("actual_qty") or 0)
+        return [SparePart(code=i["name"], name=i.get("item_name"), unit=i.get("stock_uom"),
+                          in_stores=counted.get(i["name"])) for i in items]
 
     def _cost_center(self, payload: dict) -> dict:
         """ERPNext's cost center for the MES's code: the one whose own name

@@ -686,6 +686,7 @@ async function loadWork() {
           completing = o.code;
           $("#findings").value = "";
           $("#part-code").value = ""; $("#part-qty").value = "";
+          FS.partPicker("#part-code").open();
           $("#complete-box").classList.remove("hidden");
           $("#findings").focus();
         });
@@ -826,7 +827,7 @@ async function loadHistory() {
     tr.append(el("td", "muted", o.kind));
     tr.append(el("td", null, o.summary));
     tr.append(el("td", "muted small", o.findings || ""));
-    tr.append(el("td", "small", o.part_code ? `${fmt.qty(o.part_qty)} × ${o.part_code}` : ""));
+    tr.append(el("td", "small", o.part_code ? `${fmt.qty(o.part_qty)} × ${o.part_code}${o.part_name ? " — " + o.part_name : ""}` : ""));
     tr.append(el("td", "num", o.downtime_minutes === null ? "—" : fmt.qty(o.downtime_minutes)));
     tr.append(el("td", "muted small", o.performed_by || ""));
     tr.append(el("td", "muted small", fmt.stamp(o.completed_at)));

@@ -16,7 +16,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ProductionRequest(BaseModel):
@@ -162,6 +162,40 @@ class PartUsed(BaseModel):
     # one (an ISA-95 equipment module: `FORK1_Mold_HeaterZone2`); null when it
     # was raised on the machine itself.
     equipment_module: str | None = None
+
+class SparePart(BaseModel):
+    """One part the ERP holds for repairs, as the repair order's close form
+    offers it: a code, a name, a unit and how many the ERP says are in stores.
+
+    Never a price. ERPNext sends a valuation with every item and a plain-web
+    ERP may send a cost; this model has no field for either, and anything a
+    connector reads beyond these four is dropped when the row is made, so a
+    price cannot reach a page, a log or the copy held in memory.
+
+    `in_stores` is null when the ERP did not say, which is not zero: a part
+    the ERP lists with no stock line is a part nobody counted.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    code: str
+    name: str | None = None
+    unit: str | None = None
+    in_stores: float | None = None
+
+    @classmethod
+    def from_payload(cls, row: dict) -> SparePart:
+        """One row as a plain-web ERP or a parts file writes it. The code may
+        be spelled `code`, `item_code` or `part`; everything that is not one
+        of the four fields - a price, a valuation - is left behind."""
+        code = row.get("code") or row.get("item_code") or row.get("part")
+        if not code:
+            raise ValueError(f"a part needs a code: {sorted(row)}")
+        qty = row.get("in_stores", row.get("quantity"))
+        return cls(code=str(code).strip(), name=row.get("name") or row.get("item_name"),
+                   unit=row.get("unit") or row.get("stock_uom"),
+                   in_stores=None if qty is None else float(qty))
+
 
 # The outbox kinds this contract can parse, and therefore the only ones the
 # ERP sync may take. The outbox is a domain event log now - it also carries
