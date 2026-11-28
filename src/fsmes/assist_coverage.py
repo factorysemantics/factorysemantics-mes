@@ -162,7 +162,7 @@ EXCLUDED: dict[str, str] = {
         "a node's own cost center decides which account a repair is charged "
         "to in the ERP - heater band 2 billed apart from its mould - and its "
         "place is a measurement off the floor plan. Both are an engineer's, "
-        "on Setup's equipment form with masterdata.write. The assistant "
+        "on Setup's equipment form or the 3D line view, with masterdata.write. The assistant "
         "reads where a node bills (equipment_tree) and does not move "
         "money between accounts or machines across the floor; "
         "create_equipment sets a cost center when a node is first made.",

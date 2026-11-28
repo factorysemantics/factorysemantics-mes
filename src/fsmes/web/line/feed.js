@@ -63,6 +63,7 @@ export class LiveFeed {
     this.cursor = -1;
     this.jitter = new Jitter();
     this.stations = [];
+    this.repairs = null; // open repair orders on the line's machines and parts
     this.connected = false;
     this.onError = null;
     this.onResync = null;
@@ -100,6 +101,7 @@ export class LiveFeed {
       const data = await this.fetch(`/line/events?${params}`);
       this.cursor = data.cursor;
       this.stations = data.stations;
+      this.repairs = data.repairs || null;
       this.connected = true;
       if (data.truncated && this.onResync) {
         // We were away long enough that the feed capped what it would hand over.
