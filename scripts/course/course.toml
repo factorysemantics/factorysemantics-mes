@@ -404,4 +404,10 @@ order = 3
 label = "6.3"
 slug = "running-it-on-your-own-box"
 title = "Run it on your own PC"
-one_line = "One pip command, the demo plant, two servers on one PostgreSQL; stop one and the other carries on."
+one_line = "One pip command and the demo plant is in your browser; two servers on one PostgreSQL are the guide's next step."
+outcomes = [
+  "Install the MES with one pip command, and ask fsmes which release you have.",
+  "Start the demo plant with fsmes demo cutlery, open it in a browser, and say how to stop it.",
+  "Read the two refusals, a port already taken and a mistyped command, and find two servers in the guide.",
+]
+scene = "scripts/scenes/course/07-03-running-it-on-your-own-box.toml"
