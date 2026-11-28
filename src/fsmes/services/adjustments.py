@@ -17,14 +17,14 @@ did not move the process is a finding, not a success.
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from fsmes.db import utcnow
 from fsmes.domain import AdjustmentStatus, RecommendedAdjustment
-from fsmes.services import Conflict, Invalid, NotFound, audit, masterdata, tags
+from fsmes.services import Conflict, Invalid, NotFound, audit, line_clock, masterdata, tags
 
 # How much of the way to the setpoint the process must have travelled, by
 # the time verification runs, to count as having followed. Half: a first-
@@ -147,13 +147,29 @@ def mark_failed(session: Session, code: str, error: str, actor: str = "opc-agent
     return rec
 
 
-def due_for_verification(session: Session) -> list[dict]:
+def verification_due_at(written_at: datetime, verify_after_seconds: float,
+                        the_factor: float | None = None) -> datetime:
+    """When the check on a write falls due, on this MES's own clock.
+
+    The wait is counted on the plant's clock, the one the tag's lag is
+    counted on: three time constants of a line that replays at 10x pass in a
+    tenth of the wall time. A real plant runs at 1x, the factor is 1.0, and
+    this is `written_at + verify_after_seconds` to the second.
+    """
+    factor = line_clock.factor() if the_factor is None else the_factor
+    if factor <= 0.0:
+        factor = 1.0
+    return written_at + timedelta(seconds=verify_after_seconds / factor)
+
+
+def due_for_verification(session: Session, the_factor: float | None = None) -> list[dict]:
     now = utcnow()
     rows = session.scalars(select(RecommendedAdjustment).where(
         RecommendedAdjustment.status == AdjustmentStatus.WRITTEN))
     return [{"code": r.code, "equipment": r.equipment_code, "tag": r.tag, "drives": r.drives,
              "written_value": r.written_value, "current_value": r.current_value}
-            for r in rows if r.written_at and now - r.written_at >= timedelta(seconds=r.verify_after_seconds)]
+            for r in rows if r.written_at
+            and now >= verification_due_at(r.written_at, r.verify_after_seconds, the_factor)]
 
 
 def verify(session: Session, code: str, *, pv_before: float | None, pv_after: float | None,
@@ -188,7 +204,10 @@ def out(rec: RecommendedAdjustment) -> dict:
         "proposed_by": rec.proposed_by, "proposed_at": rec.proposed_at, "status": rec.status.value,
         "decided_by": rec.decided_by, "decided_at": rec.decided_at, "decision_note": rec.decision_note,
         "written_at": rec.written_at, "written_value": rec.written_value,
-        "verify_after_seconds": rec.verify_after_seconds, "verified_at": rec.verified_at,
+        "verify_after_seconds": rec.verify_after_seconds,
+        "verify_due_at": (verification_due_at(rec.written_at, rec.verify_after_seconds)
+                          if rec.written_at else None),
+        "verified_at": rec.verified_at,
         "verification": rec.verification,
     }
 

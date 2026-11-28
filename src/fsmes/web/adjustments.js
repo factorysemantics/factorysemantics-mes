@@ -52,7 +52,7 @@ function outcome(r) {
     return `${r.drives || "PV"} ${fmt.qty(v.pv_before)} → ${fmt.qty(v.pv_after)} ${v.followed ? "followed" : "did not follow"}`;
   }
   if (r.status === "failed") return (r.verification && r.verification.error) || "failed";
-  if (r.status === "written") return `written ${fmt.clock(r.written_at)}, verifying in ${Math.round(r.verify_after_seconds)} s`;
+  if (r.status === "written") return `written ${fmt.clock(r.written_at)}, verifying at ${fmt.clock(r.verify_due_at)}`;
   if (r.status === "rejected") return r.decision_note ? `rejected: ${r.decision_note}` : "rejected";
   if (r.status === "approved") return `approved by ${r.decided_by}; the agent writes next`;
   return "";
