@@ -422,6 +422,11 @@ tbody tr.group th {
 /* A code typed against a datalist needs the room a select had: "Machine"
    truncated to "Machir" is not a label anyone can act on. */
 .row > input[list] { flex: 1 1 120px; }
+/* A code or a name typed in full needs the room for one: the equipment form
+   showed "FORK1_M" and "Heater ba" while two selects took the row (Scott,
+   via the manager, 2026-11-28). 26ch holds FORK1_Mold_HeaterZone2 and
+   "Melt temperature sensor". */
+.row > input.wide { flex: 1 1 26ch; }
 /* A labelled box in a row (Master data's place and cost center). */
 .row > .field { flex: 0 1 140px; min-width: 0; align-content: start; }
 .row > .field > input { width: 100%; box-sizing: border-box; }
