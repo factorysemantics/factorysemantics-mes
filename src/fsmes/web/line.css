@@ -17,6 +17,9 @@
   --setup: #a371f7;
   --unknown: #6e7681;
   --disconnected: #6e7681;
+  --part: #4cc3ff;      /* a part's marker, as pick.js draws it */
+  --repair: #ff3b3b;    /* a part with a repair open, as pick.js draws it */
+  --repair-text: #ff6b6b;
   --radius: 10px;
   --mono: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
 }
@@ -207,8 +210,8 @@ body {
 .swatch.idle    { background: var(--idle); }
 .swatch.down    { background: var(--down); }
 .swatch.setup   { background: var(--setup); }
-.swatch.part    { background: #4cc3ff; border-radius: 50%; }
-.swatch.repair  { background: #ff3b3b; border-radius: 50%; }
+.swatch.part    { background: var(--part); border-radius: 50%; }
+.swatch.repair  { background: var(--repair); border-radius: 50%; }
 
 .truth { margin: 0; text-align: right; max-width: 46ch; }
 .truth strong { color: var(--text); font-family: var(--mono); }
@@ -248,7 +251,7 @@ body {
 .pick-row { display: grid; grid-template-columns: 62px 1fr; gap: 8px; padding: 4px 0; border-top: 1px solid var(--line); }
 .pick-row > span:last-child { display: flex; flex-direction: column; gap: 3px; overflow-wrap: anywhere; }
 .pick-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; padding-top: 2px; }
-.pick-repair { color: #ff6b6b; }
+.pick-repair { color: var(--repair-text); }
 .pick-part, .pick-list-part, .pick-list-machine {
   background: none; border: 0; padding: 2px 0; color: var(--accent); cursor: pointer; text-align: left; font: inherit;
 }
@@ -257,7 +260,7 @@ body {
 .pick-edit input { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font: inherit; }
 .pick-buttons { display: flex; gap: 6px; }
 .pick-buttons button { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; font: inherit; cursor: pointer; }
-.pick-buttons button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pick-buttons button.primary { background: var(--accent); border-color: var(--accent); color: var(--text); }
 .pick-buttons button:disabled { opacity: .45; cursor: not-allowed; }
 .pick-note { margin: 0; color: var(--muted); font-size: 12px; min-height: 1em; }
 body.pick-moving #stage { cursor: crosshair; }
@@ -294,7 +297,7 @@ body.pick-moving #stage { cursor: crosshair; }
 .pick-list-group { padding: 4px 0; border-top: 1px solid var(--line); }
 .pick-list-machine { color: var(--text); font-weight: 600; }
 .pick-list ul { list-style: none; margin: 0; padding: 0 0 0 10px; }
-.pick-list-part.repair { color: #ff6b6b; }
+.pick-list-part.repair { color: var(--repair-text); }
 .pick-list-part.repair::after { content: " · repair open"; font-size: 11px; }
 
 @media (max-width: 900px) {
