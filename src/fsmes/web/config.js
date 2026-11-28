@@ -233,6 +233,7 @@ function draw(page) {
   $("#domain-title").textContent = `${page.title} configuration`;
   document.title = `${page.title} configuration — FactorySemantics MES`;
   $("#domain-about").textContent = page.about;
+  $("#equipment-pointer").classList.toggle("hidden", DOMAIN !== "administration");
 
   /* Past a screenful, the list needs search and a stated, stable order. The
      order is the module registry's, which is the order this product mounts

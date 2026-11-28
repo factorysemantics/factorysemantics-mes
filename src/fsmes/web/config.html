@@ -37,6 +37,13 @@
     <section class="panel span-2">
       <h2><span id="domain-title">Configuration</span> <span id="section-count" class="muted count">—</span></h2>
       <p id="domain-about" class="muted small"></p>
+      <!-- Setup's Configuration only. The equipment screen stays under
+           Engineering, and the engineer is who assigns a band its place and
+           cost center; Setup > Admin, where this line was first (#338), is
+           users.manage only, so he never saw it. Configuration is the Setup
+           page everyone opens (Scott, via the manager, 2026-11-28). -->
+      <p id="equipment-pointer" class="muted small hidden" data-assist="setup-equipment-link">Equipment, its places and its cost centers
+        are kept on <a href="/dashboard/masterdata#equipment">Engineering › Master data › Equipment</a>.</p>
       <!-- Search appears once the list passes twelve, which is the number
            this product already answered "how many rows is one screenful" with
            (services/analysis.py). Below it a search box is furniture: the eye
