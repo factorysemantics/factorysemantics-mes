@@ -553,3 +553,22 @@ def backlog(session: Session) -> dict:
         "expected_downtime_minutes": round(minutes, 1),
         "expected_downtime_hours": round(minutes / 60.0, 2),
     }
+
+
+def open_on(session: Session, machines: list) -> dict[int, list[MaintenanceOrder]]:
+    """The open orders on these machines and on their parts, keyed by the id
+    of what each is raised on - the mould's own, or heater band 2's - oldest
+    first. What the 3D line view turns red.
+
+    One read of the open orders, not one per machine: a plant has tens open
+    at a time, and the view asks twice a second.
+    """
+    ids = {machine.id for machine in machines}
+    found: dict[int, list[MaintenanceOrder]] = {}
+    orders = session.scalars(select(MaintenanceOrder)
+                             .where(MaintenanceOrder.status.in_(OPEN_STATUSES))
+                             .order_by(MaintenanceOrder.id))
+    for order in orders:
+        if masterdata.machine_of(order.equipment).id in ids:
+            found.setdefault(order.equipment_id, []).append(order)
+    return found

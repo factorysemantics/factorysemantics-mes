@@ -41,7 +41,11 @@ COMMENT = (
 
 
 def main(root: Path) -> None:
-    layout = {"_comment": COMMENT, "defaults": {"unit_label": "unit"}, "lines": {}}
+    # The drawing's frame is the plant's own (x = plant x, z = -plant y), so the
+    # 3D view may put a heater band's plant place on its mould.
+    layout = {"_comment": COMMENT,
+              "defaults": {"unit_label": "unit", "plant_frame": {"x": "x", "z": "-y"}},
+              "lines": {}}
     files = sorted((root / "positions").glob("*.json"))
     if not files:
         sys.exit(f"no positions files in {root / 'positions'}")

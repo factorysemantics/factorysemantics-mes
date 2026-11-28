@@ -349,6 +349,26 @@ filler and filled after it; anything else - `body` on the body shop - draws a
 plain slab the size of a car floor, shorter if the belts are short. The
 `cell` kind draws a fenced robot cell with an opening on every side.
 
+**A machine's parts on the drawing.** Parts the MES holds under a machine -
+a mould's heater bands, its melt sensor - are drawn as markers where each is
+held to sit (`pos_x`, `pos_y`, `pos_z`, plant metres, set in Setup or from
+the pack's equipment file). The view can put plant metres on a drawn layout
+only if the layout says how its numbers are the plant's:
+
+```json
+"defaults": {"plant_frame": {"x": "x", "z": "-y"}}
+```
+
+says the drawing's `x` is plant x and its `z` is minus plant y, both in
+metres (`"z": "y"` if it is plant y itself). It can go under `defaults` or
+under one line. A layout without it draws each part on a spot of its own on
+top of its machine and the panel says so; nothing is guessed. An engineer
+who may write master data can click a marker, press **Move**, click the spot
+on the machine and save: that goes through Setup's own route
+(`PUT /masterdata/equipment/{code}`) and is in the audit log. Moving works on
+a one-line view only; the whole-area floor plan draws machines two and a half
+times their size, so a click there is not a place on the plant.
+
 ## Your own machine models
 
 The 3D line view (`/dashboard/line/3d`) draws every machine from built-in
