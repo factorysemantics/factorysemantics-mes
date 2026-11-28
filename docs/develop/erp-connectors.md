@@ -55,7 +55,10 @@ class SapAdapter(ErpConnector):
 
 One more is optional: `send_part_used(part_used) -> None`, the part a
 repair order used (`contract.PartUsed`: part code, count, repair order,
-machine, work center, cost center, who, when, minutes down). Book it as the
+machine, work center, cost center, who, when, minutes down, and - when the
+repair was on a part of the machine, a mould's heater band - that part's code
+as `equipment_module`). The cost center is the part's when it has one of its
+own, else the machine's. Book it as the
 ERP's own stock issue against the cost center, and make it safe to receive
 twice - the message key is stable, so look for it before booking. A
 connector without the method is not broken: the sync worker marks the
