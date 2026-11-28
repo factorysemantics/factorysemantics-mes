@@ -148,7 +148,7 @@ def test_the_take_waits_for_the_firing_and_for_the_write_before_it_says_them(sce
 
     assert ("#firings-table", "ADJ-00001") in waits
     assert ("#queue-table", "approved by ADMIN") in waits
-    assert ("#queue-table", "verifying in") in waits
+    assert ("#queue-table", "verifying at") in waits
     assert any(
         "MeltTempSP" in s.get("js", "") and "211" in s.get("js", "")
         for s in steps_of(scene, "screen")
@@ -178,6 +178,21 @@ def test_after_the_write_the_take_shows_the_melt_temperature_coming_down_on_its_
     assert not [s for s in scene["step"] if s["do"] == "fill" and "MeltTemp" in s.get("selector", "")]
 
 
+def test_the_row_turns_verified_on_camera_after_the_trend_and_the_take_waits_on_its_own_words(scene):
+    screen = steps_of(scene, "screen")
+    names = [s.get("name") for s in screen if s["do"] == "mark"]
+    waits = [(s.get("selector"), s.get("text")) for s in screen if s["do"] == "wait_for"]
+    followed = next(s for s in screen if s["do"] == "wait_for" and s.get("text") == "followed")
+
+    assert names.index("the-temperature-falls") < names.index("it-followed")
+    assert ("#queue-table", "followed") in waits
+    # About 36 s after the write at ten times the clock; the wait is generous, never a sleep.
+    assert followed.get("timeout", 0) >= 60
+    assert not [s for s in scene["step"] if s["do"] == "hold" and s.get("part") == "screen"]
+    assert any("now says verified" in line for line in said(scene, "screen"))
+    assert "it-followed" in {s.get("name") for s in scene["step"] if s["do"] == "mark"}
+
+
 def test_the_honest_limits_are_said_in_the_films_own_lines(scene):
     lines = " ".join(said(scene))
     honesty = " ".join(scene["honesty"]).lower()
@@ -186,10 +201,12 @@ def test_the_honest_limits_are_said_in_the_films_own_lines(scene):
     assert "A draft watches nothing." in lines
     assert "only as a tooltip. A gap, written up." in lines
     assert "the name leaves the row. A gap, written up." in lines
-    assert "so it is said, not shown" in lines
+    assert "another night, did not follow" in lines
+    assert "said, not shown" not in lines
     assert "simulated plant at ten times the clock" in lines
     assert "simulated plant" in honesty and "ten times the clock" in honesty
-    assert "said, not filmed" in honesty
+    assert "check that the machine followed is filmed" in honesty
+    assert "said, not filmed" not in honesty
 
 
 def test_what_it_refuses_is_a_setpoint_outside_its_bounds_in_under_twenty_five_seconds(runner, scene):

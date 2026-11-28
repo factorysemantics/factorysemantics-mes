@@ -13,7 +13,9 @@
 # recommendation waits with its reason; the administrator's approval, the row
 # naming who approved; and Tags, where the fork mould's setpoint now reads the
 # new value; then MeltTemp itself, the melt temperature, and its trend with
-# the setpoint beside it, coming down toward 211 after the write. Then what it refuses: a setpoint outside the bounds the tag
+# the setpoint beside it, coming down toward 211 after the write; and back on
+# Adjustments, the row turned verified, with how far the melt temperature
+# moved. Then what it refuses: a setpoint outside the bounds the tag
 # declares. Filmed on a scratch cutlery plant at ten times the clock, every
 # screen as the product draws it.
 #
@@ -22,10 +24,12 @@
 # adjustment with no evidence) have no screen: the agent role holds no
 # approve right, which the class says over the roles, and a trigger's
 # recommendation carries its evidence by construction. The class films the
-# refusal a screen does make, the bounds. The six-minute check that the
-# machine followed is said, not filmed: it is longer than the class, and the
-# recorder has no cut inside a take. The temperature coming down is filmed:
-# at ten times the clock the mould's two-minute lag passes in twelve seconds.
+# refusal a screen does make, the bounds. The check that the machine
+# followed is filmed: it waits three of the tag's lags counted on the plant's
+# own clock, six minutes of the line, so at ten times the clock the row turns
+# verified about 36 seconds after the write. The temperature coming down is
+# filmed: at ten times the clock the mould's two-minute lag passes in twelve
+# seconds.
 
 name = "triggers-and-adjustments"
 title = "Triggers and adjustments — the only path to a PLC"
@@ -61,7 +65,7 @@ notes = [
   "Approve on Adjustments asks for an optional note in the browser's own prompt box. The recorder's browser dismisses it unanswered, so no note is written and no box is filmed. A gap, written up: a browser box is not the product's own form.",
   "Once the agent has written the value the row says written and when, and no longer who approved. A gap, written up; the class boxes the row while it still says approved by ADMIN, and says the name leaves.",
   "The tile Approved, not yet written counts the written ones too. A gap, written up; the class does not point at it.",
-  "The check that the machine followed waits three times the tag's lag, at least half a minute: 360 seconds on this pack, longer than the class, and the row's verifying in 360 s does not count down. The wait is counted on the wall clock while the lag is counted on the line's, so ten times the clock does not shorten it: here it is an hour of line time, and the recorder has no cut inside a take to skip it. It compares one reading before the write with one after, and on this pack the melt temperature wanders as far as the change: on one trial take the mould followed and the check said failed, on a trial by hand it said followed (217.27 to 211.39). A gap, written up; the class says the check, not its verdict.",
+  "The check that the machine followed waits three times the tag's lag, at least half a minute: 360 seconds of the line on this pack. The wait is counted on the plant's own clock, the one the lag is counted on, so at ten times the clock the row's verifying at names a time about 36 seconds after the write, and on a real plant at normal speed it is still six minutes. It compares one reading before the write with one after, and on this pack the melt temperature wanders as far as the change: on one trial take before this one the mould followed and the check said failed. The take waits for the row to say followed and films what it says; a take whose check said did not follow would be filmed again, not edited.",
   "The melt temperature's fall is filmed: its live reading on Tags, then its trend, opened by clicking that row, with MeltTempSP chosen as the second tag. The lag is 120 line seconds, twelve seconds of the take, so by the time the trend opens the mould has mostly followed. The trend is drawn once, when the page opens, from what the plant recorded. The take waits for the live reading to be below 213 before it says so; the trend is filmed as drawn.",
   "Who approved and when is also on Setup > Ops, in the audit trail, but that page opens on the plant's own file paths, and a frame must not show them; the class shows the name on the queue instead.",
   "The opening beat is a plain card with words on it. There is no artwork of a dial, a mould or a person.",
@@ -71,7 +75,7 @@ honesty = [
   "the plant is a scratch simulated plant, replaying a recorded line at ten times the clock",
   "the trigger's line is set just above the mould's normal wander so it fires within the class; said",
   "the trigger, its recommendation and both approvals were made on camera",
-  "the six-minute check that the machine followed is said, not filmed, and on this pack it can say failed when the mould followed",
+  "the check that the machine followed is filmed as the product made it, six minutes of the line at ten times the clock; on this pack it can say failed when the mould followed, and the class says one reading before and one after is all it compares",
   "the melt temperature coming down is the plant's own trend, filmed as drawn, a degree or two of wander and all",
   "the approver's name leaves the queue once the value is written; filmed as drawn, and said",
 ]
@@ -392,11 +396,11 @@ at = "#queue-table tbody tr:has-text(\"ADJ-00001\") td:nth-child(9)"
 [[step]]
 do = "wait_for"
 selector = "#queue-table"
-text = "verifying in"
+text = "verifying at"
 
 [[step]]
 do = "say"
-line = "In six minutes the agent reads the melt temperature again and checks it followed. That is longer than this class, so it is said, not shown."
+line = "After six minutes of the line, half a minute here, the agent checks the mould followed."
 at = "#queue-table tbody tr:has-text(\"ADJ-00001\") td:nth-child(9)"
 
 [[step]]
@@ -445,7 +449,7 @@ timeout = 90
 
 [[step]]
 do = "say"
-line = "MeltTemp, the temperature the mould actually has, is down from the 215 that fired the trigger. One reading wanders; its trend says more."
+line = "MeltTemp, the mould's real temperature, is down from the 215 that fired the trigger."
 at = "#tags-table tbody tr:has-text(\"MeltTemp\"):not(:has-text(\"MeltTempSP\")) td:nth-child(3)"
 
 [[step]]
@@ -477,15 +481,42 @@ at = "#trend"
 do = "mark"
 name = "the-temperature-falls"
 
-# -------------------------------------------------------------- it refuses
-
+# Back to the queue, where the row has turned verified. The check falls due
+# about 36 seconds after the write on this plant; the take waits on the row's
+# own words, never a clock of its own.
+# The machine page has no Engineering sub-menu, so the queue is opened by URL.
 [[step]]
-part = "refuses"
 do = "goto"
 url = "/dashboard/adjustments"
 settle = 2
 
 [[step]]
+do = "wait_for"
+selector = "#queue-table"
+text = "followed"
+timeout = 120
+scroll_to = "#queue-table tbody tr"
+scroll_text = "ADJ-00001"
+scroll_offset = 300
+
+[[step]]
+do = "say"
+line = "The row now says verified: the melt temperature before and after, and followed."
+at = "#queue-table tbody tr:has-text(\"ADJ-00001\") td:nth-child(9)"
+
+[[step]]
+do = "say"
+line = "One reading each side, on a mould that wanders: another night, did not follow."
+at = "#queue-table tbody tr:has-text(\"ADJ-00001\") td:nth-child(8)"
+
+[[step]]
+do = "mark"
+name = "it-followed"
+
+# -------------------------------------------------------------- it refuses
+
+[[step]]
+part = "refuses"
 do = "wait_for"
 js = "return document.querySelectorAll('#p-machine option').length > 0 && !!document.querySelector('#p-submit');"
 
