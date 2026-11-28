@@ -8,6 +8,10 @@ Top of the file: `name` (names every file), `title`, `base`, `budget_seconds`,
 `allow_writes` (loopback only), `[plant]` (a scratch plant of the take's own),
 and `type_delay_seconds` — seconds between typed keys, 0.085 by default
 (about twelve a second), never under 0.05.
+`assistant = true` keeps the product's floating Assistant, which a take
+otherwise hides, and moves its button and panel to the left, above the caption
+bar's two lines and under the badge's row; on the product they sit at the
+bottom right, and a scene that uses it says so in its notes.
 `[plant] before_roll` is a list of `fsmes` commands, each the words after
 `fsmes`, run against the scratch plant after it is up and before the camera
 rolls — work people do off the line that the pack's shift never does. Only

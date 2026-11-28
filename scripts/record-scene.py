@@ -193,6 +193,12 @@ CAPTION_HEIGHT = 72
 CAPTION_RIGHT_INSET = 260
 # Where the product's toast is moved to: clear of a two-line caption bar.
 TOAST_LIFT = 132
+# Where a scene with `assistant = true` puts the product's Assistant: its left
+# edge, its bottom (above the caption bar's two lines, as the toast is) and the
+# least room it leaves at the top (below the badge's row).
+ASSIST_LEFT = 18
+ASSIST_BOTTOM = TOAST_LIFT + 8
+ASSIST_TOP = BADGE_TOP + BADGE_HEIGHT + 14
 #: The longest a lesson's teaser GIF may run.
 TEASER_SECONDS = 45
 
@@ -279,6 +285,7 @@ DEFAULTS = {
     "password": "admin",
     "allow_writes": False,
     "captions": True,
+    "assistant": False,
     "part": None,
     "course": "scripts/course/course.toml",
     "take_is": "lesson",
@@ -716,7 +723,7 @@ CURSOR_SVG = (
 )
 
 
-def overlay_script(badge: str, captions: bool = True) -> str:
+def overlay_script(badge: str, captions: bool = True, assistant: bool = False) -> str:
     """The caption bar, the badge, and the two buttons that are hidden.
 
     The bar stops `CAPTION_RIGHT_INSET` short of the right-hand edge and the
@@ -738,7 +745,11 @@ def overlay_script(badge: str, captions: bool = True) -> str:
     still on screen after it rather than blinking out mid-sentence.
 
     And the product's floating Assistant and Design buttons are hidden, because
-    they sit exactly where the caption bar goes.
+    they sit exactly where the caption bar goes. A scene about the Assistant
+    (`assistant = true`) keeps its button and moves it and its panel to the
+    left, above the caption bar's two lines and under the badge's row, so the
+    bar, the badge and the avatar's corner hold none of it. On the product they
+    sit at the bottom right; the scene says so in its notes.
 
     It also draws the cursor, the ripple of a press, and the box a `say` puts
     round what it is about (`__sceneCursorTo`, `__sceneRipple`,
@@ -768,9 +779,13 @@ def overlay_script(badge: str, captions: bool = True) -> str:
         "color:#111!important;font:700 17px/34px system-ui,-apple-system,Segoe UI,sans-serif!important;"
         "padding:0 18px!important;border-radius:8px!important;white-space:nowrap!important;"
         "box-shadow:0 2px 10px rgba(0,0,0,.5)!important}"
-        ".assist-launch,.design-launch{display:none!important}"
+        + (".design-launch{display:none!important}"
+           f".assist-launch,.assist-panel{{left:{ASSIST_LEFT}px!important;right:auto!important;"
+           f"bottom:{ASSIST_BOTTOM}px!important}}"
+           f".assist-panel{{max-height:calc(100vh - {ASSIST_BOTTOM + ASSIST_TOP}px)!important}}"
+           if assistant else ".assist-launch,.design-launch{display:none!important}")
         # The cursor's tip is the point, at the element's top left; it moves by transform.
-        "#fs-scene-cursor{position:fixed!important;left:0!important;top:0!important;width:26px!important;"
+        + "#fs-scene-cursor{position:fixed!important;left:0!important;top:0!important;width:26px!important;"
         "height:30px!important;margin:-2px 0 0 -2px!important;pointer-events:none!important;"
         "z-index:2147483645!important;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))!important}"
         ".fs-scene-ripple{position:fixed!important;width:56px!important;height:56px!important;"
@@ -3326,7 +3341,7 @@ def record(scene: dict, out: Path, run_fsmes=None, run_card=None) -> dict:
                 f"could not sign in to {base} as {scene['user']} (HTTP {signed_in.status}); "
                 "set `user` and `password` in the scene, or MES_SCENE_PASSWORD"
             )
-        context.add_init_script(overlay_script(badge, bool(scene["captions"])))
+        context.add_init_script(overlay_script(badge, bool(scene["captions"]), bool(scene["assistant"])))
         presses: list[tuple[int, int]] = []
         listen_for_presses(context, presses)
         # Cards are answered here, on the plant's own origin, and never reach the plant.
