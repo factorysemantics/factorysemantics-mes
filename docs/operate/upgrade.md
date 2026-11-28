@@ -10,6 +10,14 @@ carries an **Honesty** section for anything that changed what a number
 before upgrading a plant that anyone reads numbers off, because a number that
 changes meaning without anyone noticing is worse than one that breaks.
 
+## 0.5.0 to the next release
+
+Migrations so far, each one adding and none changing a row:
+
+| Migration | What it adds |
+|---|---|
+| `b4e9c2a7d815` | one column on `maintenance_orders`: `part_name`, the part's name as the ERP's parts list gave it when the job closed. Empty on every job closed before, and on a job whose part the ERP did not list |
+
 ## 0.4.2 to 0.5.0
 
 **Three migrations** — 0.4.2's head was `2c6e817b9faf`; 0.5.0's is

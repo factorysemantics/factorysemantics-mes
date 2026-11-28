@@ -170,6 +170,17 @@ class ErpAdapter(Protocol):
         """
         ...
 
+    def list_parts(self) -> list:
+        """The parts the ERP holds for repairs: `contract.SparePart` rows.
+
+        Optional. Code, name, unit and the count in stores - never a price,
+        which `SparePart` has no field for. Raise when the ERP does not
+        answer; the close form then says so and takes a typed code. A
+        connector without this method offers no list, and the form falls
+        back to the codes this plant has used before.
+        """
+        ...
+
     def configure(self, policy) -> None:
         """Take this plant's current ERP policy, before the next cycle.
 
@@ -252,6 +263,60 @@ def send_part_used(adapter: object, message) -> None:
     method(message)
 
 
+def lists_parts(adapter: object | None) -> bool:
+    """Does this connector offer the ERP's parts list? Read off the object,
+    like `send_part_used`: a connector written before the call existed has
+    no `list_parts`, and the honest answer for it is "no list", not an error."""
+    return adapter is not None and callable(getattr(adapter, "list_parts", None))
+
+
+def list_parts(adapter: object) -> list:
+    """The ERP's parts list through this connector, as `SparePart` rows.
+
+    Whatever the connector hands back is made into `SparePart` here, so a
+    connector that returns plain dicts carrying a price loses the price at
+    this line and nowhere later. Call `lists_parts` first; this raises
+    `AttributeError` for a connector without the call.
+    """
+    from fsmes.integrations.erp.contract import SparePart
+
+    rows = adapter.list_parts()
+    return [row if isinstance(row, SparePart) else SparePart.from_payload(dict(row))
+            for row in rows]
+
+
+#: The connector the close form's parts list is read through, one per
+#: connection, built the first time a form asks and kept: an ERPNext
+#: connector logs in when it is made, and a form must not log in each time.
+_PARTS_ADAPTERS: dict[str, object] = {}
+
+
+def parts_source(settings: Settings):
+    """For the repair order's close form: is an ERP connected, a lister that
+    reads its parts, and a key naming the connection.
+
+    The lister builds the connector on first use, so an ERP that is down when
+    the plant starts is an ERP "not answering" on the form rather than a
+    plant that will not start; it returns `None` for a connector without
+    `list_parts` (one written before the call existed), which the form reads
+    as "this connection offers no list".
+    """
+    if settings.erp_mode == "off":
+        return False, None, ""
+    key = "|".join(str(v) for v in (settings.erp_mode, settings.erp_base_url, settings.erpnext_base_url,
+                                     settings.erpnext_site, settings.erp_parts_file))
+
+    def lister():
+        adapter = _PARTS_ADAPTERS.get(key)
+        if adapter is None:
+            adapter = _PARTS_ADAPTERS[key] = make_adapter(settings)
+        if not lists_parts(adapter):
+            return None
+        return list_parts(adapter)
+
+    return True, lister, key
+
+
 def requirements(adapter: object) -> list[Requirement]:
     """What the configured connector needs on the ERP side."""
     method = getattr(adapter, "requirements", None)
@@ -299,7 +364,8 @@ def make_adapter(settings: Settings) -> ErpAdapter | None:
     if settings.erp_mode == "file":
         from fsmes.integrations.erp.file_adapter import FileErpAdapter
 
-        return FileErpAdapter(settings.erp_inbox, settings.erp_outbox, settings.erp_archive)
+        return FileErpAdapter(settings.erp_inbox, settings.erp_outbox, settings.erp_archive,
+                              parts_file=settings.erp_parts_file)
     if settings.erp_mode == "off":
         return None
     # Every other mode is a module: a `fsmes.modules` entry point whose name is

@@ -67,6 +67,33 @@ orders; ... recorded in the MES only", and nothing else is held up. ERPNext's
 connector books a submitted Material Issue from the item's warehouse, with
 the key in the remarks.
 
+A second optional call is `list_parts() -> list[SparePart]`: the parts the
+ERP holds for repairs, which the repair order's Part used box offers as the
+technician types. A `contract.SparePart` is four fields - `code`, `name`,
+`unit`, `in_stores` - and has nowhere to put a price; anything else a row
+carries is dropped when it is made. `in_stores` is null when the ERP keeps
+no count for the part, never zero. Raise when the ERP does not answer: the
+form then says "the ERP's parts list is not answering" and takes a typed
+code. A connector without the call is not broken either - the form offers
+the codes the plant has used before. The MES holds what it read in memory
+for `MES_ERP_PARTS_COPY_MINUTES` (5) and writes none of it down. The built-in
+connections answer it this way:
+
+| Connection | Where the list comes from |
+|---|---|
+| `erpnext` | items in the item group `MES_ERPNEXT_PARTS_GROUP` ("Spare Parts"), their `Bin` counts added up (in `MES_ERPNEXT_PARTS_WAREHOUSE` when set) |
+| `rest` | `GET /parts`; the mock ERP answers with three example parts |
+| `file` | the JSON file at `MES_ERP_PARTS_FILE` (`erp_exchange/parts.json`), read and never moved |
+
+A parts file, the smallest example:
+
+```json
+[
+  {"code": "SP-HEATER-BAND", "name": "Heater band", "unit": "Nos", "in_stores": 3},
+  {"code": "SP-SEAL-KIT", "name": "Pump seal kit", "unit": "Nos", "in_stores": 5}
+]
+```
+
 `fsmes erp requirements`, `fsmes erp setup` and `fsmes erp check` are these
 three methods and nothing else. They act on whatever `MES_ERP_MODE` names,
 so your connector gets all three commands the moment it is installed.

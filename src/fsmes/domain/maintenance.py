@@ -208,6 +208,10 @@ class MaintenanceOrder(Base):
     # say. A code and a count only: what the part is worth is the ERP's.
     part_code: Mapped[str | None] = mapped_column(String(40))
     part_qty: Mapped[float | None] = mapped_column()
+    # The part's name as the ERP's parts list gave it when the job closed,
+    # kept as text so History reads "Heater band" with the ERP switched off.
+    # Null when the ERP did not know the code, or no list was read.
+    part_name: Mapped[str | None] = mapped_column(String(140))
 
     equipment: Mapped[Equipment] = relationship()
     plan: Mapped[MaintenancePlan | None] = relationship()

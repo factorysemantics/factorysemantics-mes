@@ -13,6 +13,14 @@ app = FastAPI(title="MES-TWIN Mock ERP", description="Pretends to be the busines
 ORDERS: dict[str, dict] = {}
 CONFIRMATIONS: list[dict] = []
 
+#: The small example parts list `GET /parts` answers with. The demo plant's
+#: own words; no price, because the MES reads none.
+PARTS: list[dict] = [
+    {"code": "SP-HEATER-BAND", "name": "Heater band", "unit": "Nos", "in_stores": 3},
+    {"code": "SP-SEAL-KIT", "name": "Pump seal kit", "unit": "Nos", "in_stores": 5},
+    {"code": "SP-BELT-A42", "name": "Conveyor belt A42", "unit": "Nos", "in_stores": 1},
+]
+
 
 class OrderIn(BaseModel):
     code: str
@@ -67,3 +75,8 @@ def receive_confirmation(payload: dict) -> dict:
 @app.get("/confirmations")
 def list_confirmations(kind: str | None = None) -> list[dict]:
     return [c for c in CONFIRMATIONS if kind is None or c.get("kind", "production_confirmation") == kind]
+
+
+@app.get("/parts")
+def list_parts() -> list[dict]:
+    return PARTS

@@ -253,6 +253,12 @@ class Settings(BaseSettings):
     erp_outbox: Path = Path("erp_exchange/outbox")
     erp_archive: Path = Path("erp_exchange/archive")
     erp_poll_seconds: float = 5.0
+    # The ERP's parts list, as the repair order's close form offers it. A file
+    # connection reads it from this JSON file (a list of {code, name, unit,
+    # in_stores}); the other connections ask the ERP. The MES holds what it
+    # read in memory for this many minutes and writes none of it down.
+    erp_parts_file: Path = Path("erp_exchange/parts.json")
+    erp_parts_copy_minutes: float = 5.0
 
     # --- What this plant asks of the link to its ERP ----------------------
     # Every one of these was a literal in the source until the configuration
@@ -327,6 +333,11 @@ class Settings(BaseSettings):
     # Post finished quantities as real Manufacture stock entries. Turn off to
     # record what the MES counted without moving ERPNext's stock.
     erpnext_post_stock_entry: bool = True
+    # Which ERPNext items are spare parts: one item group. And the warehouse
+    # whose count the close form shows; empty means every warehouse ERPNext
+    # holds the part in, added up.
+    erpnext_parts_group: str = "Spare Parts"
+    erpnext_parts_warehouse: str = ""
 
     # --- The outbox as an event log ---------------------------------------
     # The outbox carries ERP confirmations and, when this is on, the plant
