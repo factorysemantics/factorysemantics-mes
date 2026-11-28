@@ -1,0 +1,397 @@
+# Class 6.3 of the course, *Run it on your own PC*: one pip command, one
+# `fsmes demo cutlery`, and the plant is in a browser on this PC.
+#
+# Every class before this one ran on a plant the recorder built from this
+# checkout. This one films the way a person gets the product: the take
+# installs the released package from the package index into a virtual
+# environment of its own, off camera, and starts the plant with that
+# installation's own `fsmes demo cutlery`, typed as the guide types it. The
+# terminal cards are that installation's: what pip and the start printed, a
+# version and a status run as the card is filmed, and two refusals, a second
+# copy on a port already taken and a mistyped command, in the product's own
+# words. Filmed on Linux. The guide's next step, two servers of one plant on
+# PostgreSQL, needs a database server this take does not have; the class says
+# so on a card and does not film it.
+
+name = "running-it-on-your-own-box"
+title = "Run it on your own PC"
+lesson = "6.3"
+take_is = "lesson"
+part = "hook"
+base = "http://127.0.0.1:8040"
+badge = "pre-alpha · simulated plant · v{version}"
+# Four and a half to six minutes, as the outline says this class runs.
+budget_seconds = 360
+gif_skip_seconds = 2.0
+width = 1280
+height = 720
+
+notes = [
+  "The plant was not built from this checkout. Before the camera rolled, the recorder made an empty virtual environment in a temporary directory, ran `pip install \"factorysemantics-mes[postgres]\"` in it against the package index, and started the plant with that installation's own `fsmes demo cutlery`, in a home of its own. The version on the badge and on the version card is the release pip fetched.",
+  "The install and the start are shown as they printed, a minute before the camera rolled: a take cannot sit through pip, and the plant has to be up before a browser can open it. The version, the status and the two refusals were run as their cards were filmed.",
+  "The pip card shows the first lines of what pip printed and says how many lines there were; the whole output is beside the card's picture in `slides/`.",
+  "The start ran with no `--speed`, as a person types it, so the plant replays its shift at the real rate. A plant a minute old may have no Plant OEE yet, or a figure over only some machines; the class reads whatever the tile says and boxes the line that says how many machines it is a mean of.",
+  "The second copy that is refused is the same installation started again with a home of its own, as a second copy on the same PC would be; it stops at the port check, before it starts anything, and its home is deleted with the rest.",
+  "The browser is signed in as the pack's lab admin before the camera rolls; the product's sign-in page is not filmed. The accounts and their passwords are the ones the start prints, lab passwords said in the open. The one line of the start that lists the accounts is left off the cards; the cards show what comes before it and after it.",
+  "There is no key for the AI tab on this take, as the start says; the class does not open the AI tab.",
+  "Filmed on Linux. The guide's Windows lines (`py -m pip …`) are not filmed, and the class says so.",
+  "Two servers on one PostgreSQL, the guide's next step, needs a PostgreSQL server; the take has none, so it is a card that points at the guide, not a film of it.",
+  "Every line said over a screen has a box round the thing it is about. The terminal cards carry no box: the line is about the whole card.",
+]
+
+honesty = [
+  "the install and the start are shown as they printed a minute before the camera rolled, not as they ran; the version, status and refusal cards were run on camera",
+  "filmed on Linux; the Windows commands in the guide are not filmed",
+  "two servers on one PostgreSQL is a card pointing at the guide; the take had no PostgreSQL to show it on",
+  "the plant is simulated: 83 machines replaying one shift through a real OPC UA server on this PC",
+  "the AI tab's chat is off on this take, because there is no key, as the start itself says",
+]
+
+[installed]
+package = "factorysemantics-mes[postgres]"
+plant = "cutlery"
+
+# ----------------------------------------------------------------- the hook
+
+[[step]]
+do = "slide"
+name = "on-your-own-pc"
+title = "On your own PC"
+lines = [
+  "Every class so far ran on a plant like this one",
+  "One line installs it. One line starts it.",
+  "Then it is in your browser, and nothing leaves the PC",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Every class so far ran on a plant like this one. Here is how to put it on your own PC: one line to install it, one line to start it."
+
+[[step]]
+do = "mark"
+name = "on-your-own-pc"
+
+[[step]]
+do = "goto"
+url = "/dashboard"
+settle = 2
+
+[[step]]
+do = "say"
+line = "And this is where you end up: the cutlery plant, answering in a browser, on this PC."
+at = "#plant-name"
+label = "On this PC"
+
+[[step]]
+do = "mark"
+name = "the-plant-in-a-browser"
+
+# ----------------------------------------------------------------- the idea
+
+[[step]]
+part = "idea"
+do = "slide"
+name = "four-words"
+title = "Four words"
+lines = [
+  "pip: Python's installer, from the Python package index",
+  "Package: the MES and its three plants, one download",
+  "Demo plant: one of those plants, simulated, on your PC",
+  "Home: the folder a plant keeps its database and logs in",
+]
+hold = 1.5
+
+[[step]]
+do = "say"
+line = "Four words. pip is Python's own installer: it fetches a package from the Python package index, the place Python packages are published."
+
+[[step]]
+do = "say"
+line = "The package is the MES, and three simulated plants it carries. A demo plant is one of those, started on your PC. Its home is the folder it keeps its database and logs in."
+
+[[step]]
+do = "mark"
+name = "four-words"
+
+[[step]]
+do = "slide"
+name = "what-you-need"
+title = "What you need first"
+lines = [
+  "Python 3.12 or newer",
+  "A terminal: PowerShell on Windows, a shell on Linux or a Mac",
+  "No database server: the demo keeps its data in one file",
+  "No key and no network, once it is installed",
+]
+hold = 1.0
+
+[[step]]
+do = "say"
+line = "What you need: Python, 3.12 or newer, and a terminal. No database server: the demo keeps its data in one file. No key, and no network once it is installed."
+
+[[step]]
+do = "say"
+line = "This was filmed on Linux. On Windows the guide types py, dash m, pip instead of pip; that is not filmed here."
+
+[[step]]
+do = "mark"
+name = "what-you-need"
+
+# ---------------------------------------------------------------- the screen
+
+[[step]]
+part = "screen"
+do = "slide"
+name = "pip-install"
+title = "One line installs it"
+shows = "install"
+stop_after = "Collecting httpx"
+hold = 1.0
+
+[[step]]
+do = "say"
+line = "Line one: pip install factorysemantics-mes. The word in brackets, postgres, adds what a PostgreSQL database needs later; the demo does not use it."
+
+[[step]]
+do = "say"
+line = "pip fetches the MES, then everything it stands on, a line for each. The card shows the first few, and says how many there were."
+
+[[step]]
+do = "mark"
+name = "pip-install"
+
+[[step]]
+do = "slide"
+name = "version"
+title = "Which release you have"
+command = ["--version"]
+hold = 1.0
+
+[[step]]
+do = "say"
+line = "The install gives you one command, fsmes. Ask it its version, and it says which release pip fetched."
+
+[[step]]
+do = "say"
+line = "This card ran on camera. The install and the start ran a minute before it rolled."
+
+[[step]]
+do = "mark"
+name = "version"
+
+[[step]]
+do = "slide"
+name = "demo-start"
+title = "One line starts it"
+shows = "start"
+stop_after = "written in"
+hold = 1.0
+
+[[step]]
+do = "say"
+line = "Line two: fsmes demo cutlery. It makes the plant a home, and copies the cutlery pack out of the package into it, where you can edit it."
+
+[[step]]
+do = "say"
+line = "Then it makes the shift the plant will play, once: 83 machines, an hour of readings, in a few seconds."
+
+[[step]]
+do = "mark"
+name = "demo-start"
+
+[[step]]
+do = "slide"
+name = "demo-started"
+title = "It says where it is"
+shows = "start"
+start_at = "cutlery started"
+stop_after = "cutlery is on"
+hold = 1.0
+
+[[step]]
+do = "say"
+line = "Then it builds the database and starts the plant, and says where it is: an address on this PC. Next it names the lab accounts to sign in with."
+
+[[step]]
+do = "mark"
+name = "demo-started"
+
+[[step]]
+do = "slide"
+name = "how-to-stop-it"
+title = "And how to stop it"
+shows = "start"
+start_at = "these are lab passwords"
+hold = 1.0
+
+[[step]]
+do = "say"
+line = "Those are lab passwords, printed in the open, because nobody else can reach this plant. A plant other people reach names its own accounts."
+
+[[step]]
+do = "say"
+line = "There is no key on this PC, so it says the AI tab's chat is off. Every other screen works without one."
+
+[[step]]
+do = "say"
+line = "And its last line is how to stop it: fsmes demo cutlery stop. The database stays in the home, and the next start carries on from it."
+
+[[step]]
+do = "mark"
+name = "how-to-stop-it"
+
+[[step]]
+do = "goto"
+url = "/dashboard"
+settle = 2
+
+[[step]]
+do = "say"
+line = "Open that address in a browser and sign in with one of those accounts. The recording signed in as the lab admin before the camera rolled."
+at = "#user-name"
+label = "Signed in"
+
+[[step]]
+do = "say"
+line = "The plant's name and its clock, both from its pack."
+at = "#plant-name"
+
+[[step]]
+do = "say"
+line = "Machines running: the simulated floor, every machine playing its shift through a real OPC UA server on this PC."
+at = "#kpi-machines"
+
+[[step]]
+do = "mark"
+name = "machines-running"
+
+[[step]]
+do = "say"
+line = "Plant OEE. A plant a minute old may have no figure yet, and then the tile shows a dash, never a zero."
+at = "#kpi-oee"
+
+[[step]]
+do = "say"
+line = "The line under it says how many machines the figure is a mean of. A machine with nothing to measure yet is left out, not counted as zero."
+at = "#kpi-oee-sub"
+
+[[step]]
+do = "mark"
+name = "plant-oee"
+
+[[step]]
+do = "say"
+line = "From here every screen is the one the earlier classes walked through. Class 0.1 starts on this page."
+at = "header nav"
+label = "The same screens"
+
+[[step]]
+do = "mark"
+name = "the-same-screens"
+
+[[step]]
+do = "slide"
+name = "status"
+title = "Ask it how it is"
+command = ["demo", "cutlery", "status"]
+hold = 1.0
+
+[[step]]
+do = "say"
+line = "Back in the terminal, status asks the plant how it is: that this installation made it, that it answers, and on which address."
+
+[[step]]
+do = "say"
+line = "Its database is at the newest schema, and it counts the machines and the open orders."
+
+[[step]]
+do = "mark"
+name = "status"
+
+[[step]]
+do = "slide"
+name = "two-servers"
+title = "Two servers: the guide's next step"
+lines = [
+  "PostgreSQL, and two servers of one plant",
+  "Stop one, and the other carries on",
+  "Not filmed: this PC has no PostgreSQL server",
+  "The guide: A ten-minute demo from your own PC",
+]
+hold = 1.0
+
+[[step]]
+do = "say"
+line = "The guide goes one step further: the plant on PostgreSQL, and two servers of it. Stop one, and the other picks up its work."
+
+[[step]]
+do = "say"
+line = "That needs a PostgreSQL server, which this PC does not have, so it is not filmed. The guide walks it."
+
+[[step]]
+do = "mark"
+name = "two-servers"
+
+# ------------------------------------------------------------ what it refuses
+
+[[step]]
+part = "refuses"
+do = "slide"
+name = "port-taken"
+title = "A second copy, same port: refused"
+command = ["demo", "cutlery"]
+refuses = true
+home = "another"
+start_at = "not starting"
+hold = 0.5
+
+[[step]]
+do = "say"
+line = "Start a second copy, with a home of its own, and it refuses before it starts anything: the port is taken, and it says by what."
+
+[[step]]
+do = "mark"
+name = "port-taken"
+
+[[step]]
+do = "slide"
+name = "mistyped"
+title = "A mistyped command: refused"
+command = ["demoo"]
+refuses = true
+hold = 0.5
+
+[[step]]
+do = "say"
+line = "Mistype the command, and it does nothing, and offers the one you meant."
+
+[[step]]
+do = "mark"
+name = "mistyped"
+
+# ------------------------------------------------------------ you now know
+
+[[step]]
+part = "know"
+do = "slide"
+name = "you-now-know"
+title = "You now know how to"
+lines = [
+  "Install the MES with one pip command, and ask fsmes which release you have.",
+  "Start the demo plant with fsmes demo cutlery, open it in a browser, and say how to stop it.",
+  "Read the two refusals, a port already taken and a mistyped command, and find two servers in the guide.",
+]
+hold = 4
+
+[[step]]
+do = "say"
+line = "Two lines, and the plant is on your PC. You now know how to do three things."
+
+[[step]]
+do = "mark"
+name = "you-now-know"
+
+[[step]]
+do = "hold"
+seconds = 3

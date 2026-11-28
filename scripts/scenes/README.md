@@ -22,6 +22,19 @@ ready and before the camera rolls, by the plant's own `POST /coa/pallet/{serial}
 as the scene's user; no screen issues a pallet's first certificate, and the
 folder's README says it was done.
 
+`[installed]` (instead of `[plant]`) films the released package as a
+person gets it: `package` (`factorysemantics-mes`, extras allowed) is
+pip-installed, off camera, into a virtual environment in a temporary
+directory, and `plant` (a pack the package ships) is started with that
+installation's own `fsmes demo <plant>`, `--speed` only if `speed` is set.
+Its terminal cards are of three kinds: `shows = "install"` or `"start"`, what
+pip or the start printed before the roll; a read run on camera
+(`["--version"]`, `["demo", "<plant>", "status"]`); and `refuses = true`, a
+command the CLI does not have or `["demo", ...]`, which must fail on camera
+or the take stops. `home = "another"` runs a refusal in a second home of its
+own, as a second copy on the same PC would be. Every home is stopped with its
+own `fsmes demo <plant> stop` and the directory removed when the take ends.
+
 Each `[[step]]` has a `do`:
 
 | `do` | needs | may have |
@@ -34,7 +47,7 @@ Each `[[step]]` has a `do`:
 | `say` | `line` | `hold`, `at`, `label`, `style` |
 | `hold` | | `seconds` |
 | `mark` | `name` | |
-| `slide` | `name`, `title` | `lines`, `command`, `start_at`, `stop_after`, `hold` |
+| `slide` | `name`, `title` | `lines`, `command`, `start_at`, `stop_after`, `hold`; on an installed take also `shows`, `refuses`, `home` |
 | `sign_in` | `user` | `password` (the scene's own if left out), `settle` |
 
 Any step may also have `part` and `scroll_to` (with `scroll_block`,

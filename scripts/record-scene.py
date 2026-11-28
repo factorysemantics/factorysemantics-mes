@@ -125,6 +125,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import textwrap
 import time
 import tomllib
 import urllib.error
@@ -220,6 +221,29 @@ TERMINAL_BACKGROUND = "#101418"
 READ_ONLY_COMMANDS = (("oee", "explain"),)
 #: How long a terminal card's command may take before the take is called off.
 COMMAND_TIMEOUT_SECONDS = 60.0
+
+# An installed take: `[installed]` instead of `[plant]`. Off camera, before it
+# rolls, the recorder makes a virtual environment of its own in a temporary
+# directory, installs the package the scene names into it with pip from the
+# package index - what a person types on their own PC - and starts the plant
+# with that installation's own `fsmes demo <plant>`, in a home of its own. The
+# take films that plant; its terminal cards are that installation's. A card
+# may show what the install or the start printed (`shows`), run one of the
+# commands below against it, or be filmed refusing (`refuses = true`): a
+# command the product turns down, whose words are the point of the card. A
+# refusal is allowed only where a refused command writes nothing: a command
+# the CLI does not have, or `fsmes demo` itself, which checks its ports before
+# it starts anything. A refused card's command that does not refuse fails the
+# take, and anything it started is stopped with the rest.
+INSTALLED_READ_COMMANDS = (("--version",), ("demo", "{plant}", "status"))
+INSTALLED_REFUSALS = (("demo",),)
+INSTALLED_SHOWS = ("install", "start")
+#: A card with `home = "another"` runs in a second home, as a second copy of
+#: the demo would on the same PC; the only other value is the plant's own.
+INSTALLED_HOMES = ("this", "another")
+#: How long pip, and the first start, may take before the take is called off.
+INSTALL_TIMEOUT_SECONDS = 900.0
+DEMO_START_TIMEOUT_SECONDS = 300.0
 
 # What a scratch plant may be given before the camera rolls: `[plant]
 # before_roll`, each the words after `fsmes`. Work people do off the line on a
@@ -354,6 +378,12 @@ def load_scene(path: Path) -> dict:
                          f" {TYPE_DELAY_FLOOR_SECONDS:g} — faster than that is not read as it is typed")
     scene["type_delay_seconds"] = float(delay)
 
+    if scene.get("installed") is not None:
+        if scene.get("plant"):
+            raise SystemExit(f"{path}: a scene has a `[plant]` (a scratch plant from a pack in this checkout)"
+                             " or an `[installed]` (a plant from a pip install), not both")
+        scene["installed"] = installed_defaults(scene["installed"], path)
+
     part = scene["part"]
     for number, step in enumerate(steps, start=1):
         where = f"{path}: step {number}"
@@ -384,7 +414,7 @@ def load_scene(path: Path) -> dict:
             if not step.get("name") or not step.get("title"):
                 raise SystemExit(f"{where}: a `slide` needs a `name` (it names the card's file) and a `title`")
             step["lines"] = [str(line) for line in step.get("lines") or []]
-            if step.get("command") is not None:
+            if step.get("command") is not None or step.get("shows") is not None:
                 check_command_card(step, where, scene)
             step.setdefault("hold", hold_for_words(" ".join([step["title"], *step["lines"]])))
         if verb == "hold":
@@ -444,14 +474,77 @@ def check_pointer(step: dict, where: str) -> None:
         raise SystemExit(f"{where}: `style = {step['style']!r}` is not one of {', '.join(CALLOUT_STYLES)}")
 
 
+def fsmes_command_names() -> set[str]:
+    """The commands this checkout's `fsmes` has, read from the CLI itself."""
+    import typer
+
+    from fsmes.cli import app
+
+    return set(typer.main.get_command(app).commands)
+
+
+def check_installed_card(step: dict, where: str, scene: dict) -> None:
+    """Refuse a terminal card of an installed take that could write, or that this script would guess at."""
+    plant = scene["installed"]["plant"]
+    for key in ("refuses",):
+        if not isinstance(step.get(key, False), bool):
+            raise SystemExit(f"{where}: `{key}` is true or false")
+    if step.get("home", "this") not in INSTALLED_HOMES:
+        raise SystemExit(f"{where}: `home` is one of {', '.join(INSTALLED_HOMES)}")
+    if step.get("shows") is not None:
+        if step["shows"] not in INSTALLED_SHOWS:
+            raise SystemExit(f"{where}: `shows` is one of {', '.join(INSTALLED_SHOWS)} — what the install"
+                             " or the start printed before the camera rolled")
+        if step.get("command") is not None or step.get("refuses") or "home" in step:
+            raise SystemExit(f"{where}: a card that `shows` what was printed before the roll runs nothing,"
+                             " so it takes no `command`, `refuses` or `home`")
+    else:
+        command = step["command"]
+        if not isinstance(command, list) or not command or not all(isinstance(word, str) for word in command):
+            raise SystemExit(f"{where}: a slide's `command` is the words after `fsmes`, as a list of strings")
+        if step.get("refuses"):
+            unknown = command[0] not in fsmes_command_names() and not command[0].startswith("-")
+            if not unknown and not any(tuple(command[:len(allowed)]) == allowed
+                                       for allowed in INSTALLED_REFUSALS):
+                raise SystemExit(
+                    f"{where}: `fsmes {' '.join(command)}` may not be filmed refusing — only a command the"
+                    " CLI does not have, or " + ", ".join(f"`fsmes {' '.join(a)}`" for a in INSTALLED_REFUSALS)
+                    + ", whose refusal comes before anything is written")
+        else:
+            reads = [tuple(word.format(plant=plant) for word in allowed) for allowed in INSTALLED_READ_COMMANDS]
+            if tuple(command) not in reads and not any(
+                    tuple(command[:len(allowed)]) == allowed for allowed in READ_ONLY_COMMANDS):
+                raise SystemExit(
+                    f"{where}: `fsmes {' '.join(command)}` is not a command an installed take's card may run —"
+                    " only " + ", ".join(f"`fsmes {' '.join(r)}`" for r in reads)
+                    + ", which read and write nothing, or a refusal (`refuses = true`)")
+        if step.get("home", "this") == "another" and not step.get("refuses"):
+            raise SystemExit(f"{where}: a second home is for filming a second copy being refused")
+    if step.get("hold") is None:
+        raise SystemExit(f"{where}: a terminal card needs a `hold` — what the command prints is not known "
+                         "until it runs, so its words cannot time it")
+    if step["lines"]:
+        raise SystemExit(f"{where}: a terminal card shows its command's output, not `lines`")
+    for key in ("start_at", "stop_after"):
+        if step.get(key) is not None and not isinstance(step[key], str):
+            raise SystemExit(f"{where}: `{key}` is a piece of a line of the output, as a string")
+
+
 def check_command_card(step: dict, where: str, scene: dict) -> None:
     """Refuse a terminal card this script would have to guess at, or one that could write.
 
     The command is words after `fsmes`, as a list; it must begin with one of
     READ_ONLY_COMMANDS; it runs against the take's own scratch plant, so the
     scene needs a `[plant]`; and its hold is stated, because how many words a
-    command prints is not known until it runs.
+    command prints is not known until it runs. An installed take's cards are
+    checked by `check_installed_card`.
     """
+    if scene.get("installed"):
+        check_installed_card(step, where, scene)
+        return
+    for key in ("shows", "refuses", "home"):
+        if key in step:
+            raise SystemExit(f"{where}: `{key}` is for a card of an installed take (`[installed]`)")
     command = step["command"]
     if not isinstance(command, list) or not command or not all(isinstance(word, str) for word in command):
         raise SystemExit(f"{where}: a slide's `command` is the words after `fsmes`, as a list of strings")
@@ -602,9 +695,12 @@ def play(scene: dict, stage) -> None:
             stage.sign_in(step["user"], step["password"], float(step["settle"]))
         elif verb == "mark":
             stage.mark(step["name"])
-        elif verb == "slide" and step.get("command") is not None:
-            stage.terminal(step["name"], step["title"], step["command"], step.get("start_at"),
-                           step.get("stop_after"), float(step["hold"]))
+        elif verb == "slide" and (step.get("command") is not None or step.get("shows") is not None):
+            # An installed take's card says more about where it runs; a scratch
+            # plant's card is handed exactly what it always was.
+            card = {key: step[key] for key in ("shows", "refuses", "home") if key in step}
+            stage.terminal(step["name"], step["title"], step.get("command"), step.get("start_at"),
+                           step.get("stop_after"), float(step["hold"]), **card)
         elif verb == "slide":
             stage.slide(step["name"], step["title"], step["lines"], float(step["hold"]))
 
@@ -918,7 +1014,7 @@ class BrowserStage:
 
     def __init__(self, page, out: Path, started: float, presses: list | None = None,
                  base: str = "", slides: dict | None = None, render=None, run_fsmes=None,
-                 type_delay: float = TYPE_DELAY_SECONDS) -> None:
+                 type_delay: float = TYPE_DELAY_SECONDS, run_card=None) -> None:
         self.page = page
         #: Seconds between typed keys: the scene's `type_delay_seconds`.
         self.type_delay = type_delay
@@ -930,6 +1026,9 @@ class BrowserStage:
         #: Runs `fsmes <words>` against the take's own plant and returns what it
         #: printed; a terminal card's command goes through it. None without a plant.
         self.run_fsmes = run_fsmes
+        #: An installed take's cards: given a card's command (or what it `shows`),
+        #: returns the line as typed and what it printed. None otherwise.
+        self.run_card = run_card
         #: Where a slide is served from: the plant's own origin, so the caption
         #: carries across in sessionStorage and the overlay draws on the card.
         self.base = base
@@ -1271,8 +1370,8 @@ class BrowserStage:
         self.check_corner()
         self.page.wait_for_timeout(int(hold * 1000))
 
-    def terminal(self, name: str, title: str, command: list[str], start_at: str | None,
-                 stop_after: str | None, hold: float) -> None:
+    def terminal(self, name: str, title: str, command: list[str] | None, start_at: str | None,
+                 stop_after: str | None, hold: float, **card) -> None:
         """Put a terminal card on screen: one read-only `fsmes` command's output, run now.
 
         It is run against the take's own plant as the card is filmed, so what
@@ -1280,22 +1379,29 @@ class BrowserStage:
         Its whole output is kept beside the card's picture, as text, so that
         a card cut short can be read in full.
         """
-        if self.run_fsmes is None:
+        if self.run_card is not None:
+            typed, output = self.run_card(command, **card)
+        elif card:
+            raise SystemExit(f"the terminal card {name!r} is an installed take's, and this take installed nothing")
+        elif self.run_fsmes is None:
             raise SystemExit(f"the terminal card {name!r} needs the take's own plant to run its command on")
-        output = self.run_fsmes(command)
+        else:
+            typed, output = f"fsmes {' '.join(command)}", self.run_fsmes(command)
         shown, first, total = trim_output(output, start_at, stop_after)
         number = len(self.slides) + 1
-        card = terminal_html(title, command, shown, first, total)
-        self.slides[str(number)] = card
+        html_card = terminal_html(title, typed, shown, first, total)
+        self.slides[str(number)] = html_card
         stem = f"slides/{number:02d}-{name.replace(' ', '-')}"
         (self.out / "slides").mkdir(parents=True, exist_ok=True)
-        (self.out / f"{stem}.txt").write_text(f"$ fsmes {' '.join(command)}\n{output}", encoding="utf-8")
+        (self.out / f"{stem}.txt").write_text(f"$ {typed}\n{output}", encoding="utf-8")
         if self.render is not None:
-            self.render(card, self.out / f"{stem}.png")
+            self.render(html_card, self.out / f"{stem}.png")
         self.page.goto(f"{self.base}{SLIDE_PATH}{number}", wait_until="load")
         self.note(f"slide: {title}", "slide", image=f"{stem}.png", title=title,
-                  command=f"fsmes {' '.join(command)}", output=f"{stem}.txt",
-                  lines_shown=[first, first + len(shown) - 1], lines_of=total)
+                  command=typed, output=f"{stem}.txt",
+                  lines_shown=[first, first + len(shown) - 1], lines_of=total,
+                  **({"refused": True} if card.get("refuses") else {}),
+                  **({"printed_before_the_roll": True} if card.get("shows") else {}))
         self.check_corner()
         self.page.wait_for_timeout(int(hold * 1000))
 
@@ -1431,7 +1537,21 @@ def slide_html(title: str, lines: list[str]) -> str:
     )
 
 
-def terminal_html(title: str, command: list[str], lines: list[str], first: int, total: int) -> str:
+#: How wide a terminal card's line runs before it wraps, as a terminal wraps
+#: it: at 13.5px monospace, 120 characters end left of the avatar's corner.
+TERMINAL_COLUMNS = 120
+
+
+def terminal_wrap(line: str) -> list[str]:
+    """One printed line as a terminal TERMINAL_COLUMNS wide shows it: wrapped at a space, indented as it began."""
+    if len(line) <= TERMINAL_COLUMNS:
+        return [line]
+    indent = line[: len(line) - len(line.lstrip())]
+    return textwrap.wrap(line, TERMINAL_COLUMNS, initial_indent="", subsequent_indent=indent + "  ",
+                         drop_whitespace=True, break_on_hyphens=False) or [line]
+
+
+def terminal_html(title: str, command: list[str] | str, lines: list[str], first: int, total: int) -> str:
     """A terminal card: a title, the command as typed, and the lines it printed, in monospace.
 
     The writing sits in the same kind of box as a slide's, wider because
@@ -1439,6 +1559,8 @@ def terminal_html(title: str, command: list[str], lines: list[str], first: int, 
     corner the same way. A card that shows part of the output says which part,
     of how many lines, on the card itself.
     """
+    typed = command if isinstance(command, str) else f"fsmes {' '.join(command)}"
+    shown = [wrapped for line in lines for wrapped in terminal_wrap(line)]
     font = "system-ui,-apple-system,Segoe UI,sans-serif"
     mono = "ui-monospace,SFMono-Regular,Menlo,Consolas,'DejaVu Sans Mono',monospace"
     cut = "" if first == 1 and len(lines) == total else (
@@ -1456,8 +1578,8 @@ def terminal_html(title: str, command: list[str], lines: list[str], first: int, 
         "#fs-term-cut{font-size:15px;color:#9aa4ad;margin:8px 0 0}"
         "</style></head><body><div id='fs-slide'><div id='fs-slide-body'>"
         f"<h1>{html.escape(title)}</h1>"
-        f"<p id='fs-term-command'>$ fsmes {html.escape(' '.join(command))}</p>"
-        f"<pre>{html.escape(chr(10).join(lines))}</pre>{cut}</div></div></body></html>"
+        f"<p id='fs-term-command'>$ {html.escape(typed)}</p>"
+        f"<pre>{html.escape(chr(10).join(shown))}</pre>{cut}</div></div></body></html>"
     )
 
 
@@ -1737,6 +1859,20 @@ def readme(scene: dict, facts: dict) -> str:
         f"- the product's message after a save (its toast) is drawn {TOAST_LIFT} px off the bottom rather"
         " than 22, so that the caption bar does not cover it",
     ]
+    installed = scene.get("installed")
+    if installed:
+        lines += [
+            f"- **the plant itself**: installed, off camera, with `pip install \"{installed['package']}\"`"
+            " from the package index into a virtual environment of the take's own, then started with that"
+            f" installation's `fsmes demo {installed['plant']}"
+            + ("" if installed["speed"] is None else f" --speed {installed['speed']:g}") + "` in a"
+            " temporary home; stopped and deleted with the environment when the take ended. Nothing in"
+            " the checkout and no plant anybody else started was touched.",
+            "- **the terminal cards** are that installation's: a card that shows the install or the start"
+            " shows what it printed a minute before the camera rolled; every other card's command was run"
+            " as the card was filmed, and a card marked as refused is the product's own refusal. Each"
+            " card's whole output is beside its picture in `slides/`, as text",
+        ]
     plant = scene.get("plant")
     if plant:
         lines += [
@@ -2409,6 +2545,25 @@ PLANT_UP_SECONDS = 60.0
 POLL_SECONDS = 1.0
 
 
+def installed_defaults(spec: dict, path: Path) -> dict:
+    """Fill in an `[installed]` table and refuse anything this script would guess at."""
+    if not isinstance(spec, dict):
+        raise SystemExit(f"{path}: `[installed]` is a table")
+    if not isinstance(spec.get("package"), str) or not spec["package"].startswith("factorysemantics-mes"):
+        raise SystemExit(f"{path}: [installed] `package` is what pip is given, e.g."
+                         " \"factorysemantics-mes[postgres]\" — this product and nothing else")
+    if not isinstance(spec.get("plant"), str) or not SLUG.fullmatch(spec["plant"]):
+        raise SystemExit(f"{path}: [installed] `plant` is a plant the package ships, e.g. \"cutlery\"")
+    # Left out, the start is typed as a person types it, and the pack's own speed stands.
+    speed = spec.setdefault("speed", None)
+    if speed is not None and (isinstance(speed, bool) or not isinstance(speed, (int, float)) or speed <= 0):
+        raise SystemExit(f"{path}: [installed] `speed` is the replay's speed, more than 0")
+    unknown = set(spec) - {"package", "plant", "speed"}
+    if unknown:
+        raise SystemExit(f"{path}: [installed] has no {', '.join(sorted(unknown))}")
+    return spec
+
+
 def plant_defaults(spec: dict) -> dict:
     """Fill in a `[plant]` table and refuse anything this script would guess at."""
     if not spec.get("pack"):
@@ -2666,6 +2821,119 @@ class ScratchPlant:
         else:
             print(f"  scratch plant stopped, its home removed, "
                   f"{' and '.join(str(port) for port in sorted(self.ports))} free", flush=True)
+
+
+class InstalledDemo:
+    """A plant from a pip install this take made, started and is responsible for taking away.
+
+    Everything lives in one temporary directory: the virtual environment pip
+    installs into, the demo's home (its pack, database, logs and replay) and,
+    when a card films a second copy being refused, that copy's home. Nothing
+    is installed into this checkout's environment, and nothing is stopped by
+    matching a command line: each home is stopped by its own `fsmes demo
+    <plant> stop`.
+    """
+
+    def __init__(self, spec: dict) -> None:
+        self.package = spec["package"]
+        self.plant = spec["plant"]
+        self.speed = None if spec["speed"] is None else float(spec["speed"])
+        # A short prefix with no user or project in it: every path the demo
+        # prints names this directory, and the cards are filmed.
+        self.root = Path(tempfile.mkdtemp(prefix="fsmes-on-your-pc-"))
+        self.venv = self.root / "venv"
+        self.homes = {"this": self.root / "home", "another": self.root / "another-home"}
+        self.kept: dict[str, tuple[str, str]] = {}
+        self.started: set[str] = set()
+
+    def _bin(self, name: str) -> Path:
+        if sys.platform == "win32":
+            return self.venv / "Scripts" / f"{name}.exe"
+        return self.venv / "bin" / name
+
+    def _env(self, home: str) -> dict[str, str]:
+        """This installation's environment, as a fresh PC would have it.
+
+        No key for the AI tab (the class says the chat is off), no registry or
+        virtual environment of the recorder's own, the home this card's copy
+        keeps its plant in, and output in UTF-8 at a terminal's width.
+        """
+        env = {key: value for key, value in os.environ.items()
+               if key not in ("ANTHROPIC_API_KEY", "FSMES_PLANT_REGISTRY", "VIRTUAL_ENV", "PYTHONPATH")}
+        env.update({"FSMES_HOME": str(self.homes[home]), "PYTHONIOENCODING": "utf-8", "COLUMNS": "80",
+                    "PATH": str(self._bin("fsmes").parent) + os.pathsep + env.get("PATH", "")})
+        return env
+
+    def _run(self, argv: list[str], home: str, timeout: float) -> subprocess.CompletedProcess:
+        try:
+            return subprocess.run(argv, cwd=str(self.root), env=self._env(home), capture_output=True,
+                                  text=True, encoding="utf-8", check=False, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            raise SystemExit(f"`{' '.join(argv[-4:])}` took longer than {timeout:.0f}s") from None
+
+    def install(self) -> None:
+        """`pip install <package>` into a virtual environment of the take's own, off camera."""
+        import venv
+
+        print(f"== installing {self.package} with pip into {self.venv}", flush=True)
+        venv.create(self.venv, with_pip=True)
+        done = self._run([str(self._bin("python")), "-m", "pip", "install", "--disable-pip-version-check",
+                          self.package], "this", INSTALL_TIMEOUT_SECONDS)
+        if done.returncode != 0:
+            raise SystemExit(f"pip could not install {self.package}:\n{done.stdout}\n{done.stderr}")
+        self.kept["install"] = (f"pip install \"{self.package}\"", done.stdout + done.stderr)
+
+    def ports(self) -> dict[int, str]:
+        """The ports the shipped pack's plant will listen on, read from the installed package."""
+        done = self._run([str(self._bin("python")), "-c",
+                          "from importlib import resources; from fsmes import standalone; "
+                          "print(resources.files('fsmes').joinpath(*standalone.PACKS_IN_PACKAGE))"],
+                         "this", COMMAND_TIMEOUT_SECONDS)
+        pack = Path(done.stdout.strip()) / self.plant
+        if done.returncode != 0 or not (pack / "plant.toml").is_file():
+            raise SystemExit(f"the installed package ships no plant called {self.plant!r}:\n{done.stderr}")
+        return ports_of_pack(pack)
+
+    def start(self) -> None:
+        """`fsmes demo <plant>`, as a person types it, off camera; what it printed is kept for a card."""
+        words = ["demo", self.plant, *([] if self.speed is None else ["--speed", f"{self.speed:g}"])]
+        print(f"== starting the plant: fsmes {' '.join(words)}", flush=True)
+        self.started.add("this")
+        done = self._run([str(self._bin("fsmes")), *words], "this", DEMO_START_TIMEOUT_SECONDS)
+        print(done.stdout.rstrip(), flush=True)
+        if done.returncode != 0:
+            raise SystemExit(f"`fsmes {' '.join(words)}` did not start the plant:\n{done.stdout}\n{done.stderr}")
+        self.kept["start"] = (f"fsmes {' '.join(words)}", done.stdout + done.stderr)
+
+    def card(self, command: list[str] | None, shows: str | None = None, refuses: bool = False,
+             home: str = "this") -> tuple[str, str]:
+        """A terminal card's line as typed, and what it printed: kept from before the roll, or run now."""
+        if shows is not None:
+            return self.kept[shows]
+        done = self._run([str(self._bin("fsmes")), *command], home, COMMAND_TIMEOUT_SECONDS)
+        printed = done.stdout + done.stderr
+        # A copy refused at the port check started nothing and owns nothing, so
+        # there is nothing of it to stop; one that was not refused is stopped.
+        if command and command[0] == "demo" and (not refuses or done.returncode == 0):
+            self.started.add(home)
+        typed = f"fsmes {' '.join(command)}"
+        if refuses and done.returncode == 0:
+            raise SystemExit(f"`{typed}` was to be filmed refusing, and it did not:\n{printed}")
+        if not refuses and done.returncode != 0:
+            raise SystemExit(f"`{typed}` failed on the installed plant:\n{printed}")
+        return typed, printed
+
+    def stop(self) -> None:
+        """Stop every home a card or the start used, and take the directory away. Safe to call twice."""
+        for home in sorted(self.started):
+            done = self._run([str(self._bin("fsmes")), "demo", self.plant, "stop"], home,
+                             DEMO_START_TIMEOUT_SECONDS)
+            if done.returncode != 0:
+                print(f"  the {home} home's plant would not stop cleanly:\n{done.stdout}\n{done.stderr}",
+                      flush=True)
+        self.started.clear()
+        shutil.rmtree(self.root, ignore_errors=True)
+        print(f"  installed plant stopped, {self.root} removed", flush=True)
 
 
 def start_a_scratch_plant(spec: dict) -> ScratchPlant:
@@ -3020,7 +3288,7 @@ def commit_of_repo() -> str:
     return done.stdout.strip() or "unknown"
 
 
-def record(scene: dict, out: Path, run_fsmes=None) -> dict:
+def record(scene: dict, out: Path, run_fsmes=None, run_card=None) -> dict:
     """Film the scene into `out`: the raw video, the stills, the slides. Returns what was made.
 
     `run_fsmes` is the take's own plant's, for terminal cards; None when the
@@ -3078,7 +3346,8 @@ def record(scene: dict, out: Path, run_fsmes=None) -> dict:
 
         stage = BrowserStage(page, out, time.monotonic(), presses, base=base, slides=slides,
                              render=lambda card, path: render_slide(browser, card, path, width, height),
-                             run_fsmes=run_fsmes, type_delay=float(scene["type_delay_seconds"]))
+                             run_fsmes=run_fsmes, type_delay=float(scene["type_delay_seconds"]),
+                             run_card=run_card)
         page.goto(f"{base}/dashboard", wait_until="load")
 
         scene_with_base = dict(scene)
@@ -3224,7 +3493,17 @@ def take(scene: dict, args, out: Path, final: Path, name: str, course, module, l
     # running holds its ports, and the next run of this script would refuse.
     plant_spec = scene.get("plant")
     scratch = None
+    installed = None
     try:
+        if scene.get("installed"):
+            if not on_loopback(scene["base"]):
+                raise SystemExit(f"this scene installs and starts its own plant but films {scene['base']},"
+                                 " which is not on this box")
+            installed = InstalledDemo(scene["installed"])
+            installed.install()
+            refuse_a_port_that_is_not_ours(installed.ports())
+            installed.start()
+            wait_for_the_plant(scene["base"].rstrip("/"))
         if plant_spec:
             if not on_loopback(scene["base"]):
                 raise SystemExit(
@@ -3253,11 +3532,15 @@ def take(scene: dict, args, out: Path, final: Path, name: str, course, module, l
                 issue_pallet_certificates(scene["base"].rstrip("/"), plant_spec["pallet_certificates_before_roll"],
                                           scene["user"], scene["password"])
 
-        made = record(scene, out, scratch.run_fsmes if scratch is not None else None)
+        made = record(scene, out, scratch.run_fsmes if scratch is not None else None,
+                      installed.card if installed is not None else None)
     finally:
         if scratch is not None:
             print("\n== taking the scratch plant away", flush=True)
             scratch.stop()
+        if installed is not None:
+            print("\n== taking the installed plant away", flush=True)
+            installed.stop()
 
     print("\n== making the mp4 and the GIF", flush=True)
     mp4 = out / (f"{name}.teaser.mp4" if teaser_only else f"{name}.mp4")
