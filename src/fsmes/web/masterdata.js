@@ -60,7 +60,7 @@ function drawEquipment() {
     code.append(e.level === "work_unit" ? FS.link("machine", e.code) : e.level === "work_center" ? FS.link("line", e.code) : e.code);
     tr.append(code, el("td", null, e.name), el("td", "muted", e.level.replace("_", " ")),
               el("td", "muted", e.parent || "—"), el("td", "num", e.ideal_cycle_seconds ?? "—"),
-              el("td", "muted", e.cost_center || "—"),
+              costCenterCell(e),
               el("td", "muted small", place(e)));
     if (FS.can("masterdata.write")) {
       tr.title = "Change its place or cost center";
@@ -71,6 +71,18 @@ function drawEquipment() {
   if (!page.items.length) { const tr = el("tr"); const td = el("td", "muted", "No equipment matches."); td.colSpan = 7; tr.append(td); body.append(tr); }
   $("#eq-count").textContent = FS.countText(page, equipment.length);
   FS.pager($("#eq-pager"), page, (offset) => { filters.eqOffset = offset; drawEquipment(); });
+}
+
+/* Which cost center the row's work bills to: its own as written, or the one
+   it inherits, greyed, with the node it comes from - the server resolves it
+   (masterdata.cost_center_holder). None up the tree keeps the dash. */
+function costCenterCell(e) {
+  if (e.cost_center) return el("td", "cc-own", e.cost_center);
+  if (!e.bills_to) return el("td", "muted", "—");
+  const td = el("td", "muted cc-inherited", e.bills_to);
+  if (e.bills_from) td.append(" ", el("span", "small", `from ${e.bills_from}`));
+  td.title = "Inherited: it has no cost center of its own";
+  return td;
 }
 
 /* Where a node stands, as held: "12.25, 5.6, 1.55", or a dash for nobody has said. */
@@ -91,6 +103,8 @@ function pick(e) {
   $("#eq-x").value = e.x ?? ""; $("#eq-y").value = e.y ?? ""; $("#eq-z").value = e.z ?? "";
   for (const id of ["eq-code", "eq-name", "eq-level", "eq-parent", "eq-cycle"]) $(`#${id}`).disabled = true;
   $("#eq-code").required = false; $("#eq-name").required = false;
+  $("#eq-form-title").textContent = `Change ${e.name}`;
+  $("#eq-form-hint").textContent = `— ${e.code}: its place and its own cost center`;
   $("#eq-submit").textContent = `Save ${e.code}`;
   $("#eq-cancel").classList.remove("hidden");
   $("#eq-cc").focus();
@@ -100,6 +114,8 @@ function unpick() {
   $("#eq-form").reset();
   for (const id of ["eq-code", "eq-name", "eq-level", "eq-parent", "eq-cycle"]) $(`#${id}`).disabled = false;
   $("#eq-code").required = true; $("#eq-name").required = true;
+  $("#eq-form-title").textContent = "Add equipment";
+  $("#eq-form-hint").textContent = "— or pick a row below to change its place or cost center";
   $("#eq-submit").textContent = "Add";
   $("#eq-cancel").classList.add("hidden");
 }

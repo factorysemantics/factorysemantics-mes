@@ -230,11 +230,19 @@ def cost_center(session: Session, equipment: Equipment) -> str | None:
     where accounting genuinely differs, which is how cost centers are
     maintained in every ERP this will talk to.
     """
+    holder = cost_center_holder(session, equipment)
+    return holder.cost_center if holder is not None else None
+
+
+def cost_center_holder(session: Session, equipment: Equipment) -> Equipment | None:
+    """The node whose own cost center `cost_center` resolves to: the machine
+    itself, or the nearest ancestor that has one; None when nobody up the
+    tree has said. Setup shows a heater band's as "from <the line>"."""
     node: Equipment | None = equipment
     seen = set()
     while node is not None and node.id not in seen:
         if node.cost_center:
-            return node.cost_center
+            return node
         seen.add(node.id)
         node = node.parent
     return None
