@@ -57,7 +57,7 @@ def test_with_the_option_the_button_and_the_panel_sit_left_above_the_bar_below_t
         page.route(ORIGIN, lambda route: route.fulfill(status=200, content_type="text/html", body=ASSISTANT))
         page.goto(ORIGIN, wait_until="load")
 
-        for selector in (".assist-launch", ".assist-panel"):
+        for selector in ("body > .assist-launch", ".assist-panel"):
             box = page.locator(selector).bounding_box()
             assert box is not None, f"{selector} is not drawn"
             assert box["x"] == runner.ASSIST_LEFT

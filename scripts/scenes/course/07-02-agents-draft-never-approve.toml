@@ -217,11 +217,11 @@ at = "#reasons-table"
 [[step]]
 do = "say"
 line = "Class 6.1 asked the analyst on the AI tab, which only reads. This is the other one, the Assistant. It may propose a change."
-at = ".assist-launch"
+at = "body > .assist-launch"
 
 [[step]]
 do = "click"
-selector = ".assist-launch"
+selector = "body > .assist-launch"
 
 [[step]]
 do = "wait_for"
@@ -397,7 +397,7 @@ name = "both-names-on-the-row"
 
 [[step]]
 do = "click"
-selector = ".assist-launch"
+selector = "body > .assist-launch"
 
 [[step]]
 do = "wait_for"

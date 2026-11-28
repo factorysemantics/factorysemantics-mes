@@ -780,7 +780,7 @@ def overlay_script(badge: str, captions: bool = True, assistant: bool = False) -
         "padding:0 18px!important;border-radius:8px!important;white-space:nowrap!important;"
         "box-shadow:0 2px 10px rgba(0,0,0,.5)!important}"
         + (".design-launch{display:none!important}"
-           f".assist-launch,.assist-panel{{left:{ASSIST_LEFT}px!important;right:auto!important;"
+           f"body>.assist-launch,.assist-panel{{left:{ASSIST_LEFT}px!important;right:auto!important;"
            f"bottom:{ASSIST_BOTTOM}px!important}}"
            f".assist-panel{{max-height:calc(100vh - {ASSIST_BOTTOM + ASSIST_TOP}px)!important}}"
            if assistant else ".assist-launch,.design-launch{display:none!important}")
