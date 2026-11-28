@@ -5153,6 +5153,22 @@ belts: <code>bottle</code> (and <code>unit</code>, the default) draws bottles, c
 filler and filled after it; anything else - <code>body</code> on the body shop - draws a
 plain slab the size of a car floor, shorter if the belts are short. The
 <code>cell</code> kind draws a fenced robot cell with an opening on every side.</p>
+<p><strong>A machine's parts on the drawing.</strong> Parts the MES holds under a machine -
+a mould's heater bands, its melt sensor - are drawn as markers where each is
+held to sit (<code>pos_x</code>, <code>pos_y</code>, <code>pos_z</code>, plant metres, set in Setup or from
+the pack's equipment file). The view can put plant metres on a drawn layout
+only if the layout says how its numbers are the plant's:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">"defaults"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"plant_frame"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"x"</span><span class="p">:</span><span class="w"> </span><span class="s2">"x"</span><span class="p">,</span><span class="w"> </span><span class="nt">"z"</span><span class="p">:</span><span class="w"> </span><span class="s2">"-y"</span><span class="p">}}</span>
+</code></pre></div>
+<p>says the drawing's <code>x</code> is plant x and its <code>z</code> is minus plant y, both in
+metres (<code>"z": "y"</code> if it is plant y itself). It can go under <code>defaults</code> or
+under one line. A layout without it draws each part on a spot of its own on
+top of its machine and the panel says so; nothing is guessed. An engineer
+who may write master data can click a marker, press <strong>Move</strong>, click the spot
+on the machine and save: that goes through Setup's own route
+(<code>PUT /masterdata/equipment/{code}</code>) and is in the audit log. Moving works on
+a one-line view only; the whole-area floor plan draws machines two and a half
+times their size, so a click there is not a place on the plant.</p>
 <h2 id="your-own-machine-models">Your own machine models<a class="headerlink" href="#your-own-machine-models" title="Permanent link">&para;</a></h2>
 <p>The 3D line view (<code>/dashboard/line/3d</code>) draws every machine from built-in
 shapes - boxes, cylinders, a lathe for the bottles - and those stay the
